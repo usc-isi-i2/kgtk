@@ -21,18 +21,22 @@ On the other hand, when using undirected (bidirectional) edges,
 ```
 usage: kgtk graph-statistics [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                              [--undirected [True|False]]
-                             [--histogram [True|False]]
-                             [--top-relations [True|False]]
+                             [--compute-pagerank [True|False]]
+                             [--compute-hits [True|False]]
+                             [--output-statistics-only [True|False]]
                              [--output-degrees [True|False]]
                              [--output-properties [True|False]]
-                             [--pagerank [True|False]] [--hits [True|False]]
-                             [--log LOG_FILE] [--statistics-only [True|False]]
+                             [--log-file LOG_FILE]
+                             [--log-top-relations [True|False]]
+                             [--log-degrees-histogram [True|False]]
+                             [--log-top-pageranks [True|False]]
+                             [--log-top-hits [True|False]] [--log-top-n TOP_N]
                              [--vertex-in-degree-property VERTEX_IN_DEGREE]
                              [--vertex-out-degree-property VERTEX_OUT_DEGREE]
                              [--page-rank-property VERTEX_PAGERANK]
                              [--vertex-hits-authority-property VERTEX_AUTH]
                              [--vertex-hits-hubs-property VERTEX_HUBS]
-                             [--print-top-n TOP_N] [-v [optional True|False]]
+                             [-v [optional True|False]]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -45,31 +49,43 @@ optional arguments:
   --undirected [True|False]
                         Is the graph undirected? If false, then the graph is
                         treated as (node1)->(node2). If true, then the graph
-                        is treated as (node1)<->(node2). (default=False)
-  --histogram [True|False]
-                        Whether or not to compute degree distribution and
-                        output it to the log file. (default=False)
-  --top-relations [True|False]
+                        is treated as (node1)<->(node2). Also, HITS will not
+                        be computed on undirected graphs. (default=False)
+  --compute-pagerank [True|False]
+                        Whether or not to compute the PageRank property. Note:
+                        --undirected improves the pagerank calculation. If you
+                        want both pagerank and in/out-degrees, you should make
+                        two runs. (default=True)
+  --compute-hits [True|False]
+                        Whether or not to compute the HITS properties. Note:
+                        HITS will not be compued on undirected graphs.
+                        (default=True)
+  --output-statistics-only [True|False]
+                        If this option is set, write only the statistics edges
+                        to the primary output file. Else, write both the
+                        statistics and the original graph. (default=False
+  --output-degrees [True|False]
+                        Whether or not to write degree edges to the primary
+                        output file. (default=True)
+  --output-properties [True|False]
+                        Whether or not to write property edges (e.g.,
+                        pagerank, HITS) to the primary output file.
+                        (default=True)
+  --log-file LOG_FILE   Summary file for the global statistics of the graph.
+  --log-top-relations [True|False]
                         Whether or not to compute top relations and output
                         them to the log file. (default=True)
-  --output-degrees [True|False]
-                        Whether or not to output degree edges. (default=True)
-  --output-properties [True|False]
-                        Whether or not to output property edges.
-                        (default=True)
-  --pagerank [True|False]
-                        Whether or not to compute PageRank centraility and
-                        output it to the log file. Note: --undirected improves
-                        the pagerank calculation. If you want both pagerank
-                        and in/out-degrees, you should make two runs.
-                        (default=False)
-  --hits [True|False]   Whether or not to compute HITS centraility and output
-                        it to the log file. (default=False)
-  --log LOG_FILE        Summary file for the global statistics of the graph.
-  --statistics-only [True|False]
-                        If this flag is set, output only the statistics edges.
-                        Else, append the statistics to the original graph.
-                        (default=False
+  --log-degrees-histogram [True|False]
+                        Whether or not to compute degree distribution and
+                        output it to the log file. (default=True)
+  --log-top-pageranks [True|False]
+                        Whether or not to output PageRank centrality top-n to
+                        the log file. (default=True)
+  --log-top-hits [True|False]
+                        Whether or not to output the top-n HITS to the log
+                        file. (default=True)
+  --log-top-n TOP_N     Number of top centrality nodes to write to the log
+                        file. (default=5)
   --vertex-in-degree-property VERTEX_IN_DEGREE
                         Label for edge: vertex in degree property. Note: If
                         --undirected is True, then the in-degree will be 0.
@@ -89,7 +105,6 @@ optional arguments:
   --vertex-hits-hubs-property VERTEX_HUBS
                         Label for edge: vertex hits hubs.
                         (default=vertex_hubs)
-  --print-top-n TOP_N   Number of top centrality nodes to print. (default=5)
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).
@@ -111,14 +126,224 @@ kgtk cat -i examples/docs/graph-statistics-file1.tsv
 | peter | zipcode | 12040 |
 | steve | zipcode | 45601 |
 
-We can use the following command to compute degree and PageRank statistics over the graph:
+### Example: Default Options
+
+By default, all statistics will be computed and written to either the log file
+or the output KGTK file.  The output KGTK file will contain the input edges
+followed by the newly-computed statistics.
+
+```
+kgtk graph_statistics \
+     -i examples/docs/graph-statistics-file1.tsv \
+     --log-file summary.txt
+```
+
+The output is as follows:
+
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| john | zipcode | 12345 | john-zipcode-0 |
+| john | zipcode | 12346 | john-zipcode-1 |
+| peter | zipcode | 12040 | peter-zipcode-2 |
+| peter | zipcode | 12040 | peter-zipcode-3 |
+| steve | zipcode | 45601 | steve-zipcode-4 |
+| john | vertex_in_degree | 0 | john-vertex_in_degree-0 |
+| john | vertex_out_degree | 2 | john-vertex_out_degree-1 |
+| john | vertex_pagerank | 0.10471144347252878 | john-vertex_pagerank-2 |
+| john | vertex_hubs | 0.0 | john-vertex_hubs-3 |
+| john | vertex_auth | 9.536743164058163e-07 | john-vertex_auth-4 |
+| 12345 | vertex_in_degree | 1 | 12345-vertex_in_degree-5 |
+| 12345 | vertex_out_degree | 0 | 12345-vertex_out_degree-6 |
+| 12345 | vertex_pagerank | 0.14921376206743192 | 12345-vertex_pagerank-7 |
+| 12345 | vertex_hubs | 9.536743164053826e-07 | 12345-vertex_hubs-8 |
+| 12345 | vertex_auth | 0.0 | 12345-vertex_auth-9 |
+| 12346 | vertex_in_degree | 1 | 12346-vertex_in_degree-10 |
+| 12346 | vertex_out_degree | 0 | 12346-vertex_out_degree-11 |
+| 12346 | vertex_pagerank | 0.14921376206743192 | 12346-vertex_pagerank-12 |
+| 12346 | vertex_hubs | 9.536743164053826e-07 | 12346-vertex_hubs-13 |
+| 12346 | vertex_auth | 0.0 | 12346-vertex_auth-14 |
+| peter | vertex_in_degree | 0 | peter-vertex_in_degree-15 |
+| peter | vertex_out_degree | 2 | peter-vertex_out_degree-16 |
+| peter | vertex_pagerank | 0.10471144347252878 | peter-vertex_pagerank-17 |
+| peter | vertex_hubs | 0.0 | peter-vertex_hubs-18 |
+| peter | vertex_auth | 0.9999999999995453 | peter-vertex_auth-19 |
+| 12040 | vertex_in_degree | 2 | 12040-vertex_in_degree-20 |
+| 12040 | vertex_out_degree | 0 | 12040-vertex_out_degree-21 |
+| 12040 | vertex_pagerank | 0.1937160806623351 | 12040-vertex_pagerank-22 |
+| 12040 | vertex_hubs | 0.9999999999990905 | 12040-vertex_hubs-23 |
+| 12040 | vertex_auth | 0.0 | 12040-vertex_auth-24 |
+| steve | vertex_in_degree | 0 | steve-vertex_in_degree-25 |
+| steve | vertex_out_degree | 1 | steve-vertex_out_degree-26 |
+| steve | vertex_pagerank | 0.10471144347252878 | steve-vertex_pagerank-27 |
+| steve | vertex_hubs | 0.0 | steve-vertex_hubs-28 |
+| steve | vertex_auth | 9.094947017725146e-13 | steve-vertex_auth-29 |
+| 45601 | vertex_in_degree | 1 | 45601-vertex_in_degree-30 |
+| 45601 | vertex_out_degree | 0 | 45601-vertex_out_degree-31 |
+| 45601 | vertex_pagerank | 0.19371608066233506 | 45601-vertex_pagerank-32 |
+| 45601 | vertex_hubs | 9.094947017721011e-13 | 45601-vertex_hubs-33 |
+| 45601 | vertex_auth | 0.0 | 45601-vertex_auth-34 |
+
+The top-n summary of certain metrics is written to `summary.txt`.
+
+### Example: Output Only Statistics
+
+Compute the statistics and output them, but do not copy the
+input edges to the statistics:
 
 ```
 kgtk graph_statistics \
      -i examples/docs/graph-statistics-file1.tsv \
      --log-file summary.txt \
-     --log-pagerank-centrality \
      --output-statistics-only
+```
+
+The output (printed to stdout by default) is as follows:
+
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| john | vertex_in_degree | 0 | john-vertex_in_degree-0 |
+| john | vertex_out_degree | 2 | john-vertex_out_degree-1 |
+| john | vertex_pagerank | 0.10471144347252878 | john-vertex_pagerank-2 |
+| john | vertex_hubs | 0.0 | john-vertex_hubs-3 |
+| john | vertex_auth | 9.536743164058163e-07 | john-vertex_auth-4 |
+| 12345 | vertex_in_degree | 1 | 12345-vertex_in_degree-5 |
+| 12345 | vertex_out_degree | 0 | 12345-vertex_out_degree-6 |
+| 12345 | vertex_pagerank | 0.14921376206743192 | 12345-vertex_pagerank-7 |
+| 12345 | vertex_hubs | 9.536743164053826e-07 | 12345-vertex_hubs-8 |
+| 12345 | vertex_auth | 0.0 | 12345-vertex_auth-9 |
+| 12346 | vertex_in_degree | 1 | 12346-vertex_in_degree-10 |
+| 12346 | vertex_out_degree | 0 | 12346-vertex_out_degree-11 |
+| 12346 | vertex_pagerank | 0.14921376206743192 | 12346-vertex_pagerank-12 |
+| 12346 | vertex_hubs | 9.536743164053826e-07 | 12346-vertex_hubs-13 |
+| 12346 | vertex_auth | 0.0 | 12346-vertex_auth-14 |
+| peter | vertex_in_degree | 0 | peter-vertex_in_degree-15 |
+| peter | vertex_out_degree | 2 | peter-vertex_out_degree-16 |
+| peter | vertex_pagerank | 0.10471144347252878 | peter-vertex_pagerank-17 |
+| peter | vertex_hubs | 0.0 | peter-vertex_hubs-18 |
+| peter | vertex_auth | 0.9999999999995453 | peter-vertex_auth-19 |
+| 12040 | vertex_in_degree | 2 | 12040-vertex_in_degree-20 |
+| 12040 | vertex_out_degree | 0 | 12040-vertex_out_degree-21 |
+| 12040 | vertex_pagerank | 0.1937160806623351 | 12040-vertex_pagerank-22 |
+| 12040 | vertex_hubs | 0.9999999999990905 | 12040-vertex_hubs-23 |
+| 12040 | vertex_auth | 0.0 | 12040-vertex_auth-24 |
+| steve | vertex_in_degree | 0 | steve-vertex_in_degree-25 |
+| steve | vertex_out_degree | 1 | steve-vertex_out_degree-26 |
+| steve | vertex_pagerank | 0.10471144347252878 | steve-vertex_pagerank-27 |
+| steve | vertex_hubs | 0.0 | steve-vertex_hubs-28 |
+| steve | vertex_auth | 9.094947017725146e-13 | steve-vertex_auth-29 |
+| 45601 | vertex_in_degree | 1 | 45601-vertex_in_degree-30 |
+| 45601 | vertex_out_degree | 0 | 45601-vertex_out_degree-31 |
+| 45601 | vertex_pagerank | 0.19371608066233506 | 45601-vertex_pagerank-32 |
+| 45601 | vertex_hubs | 9.094947017721011e-13 | 45601-vertex_hubs-33 |
+| 45601 | vertex_auth | 0.0 | 45601-vertex_auth-34 |
+
+### Example: Rename the Output Relationships
+
+```
+kgtk graph_statistics \
+     -i examples/docs/graph-statistics-file1.tsv \
+     --log-file summary.txt \
+     --output-statistics-only \
+     --page-rank-property Ppagerank \
+     --vertex-in-degree-property Pindegree \
+     --vertex-out-degree-property Poutdegree
+```
+
+The output (printed to stdout by default) is as follows:
+
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| john | Pindegree | 0 | john-Pindegree-0 |
+| john | Poutdegree | 2 | john-Poutdegree-1 |
+| john | Ppagerank | 0.10471144347252878 | john-Ppagerank-2 |
+| john | vertex_hubs | 0.0 | john-vertex_hubs-3 |
+| john | vertex_auth | 9.536743164058163e-07 | john-vertex_auth-4 |
+| 12345 | Pindegree | 1 | 12345-Pindegree-5 |
+| 12345 | Poutdegree | 0 | 12345-Poutdegree-6 |
+| 12345 | Ppagerank | 0.14921376206743192 | 12345-Ppagerank-7 |
+| 12345 | vertex_hubs | 9.536743164053826e-07 | 12345-vertex_hubs-8 |
+| 12345 | vertex_auth | 0.0 | 12345-vertex_auth-9 |
+| 12346 | Pindegree | 1 | 12346-Pindegree-10 |
+| 12346 | Poutdegree | 0 | 12346-Poutdegree-11 |
+| 12346 | Ppagerank | 0.14921376206743192 | 12346-Ppagerank-12 |
+| 12346 | vertex_hubs | 9.536743164053826e-07 | 12346-vertex_hubs-13 |
+| 12346 | vertex_auth | 0.0 | 12346-vertex_auth-14 |
+| peter | Pindegree | 0 | peter-Pindegree-15 |
+| peter | Poutdegree | 2 | peter-Poutdegree-16 |
+| peter | Ppagerank | 0.10471144347252878 | peter-Ppagerank-17 |
+| peter | vertex_hubs | 0.0 | peter-vertex_hubs-18 |
+| peter | vertex_auth | 0.9999999999995453 | peter-vertex_auth-19 |
+| 12040 | Pindegree | 2 | 12040-Pindegree-20 |
+| 12040 | Poutdegree | 0 | 12040-Poutdegree-21 |
+| 12040 | Ppagerank | 0.1937160806623351 | 12040-Ppagerank-22 |
+| 12040 | vertex_hubs | 0.9999999999990905 | 12040-vertex_hubs-23 |
+| 12040 | vertex_auth | 0.0 | 12040-vertex_auth-24 |
+| steve | Pindegree | 0 | steve-Pindegree-25 |
+| steve | Poutdegree | 1 | steve-Poutdegree-26 |
+| steve | Ppagerank | 0.10471144347252878 | steve-Ppagerank-27 |
+| steve | vertex_hubs | 0.0 | steve-vertex_hubs-28 |
+| steve | vertex_auth | 9.094947017725146e-13 | steve-vertex_auth-29 |
+| 45601 | Pindegree | 1 | 45601-Pindegree-30 |
+| 45601 | Poutdegree | 0 | 45601-Poutdegree-31 |
+| 45601 | Ppagerank | 0.19371608066233506 | 45601-Ppagerank-32 |
+| 45601 | vertex_hubs | 9.094947017721011e-13 | 45601-vertex_hubs-33 |
+| 45601 | vertex_auth | 0.0 | 45601-vertex_auth-34 |
+
+### Example: Suppress Pageranks
+
+Supress the computation and logging of pageranks.
+
+```
+kgtk graph_statistics \
+     -i examples/docs/graph-statistics-file1.tsv \
+     --log-file summary.txt \
+     --output-statistics-only \
+     --compute-pagerank False
+```
+
+The output (printed to stdout by default) is as follows:
+
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| john | vertex_in_degree | 0 | john-vertex_in_degree-0 |
+| john | vertex_out_degree | 2 | john-vertex_out_degree-1 |
+| john | vertex_hubs | 0.0 | john-vertex_hubs-2 |
+| john | vertex_auth | 9.536743164058163e-07 | john-vertex_auth-3 |
+| 12345 | vertex_in_degree | 1 | 12345-vertex_in_degree-4 |
+| 12345 | vertex_out_degree | 0 | 12345-vertex_out_degree-5 |
+| 12345 | vertex_hubs | 9.536743164053826e-07 | 12345-vertex_hubs-6 |
+| 12345 | vertex_auth | 0.0 | 12345-vertex_auth-7 |
+| 12346 | vertex_in_degree | 1 | 12346-vertex_in_degree-8 |
+| 12346 | vertex_out_degree | 0 | 12346-vertex_out_degree-9 |
+| 12346 | vertex_hubs | 9.536743164053826e-07 | 12346-vertex_hubs-10 |
+| 12346 | vertex_auth | 0.0 | 12346-vertex_auth-11 |
+| peter | vertex_in_degree | 0 | peter-vertex_in_degree-12 |
+| peter | vertex_out_degree | 2 | peter-vertex_out_degree-13 |
+| peter | vertex_hubs | 0.0 | peter-vertex_hubs-14 |
+| peter | vertex_auth | 0.9999999999995453 | peter-vertex_auth-15 |
+| 12040 | vertex_in_degree | 2 | 12040-vertex_in_degree-16 |
+| 12040 | vertex_out_degree | 0 | 12040-vertex_out_degree-17 |
+| 12040 | vertex_hubs | 0.9999999999990905 | 12040-vertex_hubs-18 |
+| 12040 | vertex_auth | 0.0 | 12040-vertex_auth-19 |
+| steve | vertex_in_degree | 0 | steve-vertex_in_degree-20 |
+| steve | vertex_out_degree | 1 | steve-vertex_out_degree-21 |
+| steve | vertex_hubs | 0.0 | steve-vertex_hubs-22 |
+| steve | vertex_auth | 9.094947017725146e-13 | steve-vertex_auth-23 |
+| 45601 | vertex_in_degree | 1 | 45601-vertex_in_degree-24 |
+| 45601 | vertex_out_degree | 0 | 45601-vertex_out_degree-25 |
+| 45601 | vertex_hubs | 9.094947017721011e-13 | 45601-vertex_hubs-26 |
+| 45601 | vertex_auth | 0.0 | 45601-vertex_auth-27 |
+
+### Example: Suppress HITS
+
+Supress the computation and logging of HITS.
+
+```
+kgtk graph_statistics \
+     -i examples/docs/graph-statistics-file1.tsv \
+     --log-file summary.txt \
+     --output-statistics-only \
+     --compute-hits False
 ```
 
 The output (printed to stdout by default) is as follows:
@@ -147,10 +372,82 @@ The output (printed to stdout by default) is as follows:
 | 45601 | vertex_out_degree | 0 | 45601-vertex_out_degree-19 |
 | 45601 | vertex_pagerank | 0.19371608066233506 | 45601-vertex_pagerank-20 |
 
-Note that the statistics are printed as edges. Also, the original
-graph is not printed because we set the flag `statistics-only`.
+!!! Note
+    HITS will not be computed if the graph is undirected (`--undirected True`).
 
-We also stored a summary of our metrics in `summary.txt`.
+### Example: Suppress In-degrees and Out-degrees Edges
+
+Suppress the generation of in-degrees and out-degrees edges.
+
+```
+kgtk graph_statistics \
+     -i examples/docs/graph-statistics-file1.tsv \
+     --log-file summary.txt \
+     --output-statistics-only \
+     --output-degrees False
+```
+
+The output (printed to stdout by default) is as follows:
+
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| john | vertex_pagerank | 0.10471144347252878 | john-vertex_pagerank-0 |
+| john | vertex_hubs | 0.0 | john-vertex_hubs-1 |
+| john | vertex_auth | 9.536743164058163e-07 | john-vertex_auth-2 |
+| 12345 | vertex_pagerank | 0.14921376206743192 | 12345-vertex_pagerank-3 |
+| 12345 | vertex_hubs | 9.536743164053826e-07 | 12345-vertex_hubs-4 |
+| 12345 | vertex_auth | 0.0 | 12345-vertex_auth-5 |
+| 12346 | vertex_pagerank | 0.14921376206743192 | 12346-vertex_pagerank-6 |
+| 12346 | vertex_hubs | 9.536743164053826e-07 | 12346-vertex_hubs-7 |
+| 12346 | vertex_auth | 0.0 | 12346-vertex_auth-8 |
+| peter | vertex_pagerank | 0.10471144347252878 | peter-vertex_pagerank-9 |
+| peter | vertex_hubs | 0.0 | peter-vertex_hubs-10 |
+| peter | vertex_auth | 0.9999999999995453 | peter-vertex_auth-11 |
+| 12040 | vertex_pagerank | 0.1937160806623351 | 12040-vertex_pagerank-12 |
+| 12040 | vertex_hubs | 0.9999999999990905 | 12040-vertex_hubs-13 |
+| 12040 | vertex_auth | 0.0 | 12040-vertex_auth-14 |
+| steve | vertex_pagerank | 0.10471144347252878 | steve-vertex_pagerank-15 |
+| steve | vertex_hubs | 0.0 | steve-vertex_hubs-16 |
+| steve | vertex_auth | 9.094947017725146e-13 | steve-vertex_auth-17 |
+| 45601 | vertex_pagerank | 0.19371608066233506 | 45601-vertex_pagerank-18 |
+| 45601 | vertex_hubs | 9.094947017721011e-13 | 45601-vertex_hubs-19 |
+| 45601 | vertex_auth | 0.0 | 45601-vertex_auth-20 |
+
+### Example: Compute Pageranks and HITS, but Suppress Pagerank and HITS Edges
+
+Compute pageranks and HITS by default, but suppress generating output edges for
+them.
+
+```
+kgtk graph_statistics \
+     -i examples/docs/graph-statistics-file1.tsv \
+     --log-file summary.txt \
+     --output-statistics-only \
+     --output-properties False
+```
+
+The output (printed to stdout by default) is as follows:
+
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| john | vertex_in_degree | 0 | john-vertex_in_degree-0 |
+| john | vertex_out_degree | 2 | john-vertex_out_degree-1 |
+| 12345 | vertex_in_degree | 1 | 12345-vertex_in_degree-2 |
+| 12345 | vertex_out_degree | 0 | 12345-vertex_out_degree-3 |
+| 12346 | vertex_in_degree | 1 | 12346-vertex_in_degree-4 |
+| 12346 | vertex_out_degree | 0 | 12346-vertex_out_degree-5 |
+| peter | vertex_in_degree | 0 | peter-vertex_in_degree-6 |
+| peter | vertex_out_degree | 2 | peter-vertex_out_degree-7 |
+| 12040 | vertex_in_degree | 2 | 12040-vertex_in_degree-8 |
+| 12040 | vertex_out_degree | 0 | 12040-vertex_out_degree-9 |
+| steve | vertex_in_degree | 0 | steve-vertex_in_degree-10 |
+| steve | vertex_out_degree | 1 | steve-vertex_out_degree-11 |
+| 45601 | vertex_in_degree | 1 | 45601-vertex_in_degree-12 |
+| 45601 | vertex_out_degree | 0 | 45601-vertex_out_degree-13 |
+
+!!! Note
+    At this time, it is not possible to suppress the genration of
+    just pageranks or just HITS edges.
 
 ### Example: `--undirected true` vs. `--undirected false`
 
@@ -206,13 +503,11 @@ as directed (the default), focusing on the results for `Q5`:
 ```bash
 kgtk graph-statistics \
     -i examples/docs/graph-statistics-file2.tsv \
-    --pagerank True \
-    --hits False \
     --undirected False \
     --page-rank-property Ppagerank \
     --vertex-in-degree-property Pindegree \
     --vertex-out-degree-property Poutdegree \
-    --statistics-only True \
+    --output-statistics-only True \
     / filter -p 'Q5;;'
 ```
 | node1 | label | node2 | id |
@@ -220,6 +515,8 @@ kgtk graph-statistics \
 | Q5 | Pindegree | 20 | Q5-Pindegree-0 |
 | Q5 | Poutdegree | 5 | Q5-Poutdegree-1 |
 | Q5 | Ppagerank | 0.30874598028371614 | Q5-Ppagerank-2 |
+| Q5 | vertex_hubs | 0.9999999999999911 | Q5-vertex_hubs-3 |
+| Q5 | vertex_auth | 1.3328003749250113e-08 | Q5-vertex_auth-4 |
 
 Now, let's compute statistics on this file treating the
 edges as undirected (bidirectional):
@@ -227,13 +524,11 @@ edges as undirected (bidirectional):
 ```bash
 kgtk graph-statistics \
     -i examples/docs/graph-statistics-file2.tsv \
-    --pagerank True \
-    --hits False \
     --undirected True \
     --page-rank-property Ppagerank \
     --vertex-in-degree-property Pindegree \
     --vertex-out-degree-property Poutdegree \
-    --statistics-only True \
+    --output-statistics-only True \
     / filter -p 'Q5;;'
 ```
 | node1 | label | node2 | id |
