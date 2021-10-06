@@ -40,6 +40,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         help='Is the graph undirected? If false, then the graph is ' +
                         ' treated as (node1)->(node2).  If true, then the graph is ' +
                         ' treated as (node1)<->(node2). ' +
+                        '\nAlso, HITS will not be computed on undirected graphs. ' +
                         '\n(default=%(default)s)',
                         type=optional_bool, nargs='?', const=True, default=False, metavar='True|False')
 
@@ -51,7 +52,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         type=optional_bool, nargs='?', const=True, default=True, metavar='True|False')
                         
     parser.add_argument('--compute-hits', dest='compute_hits',
-                        help='Whether or not to compute the HITS properties. (default=%(default)s)',
+                        help='Whether or not to compute the HITS properties.  Note: HITS will not be compued on undirected graphs. (default=%(default)s)',
                         type=optional_bool, nargs='?', const=True, default=True, metavar='True|False')
 
     parser.add_argument('--output-statistics-only', dest='output_statistics_only',
@@ -165,12 +166,6 @@ def run(input_file: KGTKFiles,
     from kgtk.io.kgtkwriter import KgtkWriter
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
-    if log_top_pageranks and not compute_pagerank:
-        raise KGTKException("--log-pagerank requires --compute-pagerank")
-
-    if log_top_hits and not compute_hits:
-        raise KGTKException("--log-top-hits requires --compute-hits")
-
     try:
 
         # Select where to send error messages, defaulting to stderr.
@@ -224,11 +219,13 @@ def run(input_file: KGTKFiles,
             centrality.pagerank(G2, prop=v_pr)
             G2.properties[('v', vertex_pagerank)] = v_pr
 
-        if compute_hits:
+        if compute_hits and not undirected:
             if verbose:
                 print('Computing HITS.', file=error_file, flush=True)
             hits_eig, G2.vp[vertex_hubs], G2.vp[vertex_auth] = gtanalysis.compute_hits(G2)
 
+        if verbose:
+            print('Opening the output file: %s' % repr(str(output_kgtk_file)), file=error_file, flush=True)
         kw: KgtkWriter = KgtkWriter.open(output_columns,
                                      output_kgtk_file,
                                      mode=KgtkWriter.Mode.EDGE,
@@ -287,14 +284,14 @@ def run(input_file: KGTKFiles,
                     writer.write(
                         '%s degree stats: mean=%f, std=%f, max=%d\n' % (direction, mean_degree, std_degree, max_degree))
 
-            if log_top_pageranks:
+            if log_top_pageranks and compute_pagerank:
                 writer.write('\n###PageRank\n')
                 writer.write('Max pageranks\n')
                 result = gtanalysis.get_topn_indices(G2, vertex_pagerank, top_n, id_col)
                 for n_id, n_label, pr in result:
                     writer.write('%s\t%s\t%f\n' % (n_id, n_label, pr))
 
-            if log_top_hits:
+            if log_top_hits and compute_hits and not undirected:
                 writer.write('\n###HITS\n')
                 writer.write('HITS hubs\n')
                 main_hubs = gtanalysis.get_topn_indices(G2, vertex_hubs, top_n, id_col)
