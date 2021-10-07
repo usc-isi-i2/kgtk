@@ -66,7 +66,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               type=str, nargs='+')
 
     parser.add_argument(      "--no-output-header", dest="no_output_header", metavar="True|False",
-                              help="When true, do not write a header to the output file (default=%(default)s).",
+                              help=h("When true, do not write a header to the output file (default=%(default)s)."),
                               type=optional_bool, nargs='?', const=True, default=False)
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
