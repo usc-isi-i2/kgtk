@@ -198,15 +198,15 @@ cat summary.txt
 ~~~
 graph loaded! It has 7 nodes and 5 edges
 
-###Top relations:
+*** Top relations:
 zipcode	5
 
-###Degrees:
+*** Degrees:
 in degree stats: mean=0.714286, std=0.264520, max=1
 out degree stats: mean=0.714286, std=0.332847, max=1
 total degree stats: mean=1.428571, std=0.187044, max=1
 
-###PageRank
+*** PageRank
 Max pageranks
 4	12040	0.193716
 6	45601	0.193716
@@ -214,7 +214,7 @@ Max pageranks
 2	12346	0.149214
 5	steve	0.104711
 
-###HITS
+*** HITS
 HITS hubs
 4	12040	1.000000
 1	12345	0.000001
@@ -290,15 +290,15 @@ cat summary.txt
 ~~~
 graph loaded! It has 7 nodes and 5 edges
 
-###Top relations:
+*** Top relations:
 zipcode	5
 
-###Degrees:
+*** Degrees:
 in degree stats: mean=0.714286, std=0.264520, max=1
 out degree stats: mean=0.714286, std=0.332847, max=1
 total degree stats: mean=1.428571, std=0.187044, max=1
 
-###PageRank
+*** PageRank
 Max pageranks
 4	12040	0.193716
 6	45601	0.193716
@@ -306,7 +306,7 @@ Max pageranks
 2	12346	0.149214
 5	steve	0.104711
 
-###HITS
+*** HITS
 HITS hubs
 4	12040	1.000000
 1	12345	0.000001
@@ -320,6 +320,7 @@ HITS auth
 4	12040	0.000000
 6	45601	0.000000
 ~~~
+
 ### Example: Rename the Output Relationships
 
 ```
@@ -381,15 +382,15 @@ cat summary.txt
 ~~~
 graph loaded! It has 7 nodes and 5 edges
 
-###Top relations:
+*** Top relations:
 zipcode	5
 
-###Degrees:
+*** Degrees:
 in degree stats: mean=0.714286, std=0.264520, max=1
 out degree stats: mean=0.714286, std=0.332847, max=1
 total degree stats: mean=1.428571, std=0.187044, max=1
 
-###PageRank
+*** PageRank
 Max pageranks
 4	12040	0.193716
 6	45601	0.193716
@@ -397,7 +398,7 @@ Max pageranks
 2	12346	0.149214
 5	steve	0.104711
 
-###HITS
+*** HITS
 HITS hubs
 4	12040	1.000000
 1	12345	0.000001
@@ -466,15 +467,15 @@ cat summary.txt
 ~~~
 graph loaded! It has 7 nodes and 5 edges
 
-###Top relations:
+*** Top relations:
 zipcode	5
 
-###Degrees:
+*** Degrees:
 in degree stats: mean=0.714286, std=0.264520, max=1
 out degree stats: mean=0.714286, std=0.332847, max=1
 total degree stats: mean=1.428571, std=0.187044, max=1
 
-###HITS
+*** HITS
 HITS hubs
 4	12040	1.000000
 1	12345	0.000001
@@ -536,15 +537,15 @@ cat summary.txt
 ~~~
 graph loaded! It has 7 nodes and 5 edges
 
-###Top relations:
+*** Top relations:
 zipcode	5
 
-###Degrees:
+*** Degrees:
 in degree stats: mean=0.714286, std=0.264520, max=1
 out degree stats: mean=0.714286, std=0.332847, max=1
 total degree stats: mean=1.428571, std=0.187044, max=1
 
-###PageRank
+*** PageRank
 Max pageranks
 4	12040	0.193716
 6	45601	0.193716
@@ -603,15 +604,15 @@ cat summary.txt
 ~~~
 graph loaded! It has 7 nodes and 5 edges
 
-###Top relations:
+*** Top relations:
 zipcode	5
 
-###Degrees:
+*** Degrees:
 in degree stats: mean=0.714286, std=0.264520, max=1
 out degree stats: mean=0.714286, std=0.332847, max=1
 total degree stats: mean=1.428571, std=0.187044, max=1
 
-###PageRank
+*** PageRank
 Max pageranks
 4	12040	0.193716
 6	45601	0.193716
@@ -619,7 +620,7 @@ Max pageranks
 2	12346	0.149214
 5	steve	0.104711
 
-###HITS
+*** HITS
 HITS hubs
 4	12040	1.000000
 1	12345	0.000001
@@ -676,15 +677,15 @@ cat summary.txt
 ~~~
 graph loaded! It has 7 nodes and 5 edges
 
-###Top relations:
+*** Top relations:
 zipcode	5
 
-###Degrees:
+*** Degrees:
 in degree stats: mean=0.714286, std=0.264520, max=1
 out degree stats: mean=0.714286, std=0.332847, max=1
 total degree stats: mean=1.428571, std=0.187044, max=1
 
-###PageRank
+*** PageRank
 Max pageranks
 4	12040	0.193716
 6	45601	0.193716
@@ -692,7 +693,7 @@ Max pageranks
 2	12346	0.149214
 5	steve	0.104711
 
-###HITS
+*** HITS
 HITS hubs
 4	12040	1.000000
 1	12345	0.000001
@@ -707,9 +708,84 @@ HITS auth
 6	45601	0.000000
 ~~~
 
-!!! Note
-    At this time, it is not possible to suppress the genration of
-    just pageranks or just HITS edges.
+### Example: Limit the Log FIle
+
+Compute pageranks and HITS, generating edges in the output file, but
+do not report HITS in the log file:
+
+```
+kgtk graph_statistics \
+     -i examples/docs/graph-statistics-file1.tsv \
+     --log-file summary.txt \
+     --output-statistics-only \
+     --log-top-hits False
+```
+
+The output (printed to stdout by default) is as follows:
+
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| john | vertex_in_degree | 0 | john-vertex_in_degree-0 |
+| john | vertex_out_degree | 2 | john-vertex_out_degree-1 |
+| john | vertex_pagerank | 0.10471144347252878 | john-vertex_pagerank-2 |
+| john | vertex_auth | 9.536743164058163e-07 | john-vertex_auth-3 |
+| john | vertex_hubs | 0.0 | john-vertex_hubs-4 |
+| 12345 | vertex_in_degree | 1 | 12345-vertex_in_degree-5 |
+| 12345 | vertex_out_degree | 0 | 12345-vertex_out_degree-6 |
+| 12345 | vertex_pagerank | 0.14921376206743192 | 12345-vertex_pagerank-7 |
+| 12345 | vertex_auth | 0.0 | 12345-vertex_auth-8 |
+| 12345 | vertex_hubs | 9.536743164053826e-07 | 12345-vertex_hubs-9 |
+| 12346 | vertex_in_degree | 1 | 12346-vertex_in_degree-10 |
+| 12346 | vertex_out_degree | 0 | 12346-vertex_out_degree-11 |
+| 12346 | vertex_pagerank | 0.14921376206743192 | 12346-vertex_pagerank-12 |
+| 12346 | vertex_auth | 0.0 | 12346-vertex_auth-13 |
+| 12346 | vertex_hubs | 9.536743164053826e-07 | 12346-vertex_hubs-14 |
+| peter | vertex_in_degree | 0 | peter-vertex_in_degree-15 |
+| peter | vertex_out_degree | 2 | peter-vertex_out_degree-16 |
+| peter | vertex_pagerank | 0.10471144347252878 | peter-vertex_pagerank-17 |
+| peter | vertex_auth | 0.9999999999995453 | peter-vertex_auth-18 |
+| peter | vertex_hubs | 0.0 | peter-vertex_hubs-19 |
+| 12040 | vertex_in_degree | 2 | 12040-vertex_in_degree-20 |
+| 12040 | vertex_out_degree | 0 | 12040-vertex_out_degree-21 |
+| 12040 | vertex_pagerank | 0.1937160806623351 | 12040-vertex_pagerank-22 |
+| 12040 | vertex_auth | 0.0 | 12040-vertex_auth-23 |
+| 12040 | vertex_hubs | 0.9999999999990905 | 12040-vertex_hubs-24 |
+| steve | vertex_in_degree | 0 | steve-vertex_in_degree-25 |
+| steve | vertex_out_degree | 1 | steve-vertex_out_degree-26 |
+| steve | vertex_pagerank | 0.10471144347252878 | steve-vertex_pagerank-27 |
+| steve | vertex_auth | 9.094947017725146e-13 | steve-vertex_auth-28 |
+| steve | vertex_hubs | 0.0 | steve-vertex_hubs-29 |
+| 45601 | vertex_in_degree | 1 | 45601-vertex_in_degree-30 |
+| 45601 | vertex_out_degree | 0 | 45601-vertex_out_degree-31 |
+| 45601 | vertex_pagerank | 0.19371608066233506 | 45601-vertex_pagerank-32 |
+| 45601 | vertex_auth | 0.0 | 45601-vertex_auth-33 |
+| 45601 | vertex_hubs | 9.094947017721011e-13 | 45601-vertex_hubs-34 |
+
+Here is what's written to the log file, `summary.txt`:
+
+```
+cat summary.txt
+```
+
+~~~
+graph loaded! It has 7 nodes and 5 edges
+
+*** Top relations:
+zipcode	5
+
+*** Degrees:
+in degree stats: mean=0.714286, std=0.264520, max=1
+out degree stats: mean=0.714286, std=0.332847, max=1
+total degree stats: mean=1.428571, std=0.187044, max=1
+
+*** PageRank
+Max pageranks
+4	12040	0.193716
+6	45601	0.193716
+1	12345	0.149214
+2	12346	0.149214
+5	steve	0.104711
+~~~
 
 ### Example: `--undirected true` vs. `--undirected false`
 
@@ -789,18 +865,18 @@ cat summary.txt
 ~~~
 graph loaded! It has 26 nodes and 25 edges
 
-###Top relations:
+*** Top relations:
 P31	19
 P1343	4
 P1056	1
 P279	1
 
-###Degrees:
+*** Degrees:
 in degree stats: mean=0.961538, std=0.750701, max=1
 out degree stats: mean=0.961538, std=0.176091, max=1
 total degree stats: mean=1.923077, std=0.905151, max=1
 
-###PageRank
+*** PageRank
 Max pageranks
 0	Q5	0.308746
 2	Q19180675	0.069639
@@ -808,7 +884,7 @@ Max pageranks
 4	Q4086271	0.069639
 5	Q4173137	0.069639
 
-###HITS
+*** HITS
 HITS hubs
 0	Q5	1.000000
 2	Q19180675	0.000000
@@ -851,18 +927,18 @@ cat summary.txt
 ~~~
 graph loaded! It has 26 nodes and 25 edges
 
-###Top relations:
+*** Top relations:
 P31	19
 P1343	4
 P1056	1
 P279	1
 
-###Degrees:
+*** Degrees:
 in degree stats: mean=0.000000, std=0.000000, max=1
 out degree stats: mean=1.923077, std=0.905151, max=1
 total degree stats: mean=1.923077, std=0.905151, max=1
 
-###PageRank
+*** PageRank
 Max pageranks
 0	Q5	0.462575
 10	Q100153956	0.021497
