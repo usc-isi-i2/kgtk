@@ -54,7 +54,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         type=optional_bool, nargs='?', const=True, default=True, metavar='True|False')
                         
     parser.add_argument('--compute-hits', dest='compute_hits',
-                        help='Whether or not to compute the HITS properties.  Note: HITS will not be compued on undirected graphs. (default=%(default)s)',
+                        help='Whether or not to compute the HITS properties. ' +
+                        '\nNote: --undirected disables HITS calculation. (default=%(default)s)',
                         type=optional_bool, nargs='?', const=True, default=True, metavar='True|False')
 
     parser.add_argument('--output-statistics-only', dest='output_statistics_only',
