@@ -214,7 +214,7 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
     if len(output) == 0:
         pass # No standard output
     
-    if output.startswith(MD_SIGIL):
+    elif output.startswith(MD_SIGIL):
         # Process Markdown output.
         if auto_display_md:
             display(Markdown(output))
