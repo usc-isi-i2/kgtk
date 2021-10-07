@@ -63,7 +63,7 @@ class EmbeddingVector:
     
     def retry_next_gpu(self, error):
         self.selected_gpu_device_index += 1
-        if self.selected_gpu_device_index == self.total_gpu_count:
+        if self.selected_gpu_device_index >= self.total_gpu_count:
             self._logger.error("Attempted task on all available GPUs")
             raise error
         else:
