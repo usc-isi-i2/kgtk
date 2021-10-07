@@ -40,6 +40,8 @@ class KgtkCat():
                                                                                  iterable_validator=attr.validators.instance_of(list))),
                 default=None)
 
+    no_output_header: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
     # TODO: find working validators:
     reader_options: typing.Optional[KgtkReaderOptions] = attr.ib(default=None)
     # value_options: typing.Optional[KgtkValueOptions] = attr.ib(attr.validators.optional(attr.validators.instance_of(KgtkValueOptions)), default=None)
@@ -169,6 +171,7 @@ class KgtkCat():
                                          output_column_names=self.output_column_names,
                                          old_column_names=self.old_column_names,
                                          new_column_names=self.new_column_names,
+                                         no_header=self.no_output_header,
                                          error_file=self.error_file,
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)
