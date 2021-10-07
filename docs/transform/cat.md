@@ -158,7 +158,7 @@ selection extensions, e.g. `.kgtk.gz`, `.csv.gz`, `.json.bz2`.
 
 ```bash
 usage: kgtk cat [-h] [-i INPUT_FILE [INPUT_FILE ...]] [-o OUTPUT_FILE]
-                [--output-format {csv,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}]
+                [--output-format {csv,html,html-compact,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,table,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}]
                 [-v [optional True|False]]
 
 Concatenate two or more KGTK files, merging the columns appropriately. All files must be KGTK edge files or all files must be KGTK node files (unless overridden with --mode=NONE). 
@@ -173,7 +173,7 @@ optional arguments:
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
                         The KGTK output file. (May be omitted or '-' for
                         stdout.)
-  --output-format {csv,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}
+  --output-format {csv,html,html-compact,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,table,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}
                         The file format (default=kgtk)
 
   -v [optional True|False], --verbose [optional True|False]
@@ -685,14 +685,42 @@ kgtk cat --implied-label=founded -i examples/docs/cat-two-columns.tsv
 
 | node1 | node2 | label |
 | -- | -- | -- |
-| Boston | 1630 | founded |
-| Concord | 1635 | founded |
-| Scituate | 1636 | founded |
-| Springfield | 1636 | founded |
-| Cambridge | 1638 | founded |
-| Lexington | 1642 | founded |
-| Worcester | 1673 | founded |
+| Boston | 1630 |  |
+| Concord | 1635 |  |
+| Scituate | 1636 |  |
+| Springfield | 1636 |  |
+| Cambridge | 1638 |  |
+| Lexington | 1642 |  |
+| Worcester | 1673 |  |
 
 !!! note
     The `--implied-label=VALUE` option is implemented by KgtkReader, and
     can be used with most KGTK subcommands.
+
+### Expert Example: Supressing the Output Header
+
+Sometimes it is desired to produce a TSV file without an output header.
+
+kgtk cat -i examples/docs/movies_reduced.tsv --no-output-header
+
+The result will be the following file in KGTK format except
+for missing the header line.
+
+| t1 | terminator | label | 'The Terminator'@en |
+| t2 | terminator | instance_of | film |
+| t3 | terminator | genre | action |
+| t4 | terminator | genre | science_fiction |
+| t5 | terminator | publication_date | ^1984-10-26T00:00:00Z/11 |
+| t6 | t5 | location | united_states |
+| t7 | terminator | publication_date | ^1985-02-08T00:00:00Z/11 |
+| t8 | t7 | location | sweden |
+| t9 | terminator | director | james_cameron |
+| t10 | terminator | cast | arnold_schwarzenegger |
+| t11 | t10 | role | terminator |
+| t12 | terminator | cast | michael_biehn |
+| t13 | t12 | role | kyle_reese |
+| t14 | terminator | cast | linda_hamilton |
+| t15 | t14 | role | sarah_connor |
+| t16 | terminator | duration | 108 |
+| t17 | terminator | award | national_film_registry |
+| t18 | t17 | point_in_time | ^2008-01-01T00:00:00Z/9 |

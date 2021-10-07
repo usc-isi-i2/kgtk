@@ -298,7 +298,7 @@ Using kgtk format to generate graph embeddings
 kgtk graph-embeddings 
     --input-file input_file.tsv \
     --output-file output_file.tsv \
-    --output_format kgtk
+    --output_format kgtk --no-output-headers
 ```
 
 The `output_file.tsv` may look like:
