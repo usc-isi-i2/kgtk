@@ -226,7 +226,7 @@ class KgtkValueOptions:
                                   type=optional_bool, nargs='?', const=True, **d(default=False))
 
         vgroup.add_argument(      prefix1 + "validate-fromisoformat", dest=prefix2 + "validate_fromisoformat",
-                                  help=h(prefix3 + "Validate that datetim.fromisoformat(...) can parse this date and time. " +
+                                  help=h(prefix3 + "Validate that datetime.fromisoformat(...) can parse this date and time. " +
                                          "This checks that the year/month/day combination is valid.  " +
                                          "The year must be in the range 1..9999, inclusive. (default=%(default)s)."),
                                   type=optional_bool, nargs='?', const=True, **d(default=False))
