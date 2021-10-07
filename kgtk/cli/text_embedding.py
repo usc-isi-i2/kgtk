@@ -33,7 +33,8 @@ ALL_EMBEDDING_MODELS_NAMES = [
     "roberta-base-nli-mean-tokens",
     "roberta-base-nli-stsb-mean-tokens",
     "roberta-large-nli-mean-tokens",
-    "roberta-large-nli-stsb-mean-tokens"
+    "roberta-large-nli-stsb-mean-tokens",
+    "sentence-transformers/all-distilroberta-v1"
 ]
 
 

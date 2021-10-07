@@ -23,6 +23,7 @@ from SPARQLWrapper import SPARQLWrapper, JSON, POST, URLENCODED  # type: ignore
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 from kgtk.kgtkformat import KgtkFormat
+import torch
 
 
 class EmbeddingVector:
@@ -57,6 +58,17 @@ class EmbeddingVector:
         self.gt_indexes = set()
         self.input_format = ""
         self.token_pattern = re.compile(r"(?u)\b\w\w+\b")
+        self.selected_gpu_device_index = 0
+        self.total_gpu_count = torch.cuda.device_count()
+    
+    def retry_next_gpu(self, error):
+        self.selected_gpu_device_index += 1
+        if self.selected_gpu_device_index == self.total_gpu_count:
+            self._logger.error("Attempted task on all available GPUs")
+            raise error
+        else:
+            self.model = SentenceTransformer(self.model_name, device = ('cuda:' + str(self.selected_gpu_device_index)))
+            self._logger.debug(f"Reattempting task on GPU device: {('cuda:' + str(self.selected_gpu_device_index))}")
 
     def get_sentences_embedding(self, sentences: typing.List[str], qnodes: typing.List[str]):
         """
@@ -78,7 +90,14 @@ class EmbeddingVector:
                     sentence_embeddings.extend(each_embedding)
                     self.redis_server.set(query_cache_key, str(each_embedding[0].tolist()))
         else:
-            sentence_embeddings = self.model.encode(sentences, show_progress_bar=False)
+            while True: 
+                # Re-attempt executing the model on a different GPU until all GPU's have been tried
+                try:
+                    sentence_embeddings = self.model.encode(sentences, show_progress_bar=True)
+                    break # If there is no error, this will break the loop and return the results
+                except RuntimeError as e:
+                    self.retry_next_gpu(e)
+
         return sentence_embeddings
 
     def send_sparql_query(self, query_body: str):
@@ -607,16 +626,35 @@ class EmbeddingVector:
         """
             main function to get the vector representations of the descriptions
         """
+        # if self._parallel_count == 1:
+        #     start_all = time.time()
+        #     self._logger.info("Now generating embedding vector.")
+        #     for q_node, each_item in tqdm(self.candidates.items()):
+        #         # do process for each row(one target)
+        #         sentence = each_item["sentence"]
+        #         if isinstance(sentence, bytes):
+        #             sentence = sentence.decode("utf-8")
+        #         vectors = self.get_sentences_embedding([sentence], [q_node])
+        #         self.vectors_map[q_node] = vectors[0]
+        #     self._logger.info("Totally used {} seconds.".format(str(time.time() - start_all)))
+        # else:
+        #     # Skip get vector function because we already get them
+        #     pass
         if self._parallel_count == 1:
             start_all = time.time()
             self._logger.info("Now generating embedding vector.")
-            for q_node, each_item in tqdm(self.candidates.items()):
+            sentences = []
+            qnodes = []
+            for q_node, each_item in self.candidates.items():
                 # do process for each row(one target)
                 sentence = each_item["sentence"]
                 if isinstance(sentence, bytes):
                     sentence = sentence.decode("utf-8")
-                vectors = self.get_sentences_embedding([sentence], [q_node])
-                self.vectors_map[q_node] = vectors[0]
+                sentences.append(sentence)
+                qnodes.append(q_node)
+            vectors = self.get_sentences_embedding(sentences, qnodes)
+            for q_node, vector in zip(qnodes, vectors):
+                self.vectors_map[q_node] = vector
             self._logger.info("Totally used {} seconds.".format(str(time.time() - start_all)))
         else:
             # Skip get vector function because we already get them
