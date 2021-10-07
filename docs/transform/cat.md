@@ -685,13 +685,13 @@ kgtk cat --implied-label=founded -i examples/docs/cat-two-columns.tsv
 
 | node1 | node2 | label |
 | -- | -- | -- |
-| Boston | 1630 |  |
-| Concord | 1635 |  |
-| Scituate | 1636 |  |
-| Springfield | 1636 |  |
-| Cambridge | 1638 |  |
-| Lexington | 1642 |  |
-| Worcester | 1673 |  |
+| Boston | 1630 | founded |
+| Concord | 1635 | founded |
+| Scituate | 1636 | founded |
+| Springfield | 1636 | founded |
+| Cambridge | 1638 | founded |
+| Lexington | 1642 | founded |
+| Worcester | 1673 | founded |
 
 !!! note
     The `--implied-label=VALUE` option is implemented by KgtkReader, and

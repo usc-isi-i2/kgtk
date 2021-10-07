@@ -71,6 +71,7 @@ class DocUpdater():
     """
 
     kgtk_command: str = attr.ib(validator=attr.validators.instance_of(str), default="kgtk")
+    format_command: str = attr.ib(validator=attr.validators.instance_of(str), default="md")
 
     process_usage: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
     update_usage: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
@@ -443,7 +444,8 @@ class DocUpdater():
                 stdout_block_begin, stdout_block_end = self.find_stdout_block(lines, current_idx)
 
             if table_begin >= 0:
-                command += " / md"
+                if command.startswith(self.kgtk_command + ' '):
+                    command += " / " + self.format_command
                 if self.verbose:
                     print("\nGetting new table lines for:\n%s" % command, file=self.error_file, flush=True)
             else:
@@ -548,6 +550,7 @@ def main():
     parser.add_argument("--md-files", dest="md_files", help="The .md files to be updated.", type=Path, nargs='+')
 
     parser.add_argument("--kgtk-command", dest="kgtk_command", help="The kgtk command (default %(default)s).", type=str, default="kgtk")
+    parser.add_argument("--format-command", dest="format_command", help="The formatting command (default %(default)s).", type=str, default="md")
 
     parser.add_argument("--process-usage", dest="process_usage", metavar="optional True|False",
                         help="Process the ## Usage section (default=%(default)s).",
@@ -573,6 +576,7 @@ def main():
     if args.show_options:
         print("--md-files %s" % " ".join([repr(str(x)) for x in args.md_files]), file=error_file, flush=True)
         print("--kgtk-command=%s" % repr(args.kgtk_command), file=error_file, flush=True)
+        print("--format-command=%s" % repr(args.format_command), file=error_file, flush=True)
         print("--process-usage=%s" % repr(args.process_usage), file=error_file, flush=True)
         print("--update-usage=%s" % repr(args.update_usage), file=error_file, flush=True)
         print("--process-examples=%s" % repr(args.process_examples), file=error_file, flush=True)
@@ -581,6 +585,7 @@ def main():
         print("--very-verbose=%s" % repr(args.very_verbose), file=error_file, flush=True)
 
     du: DocUpdater = DocUpdater(kgtk_command=args.kgtk_command,
+                                format_command=args.format_command,
                                 process_usage=args.process_usage,
                                 update_usage=args.update_usage,
                                 process_examples=args.process_examples,
