@@ -110,6 +110,8 @@ class DocUpdater():
         current_idx: int = start_idx
         begin_idx: int = -1
         line: str
+        if self.very_verbose:
+            print("find_block beginning search at index %s" % current_idx, file=self.error_file, flush=True)
         while current_idx < len(lines):
             line = lines[current_idx]
             if stop_at_next_section and line.startswith("#"):
@@ -156,6 +158,8 @@ class DocUpdater():
         current_idx: int = start_idx
         begin_idx: int = -1
         line: str
+        if self.very_verbose:
+            print("find_table beginning search at index %s" % current_idx, file=self.error_file, flush=True)
         while current_idx < len(lines):
             line = lines[current_idx]
             if stop_at_next_section and line.startswith("#"):
@@ -273,6 +277,8 @@ class DocUpdater():
         current_idx: int = start_idx
         begin_idx: int = -1
         line: str
+        if self.very_verbose:
+            print("find_code beginning search at index %s" % current_idx, file=self.error_file, flush=True)
         while current_idx < len(lines):
             line = lines[current_idx]
             if stop_at_next_section and line.startswith("#"):
