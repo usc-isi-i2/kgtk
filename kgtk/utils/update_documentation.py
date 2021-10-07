@@ -169,6 +169,8 @@ class DocUpdater():
             if line.startswith("|"):
                 begin_idx = current_idx
                 break
+
+            # TODO: Review this suspicious-looking code:
             if len(line.strip()) < 0 and not skip_text:
                 if self.very_verbose:
                     print("find_table begin search found unexpected text at index %d" % current_idx, file=self.error_file, flush=True)
@@ -444,8 +446,7 @@ class DocUpdater():
                 stdout_block_begin, stdout_block_end = self.find_stdout_block(lines, current_idx)
 
             if table_begin >= 0:
-                if command.startswith(self.kgtk_command + ' '):
-                    command += " / " + self.format_command
+                command += " / " + self.format_command
                 if self.verbose:
                     print("\nGetting new table lines for:\n%s" % command, file=self.error_file, flush=True)
             else:
