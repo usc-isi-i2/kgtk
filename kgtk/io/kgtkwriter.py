@@ -155,6 +155,7 @@ class KgtkWriter(KgtkBase):
              output_column_names: typing.Optional[typing.List[str]] = None,
              old_column_names: typing.Optional[typing.List[str]] = None,
              new_column_names: typing.Optional[typing.List[str]] = None,
+             no_header: bool = False,
              verbose: bool = False,
              very_verbose: bool = False)->"KgtkWriter":
 
@@ -185,6 +186,7 @@ class KgtkWriter(KgtkBase):
                               output_column_names=output_column_names,
                               old_column_names=old_column_names,
                               new_column_names=new_column_names,
+                              no_header=no_header,
                               verbose=verbose,
                               very_verbose=very_verbose,
             )
@@ -217,6 +219,7 @@ class KgtkWriter(KgtkBase):
                               output_column_names=output_column_names,
                               old_column_names=old_column_names,
                               new_column_names=new_column_names,
+                              no_header=no_header,
                               verbose=verbose,
                               very_verbose=very_verbose,
             )
@@ -303,6 +306,7 @@ class KgtkWriter(KgtkBase):
                               output_column_names=output_column_names,
                               old_column_names=old_column_names,
                               new_column_names=new_column_names,
+                              no_header=no_header,
                               verbose=verbose,
                               very_verbose=very_verbose,
             )
@@ -346,6 +350,7 @@ class KgtkWriter(KgtkBase):
                               output_column_names=output_column_names,
                               old_column_names=old_column_names,
                               new_column_names=new_column_names,
+                              no_header=no_header,
                               verbose=verbose,
                               very_verbose=very_verbose,
 )
@@ -372,6 +377,7 @@ class KgtkWriter(KgtkBase):
                output_column_names: typing.Optional[typing.List[str]] = None,
                old_column_names: typing.Optional[typing.List[str]] = None,
                new_column_names: typing.Optional[typing.List[str]] = None,
+               no_header: bool = False,
                verbose: bool = False,
                very_verbose: bool = False,
     )->"KgtkWriter":
@@ -487,7 +493,8 @@ class KgtkWriter(KgtkBase):
                              verbose=verbose,
                              very_verbose=very_verbose,
         )
-        kw.write_header()
+        if not no_header:
+            kw.write_header()
         return kw
 
 
