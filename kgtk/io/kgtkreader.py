@@ -1194,7 +1194,9 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                     if self.options.truncate_long_lines and len(row) > self.column_count - 1:
                         row = row[:self.column_count-1]
                         self.data_lines_truncated += 1
-                        row.append(self.options.implied_label)
+
+                # Append the implied label value:
+                row.append(self.options.implied_label)
 
             if repair_and_validate_lines:
                 # Optionally fill missing trailing columns with empty row:
