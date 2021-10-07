@@ -67,8 +67,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         help='Whether or not to write degree edges to the primary output file. (default=%(default)s)',
                         type=optional_bool, nargs='?', const=True, default=True, metavar='True|False')
 
-    parser.add_argument('--output-properties', dest='output_properties',
-                        help='Whether or not to write property edges (e.g., pagerank, HITS) to the primary output file. (default=%(default)s)',
+    parser.add_argument('--output-pagerank', dest='output_pagerank',
+                        help='Whether or not to write pagerank edges to the primary output file. (default=%(default)s)',
+                        type=optional_bool, nargs='?', const=True, default=True, metavar='True|False')
+
+    parser.add_argument('--output-hits', dest='output_hits',
+                        help='Whether or not to write HITS edges to the primary output file. (default=%(default)s)',
                         type=optional_bool, nargs='?', const=True, default=True, metavar='True|False')
 
     parser.add_argument('--log-file', action='store', type=str, dest='log_file',
@@ -134,7 +138,8 @@ def run(input_file: KGTKFiles,
 
         output_statistics_only: bool,
         output_degrees: bool,
-        output_properties: bool,
+        output_pagerank: bool,
+        output_hits: bool,
         
         log_file: str,
         log_degrees_histogram: bool,
@@ -248,7 +253,7 @@ def run(input_file: KGTKFiles,
                 kw.write([G2.vp[id_col][sid], lbl, G2.vp[id_col][oid], '{}-{}-{}'.format(G2.vp[id_col][sid], lbl, id_count)])
                 id_count += 1
 
-        if output_degrees or output_properties:
+        if output_degrees or output_pagerank or output_hits:
             if verbose:
                 print('Outputting vertex degrees and/or properties.', file=error_file, flush=True)
             id_count = 0
@@ -260,12 +265,19 @@ def run(input_file: KGTKFiles,
                     kw.write([v_id, vertex_out_degree, str(v.out_degree()), '{}-{}-{}'.format(v_id, vertex_out_degree, id_count)])
                     id_count += 1
 
-                if output_properties:
-                    for vprop in G2.vertex_properties.keys():
-                        if vprop == id_col:
-                            continue
-                        kw.write([v_id, vprop, str(G2.vp[vprop][v]), '{}-{}-{}'.format(v_id, vprop, id_count)])
+                if output_pagerank:
+                    if vertex_pagerank in G2.vp:
+                        kw.write([v_id, vertex_pagerank, str(G2.vp[vertex_pagerank][v]), '{}-{}-{}'.format(v_id, vertex_pagerank, id_count)])
                         id_count += 1
+
+                if output_hits:
+                    if vertex_auth in G2.vp:
+                        kw.write([v_id, vertex_auth, str(G2.vp[vertex_auth][v]), '{}-{}-{}'.format(v_id, vertex_auth, id_count)])
+                        id_count += 1
+                    if vertex_hubs in G2.vp:
+                        kw.write([v_id, vertex_hubs, str(G2.vp[vertex_hubs][v]), '{}-{}-{}'.format(v_id, vertex_hubs, id_count)])
+                        id_count += 1
+
 
         kw.close()
 
