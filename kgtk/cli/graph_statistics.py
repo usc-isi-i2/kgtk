@@ -286,12 +286,12 @@ def run(input_file: KGTKFiles,
         with open(log_file, 'w') as writer:
             writer.write('graph loaded! It has %d nodes and %d edges\n' % (G2.num_vertices(), G2.num_edges()))
             if log_top_relations:
-                writer.write('\n###Top relations:\n')
+                writer.write('\n*** Top relations:\n')
                 for rel, freq in gtanalysis.get_topN_relations(G2, pred_property=predicate):
                     writer.write('%s\t%d\n' % (rel, freq))
 
             if log_degrees_histogram:
-                writer.write('\n###Degrees:\n')
+                writer.write('\n*** Degrees:\n')
                 for direction in directions:
                     degree_data = gtanalysis.compute_node_degree_hist(G2, direction)
                     max_degree = len(degree_data) - 1
@@ -300,14 +300,14 @@ def run(input_file: KGTKFiles,
                         '%s degree stats: mean=%f, std=%f, max=%d\n' % (direction, mean_degree, std_degree, max_degree))
 
             if log_top_pageranks and compute_pagerank:
-                writer.write('\n###PageRank\n')
+                writer.write('\n*** PageRank\n')
                 writer.write('Max pageranks\n')
                 result = gtanalysis.get_topn_indices(G2, vertex_pagerank, top_n, id_col)
                 for n_id, n_label, pr in result:
                     writer.write('%s\t%s\t%f\n' % (n_id, n_label, pr))
 
             if log_top_hits and compute_hits and not undirected:
-                writer.write('\n###HITS\n')
+                writer.write('\n*** HITS\n')
                 writer.write('HITS hubs\n')
                 main_hubs = gtanalysis.get_topn_indices(G2, vertex_hubs, top_n, id_col)
                 for n_id, n_label, hubness in main_hubs:
