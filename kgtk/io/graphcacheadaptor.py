@@ -104,7 +104,10 @@ class GraphCacheAdaptor:
         fallbacks.
 
         """
-        if options is not None and (options.repair_and_validate_values or options.repair_and_validate_lines):
+        if options is not None and \
+           (options.repair_and_validate_values or \
+            options.repair_and_validate_lines or \
+            options.implied_label is not None):
             if self.verbose:
                 print("Using the Graph Cache slow reader.", file=self.error_file, flush=True)
             return self.slow_reader(fetch_size, filter_batch_size, options)
@@ -453,6 +456,9 @@ class GraphCacheAdaptor:
                                         reader_self.data_lines_excluded_prohibited_lists += 1
                                         continue
 
+                            if options.implied_label is not None:
+                                row.append(options.implied_label)
+                                
                             return row
 
                         reader_self.buffer = reader_self.cursor.fetchmany(fetch_size)

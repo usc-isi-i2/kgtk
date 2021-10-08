@@ -670,8 +670,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
         if graph_cache is not None and \
            file_path is not None and \
-           not need_record_slicing and \
-           options.implied_label is None:
+           not need_record_slicing:
 
             from kgtk.io.graphcacheadaptor import GraphCacheAdaptor
             gca: typing.Optional[GraphCacheAdaptor] = GraphCacheAdaptor.open(graph_cache_path=Path(graph_cache),
@@ -706,12 +705,10 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             # header back, too, for use in debugging and error messages.
             (header, column_names) = cls._build_column_names(source, options, input_format, error_file=error_file, verbose=verbose)
 
-            # If there's an implied label, add the column to the end.  If a label column
-            # already exists, then later we'll detect a duplicate column name.
-            #
-            # TODO: do the same for the GraphCacheAdapter
-            if options.implied_label is not None:
-                column_names.append(cls.LABEL)
+        # If there's an implied label, add the column to the end.  If a label column
+        # already exists, then later we'll detect a duplicate column name.
+        if options.implied_label is not None:
+            column_names.append(cls.LABEL)
                   
         # Check for unsafe column names.
         cls.check_column_names(column_names,
