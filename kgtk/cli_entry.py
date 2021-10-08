@@ -4,6 +4,8 @@ from io import StringIO
 import itertools
 import os
 import pkgutil
+import sh # type: ignore
+import shutil # type: ignore
 import signal
 import sys
 import time
@@ -13,7 +15,6 @@ from kgtk import cli
 from kgtk.exceptions import KGTKException, KGTKExceptionHandler, KGTKArgumentParseException
 from kgtk import __version__
 from kgtk.cli_argparse import KGTKArgumentParser, add_shared_arguments, add_default_arguments, CheckDepsAction
-import sh # type: ignore
 
 
 # module name should NOT start with '__' (double underscore)
@@ -56,8 +57,8 @@ def progress_startup(pid: typing.Optional[int] = None, fd: typing.Optional[int] 
     # None, the specific fd will be monitored: it must already be open, and it
     # should be an input file.  There is no option to moitor multiple specific
     # input files other than calling this routine sequentially
-    import os
-    import sh
+    #
+    # TODO: use the envar KGTK_PV_COMMAND to get the `pv` command.
     global _save_progress, _save_progress_tty
     if _save_progress and _save_progress_tty is not None:
         global _save_progress_command
@@ -68,6 +69,10 @@ def progress_startup(pid: typing.Optional[int] = None, fd: typing.Optional[int] 
             except Exception:
                 pass
             _save_progress_command = None
+
+        # Give up if cannot find `pv`:
+        if shutil.which('pv') is None:
+            return
 
         # Start a process monitor.
         if pid is None:
