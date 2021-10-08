@@ -110,9 +110,3 @@ To see the arguments of a particular commands, run:
 ```
 kgtk <command> -h
 ```
-
-An example command that computes instances of the subclasses of two classes:
-
-```
-kgtk instances --transitive --class Q13442814,Q12345678
-```
