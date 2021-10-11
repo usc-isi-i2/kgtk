@@ -71,7 +71,7 @@ class KgtkReaderOptions():
     force_column_names: typing.Optional[typing.List[str]] = attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
                                                                                                                                      iterable_validator=attr.validators.instance_of(list))),
                                                                     default=None)
-    skip_header_record: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    no_input_header: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     # Data record sampling, pre-validation.
     #
@@ -248,21 +248,30 @@ class KgtkReaderOptions():
         hgroup: _ArgumentGroup = parser.add_argument_group(h(prefix3 + "Header parsing"),
                                                            h("Options affecting " + prefix4 + "header parsing."))
 
-        hgroup.add_argument(prefix1 + "force-column-names",
+        hgroup.add_argument(prefix1 + "input-column-names",
+                            prefix1 + "force-column-names",
                             dest=prefix2 + "force_column_names",
-                            help=h(prefix3 + "Force the column names (default=None)."),
+                            help=h(prefix3 + "Supply input column names when the input file does not " +
+                                   "have a header record (--no-input-header=True), " +
+                                   "or forcibly override the column names when " +
+                                   "a header row exists (--no-input-header=False) (default=None)."),
                             nargs='+')
+
+        hgroup.add_argument(prefix1 + "no-input-header",
+                            dest=prefix2 + "no_input_header",
+                            metavar="optional True|False",
+                            help=h(prefix3 + "When the input file does not have a header record, specify " +
+                                   "--no-input-header=True and --input-column-names.  When the input file does " +
+                                   "have a header record that you want to forcibly override, specify " +
+                                   "--input-column-names and --no-input-header=False. " +
+                                   "--no-input-header has no effect when --input-column-names " +
+                                   "has not been specified. (default=%(default)s)."),
+                            type=optional_bool, nargs='?', const=True, **d(default=False))
 
         hgroup.add_argument(prefix1 + "header-error-action",
                             dest=prefix2 + "header_error_action",
                             help=h(prefix3 + "The action to take when a header error is detected.  Only ERROR or EXIT are supported (default=%(default)s)."),
                             type=ValidationAction, action=EnumNameAction, **d(default=ValidationAction.EXIT))
-
-        hgroup.add_argument(prefix1 + "skip-header-record",
-                            dest=prefix2 + "skip_header_record",
-                            metavar="optional True|False",
-                            help=h(prefix3 + "Skip the first record when forcing column names (default=%(default)s)."),
-                            type=optional_bool, nargs='?', const=True, **d(default=False))
 
         hgroup.add_argument(prefix1 + "unsafe-column-name-action",
                             dest=prefix2 + "unsafe_column_name_action",
@@ -403,6 +412,7 @@ class KgtkReaderOptions():
             every_nth_record=lookup("every_nth_record", 1),
             fill_short_lines=lookup("fill_short_lines", False),
             force_column_names=lookup("force_column_names", None),
+            no_input_header=lookup("no_input_header", False),
             use_mgzip=lookup("use_mgzip", False),
             mgzip_threads=lookup("mgzip_threads", cls.MGZIP_THREAD_COUNT_DEFAULT),
             gzip_in_parallel=lookup("gzip_in_parallel", False),
@@ -422,7 +432,6 @@ class KgtkReaderOptions():
             repair_and_validate_lines=lookup("repair_and_validate_lines", False),
             repair_and_validate_values=lookup("repair_and_validate_values", False),
             short_line_action=lookup("short_line_action", ValidationAction.EXCLUDE),
-            skip_header_record=lookup("skip_header_record", False),
             tail_count=lookup("tail_count", None),
             truncate_long_lines=lookup("truncate_long_lines", False),
             unsafe_column_name_action=lookup("unsafe_column_name_action", ValidationAction.REPORT),
@@ -446,7 +455,7 @@ class KgtkReaderOptions():
         print("%scolumn-separator=%s" % (prefix, repr(self.column_separator)), file=out)
         if self.force_column_names is not None:
             print("%sforce-column-names=%s" % (prefix, " ".join(self.force_column_names)), file=out)
-        print("%sskip-header-record=%s" % (prefix, str(self.skip_header_record)), file=out)
+        print("%sno-input-header=%s" % (prefix, str(self.no_input_header)), file=out)
         print("%serror-limit=%s" % (prefix, str(self.error_limit)), file=out)
         print("%srepair-and-validate-lines=%s" % (prefix, str(self.repair_and_validate_lines)), file=out)
         print("%srepair-and-validate-values=%s" % (prefix, str(self.repair_and_validate_values)), file=out)
@@ -1002,7 +1011,9 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             # Do not skip the first record if the file does not have a header record.
             if verbose:
                 print("Forcing column names", file=error_file, flush=True)
-            if options.skip_header_record:
+            if options.no_input_header:
+                pass # Nothing to do.
+            else:
                 if verbose:
                     print("Skipping a header record", file=error_file, flush=True)
                 try:

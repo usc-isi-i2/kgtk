@@ -11,7 +11,7 @@ jobs:
       - name: Install Python
         uses: actions/setup-python@v2
         with:
-          python-version: '3.7'
+          python-version: '3.8'
       - name: Add conda to system path
         run: |
           echo $CONDA/bin >> $GITHUB_PATH
@@ -22,8 +22,8 @@ jobs:
           pip install coveralls
           python -m spacy download en_core_web_sm
           conda install -c conda-forge graph-tool
-          pip uninstall -y rdflib
-          pip install git+https://github.com/RDFLib/rdflib.git@master
+          # pip uninstall -y rdflib
+          # pip install git+https://github.com/RDFLib/rdflib.git@master
       - name: Run Tests
         run: |
           cd tests
