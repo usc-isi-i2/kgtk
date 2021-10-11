@@ -46,6 +46,7 @@ nav:
       - 'rename-columns': 'transform/rename_columns.md'
       - 'reorder-columns': 'transform/reorder_columns.md'
       - 'replace-nodes': 'transform/replace_nodes.md'
+      - 'select-columns': 'transform/select_columns.md'
       - 'sort': 'transform/sort.md'
       - 'table': 'transform/table.md'
       - 'tail': 'transform/tail.md'
