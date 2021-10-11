@@ -369,7 +369,6 @@ The result will be the following file in KGTK format:
 
 | id | node1 | label | node2 |
 | -- | -- | -- | -- |
-| a | b | c | d |
 | h21 | robert_patrick | label | "Robert Patrick" |
 | h22 | robert_patrick | instance_of | human |
 | h23 | robert_patrick | birth_date | ^1958-11-05T00:00:00Z/11 |
@@ -383,7 +382,7 @@ The result will be the following file in KGTK format:
 
 ### Expert Topic: Renaming Column Names on Input
 
-There is a special KGTK command, `kgtk rename_columns`, for renaming columns.
+There is a special KGTK command, `kgtk rename-columns`, for renaming columns.
 However, you may want to rename columns while also using other features of
 the `kgtk cat` command, such as combining multiple input files or sampling
 data lines.
@@ -396,7 +395,6 @@ header record and supplying a replacement list of column names.
 
 ```bash
 kgtk cat -i examples/docs/not-kgtk.tsv \
-         --skip-header-record \
 	 --force-column-names id node1 label node2
 ```
 
@@ -724,3 +722,37 @@ for missing the header line.
 | t16 | terminator | duration | 108 |
 | t17 | terminator | award | national_film_registry |
 | t18 | t17 | point_in_time | ^2008-01-01T00:00:00Z/9 |
+
+### Expert Example: Reading Files without Header Records
+
+Sometimes you may wish to read a TSV file that does not contain a
+header record.
+
+```
+kgtk cat -i examples/docs/cat-file-without-header.tsv --mode=NONE
+```
+
+| john | woke | ^2020-05-02T00:00 |
+| -- | -- | -- |
+| john | woke | ^2020-05-00T00:00 |
+| john | slept | ^2020-05-02T24:00 |
+| lionheart | born | ^1157-09-08T00:00 |
+| year0001 | starts | ^0001-01-01T00:00 |
+| year9999 | ends | ^9999-12-31T11:59:59 |
+
+Copy the file, supplying column names:
+
+```
+kgtk cat -i examples/docs/cat-file-without-header.tsv \
+         --input-column-names node1 label node2
+```
+
+The result will be the following file in KGTK format:
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| john | woke | ^2020-05-00T00:00 |
+| john | slept | ^2020-05-02T24:00 |
+| lionheart | born | ^1157-09-08T00:00 |
+| year0001 | starts | ^0001-01-01T00:00 |
+| year9999 | ends | ^9999-12-31T11:59:59 |
