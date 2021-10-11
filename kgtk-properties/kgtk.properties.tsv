@@ -64,6 +64,13 @@ P31dwd	description	'Considers items related via P106 (occupation) and P39 (posit
 P31dwd	P31	Q18616576	P31dwd-P31-Q18616576
 P31dwd	P31	Q28326461	P31dwd-P31-Q28326461
 P31dwd	P31	Q18647519	P31dwd-P31-Q18647519
+P31dwd	data_type	wikibase-item	P31dwd-data_type
+P31x	label	'instance of (extended)'@en	P31x-label-e79b73
+P31x	description	'Considers items related via P106 (occupation) and P39 (position held) as instance of'@en	P31x-description-0b5cdc
+P31x	P31	Q18616576	P31x-P31-Q18616576
+P31x	P31	Q28326461	P31x-P31-Q28326461
+P31x	P31	Q18647519	P31x-P31-Q18647519
+P31x	data_type	wikibase-item	P31x-data_type
 P279dwdstar	label	'extended subclass of (transitive)'@en	P279dwdstar-label-e79b73
 P279dwdstar	alias	'extended subclass of (reachable)'@en	P279dwdstar-alias-7773c5
 P279dwdstar	description	'All items reachable via P279, defined for all nodes that have P31dwd, including itself.'@en	P279dwdstar-description-0b5cdc
@@ -76,3 +83,21 @@ P1963computed	description	'The properties defined for a class, computed based on
 P1963computed	P31	Q19820110	P1963computed-P31-Q19820110
 P1963computed	P279	Q22582645	P1963computed-P279-Q22582645
 P1963computed	P1659	P1963	P1963computed-P1659-P1963
+P1963computed	data_type	quantity	P1963computed-data_type-1a7b30
+Pproperty_domain	label	'entity types used (computed)'@en	Pproperty_domain-label-e79b73
+Pproperty_domain	description	'List the classes that appear as values of a property'@en	Pproperty_domain-description-0b5cdc
+Pproperty_domain	P31	Q19820110	Pproperty_domain-P31-Q19820110
+Pproperty_domain	P279	Q22582645	Pproperty_domain-P279-Q22582645
+Pproperty_domain	P1659	P1963	Pproperty_domain-P1659-P1963
+Pproperty_domain	data_type	wikibase-item	Pproperty_domain-data_type
+Pproperty_units_used	label	'units used (computed)'@en	Pproperty_units_used-label-e79b73
+Pproperty_units_used	description	'The units used in quantity properties'@en	Pproperty_units_used-description-0b5cdc
+Pproperty_units_used	P31	Q19820110	Pproperty_units_used-P31-Q19820110
+Pproperty_units_used	P279	Q22582645	Pproperty_units_used-P279-Q22582645
+Pproperty_units_used	data_type	wikibase-item	Pproperty_units_used-data_type
+Paward_count	label	'number of recipients (computed)'@en	Paward_count-label-e79b73
+Paward_count	description	'The number of recipients of an award'@en	Paward_count-description-0b5cdc
+Paward_count	P31	Q19820110	Paward_count-P31-Q19820110
+Paward_count	P279	Q22582645	Paward_count-P279-Q22582645
+Paward_count	P1659	P1963	Paward_count-P1659-P1963
+Paward_count	data_type	quantity	Paward_count-data_type-1a7b30
