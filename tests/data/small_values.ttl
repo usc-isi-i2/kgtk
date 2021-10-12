@@ -35,7 +35,7 @@ wd:Q00005550-chemical-MESHC000006 a wikibase:Item ;
     wdtn:P7083 wdv:Quantityc0c0c0c0 ;
     wdt:P6897 0.0 ;
     wdt:P7015 7.0 ;
-    wdt:P7079 1.9860001065575846E-7 ;
+    wdt:P7079 0.00000019860001065575846 ;
     wdt:P7080 0.0004846436908691038 ;
     wdt:P7083 0.0 .
 

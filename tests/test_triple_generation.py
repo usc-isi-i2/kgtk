@@ -130,24 +130,7 @@ class TestTripleGeneration(unittest.TestCase):
             f1_lines = f1.readlines()
         with open('data/small_values_tmp.ttl') as f2:
             f2_lines = f2.readlines()
-        self.assertEqual(len(f1_lines), len(f2_lines))
-
-        f1_header = f1_lines.pop(0)
-        f2_header = f2_lines.pop(0)
-        self.assertEqual(f1_header, f2_header)
-        self.assertEqual(f1_header.rstrip('\r\n').split('\t')[2], 'node2')
-        
-                
-        for idx in range(len(f1_lines)):
-            f1_fields = f1_lines[idx].rstrip('\r\n').split('\t')
-            self.assertEqual(len(f1_fields), 4)
-            f2_fields = f2_lines[idx].rstrip('\r\n').split('\t')
-            self.assertEqual(len(f2_fields), 4)
-            self.assertEqual(f1_fields[0], f2_fields[0])
-            self.assertEqual(f1_fields[1], f2_fields[1])
-            self.assertEqual(float(f1_fields[2]), float(f2_fields[2]))
-            self.assertEqual(f1_fields[3], f2_fields[3])
-
+        self.assertEqual(f1_lines, f2_lines)
 
         self.assertEqual(os.stat("data/warning.log").st_size, 0)
         p = Path("data/warning.log")
