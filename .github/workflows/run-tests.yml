@@ -16,6 +16,7 @@ jobs:
         run: |
           echo $CONDA/bin >> $GITHUB_PATH
           cat $GITHUB_PATH
+          ls $CONDA/lib
       - name: Setup env
         run: |
           pip install --upgrade pip
