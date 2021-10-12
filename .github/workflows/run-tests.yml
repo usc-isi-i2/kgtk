@@ -31,8 +31,8 @@ jobs:
         run: |
           cd tests
           coverage run --source=kgtk -m unittest discover      
-      - name: Coveralls Finished
-        uses: coverallsapp/github-action@master
-        with:
-          github-token: ${{ secrets.COVERALLS_TOKEN }}
-          parallel-finished: true
+      - name: Coverage
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          coveralls --service=github
