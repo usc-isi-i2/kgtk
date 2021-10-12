@@ -36,12 +36,12 @@ jobs:
           pip install coveralls
           python -m spacy download en_core_web_sm
           conda install -c conda-forge graph-tool
-	  # 11-Oct-2021: Do not use rdflib 6.0.0 and later, at
-	  # the moment there's a fatal interaction, probably with ETK.
-	  # See issues #537 and #538.
-	  #
-          # pip uninstall -y rdflib
-          # pip install git+https://github.com/RDFLib/rdflib.git@master
+# 11-Oct-2021: Do not use rdflib 6.0.0 and later, at
+# the moment there's a fatal interaction, probably with ETK.
+# See issues #537 and #538.
+#
+# pip uninstall -y rdflib
+# pip install git+https://github.com/RDFLib/rdflib.git@master
       - name: Run Tests
         run: |
           cd tests
