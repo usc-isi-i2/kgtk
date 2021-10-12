@@ -485,8 +485,6 @@ class TripleGenerator(Generator):
             amount, lower_bound, upper_bound, unit = res
 
             amount: typing.Optional[str] = TripleGenerator.clean_number_string(amount)
-            if 'e' in str(amount).lower():
-                print("Unexpected float %s" % repr(amount))
             num_type = self.xsd_number_type(amount) # Error! xsd_number_type expectes a float or int!
 
             lower_bound = TripleGenerator.clean_number_string(lower_bound)
