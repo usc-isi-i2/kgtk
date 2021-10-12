@@ -46,8 +46,9 @@ jobs:
         run: |
           cd tests
           coverage run --source=kgtk -m unittest discover      
-      - name: Coveralls Finished
-        uses: coverallsapp/github-action@master
-        with:
-          github-token: ${{ secrets.COVERALLS_TOKEN }}
-          parallel-finished: true
+# 11-Oct-2021: Coveralls are failing.  See issue #539.
+#      - name: Coveralls Finished
+#        uses: coverallsapp/github-action@master
+#        with:
+#          github-token: ${{ secrets.COVERALLS_TOKEN }}
+#          parallel-finished: true
