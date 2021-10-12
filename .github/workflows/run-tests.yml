@@ -12,6 +12,17 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: '3.8'
+# 11-Oct-2021: Adding the system conda gives pip
+# access python 3.9 site packages:
+#
+# /usr/share/miniconda/lib/python3.9/site-packages 
+#
+# We'd prefer to use python 3.8 consistently while
+# chasing down problems.
+#
+#      - name: Add conda to system path
+#        run: |
+#          echo $CONDA/bin >> $GITHUB_PATH
       - name: Setup conda
         uses: s-weigand/setup-conda@v1
         with:
@@ -25,8 +36,12 @@ jobs:
           pip install coveralls
           python -m spacy download en_core_web_sm
           conda install -c conda-forge graph-tool
-          # pip uninstall -y rdflib
-          # pip install git+https://github.com/RDFLib/rdflib.git@master
+# 11-Oct-2021: Do not use rdflib 6.0.0 and later, at
+# the moment there's a fatal interaction, probably with ETK.
+# See issues #537 and #538.
+#
+# pip uninstall -y rdflib
+# pip install git+https://github.com/RDFLib/rdflib.git@master
       - name: Run Tests
         run: |
           cd tests
