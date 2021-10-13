@@ -101,7 +101,7 @@ conda activate kgtk-env
 
  **Note:** `kgtk import-wikidata` requires Python 3.8 or later to support high-performance parallel processing.  Other than this, KGTK should run in Python 3.7, as was recommended by earlier versions of this document, but Python 3.7 is no longer considered fully supported.
 
-2. Install (the dev branch at this point): `pip install kgtk`
+2. Install (the dev branch at this point): `pip install -e <KGTK_PATH>`
 
 You can test if `kgtk` is installed properly now with: `kgtk -h`.
 
