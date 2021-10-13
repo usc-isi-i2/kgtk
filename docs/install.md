@@ -152,19 +152,22 @@ You can test if `kgtk` is installed properly now with: `kgtk -h`.
 
 ### Install KGTK using GitHub
 
-You can also install KGTK from our GitHub repository.  To install the
-latest release, install using:
+You can install KGTK from our GitHub repository.  A GitHub installation will
+give you access to the `examples/` folder with examples of KGTK usage in
+Jupyter notebooks.
+
+To install the latest release, use one of the following two commands:
 
 `git clone git@github.com:usc-isi-i2/kgtk.git`
-`cd kgtk`
 
 or:
 
 `git clone https://github.com/usc-isi-i2/kgtk.git`
-`cd kgtk`
 
-This will give you access to the `examples/` folder with examples of
-KGTK usage in Jupyter notebooks.
+This will install KGTK in a folder called `kgtk`.  Connect to this
+folder before executing any of the commands in the sections below:
+
+`cd kgtk`
 
 You may install KGTK from GitHub without installing KGTK
 using `pip` at the same time, but you may need to set the
@@ -176,7 +179,7 @@ export PYTHONPATH=<KGTK checkout path>
 ### Installing Required Modules after Installtion from GitHub
 
 After installing KGTK from GitHub, you may need to use pip to download
-additional modules that are required bu KGTK.  For a minimal installation,
+additional modules that are required by KGTK.  For a minimal installation,
 execute:
 
 `pip install -r requirements.txt`
@@ -206,10 +209,12 @@ If you don't use Conda, or if you run into problems, see these
 
 ## Building a Docker Image
 
-You can build a local Docker image after installing KGTK from GitHub:
+You can build a local Docker image after installing KGTK from GitHub.
+Use the following commands starting from your KGTK installation
+folder:
 
 ```
-cd kgtk/docker/
+cd docker/
 docker build -t kgtk-local .
 ```
 
@@ -243,7 +248,8 @@ additional suggestions.
 
 After a Docker or GitHub installation, you may run KGTK's unit tests to
 verify that the installation was complete.  You may use either of the two
-following command sequences to run the unittests:
+following command sequences to run the unittests, starting at your
+KGTK installation folder:
 
 ```
 make unittest
@@ -252,7 +258,7 @@ make unittest
 or:
 
 ```
-cd kgtk/tests
+cd tests
 python -W ignore -m unittest discover
 ```
 
