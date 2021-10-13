@@ -24,11 +24,14 @@ KGTK is open source software, well documented, actively used and developed, and 
 
 ## Getting started
 
-### Documentation
+### Online Documentation
+
+You can read our latest documentation online with:
 
 https://kgtk.readthedocs.io/en/latest/
 
-### Demo: try KGTK online with MyBinder
+
+### Try KGTK Online with MyBinder
 The easiest, no-cost way of trying out KGTK is through [MyBinder](https://mybinder.org/). We have made available several **example notebooks** to show some of the features of KGTK, which can be run in two environments:
 
 * **Basic KGTK functionality**: This notebook may take **5-10 minutes** to launch, please be patient. Note that in this notebook some KGTK commands (graph analytics and embeddings) **will not run**. To launch the notebook in your browser, click on the "Binder" icon: [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/usc-isi-i2/kgtk/master?filepath=examples%2FExample5%20-%20AIDA%20AIF.ipynb)
@@ -37,7 +40,7 @@ The easiest, no-cost way of trying out KGTK is through [MyBinder](https://mybind
 
 For executing KGTK with large datasets, **we recommend a Docker/local installation**.
 
-### KGTK notebooks
+### KGTK Notebooks
 
 The [examples folder](examples/) provides a larger and constantly increasing number of easy-to-follow Jupyter Notebooks which showcase different functionalities of KGTK. These include computing:
 * Embeddings for ConceptNet nodes
@@ -52,96 +55,7 @@ The [examples folder](examples/) provides a larger and constantly increasing num
 
 ## Installation
 
-
-### Installation through Docker
-
-You can pull the latest image:
-```
-docker pull uscisii2/kgtk
-```
-
-Or build it yourself:
-```
-cd kgtk/docker/
-docker build -t kgtk-local .
-```
-
-To run KGTK in the command line (if you built the image yourself, replace `uscisii2/kgtk:latest` by `kgtk-local` in the following commands):
-
-```
-docker run -it --rm  --user root -e NB_GID=100 -e GEN_CERT=yes -e GRANT_SUDO=yes uscisii2/kgtk:latest /bin/bash
-```
-
-Note: if you want to load data from your local machine, you will need to [mount a volume](https://docs.docker.com/storage/volumes/).
-For example, to mount the current directory (`$PWD`) and launch KGTK in command line mode:
-
-```
-docker run -it --rm -v $PWD:/out --user root -e NB_GID=100 -e GEN_CERT=yes -e GRANT_SUDO=yes uscisii2/kgtk:latest /bin/bash
-```
-
-If you want to run KGTK in a **Jupyter notebook**, mounting the current directory (`$PWD`) as a folder called `/out` then you will have to type:
-```
-docker run -it -v $PWD:/out -p 8888:8888 uscisii2/kgtk:latest /bin/bash -c "jupyter notebook --ip='*' --port=8888 --no-browser"
-```
-
-More information about versions and tags is available here: https://hub.docker.com/repository/docker/uscisii2/kgtk. For example, the `dev` branch is available at `uscisii2/kgtk:latest-dev`.
-
-See additional examples in [the documentation](https://kgtk.readthedocs.io/en/latest/install/).
-
-### Local installation
-
-Our installation will be in a **conda environment**. If you don't have conda installed, follow [link](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) to install it. Once installed, follow the instructions below:
-
-1. Set up your own conda environment:
-```
-conda create -n kgtk-env python=3.8
-conda activate kgtk-env
-```
- **Note:** Installing Graph-tool is problematic on python 3.8 and out of a virtual environment. Thus: **the advised installation path is by using a virtual environment.**
-
- **Note:** `kgtk import-wikidata` requires Python 3.8 or later to support high-performance parallel processing.  Other than this, KGTK should run in Python 3.7, as was recommended by earlier versions of this document, but Python 3.7 is no longer considered fully supported.
-
-2. Install (the dev branch at this point): `pip install -e <KGTK_PATH>`
-
-You can test if `kgtk` is installed properly now with: `kgtk -h`.
-
-3. Download the English model of SpaCY: `python -m spacy download en_core_web_sm`
-
-4. Install `graph-tool`: `conda install -c conda-forge graph-tool==2.37`. If you don't use conda or run into problems, see these [instructions](https://git.skewed.de/count0/graph-tool/-/wikis/installation-instructions).
-
-### Updating your KGTK installation
-To update your version of KGTK, just follow the instructions below:
-
-- If you installed KGTK with through Docker, then just pull the most recent image: `docker pull <image_name>`, where `<image_name>` is the tag of the image of interest (e.g. uscisii2/kgtk:latest)
-- If you installed KGTK from pip, then type `pip install -U kgtk`.
-- If you installed KGTK from GitHub, then type `git pull && pip install` . Alternatively, you may execute:  `git pull && python setup.py install`.
-- If you installed KGTK in development mode, (i.e., `pip install -e`); then you only need to do update your repository: `git pull`.
-
-## Running KGTK commands
-
-To list all the available KGTK commands, run:
-
-```
-kgtk -h
-```
-
-To see the arguments of a particular commands, run:
-
-```
-kgtk <command> -h
-```
-
-An example command that computes instances of the subclasses of two classes:
-
-```
-kgtk instances --transitive --class Q13442814,Q12345678
-```
-
-## Running unit tests locally
-```
-cd kgtk/tests
-python -W ignore -m unittest discover
-```
+Pleas see our [installation document](/docs/install.md) for installation procedures.
 
 ## KGTK Text Search API
 
