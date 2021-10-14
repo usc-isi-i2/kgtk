@@ -148,7 +148,6 @@ class TestTripleGeneration(unittest.TestCase):
         # If the generated files equals either of the gold files, accept the
         # result.
         if f1a_lines != f2_lines and f1b_lines != f2_lines:
-            print(f2_lines)
             self.assertEqual(f1a_lines, f2_lines)
 
         self.assertEqual(os.stat("data/warning.log").st_size, 0)

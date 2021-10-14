@@ -56,7 +56,7 @@ wds:Q00005550-chemical-MESHC000006-Q00005550-chemical-MESHC000006-P2020014-18301
 wds:Q00005550-chemical-MESHC000006-Q00005550-chemical-MESHC000006-P2020015-18302 a wikibase:Statement ;
     wikibase:rank wikibase:BestRank ;
     <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
-    ps:P7079 1.9860001065575846E-7 ;
+    ps:P7079 0.00000019860001065575846 ;
     psn:P7079 wdv:Quantityc0-00000019860001065575846c0c0c0 ;
     psv:P7079 wdv:Quantityc0-00000019860001065575846c0c0c0 .
 
