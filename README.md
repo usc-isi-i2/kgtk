@@ -20,8 +20,6 @@ KGTK can process Wikidata-sized KGs with billions of edges on a laptop. We have 
 
 KGTK is open source software, well documented, actively used and developed, and released using the MIT license. We invite the community to try KGTK. It is easy to get started with our tutorial notebooks available and executable online.
 
-
-
 ## Getting started
 
 ### Online Documentation
