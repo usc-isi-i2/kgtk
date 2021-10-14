@@ -81,10 +81,16 @@ that environment.
     You will need to re-execute this command whenever you open a fresh terminal
     session for working with KGTK.
 
+!!! note
+    `conda activate` operates in part through changes that Conda makes to
+    your terminal shell's initialization file.  Occasionally, there may be
+    problems.  The [Conda documentation on managing environments](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#activating-an-environment) may help you resolve your problem.
+
 ### Install `graph-tool`
 
 Assuming that you used the recommended Conda environment, you should install
-`graph-tool` to support the KGTK subcommands that require it:
+`graph-tool` to support the KGTK subcommands that require it (e.g., `connected-components`,
+`export-gt`, `graph-statistics`, `paths`, `reachable-nodes`):
 
 ```bash
 conda install -c conda-forge graph-tool
