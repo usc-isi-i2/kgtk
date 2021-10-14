@@ -83,8 +83,8 @@ that environment.
 
 !!! note
     `conda activate` operates in part through changes that Conda makes to
-    your terminal shell's initialization file.  Occasionally, there may be
-    problems.  The [Conda documentation on managing environments](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#activating-an-environment) may help you resolve your problem.
+    your terminal shell's initialization file.
+    The [Conda documentation on managing environments](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#activating-an-environment) may help you resolve any problems you encounter with this process.
 
 ### Install `graph-tool`
 
