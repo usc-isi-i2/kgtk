@@ -134,12 +134,12 @@ class TestTripleGeneration(unittest.TestCase):
         generator.process()
     
         # This is a gold file with the expected values, 0.00000019860001065575846:
-        with open('data/small_values.ttl') as f1:
-            f1a_lines = f1.readlines()
+        with open('data/small_values.ttl') as f1a:
+            f1a_lines = f1a.readlines()
 
         # This is a gold value with values containing exponents, 1.9860001065575846E-7:
-        with open('data/small_values_with_exponent.ttl') as f1:
-            f1b_lines = f1.readlines()
+        with open('data/small_values_with_exponent.ttl') as f1b:
+            f1b_lines = f1b.readlines()
 
         # This is the generated file:
         with open('data/small_values_tmp.ttl') as f2:
@@ -148,6 +148,7 @@ class TestTripleGeneration(unittest.TestCase):
         # If the generated files equals either of the gold files, accept the
         # result.
         if f1a_lines != f2_lines and f1b_lines != f2_lines:
+            print(f2_lines)
             self.assertEqual(f1a_lines, f2_lines)
 
         self.assertEqual(os.stat("data/warning.log").st_size, 0)
