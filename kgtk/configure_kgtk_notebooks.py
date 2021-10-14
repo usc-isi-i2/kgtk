@@ -62,10 +62,6 @@ class ConfigureKGTK(object):
             if json_config_file is not None \
             else files_config
 
-        for key in self.graph_files:
-            os.environ[key] = f"{input_graph_path}/{self.graph_files[key]}"
-            self.kgtk_environment_variables.add(key)
-
         # If the input graph path is not None, it is assumed it has the files required
         if input_graph_path is None:
             input_graph_path = f"{self.user_home}/{self.default_folder}/input"
@@ -74,6 +70,10 @@ class ConfigureKGTK(object):
 
         os.environ['GRAPH'] = input_graph_path
         self.kgtk_environment_variables.add('GRAPH')
+
+        for key in self.graph_files:
+            os.environ[key] = f"{input_graph_path}/{self.graph_files[key]}"
+            self.kgtk_environment_variables.add(key)
 
         if output_path is None:
             output_project_path = f"{self.user_home}/{self.default_folder}/{project_name}"
