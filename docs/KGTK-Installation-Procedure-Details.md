@@ -1,5 +1,3 @@
-## KGTK Installation Procedure Details
-
 ### Install KGTK and the KGTK Jupyter Notebooks
 
 Here is the standard set of steps to install KGTK and the

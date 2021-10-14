@@ -3,7 +3,7 @@ nav:
   - Home: index.md
   - 'Getting Started':
       - 'Installing KGTK': install.md
-      - 'Installing KGTK: Details': install-details.md
+      - 'Installation Procedure Details': KGTK-Installation-Procedure-Details.md
   - KGTK data model: data_model.md
   - KGTK file specification: specification.md
   - KGTK environment variables: envars.md
