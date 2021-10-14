@@ -3,14 +3,17 @@ import json
 import subprocess
 from pathlib import Path
 from typing import List
+from kgtk.files_config import files_config
 
 always_print_env_variables = {'EXAMPLES_DIR', 'USE_CASES_DIR', 'GRAPH', 'OUT', 'TEMP', 'STORE', 'kgtk', 'kypher'}
 
 
 class ConfigureKGTK(object):
-    def __init__(self, kgtk_path: str = None):
+    def __init__(self, file_list: List[str], kgtk_path: str = None, input_files_url: str = None):
 
-        self.INPUT_FILES_URL = "https://github.com/usc-isi-i2/kgtk-tutorial-files/raw/main/datasets/wikidata-dwd-v2"
+        self.files = file_list
+        self.INPUT_FILES_URL = "https://github.com/usc-isi-i2/kgtk-tutorial-files/raw/main/datasets/arnold" \
+            if input_files_url is None else input_files_url
 
         self.kgtk_environment_variables = set()
         self.user_home = str(Path.home())
@@ -35,8 +38,6 @@ class ConfigureKGTK(object):
         self.kgtk_environment_variables.add('EXAMPLES_DIR')
         self.kgtk_environment_variables.add('USE_CASES_DIR')
 
-        self.JSON_CONFIG_PATH = f"{self.kgtk_path}/files_config.json"
-
     def configure_kgtk(self,
                        input_graph_path: str = None,
                        output_path: str = None,
@@ -59,7 +60,7 @@ class ConfigureKGTK(object):
 
         self.graph_files = json.load(open(json_config_file)) \
             if json_config_file is not None \
-            else json.load(open(self.JSON_CONFIG_PATH))
+            else files_config
 
         for key in self.graph_files:
             os.environ[key] = f"{input_graph_path}/{self.graph_files[key]}"
@@ -106,29 +107,32 @@ class ConfigureKGTK(object):
         if not graph_path.endswith('/'):
             graph_path += '/'
 
-        for key in self.graph_files:
-            url = f"{self.INPUT_FILES_URL}/{self.graph_files[key]}"
-            cmd = f" wget {url} --directory-prefix={graph_path}"
-            print(subprocess.getoutput(cmd))
+        for f in self.files:
+            if f in self.graph_files:
+                url = f"{self.INPUT_FILES_URL}/{self.graph_files[f]}"
+                cmd = f" wget {url} --directory-prefix={graph_path}"
+                print(subprocess.getoutput(cmd))
+            else:
+                print(f"File: {f} not present in files config: {self.graph_files}")
 
-    def print_env_variables(self, file_list: List[str]):
+    def print_env_variables(self):
         for key in self.kgtk_environment_variables:
             if key in always_print_env_variables:
                 print(f"{key}: {os.environ[key]}")
 
-        for key in file_list:
+        for key in self.files:
             print(f"{key}: {os.environ[key]}")
 
-    def load_files_into_cache(self, file_list: List[str] = None):
+    def load_files_into_cache(self):
         """
         Loads files into graph cache. The keys in this list should be in json_config_file
         :param file_list:
         :return:
         """
         kypher_command = f"{os.environ['kypher']}"
-        if file_list:
-            for f_key in file_list:
-                kypher_command += f" -i \"{os.environ[f_key]}\" --as {f_key} "
+
+        for f_key in self.files:
+            kypher_command += f" -i \"{os.environ[f_key]}\" --as {f_key} "
         kypher_command += " --limit 3"
         print(kypher_command)
         print(subprocess.getoutput(kypher_command))

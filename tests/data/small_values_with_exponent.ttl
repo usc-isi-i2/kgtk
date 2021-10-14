@@ -35,7 +35,7 @@ wd:Q00005550-chemical-MESHC000006 a wikibase:Item ;
     wdtn:P7083 wdv:Quantityc0c0c0c0 ;
     wdt:P6897 0.0 ;
     wdt:P7015 7.0 ;
-    wdt:P7079 0.00000019860001065575846 ;
+    wdt:P7079 1.9860001065575846E-7 ;
     wdt:P7080 0.0004846436908691038 ;
     wdt:P7083 0.0 .
 
@@ -56,7 +56,7 @@ wds:Q00005550-chemical-MESHC000006-Q00005550-chemical-MESHC000006-P2020014-18301
 wds:Q00005550-chemical-MESHC000006-Q00005550-chemical-MESHC000006-P2020015-18302 a wikibase:Statement ;
     wikibase:rank wikibase:BestRank ;
     <http://www.isi.edu/etk/createdBy> <http://www.isi.edu/datamart> ;
-    ps:P7079 0.00000019860001065575846 ;
+    ps:P7079 1.9860001065575846E-7 ;
     psn:P7079 wdv:Quantityc0-00000019860001065575846c0c0c0 ;
     psv:P7079 wdv:Quantityc0-00000019860001065575846c0c0c0 .
 
@@ -75,7 +75,7 @@ wds:Q00005550-chemical-MESHC000006-Q00005550-chemical-MESHC000006-P2020017-18303
     psv:P7083 wdv:Quantityc0c0c0c0 .
 
 wdv:Quantityc0-00000019860001065575846c0c0c0 a wikibase:QuantityValue ;
-    wikibase:quantityAmount 0.00000019860001065575846 ;
+    wikibase:quantityAmount 1.9860001065575846E-7 ;
     wikibase:quantityNormalized wdv:Quantityc0-00000019860001065575846c0c0c0 .
 
 wdv:Quantityc0-0004846436908691038c0c0c0 a wikibase:QuantityValue ;

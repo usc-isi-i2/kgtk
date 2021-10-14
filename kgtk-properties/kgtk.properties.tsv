@@ -101,3 +101,21 @@ Paward_count	P31	Q19820110	Paward_count-P31-Q19820110
 Paward_count	P279	Q22582645	Paward_count-P279-Q22582645
 Paward_count	P1659	P1963	Paward_count-P1659-P1963
 Paward_count	data_type	quantity	Paward_count-data_type-1a7b30
+P131admin1	label	'located in the administrative territorial entity (admin1)'@en
+P131admin1	description	'the item is located on the territory of the following administrative level 1 entity'@en
+P131admin1	P31	Q18647519
+P131admin1	P31	Q18647515
+P131admin1	P31	Q18615777
+P131admin1	P31	Q70564278
+P131admin2	label	'located in the administrative territorial entity (admin2)'@en
+P131admin2	description	'the item is located on the territory of the following administrative level 2 entity'@en
+P131admin2	P31	Q18647519
+P131admin2	P31	Q18647515
+P131admin2	P31	Q18615777
+P131admin2	P31	Q70564278
+P131country	label	'located in the administrative territorial entity (country)'@en
+P131country	description	'the item is located on the territory of the following administrative level country entity'@en
+P131country	P31	Q18647519
+P131country	P31	Q18647515
+P131country	P31	Q18615777
+P131country	P31	Q70564278
