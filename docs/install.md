@@ -96,7 +96,7 @@ example, the `dev` branch is available at `uscisii2/kgtk:latest-dev`.
 
 ## Installing KGTK from pip or GitHub
 
-### We Recommand Python 3.8
+### We Recommend Python 3.8
 
 Some of KGTK's features require Python 3.8 or later. As of 12-Oct-2021, Python
 version 3.8, 3.9, and 3.10 are available. We currently devleop and test using
@@ -176,7 +176,7 @@ location:
 
 export PYTHONPATH=<KGTK checkout path>
 
-### Installing Required Modules after Installtion from GitHub
+### Installing Required Modules after Installation from GitHub
 
 After installing KGTK from GitHub, you may need to use pip to download
 additional modules that are required by KGTK.  For a minimal installation,
@@ -207,6 +207,13 @@ support the KGTK subcommands that require it:
 If you don't use Conda, or if you run into problems, see these
 [instructions](https://git.skewed.de/count0/graph-tool/-/wikis/installation-instructions).
 
+### Download the English Model of SpaCY
+
+After installing KGTK from pip or GitHub, you may need to download
+the SpaCY English model:
+
+`python -m spacy download en_core_web_sm`
+
 ## Building a Docker Image
 
 You can build a local Docker image after installing KGTK from GitHub.
@@ -225,6 +232,10 @@ To update your version of KGTK, just follow the instructions below:
 - If you installed KGTK with through Docker, then just pull the most recent image: `docker pull <image_name>`, where `<image_name>` is the tag of the image of interest (e.g. uscisii2/kgtk:latest)
 - If you installed KGTK from pip, then type `pip install -U kgtk`.
 - If you installed KGTK from GitHub, then type `git pull && pip install -r requirements.txt`.  If you previously installed the `-full`- or `-development` modules, you should repeat those commands, too.
+
+If you have trouble during the pop update procedure, you should try:
+
+`pip --no-cache install -U kgtk`
 
 
 ## Running KGTK commands
