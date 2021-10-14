@@ -188,7 +188,7 @@ git pull
 ```
 
 The first step, `pip --no-cache install -U kgtk`, tells `pip`
-to look hard for the lastes updates, including in KGTK's required modules.
+to look hard for the lastest updates, including in KGTK's required modules.
 
 The remainig steps update your copies of the KGTK Jupyter Notebooks.
 
