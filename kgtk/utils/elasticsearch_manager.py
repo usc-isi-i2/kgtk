@@ -7,7 +7,9 @@ import pprint
 
 from requests.auth import HTTPBasicAuth
 from unidecode import unidecode
-from typing import List
+from typing import List, Tuple, Any
+
+valid_context_types = {'i', 'q', 'e', 'm', 'd'}
 
 
 class ElasticsearchManager(object):
@@ -1029,7 +1031,13 @@ class ElasticsearchManager(object):
                 for prop_val in prop_val_list:
                     _type = prop_val[0]
 
+                    assert _type in valid_context_types, f"Invalid context type :{_type} found, Qnode: {qnode}," \
+                                                         f" property value string: {prop_val}"
+
                     values, property, item = ElasticsearchManager.parse_prop_val(qnode, prop_val)
+
+                    if _type == 'd' and values.startswith("^"):
+                        values = values.replace("^", "")
 
                     if item is None:
                         key = property
@@ -1060,7 +1068,7 @@ class ElasticsearchManager(object):
         return context_dict
 
     @staticmethod
-    def parse_prop_val(qnode, property_value_string):
+    def parse_prop_val(qnode: str, property_value_string: str) -> Tuple[str, str, Any]:
         line_started = False
         string_value = list()
 
@@ -1095,7 +1103,7 @@ class ElasticsearchManager(object):
                 raise Exception(
                     f"Unexpected format of the context string, Qnode: {qnode}, context string: {property_value_string}"
                     f". Item does not start with 'Q'")
-            return string_val, rem_vals[0], item
+            return string_val, property, item
 
         if len(rem_vals) == 1:
             return string_val, property, None
