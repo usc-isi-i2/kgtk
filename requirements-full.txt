@@ -6,9 +6,6 @@ sentence_transformers
 sklearn
 SPARQLWrapper
 tqdm
-rdflib>=6.0.2
-rdflib-jsonld>=0.6.2
-pyshacl>=0.17.1
 simplejson
 pyrallel.lib==0.0.9
 redis
