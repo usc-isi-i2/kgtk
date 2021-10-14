@@ -73,7 +73,9 @@ conda create -n kgtk-env python=3.8
 conda activate kgtk-env
 ```
 
-This command activates your Conda environment.
+This command activates your Conda environment.  Once activated, your terminal
+session will have access to the resources that have been installed into
+that environment.
 
 !!! note
     You will need to re-execute this command whenever you open a fresh terminal
