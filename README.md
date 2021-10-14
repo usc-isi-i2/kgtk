@@ -55,7 +55,7 @@ The [examples folder](examples/) provides a larger and constantly increasing num
 
 ## Installation
 
-Pleas see our [installation document](/docs/install.md) for installation procedures.
+Please see our [installation document](/docs/install.md) for installation procedures.
 
 ## KGTK Text Search API
 
