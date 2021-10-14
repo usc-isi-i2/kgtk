@@ -1,7 +1,9 @@
 site_name: KGTK documentation
 nav:
   - Home: index.md
-  - Getting started: install.md
+  - 'Getting Started':
+      -- 'Installing KGTK': install.md
+      -- 'Installing KGTK: Details': install-details.md
   - KGTK data model: data_model.md
   - KGTK file specification: specification.md
   - KGTK environment variables: envars.md
