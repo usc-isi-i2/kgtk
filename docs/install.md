@@ -2,8 +2,8 @@
 
 The following steps install KGTK and the KGTK Jupyter Notebooks.
 
-Our pip and GitHub installations will use a Conda virtual environment. If you
-don't have th Conda tools installed, follow this
+OurKGTK installations use a Conda virtual environment. If you
+don't have the Conda tools installed, follow this
 [guide](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) to
 install it. We recommend installing Miniconda installation rather than the
 full Anaconda installation.
