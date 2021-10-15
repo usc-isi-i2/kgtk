@@ -208,7 +208,7 @@ You are now ready to run the KGTK Tutorial.
 In your `kgtk-notebooks` folder, execute a command such as:
 
 ```bash
-jupyter lab 'examples/Example1 - Embeddings.ipynb'
+jupyter lab part1-kgtk-intro.ipynb
 ```
 
 This will start a Jupyter Lab notebook server in your current terminal
