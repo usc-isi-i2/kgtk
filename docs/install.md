@@ -29,9 +29,9 @@ python -m spacy download en_core_web_sm
     if you need to install KGTK release `0.8.3b0`, use the following
     `pip` command instead of the `pip` command shown above:
 
-     ```bash
-     pip --no-cache install kgtk==0.8.3b0
-     ```
+```bash
+pip --no-cache install kgtk==0.8.3b0
+```
 
 If you encounter problems with your installation, or are interested in a
 detailed explanation of these commands,
