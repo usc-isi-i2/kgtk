@@ -56,7 +56,7 @@ install it.
     replacement for Conda that has been developed recently.  We may recommend
     Mamba in the future, but do not do so at the present itme.
 
-### Set Up Your Own Conda Environment
+### Create Your Conda Environment
 
 Create a Conda environment named `kgtk-env`.  You may use a
 different name, substituting it where `kgtk-env` appears in
@@ -66,7 +66,7 @@ these and following commands:
 conda create -n kgtk-env python=3.8
 ```
 
-### Activating Your Conda Environment
+### Activate Your Conda Environment
 
 ```bash
 conda activate kgtk-env
@@ -99,7 +99,7 @@ that environment.
 
     `conda activate kgtk-env`
 
-### Install `graph-tool`
+### Install `graph-tool` Using `conda`
 
 Assuming that you used the recommended Conda environment, you should install
 `graph-tool` to support the KGTK subcommands that require it (e.g., `connected-components`,
@@ -116,7 +116,7 @@ If you don't use Conda, or if you run into problems, see the
     We recommend installing `graph-tool` from the `conda-forge` channel (`-c conda-forge`)
     to ensure that you receive a recent version of `graph-tool`.
 
-### Install `jupyter lab`
+### Install `jupyter lab` Using `conda`
 
 Assuming that you used the recommended Conda environment, you should install
 Jupyter Lab to run the example Jupyter Notebooks from the `kgtk-notebooks`
@@ -155,10 +155,9 @@ python -m spacy download en_core_web_sm
 
 !!! note
     If you wisk to use KGTK to conduct text embedding analyses using
-    languages other then English, please contact the KGTK tesm for
-    assistance.
+    languages other then English, please contact the KGTK team.
 
-### Install the KGTK Jupyter Notebooks
+### Install the KGTK Jupyter Notebooks from GitHub
 
 The following commands download the KGTK Jupyter Notebooks
 from GitHub.  The notebooks are installed in the folder
@@ -169,7 +168,7 @@ git clone https://github.com/usc-isi-i2/kgtk-notebooks.git
 cd kgtk-notebooks
 ```
 
-## Running KGTK commands
+## Running KGTK Commands
 
 To list all the available KGTK commands, run:
 
