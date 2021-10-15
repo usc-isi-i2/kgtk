@@ -127,8 +127,7 @@ jupyter lab
 Use the Jupyter Lab interface to select the KGTK Tutorial notebook on which you
 wish to resume work, or to select a new notebook to begin.
 
-> note
-    If you know the name of the notebook you want to start, you may
+> If you know the name of the notebook you want to start, you may
     put it on the end of the `jupyter lab` command line:
 
 ```bash

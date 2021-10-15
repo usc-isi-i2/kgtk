@@ -252,18 +252,23 @@ jupiter lab some-notebook-name.ipynb
 
 ## Updating your KGTK installation
 
-To get the latest stable release of the KGTK commands and the latest KGTK
-Jupyter Notebooks, execute the following steps starting from where you
-installed KGTK:
+To get the latest stable release of the KGTK commands, execute
+the following commands:
+
+```bash
+conda activate kgtk-env
+pip --no-cache install -U kgtk
+```
+
+To get the latest KGTK Jupyter notebooks,
+execute the following commands:
 
 ```
-pip --no-cache install -U kgtk
-cd kgtk-notebooks
+conda activate kgtk-env
+cd /path/to/install/kgtk/tutorial/kgtk-notebooks
 git pull
 ```
 
-The first step, `pip --no-cache install -U kgtk`, tells `pip`
-to look hard for the lastest updates, including in KGTK's required modules.
-
-The remainig steps update your copies of the KGTK Jupyter Notebooks.
-
+> The `conda activate kgtk-env` commands shown above are not needed
+    if you have already activated your `kgtk-env` Conda virtual environment
+    in your current terminal session.
