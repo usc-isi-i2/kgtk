@@ -7,6 +7,7 @@ KGTK Jupyter Notebooks:
 conda create -n kgtk-env python=3.8
 conda activate kgtk-env
 conda install -c conda-forge graph-tool
+conda install -c conda-forge jupyterlab
 pip --no-cache install -U kgtk
 python -m spacy download en_core_web_sm
 git clone https://github.com/usc-isi-i2/kgtk-notebooks.git
@@ -84,9 +85,19 @@ that environment.
     your terminal shell's initialization file.
     The [Conda documentation on managing environments](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#activating-an-environment) may help you resolve any problems you encounter with this process.
 
-    For example, you may have to execute `condat init SHELL`, where
-    SHELL is the name of your shell (e.g., `bash`), then exit your
-    terminal session, and start a fresh terminal session.
+    For example, you may have to execute:
+
+    `conda init SHELL`
+
+    where SHELL is the name of your command shell  If you are using
+    the `bash` shell:
+
+    `conda init bash`
+
+    Next, exit your terminal session, start a fresh terminal session,
+    and retry:
+
+    `conda activate kgtk-env`
 
 ### Install `graph-tool`
 
@@ -104,6 +115,16 @@ If you don't use Conda, or if you run into problems, see the
 !!! note
     We recommend installing `graph-tool` from the `conda-forge` channel (`-c conda-forge`)
     to ensure that you receive a recent version of `graph-tool`.
+
+### Install `jupyter lab`
+
+Assuming that you used the recommended Conda environment, you should install
+Jupyter Lab to run the example Jupyter Notebooks from the `kgtk-notebooks`
+repository that will be installed below.
+
+```bash
+conda install -c conda-forge jupyterlab
+```
 
 ### Install KGTK Using `pip`
 

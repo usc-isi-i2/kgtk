@@ -15,6 +15,7 @@ of KGTK:
 conda create -n kgtk-env python=3.8
 conda activate kgtk-env
 conda install -c conda-forge graph-tool
+conda install -c conda-forge jupyterlab
 pip --no-cache install -U kgtk
 python -m spacy download en_core_web_sm
 git clone https://github.com/usc-isi-i2/kgtk-notebooks.git
