@@ -64,11 +64,11 @@ other Jupyter notebooks.  Change your current working directory
 to that foder.
 
 ```bash
-cd path/to/install/kgtk/tutorial
+cd /path/to/install/kgtk/tutorial
 ```
 
 !!! note
-    `path/to/install/kgtk/tutorial` is an appropriate filesystem
+    `/path/to/install/kgtk/tutorial` is an appropriate filesystem
     path of your choice.
 
 Next, execute the following command:
@@ -107,9 +107,9 @@ in your Web browser manually.
 
 ### Resuming Work with KGTK in a New Terminal Session
 
-If you have terminated started a new terminal session and want to resume work with
+If you have started a new terminal session and want to resume work with
 KGTK, first execute the following command in the new terminal session in order
-to connect to your `kgtk-env` COnda virtual environment:
+to activate your `kgtk-env` Conda virtual environment:
 
 ```bash
 conda activate kgtk-env
@@ -121,16 +121,24 @@ If you want to start a new Jupiter Lab notebook server, activate your
 Conda virtual environment as shown above and then enter:
 
 ```bash
-cd path/to/install/kgtk/tutorial/kgtk-notebooks
+cd /path/to/install/kgtk/tutorial/kgtk-notebooks
 jupyter lab
 ```
 
 !!! note
-    `path/to/install/kgtk/tutorial` is the path you originally
+    `/path/to/install/kgtk/tutorial` is the path you originally
     choose for installation of the KGTK Tutorial and other Jupyter notebooks.
 
-Use the Jupyter Lab interface to select the tutorial notebook on which you
-wish to resume work, or to select new notebook to begin.
+Use the Jupyter Lab interface to select the KGTK Tutorial notebook on which you
+wish to resume work, or to select a new notebook to begin.
+
+!!! note
+    If you know the name of the notebook you want to start, you may
+    put it on the end of the `jupyter lab` command line:
+
+    ```bash
+    jupiter lab some-notebook-name.ipynb
+    ```
 
 ## Updating your KGTK installation
 
@@ -149,7 +157,7 @@ installed KGTK:
 
 ```
 conda activate kgtk-env
-cd path/to/install/kgtk/tutorial/kgtk-notebooks
+cd /path/to/install/kgtk/tutorial/kgtk-notebooks
 git pull
 ```
 
