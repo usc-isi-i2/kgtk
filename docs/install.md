@@ -121,20 +121,19 @@ cd /path/to/install/kgtk/tutorial/kgtk-notebooks
 jupyter lab
 ```
 
-!!! note
-    `/path/to/install/kgtk/tutorial` is the path you originally
+> `/path/to/install/kgtk/tutorial` is the path you originally
     choose for installation of the KGTK Tutorial and other Jupyter notebooks.
 
 Use the Jupyter Lab interface to select the KGTK Tutorial notebook on which you
 wish to resume work, or to select a new notebook to begin.
 
-!!! note
+> note
     If you know the name of the notebook you want to start, you may
     put it on the end of the `jupyter lab` command line:
 
-    ```bash
-    jupiter lab some-notebook-name.ipynb
-    ```
+```bash
+jupiter lab some-notebook-name.ipynb
+```
 
 ## Updating your KGTK installation
 
