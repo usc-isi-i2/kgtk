@@ -21,7 +21,8 @@ git clone https://github.com/usc-isi-i2/kgtk-notebooks.git
 cd kgtk-notebooks
 ```
 
-For an explanation of these commands, [here is a detailed description](install-details.md).
+If you encounter problems with your installation, or for an
+detained explanation of these commands, [read more about the installation procedure](KGTK-Installation-Procedure-Details.md).
 
 ## Running KGTK commands
 
