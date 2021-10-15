@@ -1,10 +1,9 @@
 ## Installing KGTK
 
-!!! info
+!!! note
     The following instructions install KGTK and the KGTK Jupyter Notebooks on
     Linux and MacOS systems.
 
-!!! note
     If you want to install KGTK on a Microsoft Windows system, please
     contact the KGTK team.
 
