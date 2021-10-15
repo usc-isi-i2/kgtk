@@ -26,7 +26,7 @@ cd kgtk-notebooks
     You may need to install a specific release of KGTK, such as
     a prerelease that incorporates the latest changes.  For example,
     if you need to install KGTK release `0.8.3b0`, use the following
-    `pip` command:
+    `pip` command instead of the `pip` command shown above:
 
      ```bash
      pip --no-cache install kgtk==0.8.3b0
