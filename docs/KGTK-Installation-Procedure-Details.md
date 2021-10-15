@@ -20,16 +20,16 @@ steps.
 ### We Recommend Python 3.8
 
 Some of KGTK's features require Python 3.8 or later. As of 12-Oct-2021, Python
-version 3.8, 3.9, and 3.10 are available. We currently devleop and test using
-Python 3.8, and are not routinely checking for compatability with later versions
+version 3.8, 3.9, and 3.10 are available. We currently develop and test using
+Python 3.8, and are not routinely checking for compatibility with later versions
 of Python.  At the present time, we recommend running KGTK on Python 3.8.
 
-This is not to say that KGTK will not necessarily run on a later version of
+This is not to say that KGTK will fail to run on a later version of
 Python.  However, the removal of deprecated features, or unxpected
 incompatibilities between later releases of Python and KGTK or KGTK's required
 external modules, may lead to unanticipated problems.  If your project would
 like to run KGTK, but you require a later version of Python, please contact
-the KGTK project for support.
+the KGTK team.
 
 ### We Recommand a Virtual Environment
 
