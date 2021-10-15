@@ -1161,26 +1161,37 @@ INDEX_MODE_AUTO_TEXT   = 'mode:autotext'
 INDEX_MODE_CLEAR       = 'mode:clear'
 INDEX_MODE_CLEAR_TEXT  = 'mode:cleartext'
 INDEX_MODE_EXPERT      = 'mode:expert'
+
+# graph modes:
+INDEX_MODE_GRAPH       = 'mode:graph'
+INDEX_MODE_MONO_GRAPH  = 'mode:monograph'
+INDEX_MODE_VALUE_GRAPH = 'mode:valuegraph'
+INDEX_MODE_TEXT_GRAPH  = 'mode:textgraph'
+
 # legacy modes:
 INDEX_MODE_PAIR        = 'mode:node1+label'
 INDEX_MODE_TRIPLE      = 'mode:triple'
 INDEX_MODE_QUAD        = 'mode:quad'
 
 INDEX_MODES = {
-    INDEX_MODE_NONE:       INDEX_MODE_NONE,
-    INDEX_MODE_AUTO:       INDEX_MODE_AUTO,
-    INDEX_MODE_AUTO_TEXT:  INDEX_MODE_AUTO_TEXT,
-    INDEX_MODE_CLEAR:      INDEX_MODE_CLEAR,
-    INDEX_MODE_CLEAR_TEXT: INDEX_MODE_CLEAR_TEXT,
-    INDEX_MODE_EXPERT:     INDEX_MODE_EXPERT,
-    'mode:graph':          ['index:node1,label,node2', 'index:label', 'index:node2,label,node1'],
-    'mode:unigraph':       ['index:node1,label,node2', 'index:node2,label,node1'],
-    'mode:attgraph':       ['index:node1'],
-    'mode:textattgraph':   ['index:node1', 'text:node1, node2/text/upcase/lang=@en'],
+    # macro modes:
+    INDEX_MODE_NONE:        INDEX_MODE_NONE,
+    INDEX_MODE_AUTO:        INDEX_MODE_AUTO,
+    INDEX_MODE_AUTO_TEXT:   INDEX_MODE_AUTO_TEXT,
+    INDEX_MODE_CLEAR:       INDEX_MODE_CLEAR,
+    INDEX_MODE_CLEAR_TEXT:  INDEX_MODE_CLEAR_TEXT,
+    INDEX_MODE_EXPERT:      INDEX_MODE_EXPERT,
+
+    # graph modes:
+    INDEX_MODE_GRAPH:       ['index:node1,label,node2', 'index:label', 'index:node2,label,node1'],
+    INDEX_MODE_MONO_GRAPH:  ['index:node1,label,node2', 'index:node2,label,node1'],
+    INDEX_MODE_VALUE_GRAPH: ['index:node1'],
+    INDEX_MODE_TEXT_GRAPH:  ['index:node1', 'text:node2//tokenize=trigram'],
+    
     # legacy modes:
-    INDEX_MODE_PAIR:       ['index:node1', 'index:label'],
-    INDEX_MODE_TRIPLE:     ['index:node1', 'index:label', 'index:node2'],
-    INDEX_MODE_QUAD:       ['index:node1', 'index:label', 'index:node2', 'index:id'],
+    INDEX_MODE_PAIR:        ['index:node1', 'index:label'],
+    INDEX_MODE_TRIPLE:      ['index:node1', 'index:label', 'index:node2'],
+    INDEX_MODE_QUAD:        ['index:node1', 'index:label', 'index:node2', 'index:id'],
 }
 
 def get_normalized_index_mode(index_spec):
