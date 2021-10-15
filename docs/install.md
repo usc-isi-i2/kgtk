@@ -150,9 +150,7 @@ pip --no-cache install -U kgtk
 ```
 
 To get the latest KGTK Jupyter notebooks, 
-
-Execute the following commands
-installed KGTK:
+execute the following commands:
 
 ```
 conda activate kgtk-env
