@@ -2,7 +2,7 @@
 
 The following steps install KGTK and the KGTK Jupyter Notebooks.
 
-OurKGTK installations use a Conda virtual environment. If you
+Our KGTK installations use a Conda virtual environment. If you
 don't have the Conda tools installed, follow this
 [guide](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) to
 install it. We recommend installing Miniconda installation rather than the
