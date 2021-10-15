@@ -1,0 +1,4 @@
+node1	label	node2	color	node1;label	nolabel
+Q1	P1	Q5	Q101	"Elmo"	Q201
+Q1	P2	Q6	Q102		Q202
+Q6	P1	Q5	Q103		Q203

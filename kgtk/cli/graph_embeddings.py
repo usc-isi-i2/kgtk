@@ -142,6 +142,7 @@ def add_arguments(parser: KGTKArgumentParser):
     """
     # import modules locally
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     ### IO 
@@ -216,6 +217,10 @@ def add_arguments(parser: KGTKArgumentParser):
                              "to all the entities of a certain type. This vector is learned during training.[Default: False] ",
                              type=bool,default=False, metavar='True|False')
     ### kgtk format
+    parser.add_argument(      "--no-output-header", dest="output_no_header", metavar="True|False",
+                              help="When true, do not write a header to the output file (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+    
     KgtkReader.add_debug_arguments(parser)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=True)
     KgtkValueOptions.add_arguments(parser)
@@ -237,7 +242,7 @@ def config_preprocess(raw_config):
         algorithm = algorithm_operator[raw_config['relations'][0]['operator'].lower()]
         raw_config['relations'][0]['operator'] = algorithm
     except:
-        print('Plase use valid operator! choices: RESCAL|DistMult|ComplEx|TransE')
+        print('Plase use valid operator! choices: RESCAL|DistMult|ComplEx|TransE', file=sys.stderr, flush=True)
         import sys
         sys.exit()
 
@@ -245,7 +250,7 @@ def config_preprocess(raw_config):
     learning_rate = raw_config['lr']
     if algorithm and loss_fn and learning_rate:
         return 
-
+    
     if  not algorithm:  # use doesn't enter anything
         raw_config['relations'][0]['operator'] = 'complex_diagonal'
         if not loss_fn:
@@ -278,11 +283,11 @@ def config_preprocess(raw_config):
     return processed_config
 
 # convert wv format to kgtk format ..
-def generate_kgtk_output(entities_output,output_kgtk_file,verbose,very_verbose):
+def generate_kgtk_output(entities_output,output_kgtk_file,output_no_header,verbose,very_verbose):
 
     # Open the output file.
     kw: KgtkWriter = KgtkWriter.open(#kr.column_names,
-                                    ['id','node1','node2','relation'], # in order to obey the kgtk rules
+                                    ['node1', 'label', 'node2'],
                                     output_kgtk_file,
                                     #mode=KgtkWriter.Mode[kr.mode.name],
                                     mode = KgtkWriter.Mode.AUTO,
@@ -290,16 +295,13 @@ def generate_kgtk_output(entities_output,output_kgtk_file,verbose,very_verbose):
                                     prohibit_extra_columns=False,
                                     fill_missing_columns=False,
                                     gzip_in_parallel=False,
+                                    no_header=output_no_header,
                                     verbose=verbose,
                                     very_verbose=very_verbose)
 
     input_line_count: int = 0
     if verbose:
         logging.info("Processing the input records.", file=self.error_file, flush=True)
-
-    #delete header
-    kw.file_out.seek(0)         # set the cursor to the top of the file
-    kw.file_out.truncate()      # truncate following part == delete first line
 
     MODULE_NAME = 'graph_embeddings' # __name__.split('.')[-1] 
     with open(entities_output) as wv_file:
@@ -367,7 +369,7 @@ def run(input_file: KGTKFiles,
                     level=logging.DEBUG,
                     filename=str(log_file_path),
                     filemode='w')
-            print(f'In Processing, Please go to {kwargs["log_file_path"]} to check details')
+            print(f'In Processing, Please go to {kwargs["log_file_path"]} to check details', file=sys.stderr, flush=True)
 
         tmp_folder = kwargs['temporary_directory']
         tmp_tsv_path:Path = tmp_folder / f'tmp_{input_kgtk_file.name}'
@@ -461,7 +463,11 @@ def run(input_file: KGTKFiles,
             generate_w2v_output(entities_output,output_kgtk_file,kwargs)
 
         else: # write to the kgtk output format tsv 
-            generate_kgtk_output(entities_output,output_kgtk_file,verbose,very_verbose)
+            generate_kgtk_output(entities_output,
+                                 output_kgtk_file,
+                                 kwargs.get('output_no_header', False),
+                                 verbose,
+                                 very_verbose)
 
         logging.info(f'Embeddings has been generated in {output_kgtk_file}.')
 
@@ -474,10 +480,10 @@ def run(input_file: KGTKFiles,
             # shutil.rmtree(tmp_output_folder) # deleter temporay output folder   
 
         if kwargs["log_file_path"] != None:
-            print('Processed Finished.')
-            logging.info(f"Process Finished.\nOutput has been saved in {kwargs['output_file_path']}")
+            print('Processed Finished.', file=sys.stderr, flush=True)
+            logging.info(f"Process Finished.\nOutput has been saved in {repr(str(output_kgtk_file))}")
         else:
-            print(f"Process Finished.\nOutput has been saved in {kwargs['output_file_path']}")
+            print(f"Process Finished.\nOutput has been saved in {repr(str(output_kgtk_file))}", file=sys.stderr, flush=True)
 
     except Exception as e:
         raise KGTKException(str(e))

@@ -22,6 +22,14 @@ def add_arguments(parser):
     parser.add_argument('--alias-properties', action='store', type=str, dest='alias_properties', default=None,
                         help='the name of property which has aliases for the node1')
 
+    parser.add_argument('--extra-alias-properties', action='store', type=str, dest='extra_alias_properties',
+                        default="P1448,P1705,P1477,P1810",
+                        help='comma separated list of properties to be used as additional aliases.')
+    # P1448: official name
+    # P1705: native label
+    # P1477: official name
+    # P1810: named as
+
     parser.add_argument('--description-properties', action='store', type=str, dest='description_properties',
                         default=None,
                         help='the name of property which has descriptions for the node1')
@@ -52,6 +60,7 @@ def run(**kwargs):
         ElasticsearchManager.build_kgtk_search_input(kwargs['input_file_path'], kwargs['label_properties'],
                                                      kwargs['mapping_file_path'], kwargs['output_file_path'],
                                                      alias_fields=kwargs['alias_properties'],
+                                                     extra_alias_properties=kwargs['extra_alias_properties'],
                                                      pagerank_fields=kwargs['pagerank_properties'],
                                                      description_properties=kwargs['description_properties'],
                                                      add_text=kwargs['add_text'],

@@ -21,6 +21,10 @@ You provide a list of column names in the order in which they should appear in t
 
     See [`kgtk rename-columns`](../rename_columns) if you wish to rename columns.
 
+    See [`kgtk select-columns`](../select_columns) if you wish to select a subset of
+    columns, dropping unmentioned columns.  This provides the same functionality as
+    `kgtk reorder-columns --trim`.
+
 ### List of Column Names
 
 When you use this command, you supply the `--columns` option with

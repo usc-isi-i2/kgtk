@@ -7,8 +7,9 @@ and the destination column for the label values.
 
 ### Memory Usage
 
-The input rows are saved in memory, as well as the value-to-label mapping.
-This will impose a limit on the size of the input files that can be processed.
+By default, the input rows are saved in memory, as well as the value-to-label
+mapping.  This will impose a limit on the size of the input files that can be
+processed.
 
 Seperating the labels from the  edges being lifted, and presorting each
 of the files, enables operation with reduced memory requirements.
@@ -31,9 +32,9 @@ usage: kgtk lift [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                  [--clear-before-lift [CLEAR_BEFORE_LIFT]]
                  [--overwrite [OVERWRITE]]
                  [--output-only-modified-rows [OUTPUT_ONLY_MODIFIED_ROWS]]
-                 [-v [optional True|False]]
+                 [--use-label-envar [True/False]] [-v [optional True|False]]
 
-Lift labels for a KGTK file. For each of the items in the (node1, label, node2) columns, look for matching label records. If found, lift the label values into additional columns in the current record. Label records are reoved from the output. 
+Lift labels for a KGTK file. If called as "kgtk lift", for each of the items in the (node1, label, node2) columns, look for matching label records. If called as "kgtk add-labels", look for matching label records for all input columns. If found, lift the label values into additional columns in the current record. Label records are removed from the output unless --remove-label-records=False. 
 
 Additional options are shown in expert help.
 kgtk --expert lift --help
@@ -95,6 +96,9 @@ optional arguments:
   --output-only-modified-rows [OUTPUT_ONLY_MODIFIED_ROWS]
                         If true, output only modified edges to the primary
                         output stream. (default=False).
+  --use-label-envar [True/False]
+                        If true, use the KGTK_LABEL_FILE envar for the label
+                        file if no --label-file. (default=False).
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).
@@ -104,7 +108,7 @@ optional arguments:
 
 ### Sample Data
 
-Suppose that `file1.tsv` contains the following table in KGTK format:
+Suppose that `lift-file1.tsv` contains the following table in KGTK format:
 
 ```bash
 kgtk cat --input-file examples/docs/lift-file1.tsv
@@ -146,7 +150,7 @@ By default, `kgtk lift` will build a list of labels if multiple label records
 are found for a property. The labels in the list will be sorted and
 deduplicated.
 
-Suppose that `file4.tsv` contains the following table in KGTK format:
+Suppose that `lift-file4.tsv` contains the following table in KGTK format:
 
 ```bash
 kgtk cat --input-file examples/docs/lift-file4.tsv
@@ -202,7 +206,7 @@ The labels may be in a seperate file from the input.  If
 processed in a single pass without keeping a copy in memory.  The labels will
 still be loaded into an in-memory dictionary.
 
-Suppose that `file5.tsv` contains the following table in KGTK format:
+Suppose that `lift-file5.tsv` contains the following table in KGTK format:
 
 ```bash
 kgtk cat --input-file examples/docs/lift-file5.tsv
@@ -214,7 +218,7 @@ kgtk cat --input-file examples/docs/lift-file5.tsv
 | Q1 | P2 | Q6 |
 | Q6 | P1 | Q5 |
 
-And `file6.tsv` contains the following table in KGTK format:
+And `lift-file6.tsv` contains the following table in KGTK format:
 
 ```bash
 kgtk cat --input-file examples/docs/lift-file6.tsv
@@ -291,7 +295,7 @@ kgtk lift --input-file examples/docs/lift-file5.tsv \
 
 ### Duplicate Labels
 
-Suppose that `file7.tsv` contains the following table in KGTK format,
+Suppose that `lift-file7.tsv` contains the following table in KGTK format,
 which is sorted on the `node1` column:
 
 ```bash
@@ -329,7 +333,7 @@ The output will be the following table in KGTK format:
 
 ### More Sample Data
 
-Suppose that `file8.tsv` contains the following table in KGTK format:
+Suppose that `lift-file8.tsv` contains the following table in KGTK format:
 
 ```bash
 kgtk cat --input-file examples/docs/lift-file8.tsv
@@ -342,7 +346,7 @@ kgtk cat --input-file examples/docs/lift-file8.tsv
 | Q2 | P1 | Q5 | False |
 | Q2 | P2 | Q6 | False |
 
-and suppose that `file9.tsv` contains the following file in KGTK format:
+and suppose that `lift-file9.tsv` contains the following file in KGTK format:
 
 ```bash
 kgtk cat --input-file examples/docs/lift-file9.tsv
@@ -723,7 +727,7 @@ kgtk lift --input-file examples/docs/lift-file8.tsv \
 
 ### Expert Example: Overriding the Label Match and Value Columns
 
-Consider the following file, file10.tsv, which is like `lift-file9.tsv`,
+Consider the following file, `lift-file10.tsv`, which is like `lift-file9.tsv`,
 but with the `node1` and `node2` columns swapped and with an additional column, `action`:
 
 ```bash
@@ -780,7 +784,7 @@ kgtk lift --input-file examples/docs/lift-file8.tsv \
 | Q2 | P1 | Q5 | False | "Alice" | "instance of" | "human" |
 | Q2 | P2 | Q6 | False | "Alice" | "friend" | "Fred" |
 
-If we hadn't filter the labels, the output would look like this:
+If we hadn't filtered the labels, the output would have looked like this:
 
 ```bash
 kgtk lift --input-file examples/docs/lift-file8.tsv \

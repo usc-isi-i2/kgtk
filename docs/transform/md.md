@@ -7,6 +7,9 @@ However, there are instances in which the output of this command is more
 readable than a KGTK TSV file, so this command can also be used as a debugging
 aid.
 
+This command defaults to `--mode=NONE` since it doesn't attach special meaning
+to particular columns.
+                                                                                                                                                                     
 This comand is equivalent to `kgtk cat --MODE=NONE --output-format=md`.
 However, it is a lot shorter and easier to type.
 

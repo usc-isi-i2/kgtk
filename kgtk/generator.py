@@ -151,7 +151,7 @@ class Generator:
             return False
 
     @staticmethod
-    def clean_number_string(num: str) -> typing.Optional[str]:
+    def clean_number_string(num: typing.Optional[str]) -> typing.Optional[str]:
         from numpy import format_float_positional
         if num == None:
             return None
@@ -484,8 +484,8 @@ class TripleGenerator(Generator):
 
             amount, lower_bound, upper_bound, unit = res
 
-            amount = TripleGenerator.clean_number_string(amount)
-            num_type = self.xsd_number_type(amount)
+            amount: typing.Optional[str] = TripleGenerator.clean_number_string(amount)
+            num_type = self.xsd_number_type(amount) # Error! xsd_number_type expectes a float or int!
 
             lower_bound = TripleGenerator.clean_number_string(lower_bound)
             upper_bound = TripleGenerator.clean_number_string(upper_bound)

@@ -9,8 +9,12 @@ import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
+REORDER_COLUMNS_COMMAND: str = 'reorder-columns'
+SELECT_COLUMNS_COMMAND: str = 'select-columns'
+
 def parser():
     return {
+        'aliases': [ SELECT_COLUMNS_COMMAND ],
         'help': 'Reorder KGTK file columns.',
         'description': 'This command reorders one or more columns in a KGTK file. ' +
         '\n\nReorder all columns using --columns col1 col2' +
@@ -36,6 +40,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     _expert: bool = parsed_shared_args._expert
+    _command: str = parsed_shared_args._command
 
     # This helper function makes it easy to suppress options from
     # The help message.  The options are still there, and initialize
@@ -58,7 +63,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "--trim", dest="omit_remaining_columns",
                               help="If true, omit unmentioned columns. (default=%(default)s).",
                               metavar="True|False",
-                              type=optional_bool, nargs='?', const=True, default=False)
+                              type=optional_bool, nargs='?', const=True, default=(_command == SELECT_COLUMNS_COMMAND))
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)

@@ -42,8 +42,14 @@ class TestGraphEmbeddings(unittest.TestCase):
         '-ot','kgtk')    
         with open(f'{self.temp_dir}/out.tsv') as f :
             data = f.readlines()
+        self.assertTrue(len(data) > 0)
+        header = data.pop(0).rstrip('\r\n').split('\t')
+        self.assertTrue(len(header) == 3)
+        self.assertTrue(header[0] == 'node1')
+        self.assertTrue(header[1] == 'label')
+        self.assertTrue(header[2] == 'node2')
         for entity_emb in data:
-            value = entity_emb.split('\t')
+            value = entity_emb.rstrip('\r\n').split('\t')
             self.assertTrue(len(value) == 3)
             self.assertTrue(value[1]=='graph_embeddings')
 

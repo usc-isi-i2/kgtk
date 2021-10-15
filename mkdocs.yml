@@ -1,9 +1,12 @@
 site_name: KGTK documentation
 nav:
   - Home: index.md
-  - Getting started: install.md
+  - 'Getting Started':
+      - 'Basic KGTK Installation': install.md
+      - 'Installation Procedure Details': KGTK-Installation-Procedure-Details.md
   - KGTK data model: data_model.md
   - KGTK file specification: specification.md
+  - KGTK environment variables: envars.md
   - 'Import commands':
       - 'import-atomic': 'import/import_atomic.md'
       - 'import-conceptnet': 'import/import_conceptnet.md'
@@ -18,12 +21,15 @@ nav:
       - 'generate_wikidata_triples': 'export/generate_wikidata_triples.md'
   - 'Transformation commands':
       - 'add-id': 'transform/add_id.md'
+      - 'add-labels': 'transform/add_labels.md'
       - 'calc': 'transform/calc.md'
       - 'cat': 'transform/cat.md'
       - 'compact': 'transform/compact.md'
       - 'expand': 'transform/expand.md'
       - 'explode': 'transform/explode.md'
       - 'filter': 'transform/filter.md'
+      - 'head': 'transform/head.md'
+      - 'html': 'transform/html.md'
       - 'ifempty': 'transform/ifempty.md'
       - 'ifexists': 'transform/ifexists.md'
       - 'ifnotempty': 'transform/ifnotempty.md'
@@ -42,7 +48,10 @@ nav:
       - 'rename-columns': 'transform/rename_columns.md'
       - 'reorder-columns': 'transform/reorder_columns.md'
       - 'replace-nodes': 'transform/replace_nodes.md'
+      - 'select-columns': 'transform/select_columns.md'
       - 'sort': 'transform/sort.md'
+      - 'table': 'transform/table.md'
+      - 'tail': 'transform/tail.md'
       - 'tee': 'transform/tee.md'
       - 'unique': 'transform/unique.md'
       - 'unreify-rdf-statements': 'transform/unreify_rdf_statements.md'

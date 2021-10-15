@@ -536,10 +536,6 @@ def main():
 
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
     
-    parser.add_argument(      "--only-one-id", dest="only_one_id",
-                              help="When the ID column contains a list, pick one value. (default=%(default)s).",
-                              type=optional_bool, nargs='?', const=True, default=False)
-
     parser.add_argument(      "--build-id", dest="build_id",
                               help="Build id values in an id column. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
@@ -572,7 +568,6 @@ def main():
         print("--report-lists=%s" % str(args.report_lists), file=error_file, flush=True)
         print("--exclude-lists=%s" % str(args.exclude_lists), file=error_file, flush=True)
         print("--output-only-lists=%s" % str(args.output_only_lists), file=error_file, flush=True)
-        print("--only-one-id=%s" % str(args.only_one_id), file=error_file, flush=True)
         print("--build-id=%s" % str(args.build_id), file=error_file, flush=True)
         idbuilder_options.show(out=error_file)
         reader_options.show(out=error_file)

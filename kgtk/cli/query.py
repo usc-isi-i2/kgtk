@@ -133,7 +133,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args):
                         help="explain the query execution and indexing plan according to MODE"
                         + " (%(choices)s, default: %(const)s)."
                         + " This will not actually run or create anything.")
-    parser.add_argument('--graph-cache', default=DEFAULT_GRAPH_CACHE_FILE, action='store', dest='graph_cache_file',
+    parser.add_argument('--graph-cache', action='store', dest='graph_cache_file',
                         help="database cache where graphs will be imported before they are queried"
                         + " (defaults to per-user temporary file)")
     parser.add_argument('--show-cache', action='store_true', dest='show_cache',
@@ -212,6 +212,11 @@ def run(input_files: KGTKFiles,
         store = None
         try:
             graph_cache = options.get('graph_cache_file')
+            
+            if graph_cache is None or len(graph_cache) == 0:
+                graph_cache = os.getenv('KGTK_GRAPH_CACHE')
+                if graph_cache is None or len(graph_cache) == 0:
+                    graph_cache = DEFAULT_GRAPH_CACHE_FILE
             store = sqlstore.SqliteStore(graph_cache, create=not os.path.exists(graph_cache), loglevel=loglevel)
 
             if options.get('show_cache', False):
