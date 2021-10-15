@@ -23,9 +23,9 @@ usage: kgtk query [-h] [-i INPUT_FILE [INPUT_FILE ...]] [--as NAME]
                   [--where: CLAUSE] [--return CLAUSE] [--order-by CLAUSE]
                   [--skip CLAUSE] [--limit CLAUSE] [--para NAME=VAL]
                   [--spara NAME=VAL] [--lqpara NAME=VAL] [--no-header]
-                  [--force] [--index [MODE]] [--explain [MODE]]
-                  [--graph-cache GRAPH_CACHE_FILE] [--show-cache]
-                  [--import MODULE_LIST] [-o OUTPUT]
+                  [--force] [--index MODE [MODE ...]] [--idx SPEC [SPEC ...]]
+                  [--explain [MODE]] [--graph-cache GRAPH_CACHE_FILE]
+                  [--show-cache] [--import MODULE_LIST] [-o OUTPUT]
 
 Query one or more KGTK files with Kypher.
 IMPORTANT: input can come from stdin but chaining queries is not yet supported.
@@ -36,8 +36,8 @@ optional arguments:
                         One or more input files to query, maybe compressed
                         (May be omitted or '-' for stdin.)
   --as NAME             alias name to be used for preceding input
-  --comment COMMENT     comment string to store in the cache for the preceding
-                        input (displayed by --show-cache)
+  --comment COMMENT     comment string to store for the preceding input
+                        (displayed by --show-cache)
   --query QUERY         complete Kypher query combining all clauses, if
                         supplied, all other specialized clause arguments will
                         be ignored
@@ -64,9 +64,13 @@ optional arguments:
                         to the query
   --no-header           do not generate a header row with column names
   --force               force problematic queries to run against advice
-  --index [MODE]        control column index creation according to MODE (auto,
-                        expert, quad, triple, node1+label, node1, label,
-                        node2, none, default: auto)
+  --index MODE [MODE ...], --index-mode MODE [MODE ...]
+                        default index creation MODE for all inputs (default:
+                        auto); can be overridden with --idx for specific
+                        inputs
+  --idx SPEC [SPEC ...], --input-index SPEC [SPEC ...]
+                        create index(es) according to SPEC for the preceding
+                        input only
   --explain [MODE]      explain the query execution and indexing plan
                         according to MODE (plan, full, expert, default: plan).
                         This will not actually run or create anything.
@@ -728,11 +732,6 @@ might become available in future versions.  Some kind of that can already
 be achieved through pipelines of KGTK commands combining `query` and `cat`, for
 example.  Certain cases can also be handled by introducing additional graphs
 such as the `$PROPS` graph used in [this example](#time-machine-use-case).
-
-!!! note
-    <b>Important:</b> restrictions via `OR` and `IN` defeat any indexing and might
-    result in long query times on large graphs in the absence of other direct
-    restrictions (such as the `node1` restriction to `Joe` in the examples above).
 
 
 ### Querying connected edges across multiple graphs
@@ -2078,6 +2077,172 @@ example, `x.kgtk_lqstring_text` instead of `kgtk_lqstring_text(x)`.
 | kgtk_geo_coords_long(x) | Return the longitude component of a KGTK geo coordinates literal as a float. |
 
 
+<A NAME="text-search-functions"></A>
+#### Full-text search functions
+
+The following functions support efficient full-text search and
+matching based on text indexes.  Full-text search is based on SQLite's
+FTS5 module whose implementation, options and match syntax is
+described in more detail [here](https://www.sqlite.org/fts5.html).
+In the functions below, `x` must be a match variable that can be
+uniquely linked to a specific unnamed or named text index.  If no or
+multiple indexes are applicable, an error will be raised.  Text indexes
+can be built with a `text:` index spec, for example,  `--idx text:node2`.
+
+| Function                          | Description                                                       |
+|-----------------------------------|-------------------------------------------------------------------|
+| textmatch(x, pat)                 | Return True if `x` matches the full-text MATCH pattern `pat`.     |
+| textlike(x, pat)                  | Return True if `x` matches the LIKE pattern `pat`.                |
+| textglobl(x, pat)                 | Return True if `x` matches the GLOB pattern `pat`.                |
+| matchscore(x)                     | Return the BM25 match score for the text match on `x` (scores are negative, smaller are better). |
+| bm25(x)                           | Synonym for `matchscore`.                                         |
+
+For example, here we define a text index on the `node2` column of
+`GRAPH` and then use `textmatch` to match against the values of that
+column.  For now text indexes need to be explicitly defined before
+they can be used.  We also give the index a name using the
+`//name=myidx` option which is optional but will allow us to
+demonstrate access to named indexes.
+
+```
+kgtk query -i $GRAPH --idx auto text:node2//name=myidx \
+     --match '(x)-[r]->(y)' \
+     --where 'textmatch(y, "ott")' \
+     --return 'x, r.label, y, matchscore(y) as score' \
+     --order 'score'
+```
+Result:
+
+| node1 | label  |  node2     |  score               |
+|-------|--------|------------|----------------------|
+| Joe   | friend |  Otto      |  -1.3605330992115003 |
+| Otto  | name   |  'Otto'@de |  -0.8144321029967752 |
+
+Note how all the scores are negative with the best being the smallest
+(most negative) which allows the use of default ascending ordering to
+get the best matches first.
+
+`textmatch` patterns use a phrase-based language that allows
+multi-word phrases, Boolean expressions, multi-column expressions,
+suffix patterns, etc.  See
+[here](https://www.sqlite.org/fts5.html#full_text_query_syntax) for a
+full exposition.  What is handled exactly and efficiently depends on
+the options used when the text index was defined (which are
+unfortunately somewhat complex).  By default, the `trigram` tokenizer
+is used here which supports a large number of different operations
+efficiently.
+
+Here is an example of a Boolean expression:
+
+```
+kgtk query -i $GRAPH --idx auto text:node2//name=myidx \
+     --match '(x)-[r]->(y)' \
+     --where 'textmatch(y, "ott OR hans")' \
+     --return 'x, r.label, y, matchscore(y) as score' \
+     --order 'score'
+```
+Result:
+
+| node1 | label  |  node2     |  score               |
+|-------|--------|------------|----------------------|
+| Joe   | friend | Otto       | -1.3605330992115003  |
+| Hans  | name   | 'Hans'@de  | -1.2859084137069412  |
+| Otto  | name   | 'Otto'@de  | -0.8144321029967752  |
+
+The `trigram` tokenizer also supports case-insensitive SQL `LIKE`
+patterns and case-sensitive `GLOB` patterns.  In general, with a
+trigram index, a pattern must contain at least one trigram for a
+`MATCH` pattern to be successful or for the `LIKE` and `GLOB` patterns
+to work efficiently.  Here are some more examples:
+
+```
+kgtk query -i $GRAPH --idx auto text:node2//name=myidx \
+     --match '(x)-[r]->(y)' \
+     --where 'textlike(y, "%ott%")' \
+     --return 'x, r.label, y, matchscore(y) as score' \
+     --order 'score'
+```
+Result:
+
+| node1 | label  |  node2     |  score               |
+|-------|--------|------------|----------------------|
+| Joe   | friend | Otto       | -1.3605330992115003  |
+| Otto  | name   | 'Otto'@de  | -0.8144321029967752  |
+
+```
+kgtk query -i $GRAPH --idx auto text:node2//name=myidx \
+     --match '(x)-[r]->(y)' \
+     --where 'textglob(y, "*Ott*")' \
+     --return 'x, r.label, y, matchscore(y) as score' \
+     --order 'score'
+```
+Result:
+
+| node1 | label  |  node2     |  score               |
+|-------|--------|------------|----------------------|
+| Joe   | friend | Otto       | -1.3605330992115003  |
+| Otto  | name   | 'Otto'@de  | -0.8144321029967752  |
+
+It is possible to define more than one text index for a particular graph
+or column, e.g., to allow differently optimized indexes to coexist for
+certain types of fuzzy matching.  In such cases the optional name of an
+index can be used to indicate which index should be used.  Such names
+must be used as the first element of the match variable.  For example:
+
+```
+kgtk query -i $GRAPH --idx auto text:node2//name=myidx \
+     --match '(x)-[r]->(y)' \
+     --where 'textmatch(myidx.y, "ott")' \
+     --return 'x, r.label, y, matchscore(myidx.y) as score' \
+     --order 'score'
+```
+Result:
+
+| node1 | label  |  node2     |  score               |
+|-------|--------|------------|----------------------|
+| Joe   | friend |  Otto      |  -1.3605330992115003 |
+| Otto  | name   |  'Otto'@de |  -0.8144321029967752 |
+
+Finally, a text index may index more than one column in which case the
+match expression can use column-specific filters which can be combined
+in arbitrary Boolean expressions.  For multi-column matching, the
+relation variable must be used as the variable to be matched on (`r`
+in the examples below):
+
+```
+kgtk query -i $GRAPH --idx auto text:node1,node2//name=multi \
+     --match '(x)-[r]->(y)' \
+     --where 'textmatch(multi.r, "node1: joe AND node2 : ott")' \
+     --return 'x, r.label, y, matchscore(multi.r) as score' \
+     --order 'score'
+```
+Result:
+
+| node1 | label  |  node2     |  score               |
+|-------|--------|------------|----------------------|
+| Joe   | friend | Otto       | -2.1158081150971633  |
+
+```
+kgtk query -i $GRAPH --idx auto text:node1,node2//name=multi \
+     --match '(x)-[r]->(y)' \
+     --where 'textmatch(multi.r, "node2: ott NOT node1 : joe")' \
+     --return 'x, r.label, y, matchscore(multi.r) as score' \
+     --order 'score'
+```
+Result:
+
+| node1 | label  |  node2     |  score               |
+|-------|--------|------------|----------------------|
+| Otto  | name   | 'Otto'@de  | -0.8763404768201021  |
+
+Finally, full-text indexing is really only necessary on reasonably
+large data (e.g., the text labels of Wikidata), on small data like the
+example `GRAPH` used here, everything could have been done just as
+efficiently with standard regular expression matching.
+
+TO DO: full documentation of all text index definition options
+
+
 #### Defining and using custom functions
 
 When the built-in functions provided by SQLite and Kypher are not enough, the functions below
@@ -2226,9 +2391,105 @@ Proper indexing of KGTK graph file columns is important for good query
 performance on large files.  Appropriate indexes are created
 automatically as needed before a query is run.  However, sometimes
 more fine-grained control of index generation is needed which can be
-achieved with the `--index [MODE]` option (experts only).  Mode can
-be one of `auto` (the default), `expert`, `quad`, `triple`, `node1+label`,
-`node1`, `label`, `node2` and `none`.
+achieved with the `--index [MODE ...]` and `--idx [SPEC ...]` options
+(experts only).
+
+`--index` describes one or more default indexing modes or actions that
+should be applied to all inputs of the current query (the default is
+`mode:auto` or `auto` for short).  `--idx` or its long form
+`--input-index` describe one or more indexing modes/specs that should
+be applied for the preceding input only which will override any
+defaults coming from `--index` for that particular input.
+
+The following pre-defined indexing modes are currently supported:
+
+| Macro Modes               | Description                                                                                            |
+|---------------------------|--------------------------------------------------------------------------------------------------------|
+| mode:none                 | do not create any new indexes                                                                          |
+| mode:auto                 | automatically create indexes needed for good performance (the default)                                 |
+| mode:autotext             | automatically create text search indexes as needed (not yet implemented)                               |
+| mode:clear                | delete all currently defined indexes                                                                   |
+| mode:cleartext            | delete all currently defined text search indexes                                                       |
+| mode:expert               | use SQLite's expert mode to determine which indexes to build (deprecated)                              |
+
+| Graph modes               |                                                                                                        |
+|---------------------------|--------------------------------------------------------------------------------------------------------|
+| mode:graph                | build covering indexes on `node1` and `node2`, single column index on `label` (for general graphs)     |
+| mode:monograph            | build covering indexes on `node1` and `node2` (for mono-relational graphs)                             |
+| mode:valuegraph           | build a single-column index on `node1` (for mono-relational attribute-value graphs)                    |
+| mode:textgraph            | build a single-column index on `node1`, default unnamed text index on `node2` (for mono-relational attribute-value graphs with text values) |
+
+| Legacy modes              |                                                                                                        |
+|---------------------------|--------------------------------------------------------------------------------------------------------|
+| mode:node1+label          | build single-column indexes on `node1` and `label`                                                     |
+| mode:triple               | build single-column indexes on `node1`, `label` and `node2`                                            |
+| mode:quad                 | build single-column indexes on `node1`, `label`, `node2` and `id`                                      |
+
+All of the modes listed above except for `mode:clear` and
+`mode:cleartext` can be supplied without the `mode:` prefix.  Clearing
+modes need to be explicitly qualified to reduce the chance of
+accidental deletion of indexes.  Note that these modes will be applied
+only locally to the listed input most closely preceding an `--idx`
+option, or globally to all listed query inputs if the `--index` option
+is used.  If a local indexing option is given for an input, none
+of the global default options will be applied to it.
+
+Multiple index options can be supplied locally and globally.
+For example, here we first clear any pre-existing indexes on the
+qualifiers graph and then create a single-column index on `node1`
+using the `valuegraph` mode:
+
+```
+kgtk query -i $QUALS --idx mode:clear valuegraph
+```
+
+Indexing modes can safely be resupplied over multiple queries.
+Indexes will only be built if they are not yet available.  If an index
+implied by a mode has already been constructed, it will simply be reused.
+
+Besides high-level modes, a concise more fine-grained language of
+index specs is also available to allow highly custom-tailored
+specification of graph indexes.  This is particularly useful for text
+search indexing which provides a number of different indexing options
+(see [<b>Full text search functions</b>](#text-search-functions) for
+more details).
+
+Index specs are indicated with the `index:` prefix for graph indexes
+and the `text:` prefix for text search indexes.  For example, a
+two-column unique index starting from `node2` that ignores the label
+column can be specified like this:
+
+```
+index:node2,node1//unique
+```
+
+Options can be supplied with the slash syntax.  Double slashes indicate global
+options that apply to the whole index, single slashes indicate column-local
+options.  `unique` is the only option currently supported for graph indexes,
+it indicates and enforces that the listed columns form a unique key, that is,
+there are no two rows in the graph that have the same values for those columns.
+
+Columns containing special characters can be quoted using backtick
+syntax.  For example, to index on an extra column do this (but note the
+extra quotes necessary to prevent the shell from interpreting those
+backticks):
+
+```
+--idx 'index:node1,`node1;region`'
+```
+
+`index:` is the default prefix implied for specs without a prefix.  For example,
+`node1` can be used instead of `index:node1`.  For cases where a column name
+matches one of the modes listed above, an explicit qualification is needed,
+for example, to index a column named `cleartext` use `index:cleartext`.
+
+Multiple modes and specs can be specified locally and globally and will be
+interpreted in sequence.  For example:
+
+```
+kgtk query -i $GRAPH --idx mode:clear node1,node2 node2,node1 -i $WORKS --index none ...
+```
+
 
 #### Sorting the data before querying
 
@@ -2263,12 +2524,34 @@ as `node1`.  In a Wikidata-style dataset, however, `node1` skew is
 generally much less than `label` skew, so `node1` queries will be less
 affected by this resorting.  In the end what is the best strategy is
 an experimental question that will vary from dataset to dataset and
-use case.
+use case.  Note also the next section on covering indexes which can
+help with implicit sorting along multiple directions.
 
 Another thing to consider for very large datasets is to split them
 into separate files with different sets of edge labels.  This will
 keep data tables smaller, improve locality, but for the cost of some
 extra query complexity due to the multiple data files.
+
+
+#### Covering indexes
+
+Several of the indexing modes listed above will generate *covering
+indexes* for graphs.  A covering index is an index where the database
+can retrieve all the required values in a join directly from the index
+as opposed to first looking up a table row from the index and then
+accessing that table row to get a relevant value which requires
+additional disk accesses and will often break access locality.
+
+For example a `node2` covering index such as `index:node2,label,node1`
+will allow the database to join on `node2` and `label` which is useful
+for highly ambiguous labels (e.g., Wikidata's `P31`) and then be able
+to get `node1` directly from the index entry instead of having to go
+back to the data table to look it up.  Such an index also implicitly
+sorts the data which greatly improves locality, even if the data is
+not sorted in the data table.  Such covering indexes can therefore
+greatly speed up complex queries on large graphs.  The price for the
+performance gain is the extra disk space needed for such indexes which
+might be significant.
 
 
 ### Explanation

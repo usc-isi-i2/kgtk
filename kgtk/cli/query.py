@@ -43,6 +43,11 @@ class InputOptionAction(argparse.Action):
         if self.type == bool:
             values = True
         # we use self.dest as the key for this particular option:
+        cur_options = input_options.get(input_file, {})
+        cur_values = cur_options.get(self.dest)
+        if isinstance(cur_values, list):
+            # handle multiple specs of multi-valued options via append:
+            values = cur_values + values
         input_options.setdefault(input_file, {})[self.dest] = values
         setattr(namespace, 'input_file_options', input_options)
 
@@ -115,10 +120,14 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args):
                         help="do not generate a header row with column names")
     parser.add_argument('--force', action='store_true', dest='force',
                         help="force problematic queries to run against advice")
-    parser.add_argument('--index', metavar='MODE', nargs='?', action='store', dest='index',
-                        choices=INDEX_MODES, const=INDEX_MODES[0], default=INDEX_MODES[0], 
-                        help="control column index creation according to MODE"
-                        + " (%(choices)s, default: %(const)s)")
+    parser.add_argument('--index', '--index-mode', metavar='MODE', nargs='+', action='store',
+                        dest='index_mode', default=[INDEX_MODES[0]], 
+                        help="default index creation MODE for all inputs"
+                        + f" (default: {INDEX_MODES[0]});"
+                        + " can be overridden with --idx for specific inputs")
+    parser.add_argument('--idx', '--input-index', metavar='SPEC', nargs='+', default=None,
+                        action=InputOptionAction, dest='index_specs',
+                        help="create index(es) according to SPEC for the preceding input only")
     parser.add_argument('--explain', metavar='MODE', nargs='?', action='store', dest='explain',
                         choices=EXPLAIN_MODES, const=EXPLAIN_MODES[0], 
                         help="explain the query execution and indexing plan according to MODE"
@@ -229,7 +238,7 @@ def run(input_files: KGTKFiles,
                                       skip=options.get('skip'),
                                       limit=options.get('limit'),
                                       parameters=parameters,
-                                      index=options.get('index'),
+                                      index=options.get('index_mode'),
                                       force=options.get('force'))
             
             explain = options.get('explain')
