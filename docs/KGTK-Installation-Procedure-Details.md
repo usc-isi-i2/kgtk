@@ -84,6 +84,10 @@ that environment.
     your terminal shell's initialization file.
     The [Conda documentation on managing environments](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#activating-an-environment) may help you resolve any problems you encounter with this process.
 
+    For example, you may have to execute `condat init SHELL`, where
+    SHELL is the name of your shell (e.g., `bash`), then exit your
+    terminal session, and start a fresh terminal session.
+
 ### Install `graph-tool`
 
 Assuming that you used the recommended Conda environment, you should install
