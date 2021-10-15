@@ -143,7 +143,7 @@ Spacy's English language module using the following command:
 python -m spacy download en_core_web_sm
 ```
 
-> If you wisk to use KGTK to conduct text embedding analyses using
+> If you wisk to use KGTK for text embedding analyses using
     languages other then English, please contact the KGTK team.
 
 ## Running KGTK Commands in the Terminal Session
