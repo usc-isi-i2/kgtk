@@ -1,7 +1,6 @@
 ## Installing KGTK
 
-!!! note
-    The following instructions install KGTK and the KGTK Jupyter Notebooks on
+> The following instructions install KGTK and the KGTK Jupyter Notebooks on
     Linux and MacOS systems.
 
     If you want to install KGTK on a Microsoft Windows system, please
@@ -25,8 +24,7 @@ pip --no-cache install -U kgtk
 python -m spacy download en_core_web_sm
 ```
 
-!!! note
-    You may sometimes need to install a specific release of KGTK, such as
+> You may sometimes need to install a specific release of KGTK, such as
     a prerelease that incorporates the latest changes.  For example,
     if you need to install KGTK release `0.8.3b0`, use the following
     `pip` command instead of the `pip` command shown above:
