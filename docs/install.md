@@ -22,6 +22,16 @@ git clone https://github.com/usc-isi-i2/kgtk-notebooks.git
 cd kgtk-notebooks
 ```
 
+!!! note
+    You may need to install a specific release of KGTK, such as
+    a prerelease that incorporates the latest changes.  For example,
+    if you need to install KGTK release `0.8.3b0`, use the following
+    `pip` command:
+
+     ```bash
+     pip --no-cache install kgtk==0.8.3b0
+     ```
+
 If you encounter problems with your installation, or are interested in a
 detailed explanation of these commands,
 [read more about the installation procedure here](KGTK-Installation-Procedure-Details.md).
