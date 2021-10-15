@@ -81,15 +81,15 @@ that environment.
     session for working with KGTK.
 
 !!! note
-    `conda activate` operates in part through changes that Conda makes to
-    your terminal shell's initialization file.
+    `conda activate kgtk-env` operates in part through changes that Conda made to
+    your terminal shell's initialization file when Conda was installed.
     The [Conda documentation on managing environments](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#activating-an-environment) may help you resolve any problems you encounter with this process.
 
     For example, you may have to execute:
 
     `conda init SHELL`
 
-    where SHELL is the name of your command shell  If you are using
+    where SHELL is the name of your command shell.  If you are using
     the `bash` shell:
 
     `conda init bash`
