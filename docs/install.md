@@ -64,8 +64,7 @@ to that foder.
 cd /path/to/install/kgtk/tutorial
 ```
 
-!!! note
-    `/path/to/install/kgtk/tutorial` is an appropriate filesystem
+>    `/path/to/install/kgtk/tutorial` is an appropriate filesystem
     path of your choice.
 
 Next, execute the following command:
@@ -156,7 +155,6 @@ cd /path/to/install/kgtk/tutorial/kgtk-notebooks
 git pull
 ```
 
-!!! note
-    The `conda activate kgtk-env` commands shown above are not needed
+> The `conda activate kgtk-env` commands shown above are not needed
     if you have already activated your `kgtk-env` Conda virtual environment
     in your current terminal session.
