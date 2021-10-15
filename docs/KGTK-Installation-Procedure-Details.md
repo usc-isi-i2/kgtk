@@ -1,4 +1,4 @@
-### Install KGTK and the KGTK Jupyter Notebooks
+## Install KGTK and the KGTK Jupyter Notebooks
 
 Here is the standard set of steps to install KGTK and the
 KGTK Jupyter Notebooks:
@@ -10,6 +10,7 @@ conda install -c conda-forge graph-tool
 conda install -c conda-forge jupyterlab
 pip --no-cache install -U kgtk
 python -m spacy download en_core_web_sm
+
 cd /path/to/install/kgtk/tutorial
 git clone https://github.com/usc-isi-i2/kgtk-notebooks.git
 cd kgtk-notebooks
@@ -40,7 +41,7 @@ advised installation path is by using a virtual environment**,
 such as [Mamba](https://github.com/mamba-org/mamba#readme)
 or [Conda](https://docs.conda.io/en/latest/).
 
-### Install Conda
+## Install Conda
 
 Our installation procedure usees a [Conda](https://docs.conda.io/en/latest/) virtual environment. If you don't have a conda installed,
 follow this
@@ -57,7 +58,7 @@ install it.
     replacement for Conda that has been developed recently.  We may recommend
     Mamba in the future, but do not do so at the present itme.
 
-### Create Your Conda Environment
+## Create Your Conda Environment
 
 Create a Conda environment named `kgtk-env`.  You may use a
 different name, substituting it where `kgtk-env` appears in
@@ -67,7 +68,7 @@ these and following commands:
 conda create -n kgtk-env python=3.8
 ```
 
-### Activate Your Conda Environment
+## Activate Your Conda Environment
 
 ```bash
 conda activate kgtk-env
@@ -100,7 +101,7 @@ that environment.
 
     `conda activate kgtk-env`
 
-### Install `graph-tool` Using `conda`
+## Install `graph-tool` Using `conda`
 
 Assuming that you used the recommended Conda environment, you should install
 `graph-tool` to support the KGTK subcommands that require it (e.g., `connected-components`,
@@ -117,17 +118,7 @@ If you don't use Conda, or if you run into problems, see the
     We recommend installing `graph-tool` from the `conda-forge` channel (`-c conda-forge`)
     to ensure that you receive a recent version of `graph-tool`.
 
-### Install `jupyter lab` Using `conda`
-
-Assuming that you used the recommended Conda environment, you should install
-Jupyter Lab to run the example Jupyter Notebooks from the `kgtk-notebooks`
-repository that will be installed below.
-
-```bash
-conda install -c conda-forge jupyterlab
-```
-
-### Install KGTK Using `pip`
+## Install KGTK Using `pip`
 
 Installing KGTK using `pip` will give you access to the `kgtk` command
 and its subcommands.
@@ -150,7 +141,7 @@ pip --no-cache install -U kgtk
      pip --no-cache install kgtk==0.8.3b0
      ```
      
-### Download the English Model of SpaCY
+## Download the English Model of SpaCY
 
 SpaCY is used by the `kgtk text-embeddings` command.  We download
 Spacy's English language module using the following command:
@@ -180,7 +171,17 @@ kgtk <command> -h
 See our [online documentation](https://kgtk.readthedocs.io/en/latest/) for
 additional suggestions.
 
-### Install the KGTK Tutorial and Other Jupyter Notebooks from GitHub
+## Install `jupyter lab` Using `conda`
+
+Assuming that you used the recommended Conda environment, you should install
+Jupyter Lab to run the example Jupyter Notebooks from the `kgtk-notebooks`
+repository that will be installed below.
+
+```bash
+conda install -c conda-forge jupyterlab
+```
+
+## Install the KGTK Tutorial and Other Jupyter Notebooks from GitHub
 
 The following commands download the KGTK Jupyter Notebooks
 from GitHub.
@@ -224,7 +225,7 @@ will automatically open in one of your Web browser windows, or you can use
 the URI that the Jupyter Labs server prints to open a Jupyter Lab interface
 in your Web browser manually.
 
-### Resuming Work with KGTK in a New Terminal Session
+## Resuming Work with KGTK in a New Terminal Session
 
 If you have started a new terminal session and want to resume work with
 KGTK, first execute the following command in the new terminal session in order

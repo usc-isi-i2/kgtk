@@ -104,7 +104,7 @@ will automatically open in one of your Web browser windows, or you can use
 the URI that the Jupyter Labs server prints to open a Jupyter Lab interface
 in your Web browser manually.
 
-### Resuming Work with KGTK in a New Terminal Session
+## Resuming Work with KGTK in a New Terminal Session
 
 If you have started a new terminal session and want to resume work with
 KGTK, first execute the following command in the new terminal session in order
