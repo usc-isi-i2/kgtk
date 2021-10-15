@@ -1,6 +1,12 @@
 ## Installing KGTK
 
-The following steps install KGTK and the KGTK Jupyter Notebooks.
+!!! info
+    The following instructions install KGTK and the KGTK Jupyter Notebooks on
+    Linux and MacOS systems.
+
+!!! note
+    If you want to install KGTK on a Microsoft Windows system, please
+    contact the KGTK team.
 
 Our KGTK installations use a Conda virtual environment. If you
 don't have the Conda tools installed, follow this
@@ -11,19 +17,17 @@ full Anaconda installation.
 Next, execute the following steps to install the latest stable release
 of KGTK:
 
-```
+```bash
 conda create -n kgtk-env python=3.8
 conda activate kgtk-env
 conda install -c conda-forge graph-tool
 conda install -c conda-forge jupyterlab
 pip --no-cache install -U kgtk
 python -m spacy download en_core_web_sm
-git clone https://github.com/usc-isi-i2/kgtk-notebooks.git
-cd kgtk-notebooks
 ```
 
 !!! note
-    You may need to install a specific release of KGTK, such as
+    You may sometimes need to install a specific release of KGTK, such as
     a prerelease that incorporates the latest changes.  For example,
     if you need to install KGTK release `0.8.3b0`, use the following
     `pip` command instead of the `pip` command shown above:
@@ -53,12 +57,46 @@ kgtk <command> -h
 See our [online documentation](https://kgtk.readthedocs.io/en/latest/) for
 additional suggestions.
 
-## Running the KGTK Jupyter Notebooks
+## Installing the KGTK Tutorial and Other Jupyter Notebooks
 
-In your `kgtk-notebooks` folder, execute a command such as:
+Choose a folder in which you want to install the KGTK Tutorial and
+other Jupyter notebooks.  Change your current working directory
+to that foder.
 
 ```bash
-jupyter lab 'examples/Example1 - Embeddings.ipynb'
+cd path/to/install/kgtk/tutorial
+```
+
+!!! note
+    `path/to/install/kgtk/tutorial` is an appropriate filesystem
+    path of your choice.
+
+Next, execute the following command:
+
+```bash
+git clone https://github.com/usc-isi-i2/kgtk-notebooks.git
+```
+
+This will create a new folder (`kgtk-notebooks`) in your existing folder,
+then download the KGTK Tutorial and other Jupyter notebook files into
+the new folder.
+
+Change your current working directory to the `kgtk-notebooks` folder:
+
+```bash
+cd kgtk-notebooks
+```
+
+You are now in your `kgtk-notebooks` folder and ready to start the
+KGTK Tutorial using Jupyter Lab.
+
+## Running the KGTK Tutorial and Other Jupyter Notebooks
+
+In your `kgtk-notebooks` folder, start the first KGTK Tutorial notebook using the
+following command:
+
+```bash
+jupyter lab part1-kgtk-intro.ipynb
 ```
 
 This will start a Jupyter Lab notebook server in your current terminal
@@ -67,14 +105,55 @@ will automatically open in one of your Web browser windows, or you can use
 the URI that the Jupyter Labs server prints to open a Jupyter Lab interface
 in your Web browser manually.
 
+### Resuming Work with KGTK in a New Terminal Session
+
+If you have terminated started a new terminal session and want to resume work with
+KGTK, first execute the following command in the new terminal session in order
+to connect to your `kgtk-env` COnda virtual environment:
+
+```bash
+conda activate kgtk-env
+```
+
+You should now be able to execute KGTK commands on the command line.
+
+If you want to start a new Jupiter Lab notebook server, activate your
+Conda virtual environment as shown above and then enter:
+
+```bash
+cd path/to/install/kgtk/tutorial/kgtk-notebooks
+jupyter lab
+```
+
+!!! note
+    `path/to/install/kgtk/tutorial` is the path you originally
+    choose for installation of the KGTK Tutorial and other Jupyter notebooks.
+
+Use the Jupyter Lab interface to select the tutorial notebook on which you
+wish to resume work, or to select new notebook to begin.
+
 ## Updating your KGTK installation
 
-To get the latest stable release of the KGTK commands and the latest KGTK
-Jupyter Notebooks, execute the following steps starting from where you
+To get the latest stable release of the KGTK commands, execute
+the following commands:
+
+```bash
+conda activate kgtk-env
+pip --no-cache install -U kgtk
+```
+
+To get the latest KGTK Jupyter notebooks, 
+
+Execute the following commands
 installed KGTK:
 
 ```
-pip --no-cache install -U kgtk
-cd kgtk-notebooks
+conda activate kgtk-env
+cd path/to/install/kgtk/tutorial/kgtk-notebooks
 git pull
 ```
+
+!!! note
+    The `conda activate kgtk-env` commands shown above are not needed
+    if you have already activated your `kgtk-env` Conda virtual environment
+    in your current terminal session.
