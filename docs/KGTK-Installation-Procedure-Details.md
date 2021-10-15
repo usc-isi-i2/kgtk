@@ -48,13 +48,11 @@ follow this
 [link](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) to
 install it.
 
-!!! info
-    If you are new to Conda, we recommend a Miniconda installation rather than the
+> If you are new to Conda, we recommend a Miniconda installation rather than the
     full Anaconda installation.
 
 
-!!! note
-    [Mamba](https://github.com/mamba-org/mamba#readme) is a faster, drop-in
+> [Mamba](https://github.com/mamba-org/mamba#readme) is a faster, drop-in
     replacement for Conda that has been developed recently.  We may recommend
     Mamba in the future, but do not do so at the present itme.
 
@@ -78,12 +76,10 @@ This command activates your Conda environment.  Once activated, your terminal
 session will have access to the resources that have been installed into
 that environment.
 
-!!! note
-    You will need to re-execute this command whenever you open a fresh terminal
+> You will need to re-execute this command whenever you open a fresh terminal
     session for working with KGTK.
 
-!!! note
-    `conda activate kgtk-env` operates in part through changes that Conda made to
+> `conda activate kgtk-env` operates in part through changes that Conda made to
     your terminal shell's initialization file when Conda was installed.
     The [Conda documentation on managing environments](https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html#activating-an-environment) may help you resolve any problems you encounter with this process.
 
@@ -114,8 +110,7 @@ conda install -c conda-forge graph-tool
 If you don't use Conda, or if you run into problems, see the
 [graph-tool installation instructions](https://git.skewed.de/count0/graph-tool/-/wikis/installation-instructions).
 
-!!! note
-    We recommend installing `graph-tool` from the `conda-forge` channel (`-c conda-forge`)
+> We recommend installing `graph-tool` from the `conda-forge` channel (`-c conda-forge`)
     to ensure that you receive a recent version of `graph-tool`.
 
 ## Install KGTK Using `pip`
@@ -127,19 +122,17 @@ and its subcommands.
 pip --no-cache install -U kgtk
 ```
 
-!!! note
-    The `--no-cache` and `-U` options tell `pip` to install the latest
+> The `--no-cache` and `-U` options tell `pip` to install the latest
     version of KGTK and its required modules.
 
-!!! note
-    You may sometimes need to install a specific release of KGTK, such as
-    a prerelease that incorporates the latest changes.  For example,
-    if you need to install KGTK release `0.8.3b0`, use the following
-    `pip` command instead of the `pip` command shown above:
+> You may sometimes need to install a specific release of KGTK, such as
+   a prerelease that incorporates the latest changes.  For example,
+   if you need to install KGTK release `0.8.3b0`, use the following
+   `pip` command instead of the `pip` command shown above:
 
-     ```bash
-     pip --no-cache install kgtk==0.8.3b0
-     ```
+```bash
+pip --no-cache install kgtk==0.8.3b0
+```
      
 ## Download the English Model of SpaCY
 
@@ -150,8 +143,7 @@ Spacy's English language module using the following command:
 python -m spacy download en_core_web_sm
 ```
 
-!!! note
-    If you wisk to use KGTK to conduct text embedding analyses using
+> If you wisk to use KGTK to conduct text embedding analyses using
     languages other then English, please contact the KGTK team.
 
 ## Running KGTK Commands in the Terminal Session
@@ -245,20 +237,18 @@ cd /path/to/install/kgtk/tutorial/kgtk-notebooks
 jupyter lab
 ```
 
-!!! note
-    `/path/to/install/kgtk/tutorial` is the path you originally
+> `/path/to/install/kgtk/tutorial` is the path you originally
     choose for installation of the KGTK Tutorial and other Jupyter notebooks.
 
 Use the Jupyter Lab interface to select the KGTK Tutorial notebook on which you
 wish to resume work, or to select a new notebook to begin.
 
-!!! note
-    If you know the name of the notebook you want to start, you may
+> If you know the name of the notebook you want to start, you may
     put it on the end of the `jupyter lab` command line:
 
-    ```bash
-    jupiter lab some-notebook-name.ipynb
-    ```
+```bash
+jupiter lab some-notebook-name.ipynb
+```
 
 ## Updating your KGTK installation
 
