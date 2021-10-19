@@ -408,7 +408,7 @@ class KgtkIdBuilder(KgtkFormat):
         """
         Build a new ID value if needed.
         """
-        row = row.copy() # as a precaution
+        row = list(row).copy() # as a precaution
         if self.add_new_id_column and not already_added:
             row.append("")
         elif self.old_id_column_idx >= 0:

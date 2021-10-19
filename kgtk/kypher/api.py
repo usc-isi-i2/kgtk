@@ -137,8 +137,10 @@ class KypherQuery(object):
             force=force)
         
         self.kgtk_query.defer_params = True
-        self.sql, self.parameters = self.kgtk_query.translate_to_sql()
-        self.kgtk_query.ensure_relevant_indexes(self.sql)
+        state = self.kgtk_query.translate_to_sql()
+        self.sql = state.get_sql()
+        self.parameters = state.get_parameters()
+        self.kgtk_query.ensure_relevant_indexes(state)
         # create memoizable execution wrapper:
         self.exec_wrapper = lambda q, p, f: q._exec(p, f)
         if maxcache > 0:

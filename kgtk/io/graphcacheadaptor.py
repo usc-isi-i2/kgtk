@@ -1,5 +1,9 @@
 """
 Connect to a graph cache using the Kypher API.
+
+Note: Sqlite3 may return tuples.  KTK code tends to assume that
+rows are lists (for example, to use `.copy()`). We will proactively
+conver the rows we're read into lists.
 """
 
 import attr
@@ -211,7 +215,7 @@ class GraphCacheAdaptor:
                 if row is None:
                     adapter_self.close()
                     raise StopIteration
-                return row
+                return list(row)
 
         return SimpleGraphCacheReader
         
@@ -301,7 +305,7 @@ class GraphCacheAdaptor:
 
                 while True:
                     if reader_self.buffer is not None and reader_self.buffer_idx < len(reader_self.buffer):
-                        row = reader_self.buffer[reader_self.buffer_idx]
+                        row = list(reader_self.buffer[reader_self.buffer_idx])
                         reader_self.buffer_idx += 1
                         return row
 
@@ -349,7 +353,7 @@ class GraphCacheAdaptor:
                             
                     while True:
                         if reader_self.buffer is not None and reader_self.buffer_idx < len(reader_self.buffer):
-                            row = reader_self.buffer[reader_self.buffer_idx]
+                            row = list(reader_self.buffer[reader_self.buffer_idx])
                             reader_self.buffer_idx += 1
                             return row
 
@@ -403,7 +407,7 @@ class GraphCacheAdaptor:
                             
                     while True:
                         if reader_self.buffer is not None and reader_self.buffer_idx < len(reader_self.buffer):
-                            row = reader_self.buffer[reader_self.buffer_idx]
+                            row = list(reader_self.buffer[reader_self.buffer_idx])
                             reader_self.buffer_idx += 1
 
                             if options.repair_and_validate_lines:
