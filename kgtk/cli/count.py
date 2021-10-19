@@ -10,6 +10,7 @@ COUNT_COMMAND: str = "count"
 WC_COMMAND: str = "wc"
 
 DEFAULT_COUNT_RECORDS: bool = False
+DEFAULT_COUNT_RECORDS_WC: bool = True
 DEFAULT_COUNT_PROPERTY: str = "count"
 
 def parser():
@@ -17,7 +18,7 @@ def parser():
         'aliases': [ WC_COMMAND ],
         'help': 'Count records or non-empty values per column.',
         'description': 'Count the number of records in a KGTK file, excluding the header record, ' +
-        'or count the number of non-empty values per column.  Note:  not non-emptu unique values, ' +
+        'or count the number of non-empty values per column.  Note:  not non-empty unique values, ' +
         'that is what `kgtk unique` does.' +
         '\n\nAdditional options are shown in expert help.\nkgtk --expert lift --help'
     }
@@ -52,7 +53,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument('-l', '--lines', dest="count_records", metavar="True/False",
                         help="If true, count records and print a single number to stdout. " +
                         "If false, count non-empty values per column and produce a simple KGTK output file. (default=%(default)s).",
-                        type=optional_bool, nargs='?', const=True, default=DEFAULT_COUNT_RECORDS)
+                        type=optional_bool, nargs='?', const=True,
+                        default=DEFAULT_COUNT_RECORDS_WC if _command == WC_COMMAND else DEFAULT_COUNT_RECORDS)
 
     parser.add_argument(      "--count-property", dest="count_property",
                               help=h("The property used for column count output edges. (default=%(default)s)."),
