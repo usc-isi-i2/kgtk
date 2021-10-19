@@ -11,11 +11,6 @@ a KGTK command.  The following features are illustrated:
 * Writing a KGTK output file.
 * Writing non-KGTK output to stdout.
 * Writing progress feedback to etderr.
-
-
-TODO: Fix the following bug:
-In the record count mode, results are sent to standard ouput.  They
-should be sent to the primary output file, instead.
 """
 
 # We minimize the imports here because every additional global import
@@ -117,6 +112,7 @@ def run(input_file: KGTKFiles,
     from kgtk.exceptions import KGTKException
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
     from kgtk.io.kgtkwriter import KgtkWriter
+
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     # Perform the final parsing steps on the primary input and output files.
@@ -166,11 +162,14 @@ def run(input_file: KGTKFiles,
             for row in kr:
                 record_count += 1
 
-            # Send the record count to standard output:
-            #
-            # TODO: send the record count to the primary output file!
-            print("%d" % record_count, file=sys.stdout, flush=True)
+            if str(output_kgtk_file) == "-":
+                # Send the record count to standard output:
+                print("%d" % record_count, file=sys.stdout, flush=True)
 
+            else:
+                with open(output_kgtk_file, "w") as outf:
+                    # Send the record count to a file:
+                    print("%d" % record_count, file=outf)
 
         else:
             # Open a KgtkWriter file for the primary output file:
