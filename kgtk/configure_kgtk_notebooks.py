@@ -35,8 +35,11 @@ class ConfigureKGTK(object):
         os.environ['EXAMPLES_DIR'] = self.examples_dir
         os.environ['USE_CASES_DIR'] = self.use_cases_dir
 
+        os.environ['KGTK_OPTION_DEBUG'] = "false"
+
         self.kgtk_environment_variables.add('EXAMPLES_DIR')
         self.kgtk_environment_variables.add('USE_CASES_DIR')
+        self.kgtk_environment_variables.add('KGTK_OPTION_DEBUG')
 
     def configure_kgtk(self,
                        input_graph_path: str = None,
@@ -94,6 +97,9 @@ class ConfigureKGTK(object):
             graph_cache_path = f"{temp_path}/wikidata.sqlite3.db"
         os.environ['STORE'] = graph_cache_path
         self.kgtk_environment_variables.add('STORE')
+
+        os.environ['KGTK_GRAPH_CACHE'] = os.environ['STORE']
+        self.kgtk_environment_variables.add('KGTK_GRAPH_CACHE')
 
         kgtk = "kgtk --debug" if debug else "kgtk"
         os.environ['kgtk'] = kgtk
