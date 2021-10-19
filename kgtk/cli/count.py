@@ -1,4 +1,14 @@
 """Count records or non-empty values per column.
+
+This is a simple command that illustrates several aspects of building
+a KGTK command.  The following features are illustrated:
+
+* Reading a KGTK input file.
+* Writing a KGTK output file.
+* Writing non-KGTK output to stdout.
+* Writing progress feedback to etderr.
+* A command alias with a different default than the base command.
+* An expert option.
 """
 
 from argparse import Namespace, SUPPRESS
@@ -6,9 +16,11 @@ import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
+# Decine the name of the command and its alias.
 COUNT_COMMAND: str = "count"
 WC_COMMAND: str = "wc"
 
+# Default option values:
 DEFAULT_COUNT_RECORDS: bool = False
 DEFAULT_COUNT_RECORDS_WC: bool = True
 DEFAULT_COUNT_PROPERTY: str = "count"
@@ -50,12 +62,14 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_input_file()
     parser.add_output_file()
 
+    # The default value for this option depends upon the command used.
     parser.add_argument('-l', '--lines', dest="count_records", metavar="True/False",
                         help="If true, count records and print a single number to stdout. " +
                         "If false, count non-empty values per column and produce a simple KGTK output file. (default=%(default)s).",
                         type=optional_bool, nargs='?', const=True,
                         default=DEFAULT_COUNT_RECORDS_WC if _command == WC_COMMAND else DEFAULT_COUNT_RECORDS)
 
+    # This is an expert option.  It will not show up on `--help` without `--expert`:
     parser.add_argument(      "--count-property", dest="count_property",
                               help=h("The property used for column count output edges. (default=%(default)s)."),
                               default=DEFAULT_COUNT_PROPERTY)
