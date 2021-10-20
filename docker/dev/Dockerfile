@@ -14,7 +14,9 @@ RUN apt-get update && apt-get install -y \
 
 RUN apt-get install --reinstall build-essential -y
 
-RUN pip install huggingface-hub==0.0.12
+RUN pip install huggingface-hub==0.0.17
+
+RUN pip install chardet
 
 RUN git clone https://github.com/usc-isi-i2/kgtk/ --branch dev
 
