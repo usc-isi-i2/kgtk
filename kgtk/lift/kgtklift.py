@@ -82,6 +82,11 @@ class KgtkLift(KgtkFormat):
     matched_label_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)), default=None)
     unmatched_label_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)), default=None)
 
+    languages: typing.Optional[typing.List[str]] = \
+        attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
+                                                                                 iterable_validator=attr.validators.instance_of(list))),
+                default=None)
+
     lift_all_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     force_input_mode_none: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     
@@ -259,6 +264,21 @@ class KgtkLift(KgtkFormat):
             print("label_value_column_idx=%d (%s)." % (label_value_column_idx, kr.column_names[label_value_column_idx]), file=self.error_file, flush=True)
             print("label_select_column_value='%s'." % self.label_select_column_value, file=self.error_file, flush=True)
 
+        # Setup for language filtering:
+        language_filtering: bool = self.languages is not None and len(self.languages) > 0
+        allow_all_strings: bool = False
+        allow_all_lqstrings: bool = False
+        language_filter_tuple: typing.Tuple[str, ...] = ( )
+        if language_filtering:
+            language_filter: typing.List[str] = self.languages.copy()
+            if 'NONE' in language_filter:
+                allow_all_strings = True
+                language_filter.remove('NONE')
+            if 'ANY' in language_filter:
+                allow_all_lqstrings = True
+                language_filter.remove('ANY')
+            language_filter_tuple = tuple(["'@" + f for f in language_filter])
+
         key: str
         row: typing.List[str]
         for row in kr:
@@ -266,6 +286,23 @@ class KgtkLift(KgtkFormat):
                 # This is a label definition row.
                 label_key: str = row[label_match_column_idx]
                 label_value: str = row[label_value_column_idx]
+
+                if len(label_value) == 0:
+                    continue # Ignore empty label values.
+                   
+                if language_filtering:
+                    if label_value[0] == KgtkFormat.STRING_SIGIL:
+                        if not allow_all_strings:
+                            continue # Not a matching string.
+
+                    elif label_value[0] == KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL:
+                        if not (allow_all_lqstrings or label_value.endswith(language_filter_tuple)):
+                            continue # Not a matching lqstring.
+
+                    else:
+                        # Do not allow values that are neither strings nor lqstrings.
+                        continue
+
                 if label_value != self.default_value:
                     if label_key in labels:
                         # This label already exists in the table.
@@ -721,6 +758,21 @@ class KgtkLift(KgtkFormat):
         if len(lift_column_idxs) != 1:
             raise ValueError("Expecting exactly one lift_column_idxs, got %d" % len(lift_column_idxs))
 
+        # Setup for language filtering:
+        language_filtering: bool = self.languages is not None and len(self.languages) > 0
+        allow_all_strings: bool = False
+        allow_all_lqstrings: bool = False
+        language_filter_tuple: typing.Tuple[str, ...] = ()
+        if language_filtering:
+            language_filter: typing.List[str] = self.languages.copy()
+            if 'NONE' in language_filter:
+                allow_all_strings = True
+                language_filter.remove('NONE')
+            if 'ANY' in language_filter:
+                allow_all_lqstrings = True
+                language_filter.remove('ANY')
+            language_filter_tuple = tuple(["'@" + f for f in language_filter])
+
         ew: KgtkWriter
         lifted_output_column_idxs: typing.List[int]
         ew, lifted_output_column_idxs = self.open_output_writer(ikr, lift_column_idxs)
@@ -806,7 +858,20 @@ class KgtkLift(KgtkFormat):
                 while more_labels and current_label_row is not None and current_label_row[label_match_column_idx] == value_to_lift:
                     if label_select_column_idx < 0 or current_label_row[label_select_column_idx] == self.label_select_column_value:
                         label_value: str = current_label_row[label_value_column_idx]
-                        if len(label_value) > 0:
+
+                        process_label: bool = len(label_value) > 0
+                        if process_label and language_filtering:
+                            if label_value[0] == KgtkFormat.STRING_SIGIL:
+                                process_label = allow_all_strings
+
+                            elif label_value[0] == KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL:
+                                process_label = allow_all_lqstrings or label_value.endswith(language_filter_tuple)
+
+                            else:
+                                # Do not allow values that are neither strings nor lqstrings.
+                                process_label = False
+
+                        if process_label:
                             # TODO: is this code positioned correctly?
                             if mlkw is not None:
                                 mlkw.write(current_label_row)
@@ -973,7 +1038,6 @@ class KgtkLift(KgtkFormat):
                                    verbose=self.verbose,
                                    very_verbose=self.very_verbose)        
             
-
         if self.input_lifting_column_names is not None and len(self.input_lifting_column_names) == 1 and \
            not self.suppress_empty_columns and \
            self.input_is_presorted and \
