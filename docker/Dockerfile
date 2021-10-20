@@ -16,8 +16,6 @@ RUN apt-get install --reinstall build-essential -y
 
 RUN pip install huggingface-hub==0.0.17
 
-RUN pip install chardet
-
 RUN git clone https://github.com/usc-isi-i2/kgtk/
 
 RUN cd /kgtk && python setup.py install
@@ -27,6 +25,8 @@ RUN conda update -n base -c defaults conda
 RUN conda install -c conda-forge graph-tool
 
 RUN conda install -c conda-forge jupyterlab
+
+RUN pip install chardet
 
 ARG NB_USER=jovyan
 ARG NB_UID=1000
