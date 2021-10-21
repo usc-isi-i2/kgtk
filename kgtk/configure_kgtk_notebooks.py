@@ -5,7 +5,19 @@ from pathlib import Path
 from typing import List
 from kgtk.files_config import files_config
 
-always_print_env_variables = {'EXAMPLES_DIR', 'USE_CASES_DIR', 'GRAPH', 'OUT', 'TEMP', 'STORE', 'kgtk', 'kypher'}
+always_print_env_variables = {
+    'EXAMPLES_DIR',
+    'USE_CASES_DIR',
+    'GRAPH',
+    'OUT',
+    'TEMP',
+    'STORE',
+    'kgtk',
+    'kypher',
+    'KGTK_GRAPH_CACHE',
+    'KGTK_OPTION_DEBUG',
+    'KGTK_LABEL_FILE'
+}
 
 
 class ConfigureKGTK(object):
@@ -136,7 +148,6 @@ class ConfigureKGTK(object):
     def load_files_into_cache(self):
         """
         Loads files into graph cache. The keys in this list should be in json_config_file
-        :param file_list:
         :return:
         """
         kypher_command = f"{os.environ['kypher']}"
