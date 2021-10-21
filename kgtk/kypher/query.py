@@ -864,7 +864,9 @@ class KgtkQuery(object):
                     if graph in graphs:
                         # for now unconditionally restrict to core columns:
                         if column in self.get_edge_columns(graph):
-                            unique = column == self.get_id_column(graph)
+                            #unique = column == self.get_id_column(graph)
+                            # for now don't enforce uniqueness on edge IDs to support noisy data:
+                            unique = False
                             self.store.ensure_graph_index_for_columns(graph, column, unique=unique, explain=explain)
                             
             elif index_spec == ss.INDEX_MODE_EXPERT:
@@ -873,7 +875,9 @@ class KgtkQuery(object):
                     if graph in graphs:
                         # only consider first column, multi-column indexes can be specified manually:
                         column = columns[0]
-                        unique = column == self.get_id_column(graph)
+                        #unique = column == self.get_id_column(graph)
+                        # for now don't enforce uniqueness on edge IDs to support noisy data:
+                        unique = False
                         self.store.ensure_graph_index_for_columns(graph, column, unique=unique, explain=explain)
 
             elif index_spec == ss.INDEX_MODE_NONE:
