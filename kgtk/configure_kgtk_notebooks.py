@@ -61,10 +61,14 @@ class ConfigureKGTK(object):
         :return:
         """
 
-        self.graph_files = json.load(open(json_config_file)) \
-            if json_config_file is not None \
-            else files_config
+        self.graph_files = files_config
 
+        if json_config_file is not None:
+            try:
+                _files_config = json.load(open(json_config_file))
+                self.graph_files.update(_files_config)
+            except Exception as e:
+                print(e)
         # If the input graph path is not None, it is assumed it has the files required
         if input_graph_path is None:
             input_graph_path = f"{self.user_home}/{self.default_folder}/input"
