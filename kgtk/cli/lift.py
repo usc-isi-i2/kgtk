@@ -225,6 +225,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help="Lift only labels with a matching language qualifier. " +
                               "ANY means any language qualifier. NONE means no language qualifier. (default=ANY NONE)")
 
+    parser.add_argument(      "--prioritize", dest="prioritize",
+                              help="If true and filtering labels by language, pick only the label matching " +
+                              "the language that appears before other matches in the language list. (default=%(default)s).",
+                              metavar="True/False",
+                              type=optional_bool, nargs='?', const=True, default=use_label_envar_default)
+
     parser.add_argument(      "--use-label-envar", dest="use_label_envar",
                               help="If true, use the KGTK_LABEL_FILE envar for the label file if no --label-file. (default=%(default)s).",
                               metavar="True/False",
@@ -289,6 +295,7 @@ def run(input_file: KGTKFiles,
         output_only_modified_rows: bool = False,
 
         languages: typing.Optional[typing.List[str]] = None,
+        prioritize: bool = False,
 
         use_label_envar: bool = False,
         lift_all_columns: bool = False,
@@ -380,6 +387,7 @@ def run(input_file: KGTKFiles,
 
         if languages is not None:
             print("--languages %s" % " ".join(repr(l) for l in languages), file=error_file, flush=True)
+        print("--prioritize=%s" % repr(prioritize), file=error_file, flush=True)
         
         print("--use-label-envar=%s" % repr(use_label_envar), file=error_file, flush=True)
         print("--lift-all-columns=%s" % repr(lift_all_columns), file=error_file, flush=True)
@@ -441,6 +449,7 @@ def run(input_file: KGTKFiles,
             output_only_modified_rows=output_only_modified_rows,
 
             languages=languages,
+            prioritize=prioritize,
 
             lift_all_columns=lift_all_columns,
             force_input_mode_none=force_input_mode_none,

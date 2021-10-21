@@ -33,7 +33,8 @@ usage: kgtk lift [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                  [--overwrite [OVERWRITE]]
                  [--output-only-modified-rows [OUTPUT_ONLY_MODIFIED_ROWS]]
                  [--languages [LANGUAGE [LANGUAGE ...]]]
-                 [--use-label-envar [True/False]] [-v [optional True|False]]
+                 [--prioritize [True/False]] [--use-label-envar [True/False]]
+                 [-v [optional True|False]]
 
 Lift labels for a KGTK file. If called as "kgtk lift", for each of the items in the (node1, label, node2) columns, look for matching label records. If called as "kgtk add-labels", look for matching label records for all input columns. If found, lift the label values into additional columns in the current record. Label records are removed from the output unless --remove-label-records=False. 
 
@@ -101,6 +102,10 @@ optional arguments:
                         Lift only labels with a matching language qualifier.
                         ANY means any language qualifier. NONE means no
                         language qualifier. (default=ANY NONE)
+  --prioritize [True/False]
+                        If true and filtering labels by language, pick only
+                        the label matching the language that appears before
+                        other matches in the language list. (default=False).
   --use-label-envar [True/False]
                         If true, use the KGTK_LABEL_FILE envar for the label
                         file if no --label-file. (default=False).
@@ -727,6 +732,97 @@ kgtk lift --input-file examples/docs/lift-file5.tsv \
 | Q1 | P1 | Q5 | 'Elmo'@en | "instance of" | "human" |
 | Q1 | P2 | Q6 | 'Elmo'@en | "friend" |  |
 | Q6 | P1 | Q5 |  | "instance of" | "human" |
+
+### Lift Labels with Prioritized Languages
+
+Suppose`lift-file12.tsv` contains the following table in KGTK format:
+
+```bash
+kgtk cat --input-file examples/docs/lift-file12.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| Q1 | label | 'Elmo'@en |
+| Q1 | label | 'Sr Elmo'@es |
+| Q2 | label | 'Alice'@en |
+| Q2 | label | 'Alicia'@es |
+| Q5 | label | "human" |
+| Q6 | label | 'Frank'@en |
+| Q6 | label | 'Frances'@fr |
+| Q6 | label | 'Francisco'@es |
+| P1 | label | "instance of" |
+| P2 | label | "friend" |
+
+Lift only labels that are qualified as English,
+ignoring labels without language qualifiers:
+
+```bash
+kgtk add-labels --input-file examples/docs/lift-file5.tsv \
+                --label-file examples/docs/lift-file12.tsv \
+                --language en
+```
+| node1 | label | node2 | node1;label | node2;label |
+| -- | -- | -- | -- | -- |
+| Q1 | P1 | Q5 | 'Elmo'@en |  |
+| Q1 | P2 | Q6 | 'Elmo'@en | 'Frank'@en |
+| Q6 | P1 | Q5 | 'Frank'@en |  |
+
+Lift only labels that are qualified as Spanish,
+ignoring labels without language qualifiers:
+
+```bash
+kgtk add-labels --input-file examples/docs/lift-file5.tsv \
+                --label-file examples/docs/lift-file12.tsv \
+                --language es
+```
+| node1 | label | node2 | node1;label | node2;label |
+| -- | -- | -- | -- | -- |
+| Q1 | P1 | Q5 | 'Sr Elmo'@es |  |
+| Q1 | P2 | Q6 | 'Sr Elmo'@es | 'Francisco'@es |
+| Q6 | P1 | Q5 | 'Francisco'@es |  |
+
+Lift only labels that are qualified as English or Spanish, preferring English labels,
+ignoring labels without language qualifiers:
+
+```bash
+kgtk add-labels --input-file examples/docs/lift-file5.tsv \
+                --label-file examples/docs/lift-file12.tsv \
+                --languages en es
+```
+| node1 | label | node2 | node1;label | node2;label |
+| -- | -- | -- | -- | -- |
+| Q1 | P1 | Q5 | 'Elmo'@en |  |
+| Q1 | P2 | Q6 | 'Elmo'@en | 'Frank'@en |
+| Q6 | P1 | Q5 | 'Frank'@en |  |
+
+Lift only labels that are qualified as English or Spanish, preferring Spanish labels,
+ignoring labels without language qualifiers:
+
+```bash
+kgtk add-labels --input-file examples/docs/lift-file5.tsv \
+                --label-file examples/docs/lift-file12.tsv \
+                --languages es en
+```
+| node1 | label | node2 | node1;label | node2;label |
+| -- | -- | -- | -- | -- |
+| Q1 | P1 | Q5 | 'Sr Elmo'@es |  |
+| Q1 | P2 | Q6 | 'Sr Elmo'@es | 'Francisco'@es |
+| Q6 | P1 | Q5 | 'Francisco'@es |  |
+
+Lift only labels that are qualified as French, English, or Spanish, preferring the labels in that order,
+ignoring labels without language qualifiers:
+
+```bash
+kgtk add-labels --input-file examples/docs/lift-file5.tsv \
+                --label-file examples/docs/lift-file12.tsv \
+                --languages fr en es
+```
+| node1 | label | node2 | node1;label | node2;label |
+| -- | -- | -- | -- | -- |
+| Q1 | P1 | Q5 | 'Elmo'@en |  |
+| Q1 | P2 | Q6 | 'Elmo'@en | 'Frances'@fr |
+| Q6 | P1 | Q5 | 'Frances'@fr |  |
 
 ### Expert Example: Input Filtering
 
