@@ -26,11 +26,11 @@ python -m spacy download en_core_web_sm
 
 > You may sometimes need to install a specific release of KGTK, such as
     a prerelease that incorporates the latest changes.  For example,
-    if you need to install KGTK release `0.8.3b0`, use the following
+    if you need to install KGTK release `0.8.6b0`, use the following
     `pip` command instead of the `pip` command shown above:
 
 ```bash
-pip --no-cache install kgtk==0.8.3b0
+pip --no-cache install kgtk==0.8.6b0
 ```
 
 If you encounter problems with your installation, or are interested in a
