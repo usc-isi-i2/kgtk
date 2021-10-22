@@ -23,6 +23,7 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
          auto_display_html: typing.Optional[bool] = None,
          auto_display_json: typing.Optional[bool] = None,
          auto_display_md: typing.Optional[bool] = None,
+         unquote_column_names: typing.Optional[bool] = None,
          bash_command: typing.Optional[str] = None,
          kgtk_command: typing.Optional[str] = None,
          )->typing.Optional[pandas.DataFrame]:
@@ -59,6 +60,10 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
     auto_display_md=True/False (default False)
 
         This parameter controls the processing of MarkDown output.  See below.
+
+    unquote_column_names=True/False (default True)
+
+        Convert string column names to symbols.
 
     bash_command=CMD (default 'bash')
 
@@ -117,11 +122,12 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
     Environment Variables
     =========== =========
 
-    This modeule directly uses the following environment variables:
+    This module directly uses the following environment variables:
 
     KGTK_AUTO_DISPLAY_HTML
     KGTK_AUTO_DISPLAY_JSON
     KGTK_AUTO_DISPLAY_MD
+    KGTK_UNQUOTE_COLUMN_NAMES
     KGTK_BASH_COMMAND
     KGTK_KGTK_COMMAND
 
@@ -142,6 +148,8 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
         auto_display_json = os.getenv("KGTK_AUTO_DISPLAY_JSON", "true").lower() in ["true", "yes", "y"]
     if auto_display_md is None:
         auto_display_md = os.getenv("KGTK_AUTO_DISPLAY_MD", "false").lower() in ["true", "yes", "y"]
+    if unquote_column_names is None:
+        unquote_column_names = os.getenv("KGTK_UNQUOTE_COLUMN_NAMES", "true").lower() in ["true", "yes", "y"]
 
     # Why not os.getenv("KGTK_BASH_COMMAND", "bash")? Splitting it up makes
     # mypy happier.
@@ -189,6 +197,18 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
                               doublequote=False,
                               escapechar='\\',
                               )
+        if unquote_column_names:
+            # Pandas will have treated the column names as strings and quoted
+            # them.  By convention, KGTK column names are symbols.  So, we will
+            # remove double quotes from the outside of each column name.
+            #
+            # TODO: Handle the troublesome case of a double quote inside a column
+            # name.
+            header, body = in_tsv.split('\n', 1)
+            column_names = header.split('\t')
+            column_names = [x[1:-1] if x.startswith('"') else x for x in column_names ]
+            header = "\t".join(column_names)
+            in_tsv = header + "\n" + body
 
     # Execute the KGTK command pipeline:
     outbuf: StringIO = StringIO()
@@ -247,11 +267,20 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
         # Assume that anything else is KGTK formatted output.  Convert it to a
         # pandas DataFrame and return it.
         #
+        # TODO: Test this conversion with all KTK datatypes.  Language-qualified
+        # strings are problematic.  Check what happens to quantites, date/times,
+        # and locations.
+        #
         # TODO: Remove the escape character from internal `|` characters?
         # If we do that, should we detect KGTK lists and complain?
         # `\|` -> `|`
         outbuf.seek(0)
-        result = pandas.read_csv(outbuf, sep='\t')
+        result = pandas.read_csv(outbuf,
+                                 sep='\t',
+                                 quotechar='"',
+                                 doublequote=False,
+                                 escapechar='\\',
+                                 )
 
     outbuf.close()
 
