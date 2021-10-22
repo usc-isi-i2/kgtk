@@ -1,0 +1,2 @@
+node1	label	node2
+rdf-schema	prefix_expansion	"http://www.w3.org/2000/01/rdf-schema#"

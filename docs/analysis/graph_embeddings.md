@@ -247,7 +247,11 @@ Line parsing:
 
 ### Example 1
 For easiest running, just give the input file and let it write its output to `output_embeddings.csv` at current folder
-`kgtk graph-embeddings -i input_file.tsv  -o output_file.tsv`
+
+
+``
+`kgtk graph-embeddings -i input_file.tsv  -o output_file.tsv
+```
 
 The output_file.tsv may look like:
 ```
@@ -298,7 +302,7 @@ Using kgtk format to generate graph embeddings
 kgtk graph-embeddings 
     --input-file input_file.tsv \
     --output-file output_file.tsv \
-    --output_format kgtk
+    --output_format kgtk --no-output-headers
 ```
 
 The `output_file.tsv` may look like:

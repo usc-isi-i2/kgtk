@@ -7,8 +7,9 @@ and the destination column for the label values.
 
 ### Memory Usage
 
-The input rows are saved in memory, as well as the value-to-label mapping.
-This will impose a limit on the size of the input files that can be processed.
+By default, the input rows are saved in memory, as well as the value-to-label
+mapping.  This will impose a limit on the size of the input files that can be
+processed.
 
 Seperating the labels from the  edges being lifted, and presorting each
 of the files, enables operation with reduced memory requirements.
@@ -18,6 +19,9 @@ of the files, enables operation with reduced memory requirements.
 ```
 usage: kgtk lift [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                  [--label-file INPUT_FILE]
+                 [--unmodified-row-output-file UNMODIFIED_ROW_OUTPUT_FILE]
+                 [--matched-label-output-file MATCHED_LABEL_OUTPUT_FILE]
+                 [--unmatched-label-output-file UNMATCHED_LABEL_OUTPUT_FILE]
                  [--columns-to-write [OUTPUT_LIFTED_COLUMN_NAMES [OUTPUT_LIFTED_COLUMN_NAMES ...]]]
                  [--default-value DEFAULT_VALUE]
                  [--suppress-empty-columns [True/False]]
@@ -26,9 +30,11 @@ usage: kgtk lift [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                  [--input-file-is-presorted [True/False]]
                  [--label-file-is-presorted [True/False]]
                  [--clear-before-lift [CLEAR_BEFORE_LIFT]]
-                 [--overwrite [OVERWRITE]] [-v [optional True|False]]
+                 [--overwrite [OVERWRITE]]
+                 [--output-only-modified-rows [OUTPUT_ONLY_MODIFIED_ROWS]]
+                 [--use-label-envar [True/False]] [-v [optional True|False]]
 
-Lift labels for a KGTK file. For each of the items in the (node1, label, node2) columns, look for matching label records. If found, lift the label values into additional columns in the current record. Label records are reoved from the output. 
+Lift labels for a KGTK file. If called as "kgtk lift", for each of the items in the (node1, label, node2) columns, look for matching label records. If called as "kgtk add-labels", look for matching label records for all input columns. If found, lift the label values into additional columns in the current record. Label records are removed from the output unless --remove-label-records=False. 
 
 Additional options are shown in expert help.
 kgtk --expert lift --help
@@ -44,6 +50,20 @@ optional arguments:
   --label-file INPUT_FILE
                         A KGTK file with label records (Optional, use '-' for
                         stdin.)
+  --unmodified-row-output-file UNMODIFIED_ROW_OUTPUT_FILE
+                        A KGTK output file that will contain only unmodified
+                        rows. This file will have the same columns as the
+                        input file. (Optional, use '-' for stdout.)
+  --matched-label-output-file MATCHED_LABEL_OUTPUT_FILE
+                        A KGTK output file that will contain matched label
+                        edges. This file will have the same columns as the
+                        source of the labels, either the input file or the
+                        label file. (Optional, use '-' for stdout.)
+  --unmatched-label-output-file UNMATCHED_LABEL_OUTPUT_FILE
+                        A KGTK output file that will contain unmatched label
+                        edges. This file will have the same columns as the
+                        source of the labels, either the input file or the
+                        label file. (Optional, use '-' for stdout.)
   --columns-to-write [OUTPUT_LIFTED_COLUMN_NAMES [OUTPUT_LIFTED_COLUMN_NAMES ...]]
                         The columns into which to store the lifted values. The
                         default is [node1;label, label;label, node2;label] or
@@ -73,6 +93,12 @@ optional arguments:
                         If true, overwrite non-default values in the columns
                         to write. If false, do not overwrite non-default
                         values in the columns to write. (default=True).
+  --output-only-modified-rows [OUTPUT_ONLY_MODIFIED_ROWS]
+                        If true, output only modified edges to the primary
+                        output stream. (default=False).
+  --use-label-envar [True/False]
+                        If true, use the KGTK_LABEL_FILE envar for the label
+                        file if no --label-file. (default=False).
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).
@@ -82,7 +108,7 @@ optional arguments:
 
 ### Sample Data
 
-Suppose that `file1.tsv` contains the following table in KGTK format:
+Suppose that `lift-file1.tsv` contains the following table in KGTK format:
 
 ```bash
 kgtk cat --input-file examples/docs/lift-file1.tsv
@@ -124,7 +150,7 @@ By default, `kgtk lift` will build a list of labels if multiple label records
 are found for a property. The labels in the list will be sorted and
 deduplicated.
 
-Suppose that `file4.tsv` contains the following table in KGTK format:
+Suppose that `lift-file4.tsv` contains the following table in KGTK format:
 
 ```bash
 kgtk cat --input-file examples/docs/lift-file4.tsv
@@ -180,7 +206,7 @@ The labels may be in a seperate file from the input.  If
 processed in a single pass without keeping a copy in memory.  The labels will
 still be loaded into an in-memory dictionary.
 
-Suppose that `file5.tsv` contains the following table in KGTK format:
+Suppose that `lift-file5.tsv` contains the following table in KGTK format:
 
 ```bash
 kgtk cat --input-file examples/docs/lift-file5.tsv
@@ -192,7 +218,7 @@ kgtk cat --input-file examples/docs/lift-file5.tsv
 | Q1 | P2 | Q6 |
 | Q6 | P1 | Q5 |
 
-And `file6.tsv` contains the following table in KGTK format:
+And `lift-file6.tsv` contains the following table in KGTK format:
 
 ```bash
 kgtk cat --input-file examples/docs/lift-file6.tsv
@@ -269,7 +295,7 @@ kgtk lift --input-file examples/docs/lift-file5.tsv \
 
 ### Duplicate Labels
 
-Suppose that `file7.tsv` contains the following table in KGTK format,
+Suppose that `lift-file7.tsv` contains the following table in KGTK format,
 which is sorted on the `node1` column:
 
 ```bash
@@ -307,7 +333,7 @@ The output will be the following table in KGTK format:
 
 ### More Sample Data
 
-Suppose that `file8.tsv` contains the following table in KGTK format:
+Suppose that `lift-file8.tsv` contains the following table in KGTK format:
 
 ```bash
 kgtk cat --input-file examples/docs/lift-file8.tsv
@@ -320,7 +346,7 @@ kgtk cat --input-file examples/docs/lift-file8.tsv
 | Q2 | P1 | Q5 | False |
 | Q2 | P2 | Q6 | False |
 
-and suppose that `file9.tsv` contains the following file in KGTK format:
+and suppose that `lift-file9.tsv` contains the following file in KGTK format:
 
 ```bash
 kgtk cat --input-file examples/docs/lift-file9.tsv
@@ -433,6 +459,174 @@ kgtk lift --input-file examples/docs/lift-file8.tsv \
     The `;full-name` needs to be quoted on the command line, since `;` is
     a shell metacharacter.
 
+### Outputting Only Modified Rows
+
+Let's output only modified rows.  We will start by outputting
+all rows:
+
+```bash
+kgtk lift --input-file examples/docs/lift-file8.tsv \
+          --label-file examples/docs/lift-file9.tsv \
+          --property name \
+          --lift-from full-name \
+          --lift-suffix ";full-name" \
+	  --columns-to-lift node2
+```
+
+| node1 | label | node2 | confident | node2;full-name |
+| -- | -- | -- | -- | -- |
+| Q1 | P1 | Q5 | True |  |
+| Q1 | P2 | Q6 | True | "Fred Rogers" |
+| Q2 | P1 | Q5 | False |  |
+| Q2 | P2 | Q6 | False | "Fred Rogers" |
+
+Next, we will output only the modified rows:
+
+```bash
+kgtk lift --input-file examples/docs/lift-file8.tsv \
+          --label-file examples/docs/lift-file9.tsv \
+          --property name \
+          --lift-from full-name \
+          --lift-suffix ";full-name" \
+	  --columns-to-lift node2 \
+	  --output-only-modified-rows
+```
+
+| node1 | label | node2 | confident | node2;full-name |
+| -- | -- | -- | -- | -- |
+| Q1 | P2 | Q6 | True | "Fred Rogers" |
+| Q2 | P2 | Q6 | False | "Fred Rogers" |
+
+### Unmodified Row Output File
+
+Suppose we want to isolate the unmodified rows for
+further processing.  We can send them to the unmodified row
+output file.
+
+We will send only the modified rows to the primary output
+stream by using `--output-only-modified-rows`.
+
+```bash
+kgtk lift --input-file examples/docs/lift-file8.tsv \
+          --label-file examples/docs/lift-file9.tsv \
+          --property name \
+          --lift-from full-name \
+          --lift-suffix ";full-name" \
+	  --columns-to-lift node2 \
+	  --output-only-modified-rows \
+	  --unmodified-row-output-file lift-unmodified-rows.tsv
+```
+
+| node1 | label | node2 | confident | node2;full-name |
+| -- | -- | -- | -- | -- |
+| Q1 | P2 | Q6 | True | "Fred Rogers" |
+| Q2 | P2 | Q6 | False | "Fred Rogers" |
+
+Here are the unmodified rows:
+
+```bash
+kgtk cat -i lift-unmodified-rows.tsv
+```
+
+| node1 | label | node2 | confident |
+| -- | -- | -- | -- |
+| Q1 | P1 | Q5 | True |
+| Q2 | P1 | Q5 | False |
+
+!!! note
+    The unmodified row output file has the same columns as the
+    primary input file.  In this example, it does not have the
+    `node2;full-name` column that was added to the primary
+    output file.
+
+### Matched Label Output File
+
+Suppose we are interested in finding which label file edges were matched with
+input file edges during the lift.  The `--matched-label-output-file
+OUTPUT_FILE` option provides a simple way to get this list.
+
+
+```bash
+kgtk lift --input-file examples/docs/lift-file8.tsv \
+          --label-file examples/docs/lift-file9.tsv \
+          --property name \
+          --lift-from full-name \
+          --lift-suffix ";full-name" \
+	  --columns-to-lift node2 \
+	  --output-only-modified-rows \
+	  --matched-label-output-file lift-matched-labels.tsv
+```
+
+| node1 | label | node2 | confident | node2;full-name |
+| -- | -- | -- | -- | -- |
+| Q1 | P2 | Q6 | True | "Fred Rogers" |
+| Q2 | P2 | Q6 | False | "Fred Rogers" |
+
+Here are the matched labels:
+
+```bash
+kgtk cat -i lift-matched-labels.tsv
+```
+
+| node1 | label | node2 | full-name |
+| -- | -- | -- | -- |
+| Q6 | name | "Fred" | "Fred Rogers" |
+
+!!! note
+    The matched label output file has the same columns as the
+    label file when a label file has been specified.  Otherwise,
+    the matched label file has the same columns as the primary
+    input file.
+
+!!! note
+    Logically, there should be an `--unmatched-labels-output-file OUTPUT_FILE`
+    option.  This option may be added in the future.
+
+!!! note
+    It may be useful if the matched label output file had an additional
+    column with a count of the number of matches.  This option may be
+    added in the future.
+
+### Unmatched Label Output File
+
+Suppose we are interested in finding which label file edges were not matched with
+input file edges during the lift.  The `--unmatched-label-output-file
+OUTPUT_FILE` option provides a simple way to get this list.
+
+
+```bash
+kgtk lift --input-file examples/docs/lift-file8.tsv \
+          --label-file examples/docs/lift-file9.tsv \
+          --property name \
+          --lift-from full-name \
+          --lift-suffix ";full-name" \
+	  --columns-to-lift node2 \
+	  --output-only-modified-rows \
+	  --unmatched-label-output-file lift-unmatched-labels.tsv
+```
+
+| node1 | label | node2 | confident | node2;full-name |
+| -- | -- | -- | -- | -- |
+| Q1 | P2 | Q6 | True | "Fred Rogers" |
+| Q2 | P2 | Q6 | False | "Fred Rogers" |
+
+Here are the unmatched labels:
+
+```bash
+kgtk cat -i lift-unmatched-labels.tsv
+```
+
+| node1 | label | node2 | full-name |
+| -- | -- | -- | -- |
+| Q1 | name | "Elmo" | "Elmo Fudd" |
+| Q2 | name | "Alice" | "Alice Cooper" |
+
+!!! note
+    The unmatched label output file has the same columns as the
+    label file when a label file has been specified.  Otherwise,
+    the unmatched label file has the same columns as the primary
+    input file.
+
 ### Expert Example: Input Filtering
 
 Let's list the full names only when we are confident in the relationship.
@@ -483,6 +677,33 @@ kgtk lift --input-file examples/docs/lift-file8.tsv \
     `--lift-suffix=` is another way to specify the empty lift suffix,
     and does not require shell quoting.
 
+!!! note
+    This procedure, repeated for the `node1`, `label`, and `node2`
+    columns, can be used to transform relationships from one
+    knowledge base system to another.
+
+### Expert Example: Lifting into `node2`, Outputting Only Modified Rows
+
+Let's lift full names into the node2 column, replacing the
+existing values there.  We can do this by specifying
+`--columns-to-lift node2` and giving an empty `--lift-suffix`.
+We will output only modified rows.
+
+```bash
+kgtk lift --input-file examples/docs/lift-file8.tsv \
+          --label-file examples/docs/lift-file9.tsv \
+          --property name \
+          --lift-from full-name \
+          --columns-to-lift node2 \
+          --lift-suffix= \
+	  --output-only-modified-rows
+```
+
+| node1 | label | node2 | confident |
+| -- | -- | -- | -- |
+| Q1 | P2 | "Fred Rogers" | True |
+| Q2 | P2 | "Fred Rogers" | False |
+
 ### Expert Example: Update Lifted Relationships
 
 Let's lift full names into the node2 column, changing the label of the relationahip when we do so.
@@ -506,7 +727,7 @@ kgtk lift --input-file examples/docs/lift-file8.tsv \
 
 ### Expert Example: Overriding the Label Match and Value Columns
 
-Consider the following file, file10.tsv, which is like `lift-file9.tsv`,
+Consider the following file, `lift-file10.tsv`, which is like `lift-file9.tsv`,
 but with the `node1` and `node2` columns swapped and with an additional column, `action`:
 
 ```bash
@@ -563,7 +784,7 @@ kgtk lift --input-file examples/docs/lift-file8.tsv \
 | Q2 | P1 | Q5 | False | "Alice" | "instance of" | "human" |
 | Q2 | P2 | Q6 | False | "Alice" | "friend" | "Fred" |
 
-If we hadn't filter the labels, the output would look like this:
+If we hadn't filtered the labels, the output would have looked like this:
 
 ```bash
 kgtk lift --input-file examples/docs/lift-file8.tsv \

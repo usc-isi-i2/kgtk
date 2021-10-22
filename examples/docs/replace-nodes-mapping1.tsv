@@ -1,0 +1,5 @@
+node1	label	node2	confidence
+box1	same_as_item	Q001	1.0
+box2	same_as_item	Q002	
+box4	same_as_item	Q004	
+isa	same_as_property	P1	1.0

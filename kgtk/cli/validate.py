@@ -107,6 +107,7 @@ def run(input_files: KGTKFiles,
                 print ("Validating from stdin", file=error_file, flush=True)
 
         kr: typing.Optional[KgtkReader] = None
+        error_return: int = 1
         try:
             kr = KgtkReader.open(kgtk_file,
                                  error_file=error_file,
@@ -140,8 +141,12 @@ def run(input_files: KGTKFiles,
                 if report_summary or verbose:
                     print("\n====================================================", file=error_file, flush=True)
                     kr.report_summary()
-                    
+
+                if kr.data_errors_reported == 0:
+                    error_return = 0
                 kr.close()
 
-    return 0
-
+    if error_return == 0:
+        return 0
+    else:
+        raise KGTKException("Errors detected")

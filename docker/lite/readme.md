@@ -1,5 +1,7 @@
 ## KGTK-lite as a Docker image
 
+## This Docker version KGTK is no longer maintained. Please use dev or main (in the parent folder)
+
 This version of KGTK does not incorporate graph-tool and embeddings to be lighter.
 
 To use this Dockerfile, you can build it yourself: 

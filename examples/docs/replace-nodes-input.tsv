@@ -1,0 +1,6 @@
+node1	label	node2
+box1	isa	box
+box2	isa	box
+box3	hasa	box
+box1	color	red
+box2	color	blue

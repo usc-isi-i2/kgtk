@@ -78,8 +78,13 @@ def run(input_file: KGTKFiles,
         namespace_id_counter: int,
         namespace_id_zfill: int,
         output_only_used_namespaces: bool,
+        build_new_namespaces: bool,
 
         allow_lax_uri: bool,
+        allow_unknown_datatype_iris: bool,
+        allow_turtle_quotes: bool,
+        allow_lang_string_datatype: bool,
+        lang_string_tag: str,
 
         local_namespace_prefix: str,
         local_namespace_use_uuid: bool,
@@ -95,9 +100,11 @@ def run(input_file: KGTKFiles,
 
         build_id: bool,
 
-        escape_pipes: bool,
+        build_datatype_column: bool,
+        datatype_column_name: str,
 
         validate: bool,
+        summary: bool,
 
         override_uuid: typing.Optional[str],
 
@@ -138,42 +145,49 @@ def run(input_file: KGTKFiles,
 
     # Show the final option structures for debugging and documentation.
     if show_options:
-        print("--input-files %s" % " ".join([str(path) for  path in input_file_paths]), file=error_file, flush=True)
-        print("--output-file=%s" % str(output_kgtk_file), file=error_file, flush=True)
+        print("--input-files %s" % " ".join([repr(str(path)) for path in input_file_paths]), file=error_file, flush=True)
+        print("--output-file=%s" % repr(str(output_kgtk_file)), file=error_file, flush=True)
         if reject_file_path is not None:
-            print("--reject-file=%s" % str(reject_file_path), file=error_file, flush=True)
+            print("--reject-file=%s" % repr(str(reject_file_path)), file=error_file, flush=True)
         if namespace_kgtk_file is not None:
-            print("--namespace-file=%s" % str(namespace_kgtk_file), file=error_file, flush=True)
+            print("--namespace-file=%s" % repr(str(namespace_kgtk_file)), file=error_file, flush=True)
         if updated_namespace_kgtk_file is not None:
-            print("--updated-namespace-file=%s" % str(updated_namespace_kgtk_file), file=error_file, flush=True)
+            print("--updated-namespace-file=%s" % repr(str(updated_namespace_kgtk_file)), file=error_file, flush=True)
 
-        print("--namespace-id-prefix %s" % namespace_id_prefix, file=error_file, flush=True)
-        print("--namespace-id-use-uuid %s" % str(namespace_id_use_uuid), file=error_file, flush=True)
-        print("--namespace-id-counter %s" % str(namespace_id_counter), file=error_file, flush=True)
-        print("--namespace-id-zfill %s" % str(namespace_id_zfill), file=error_file, flush=True)
-        print("--output-only-used-namespaces %s" % str(output_only_used_namespaces), file=error_file, flush=True)
+        print("--namespace-id-prefix %s" % repr(namespace_id_prefix), file=error_file, flush=True)
+        print("--namespace-id-use-uuid %s" % repr(namespace_id_use_uuid), file=error_file, flush=True)
+        print("--namespace-id-counter %s" % repr(namespace_id_counter), file=error_file, flush=True)
+        print("--namespace-id-zfill %s" % repr(namespace_id_zfill), file=error_file, flush=True)
+        print("--output-only-used-namespaces %s" % repr(output_only_used_namespaces), file=error_file, flush=True)
+        print("--build-new-namespaces %s" % repr(build_new_namespaces), file=error_file, flush=True)
 
-        print("--allow-lax-uri %s" % str(allow_lax_uri), file=error_file, flush=True)
+        print("--allow-lax-uri %s" % repr(allow_lax_uri), file=error_file, flush=True)
+        print("--allow-unknown-datatype-iris %s" % repr(allow_unknown_datatype_iris), file=error_file, flush=True)
+        print("--allow-turtle-quotes %s" % repr(allow_turtle_quotes), file=error_file, flush=True)
+        print("--allow-lang-string-datatype %s" % repr(allow_lang_string_datatype), file=error_file, flush=True)
+        print("--lang-string-tag %s" % repr(lang_string_tag), file=error_file, flush=True)
         
-        print("--local-namespace-prefix %s" % local_namespace_prefix, file=error_file, flush=True)
-        print("--local-namespace-use-uuid %s" % str(local_namespace_use_uuid), file=error_file, flush=True)
+        print("--local-namespace-prefix %s" % repr(local_namespace_prefix), file=error_file, flush=True)
+        print("--local-namespace-use-uuid %s" % repr(local_namespace_use_uuid), file=error_file, flush=True)
 
-        print("--prefix-expansion-label %s" % prefix_expansion_label, file=error_file, flush=True)
-        print("--structured-value-label %s" % structured_value_label, file=error_file, flush=True)
-        print("--structured-uri-label %s" % structured_uri_label, file=error_file, flush=True)
+        print("--prefix-expansion-label %s" % repr(prefix_expansion_label), file=error_file, flush=True)
+        print("--structured-value-label %s" % repr(structured_value_label), file=error_file, flush=True)
+        print("--structured-uri-label %s" % repr(structured_uri_label), file=error_file, flush=True)
         
-        print("--newnode-prefix %s" % newnode_prefix, file=error_file, flush=True)
-        print("--newnode-use-uuid %s" % str(newnode_use_uuid), file=error_file, flush=True)
-        print("--newnode-counter %s" % str(newnode_counter), file=error_file, flush=True)
-        print("--newnode-zfill %s" % str(newnode_zfill), file=error_file, flush=True)
+        print("--newnode-prefix %s" % repr(newnode_prefix), file=error_file, flush=True)
+        print("--newnode-use-uuid %s" % repr(newnode_use_uuid), file=error_file, flush=True)
+        print("--newnode-counter %s" % repr(newnode_counter), file=error_file, flush=True)
+        print("--newnode-zfill %s" % repr(newnode_zfill), file=error_file, flush=True)
         
-        print("--build-id=%s" % str(build_id), file=error_file, flush=True)
+        print("--build-id=%s" % repr(build_id), file=error_file, flush=True)
 
-        print("--escape-pipes=%s" % str(escape_pipes), file=error_file, flush=True)
+        print("--build-datatype-column %s" % repr(build_datatype_column), file=error_file, flush=True)
+        print("--datatype-column-name %s" % repr(datatype_column_name), file=error_file, flush=True)
+
+        print("--validate=%s" % repr(validate), file=error_file, flush=True)
+        print("--summary=%s" % repr(summary), file=error_file, flush=True)
         
-        print("--validate=%s" % str(validate), file=error_file, flush=True)
-        
-        print("--override-uuid=%s" % str(override_uuid), file=error_file, flush=True)
+        print("--override-uuid=%s" % repr(override_uuid), file=error_file, flush=True)
         
         idbuilder_options.show(out=error_file)
         reader_options.show(out=error_file)
@@ -192,19 +206,26 @@ def run(input_file: KGTKFiles,
             namespace_id_counter=namespace_id_counter,
             namespace_id_zfill=namespace_id_zfill,
             output_only_used_namespaces=output_only_used_namespaces,
+            build_new_namespaces=build_new_namespaces,
             newnode_prefix=newnode_prefix,
             newnode_use_uuid=newnode_use_uuid,
             newnode_counter=newnode_counter,
             newnode_zfill=newnode_zfill,
             allow_lax_uri=allow_lax_uri,
+            allow_unknown_datatype_iris=allow_unknown_datatype_iris,
+            allow_turtle_quotes=allow_turtle_quotes,
+            allow_lang_string_datatype=allow_lang_string_datatype,
+            lang_string_tag=lang_string_tag,
             local_namespace_prefix=local_namespace_prefix,
             local_namespace_use_uuid=local_namespace_use_uuid,
             prefix_expansion_label=prefix_expansion_label,
             structured_value_label=structured_value_label,
             structured_uri_label=structured_uri_label,
             build_id=build_id,
-            escape_pipes=escape_pipes,
+            build_datatype_column=build_datatype_column,
+            datatype_column_name=datatype_column_name,
             validate=validate,
+            summary=summary,
             override_uuid=override_uuid,
             idbuilder_options=idbuilder_options,
             reader_options=reader_options,

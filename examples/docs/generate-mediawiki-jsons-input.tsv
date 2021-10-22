@@ -1,0 +1,5 @@
+node1	label	node2	id
+Q2140726727_mag_author	P6366	2140726727	id1
+Q2140726727_mag_author	label	'Zunyou Wu'@en	id2
+Q2140726727_mag_author	P1416	Q184490438_mag_affiliation	id3
+Q184490438_mag_affiliation	label	'Chinese Center For Disease Control And Prevention'@en	id4

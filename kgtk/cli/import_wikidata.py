@@ -1845,8 +1845,8 @@ def run(input_file: KGTKFiles,
             if len(nrows) > 0 or \
                len(erows) > 0 or \
                len(qrows) > 0 or \
-               len(invalid_erows) > 0 or \
-               len(invalid_qrows) > 0 or \
+               (invalid_erows is not None and len(invalid_erows) > 0) or \
+               (invalid_qrows is not None and len(invalid_qrows) > 0) or \
                len(description_erows) > 0 or \
                len(sitelink_erows) > 0:
                 if collect_results:
@@ -1945,11 +1945,11 @@ def run(input_file: KGTKFiles,
                             if skip_validation or validate(row, "detailed qual uncollected"):
                                 self.qual_wr.writerow(row)
     
-                    if invalid_edge_file:
+                    if invalid_edge_file and invalid_erows is not None:
                         for row in invalid_erows:
                             self.invalid_edge_wr.writerow(row)
 
-                    if invalid_qual_file:
+                    if invalid_qual_file and invalid_qrows is not None:
                         for row in invalid_qrows:
                             self.invalid_qual_wr.writerow(row)
     
@@ -2551,7 +2551,7 @@ def run(input_file: KGTKFiles,
 
 
     try:
-        UPDATE_VERSION: str = "2021-02-24T21:11:49.602037+00:00#sgB3FM8zpy/0bbx1RwyRawYnB1spAUBS+FVVQBL8DtJVxXE8mYCTTLr2lHJqbKVe5fBPp+k5iQjTDmJ6GRVf8Q=="
+        UPDATE_VERSION: str = "2021-07-27T00:18:27.976595+00:00#uCgv6AINWlOoAT3vQsy/Kc9+PI9cYOIyLQrOeqSPjqiNO0aVAm47qdtfCH6Us0y3ikYAVXsCyapKtnMe8tgqQA=="
         print("kgtk import-wikidata version: %s" % UPDATE_VERSION, file=sys.stderr, flush=True)
         print("Starting main process (pid %d)." % os.getpid(), file=sys.stderr, flush=True)
         inp_path = KGTKArgumentParser.get_input_file(input_file)

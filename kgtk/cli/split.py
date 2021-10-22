@@ -119,7 +119,7 @@ def run(input_file: KGTKFiles,
             if prev is None:
                 prev = node
 
-            if not prev.strip() == node.strip():
+            if not are_nodes_equal(prev, node):
                 if split_by_qnode or len(lines_to_write) >= lines:
                     write_files(error_file, file_number, file_prefix, kr, lines_to_write, output_path, prev,
                                 reader_options, split_by_qnode, suffix)
@@ -135,3 +135,15 @@ def run(input_file: KGTKFiles,
         write_files(error_file, file_number, file_prefix, kr, lines_to_write, output_path, prev, reader_options,
                     split_by_qnode, suffix)
         return 0
+
+
+def are_nodes_equal(q1, q2):
+    if q1.strip() == "" or q2.strip() == "":
+        return False
+
+    if q1.strip() == q2.strip():
+        return True
+    
+    if q1.strip() == q2.split('-')[0]:  # qualifiers
+        return True
+    return False

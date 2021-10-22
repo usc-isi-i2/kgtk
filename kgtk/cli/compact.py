@@ -53,12 +53,18 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_input_file(positional=True)
     parser.add_output_file()
+    parser.add_output_file(who="A KGTK output file that will contain only the rows containing lists." +
+                           " This file will have the same columns as the primary output file.",
+                           dest="list_output_file",
+                           options=["--list-output-file"],
+                           metavar="LIST_OUTPUT_FILE",
+                           optional=True)
 
     if _command == DEDUP_COMMAND:
 
         parser.add_argument(      "--columns", dest="key_column_names",
                                   help=h("The key columns to identify records for compaction. " +
-                                  "(default=id for node files, (node1, label, node2, id) for edge files)."), nargs='+', default=[ ])
+                                  "(default=all columns)."), nargs='+', default=[ ])
     
         parser.add_argument(      "--compact-id", dest="compact_id",
                                   help=h("Indicate that the ID column in KGTK edge files should be compacted. " +
@@ -76,6 +82,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                                   help=h("Assume that the input file may contain lists (disable when certain it does not). (default=%(default)s)."),
                                   type=optional_bool, nargs='?', const=True, default=True)
 
+        parser.add_argument(      "--keep-first", dest="keep_first_names",
+                                  help=h("If compaction results in a list of values for any column on this list, keep only the first value after sorting. " +
+                                  "(default=none)."), nargs='+', default=[ ])
     else:
         parser.add_argument(      "--columns", dest="key_column_names",
                                   help="The key columns to identify records for compaction. " +
@@ -97,6 +106,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                                   help="Assume that the input file may contain lists (disable when certain it does not). (default=%(default)s).",
                                   type=optional_bool, nargs='?', const=True, default=True)
 
+        parser.add_argument(      "--keep-first", dest="keep_first_names",
+                                  help="If compaction results in a list of values for any column on this list, keep only the first value after sorting. " +
+                                  "(default=none).", nargs='+', default=[ ])
+
     parser.add_argument(      "--presorted", dest="sorted_input",
                               help="Indicate that the input has been presorted (or at least pregrouped) (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
@@ -104,6 +117,18 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "--verify-sort", dest="verify_sort",
                               help="If the input has been presorted, verify its consistency (disable if only pregrouped). (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True, metavar="True|False")
+
+    parser.add_argument(      "--report-lists", dest="report_lists",
+                              help="When True, report records with lists to the error output. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument(      "--exclude-lists", dest="exclude_lists",
+                              help="When True, exclude records with lists from the output. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument(      "--output-only-lists", dest="output_only_lists",
+                              help="When True, only records containing lists will be written to the primary output file. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--build-id", dest="build_id",
                               help="Build id values in an id column. (default=%(default)s).",
@@ -116,12 +141,17 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
 def run(input_file: KGTKFiles,
         output_file: KGTKFiles,
+        list_output_file: KGTKFiles,
         key_column_names: typing.List[str],
+        keep_first_names: typing.List[str],
         compact_id: bool,
         deduplicate: bool,
         sorted_input: bool,
         verify_sort: bool,
         lists_in_input: bool,
+        report_lists: bool,
+        exclude_lists: bool,
+        output_only_lists: bool,
         build_id: bool,
 
         errors_to_stdout: bool = False,
@@ -145,6 +175,7 @@ def run(input_file: KGTKFiles,
 
     input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
     output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
+    list_output_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(list_output_file, who="KGTK list output file")
 
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
@@ -158,12 +189,18 @@ def run(input_file: KGTKFiles,
     if show_options:
         print("--input-file=%s" % str(input_kgtk_file), file=error_file)
         print("--output-file=%s" % str(output_kgtk_file), file=error_file)
+        if list_output_kgtk_file is not None:
+            print("--list-output-file=%s" % str(list_output_kgtk_file), file=error_file, flush=True)
         print("--columns=%s" % " ".join(key_column_names), file=error_file)
+        print("--keep-first=%s" % " ".join(keep_first_names), file=error_file)
         print("--compact-id=%s" % str(compact_id), file=error_file, flush=True)
         print("--deduplicate=%s" % str(deduplicate), file=error_file, flush=True)
         print("--presorted=%s" % str(sorted_input), file=error_file, flush=True)
         print("--verify-sort=%s" % str(verify_sort), file=error_file, flush=True)
         print("--lists-in-input=%s" % str(lists_in_input), file=error_file, flush=True)
+        print("--report-lists=%s" % str(report_lists), file=error_file, flush=True)
+        print("--exclude-lists=%s" % str(exclude_lists), file=error_file, flush=True)
+        print("--output-only-lists=%s" % str(output_only_lists), file=error_file, flush=True)
         print("--build-id=%s" % str(build_id), file=error_file, flush=True)
         idbuilder_options.show(out=error_file)
         reader_options.show(out=error_file)
@@ -176,16 +213,24 @@ def run(input_file: KGTKFiles,
                                         out=error_file)
         print("=======", file=error_file, flush=True)
 
+    if exclude_lists and output_only_lists:
+        raise KGTKException("--exclude-lists and --output-only-lists may not be used together.")
+
     try:
         ex: KgtkCompact = KgtkCompact(
             input_file_path=input_kgtk_file,
+            output_file_path=output_kgtk_file,
+            list_output_file_path=list_output_kgtk_file,
             key_column_names=key_column_names,
+            keep_first_names=keep_first_names,
             compact_id=compact_id,
             deduplicate=deduplicate,
             sorted_input=sorted_input,
             verify_sort=verify_sort,
             lists_in_input=lists_in_input,
-            output_file_path=output_kgtk_file,
+            report_lists=report_lists,
+            exclude_lists=exclude_lists,
+            output_only_lists=output_only_lists,
             build_id=build_id,
             idbuilder_options=idbuilder_options,
             reader_options=reader_options,

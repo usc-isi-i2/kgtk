@@ -17,28 +17,41 @@ output file which will be transparently compressed according to its file extensi
 
 ## Usage
 ```
-usage: kgtk query [-h] -i INPUT_FILE [INPUT_FILE ...] [--as NAME]
-                  [--query QUERY] [--match PATTERN] [--where CLAUSE]
-                  [--return CLAUSE] [--order-by CLAUSE] [--skip CLAUSE]
-                  [--limit CLAUSE] [--para NAME=VAL] [--spara NAME=VAL]
-                  [--lqpara NAME=VAL] [--no-header] [--index [MODE]]
+usage: kgtk query [-h] [-i INPUT_FILE [INPUT_FILE ...]] [--as NAME]
+                  [--comment COMMENT] [--query QUERY] [--match PATTERN]
+                  [--where CLAUSE] [--opt PATTERN] [--with CLAUSE]
+                  [--where: CLAUSE] [--return CLAUSE] [--order-by CLAUSE]
+                  [--skip CLAUSE] [--limit CLAUSE] [--para NAME=VAL]
+                  [--spara NAME=VAL] [--lqpara NAME=VAL] [--no-header]
+                  [--force] [--index MODE [MODE ...]] [--idx SPEC [SPEC ...]]
                   [--explain [MODE]] [--graph-cache GRAPH_CACHE_FILE]
-                  [-o OUTPUT]
+                  [--show-cache] [--import MODULE_LIST] [-o OUTPUT]
 
 Query one or more KGTK files with Kypher.
+IMPORTANT: input can come from stdin but chaining queries is not yet supported.
 
 optional arguments:
   -h, --help            show this help message and exit
   -i INPUT_FILE [INPUT_FILE ...], --input-files INPUT_FILE [INPUT_FILE ...]
-                        One or more input files to query (maybe compressed).
-                        (Required, use '-' for stdin.)
+                        One or more input files to query, maybe compressed
+                        (May be omitted or '-' for stdin.)
   --as NAME             alias name to be used for preceding input
+  --comment COMMENT     comment string to store for the preceding input
+                        (displayed by --show-cache)
   --query QUERY         complete Kypher query combining all clauses, if
                         supplied, all other specialized clause arguments will
                         be ignored
   --match PATTERN       MATCH pattern of a Kypher query, defaults to universal
                         node pattern `()'
-  --where CLAUSE        WHERE clause of a Kypher query
+  --where CLAUSE        WHERE clause to a preceding --match, --opt or --with
+                        clause
+  --opt PATTERN, --optional PATTERN
+                        OPTIONAL MATCH pattern(s) of a Kypher query (zero or
+                        more)
+  --with CLAUSE         WITH clause of a Kypher query (only 'WITH * ...' is
+                        currently supported)
+  --where: CLAUSE       final global WHERE clause, shorthand for 'WITH * WHERE
+                        ...'
   --return CLAUSE       RETURN clause of a Kypher query (defaults to *)
   --order-by CLAUSE     ORDER BY clause of a Kypher query
   --skip CLAUSE         SKIP clause of a Kypher query
@@ -50,15 +63,24 @@ optional arguments:
   --lqpara NAME=VAL     zero or more named LQ-string parameters to be passed
                         to the query
   --no-header           do not generate a header row with column names
-  --index [MODE]        control column index creation according to MODE (auto,
-                        expert, quad, triple, node1+label, node1, label,
-                        node2, none, default: auto)
+  --force               force problematic queries to run against advice
+  --index MODE [MODE ...], --index-mode MODE [MODE ...]
+                        default index creation MODE for all inputs (default:
+                        auto); can be overridden with --idx for specific
+                        inputs
+  --idx SPEC [SPEC ...], --input-index SPEC [SPEC ...]
+                        create index(es) according to SPEC for the preceding
+                        input only
   --explain [MODE]      explain the query execution and indexing plan
                         according to MODE (plan, full, expert, default: plan).
                         This will not actually run or create anything.
   --graph-cache GRAPH_CACHE_FILE
                         database cache where graphs will be imported before
                         they are queried (defaults to per-user temporary file)
+  --show-cache          describe the current content of the graph cache and
+                        exit (does not actually run a query or import data)
+  --import MODULE_LIST  Python modules needed to define user extensions to
+                        built-in functions
   -o OUTPUT, --out OUTPUT
                         output file to write to, if `-' (the default) output
                         goes to stdout. Files with extensions .gz, .bz2 or .xz
@@ -86,8 +108,6 @@ and therefore Kypher does not use a property graph data model assumed
 by Cypher.  Kypher only implements a subset of the Cypher commands
 (for example, no update commands) and has some minor differences in
 syntax, for example, to support naming and querying over multiple graphs.
-Kypher also does not allow certain path-range patterns which would be
-expensive to support.
 
 To implement Kypher queries, we translate them into SQL and execute
 them on a very lightweight file-based SQL database such as SQLite.
@@ -104,7 +124,6 @@ milliseconds to minutes depending on selectivity and result sizes.
 
 ### Features under development:
 
-* optional match
 * `not/exists` pattern handling
 * support for chained queries
 * `--create` and `--remove` to instantiate and add/remove edge patterns
@@ -714,11 +733,6 @@ be achieved through pipelines of KGTK commands combining `query` and `cat`, for
 example.  Certain cases can also be handled by introducing additional graphs
 such as the `$PROPS` graph used in [this example](#time-machine-use-case).
 
-!!! note
-    <b>Important:</b> restrictions via `OR` and `IN` defeat any indexing and might
-    result in long query times on large graphs in the absence of other direct
-    restrictions (such as the `node1` restriction to `Joe` in the examples above).
-
 
 ### Querying connected edges across multiple graphs
 
@@ -1010,6 +1024,359 @@ Result:
 |    Renal  |       1  |     11000.0  |
 
 
+### Optional match
+
+Kypher also supports Cypher's optional match patterns which are useful
+to retrieve sparse or incomplete edges and attributes that are common
+in real-world knowledge graphs.  Optional patterns are allowed to fail
+which will generate NULL values for their respective pattern variables
+in such cases instead of making the whole pattern fail.  Optional
+patterns are similar to SQL's left joins.
+
+Each Kypher query must have exactly one strict `--match` clause and
+can have zero or more optional match clauses introduced by `--opt`.
+This is somewhat more restrictive than Cypher which can have any
+number of strict and/or optional patterns in any order, but that
+should generally not matter in practice.  Each strict and optional
+match clause can have its own `--where` clause, so the `query` command
+associates each `--where` clause with the (closest) match clause
+preceding it.  For optional match clauses the order matters, since
+there can be optionals on optionals, which is an important concept to
+keep in mind.  The required strict match clause is always interpreted
+as the first match clause in the query, regardless of where it is
+specified on the command line.  Let us illustrate these concepts with
+some examples.
+
+In some of the examples below we use the following edge qualifier
+data, which adds start and end times to some of the edges in the
+`$WORKS` graph:
+
+```
+QUALS=examples/docs/query-quals.tsv
+
+kgtk query -i $QUALS
+```
+Result:
+
+|    id   |  node1  |  label   |  node2                     |  graph  |
+|---------|---------|----------|----------------------------|---------|
+|    m11  |  w11    |  starts  |  ^1984-12-17T00:03:12Z/11  |  quals  |
+|    m12  |  w12    |  ends    |  ^1987-11-08T04:56:34Z/10  |  quals  |
+|    m13  |  w13    |  starts  |  ^1996-02-23T08:02:56Z/09  |  quals  |
+|    m14  |  w14    |  ends    |  ^2001-04-09T06:16:27Z/08  |  quals  |
+|    m15  |  w15    |  starts  |  ^2008-10-01T12:49:18Z/07  |  quals  |
+
+
+To illustrate the usefulness of optional patters, let us start with a
+strict query first that retrieves company employees, their names and
+start dates:
+
+```
+kgtk query -i $GRAPH -i $WORKS -i $QUALS \
+     --match  'w: (p)-[r:works]->(c), g: (p)-[:name]->(n), q: (r)-[:starts]->(s)' \
+     --return 'c as company, p as employee, n as name, s as start'
+```
+Result:
+
+| company | employee | name      | start                    |
+|---------|----------|-----------|--------------------------|
+| ACME    | Hans     | 'Hans'@de | ^1984-12-17T00:03:12Z/11 |
+| Kaiser  | Joe      | "Joe"     | ^1996-02-23T08:02:56Z/09 |
+| Cakes   | Susi     | "Susi"    | ^2008-10-01T12:49:18Z/07 |
+
+
+The result only lists some of the companies, since not all employment
+edges have an associated start date in the edge qualifiers data.  This
+means the start date edges are incomplete which in turn makes us miss
+some potentially useful employment edges.  If we want to be sure to
+retrieve all employment edges and associate them with start dates
+where available, we can use the following query that makes start date
+qualifier edges optional:
+
+```
+kgtk query -i $GRAPH -i $WORKS -i $QUALS \
+     --match  'w: (p)-[r:works]->(c), g: (p)-[:name]->(n)' \
+     --opt    'q: (r)-[:starts]->(s)' \
+     --return 'c as company, p as employee, n as name, s as start'
+```
+Result:
+
+| company | employee | name      | start                    |
+|---------|----------|-----------|--------------------------|
+| ACME    | Hans     | 'Hans'@de | ^1984-12-17T00:03:12Z/11 |
+| Kaiser  | Otto     | 'Otto'@de |                          |
+| Kaiser  | Joe      | "Joe"     | ^1996-02-23T08:02:56Z/09 |
+| Renal   | Molly    | "Molly"   |                          |
+| Cakes   | Susi     | "Susi"    | ^2008-10-01T12:49:18Z/07 |
+
+Now we get all employment edges, and missing start dates will simply
+be empty (or NULL).
+
+An optional match pattern is either fully satisfied for a particular
+set of variable bindings established by previous match clauses (the
+variable `r` in the example above), or it is considered to have failed
+for that set of bindings, so optionals do not generate partial
+solutions.  In fact, optional patterns are by themselves run in strict
+match mode against the data, it is only in their connection or
+intersection with matches from previous clauses where the optional (or
+"left join") semantics comes into play.  If for a particular set of
+bindings from previous clauses the edge set retrieved by an optional
+clause does not have a relevant entry, the variables generated by the
+optional clause are considered to be NULL for that case.
+
+In the next example, we use multiple independent optional clauses to
+retrieve both start and/or end dates where they are available.  The
+optional clauses are independent of each other, but both are dependent
+on the `r` variable of the strict match clause.  In general, optional
+clauses should always depend on one or more variables of a previous
+match clause, otherwise they will generate potentially very large
+cross products that are likely unintended:
+
+```
+kgtk query -i $GRAPH -i $WORKS -i $QUALS \
+     --match  'w: (p)-[r:works]->(c), g: (p)-[:name]->(n)' \
+     --opt    'q: (r)-[:starts]->(s)' \
+     --opt    'q: (r)-[:ends]->(e)' \
+     --return 'c as company, p as employee, n as name, s as start, e as end'
+```
+Result:
+
+| company | employee | name      | start                    | end                      |
+|---------|----------|-----------|--------------------------|--------------------------|
+| ACME    | Hans     | 'Hans'@de | ^1984-12-17T00:03:12Z/11 |                          |
+| Kaiser  | Otto     | 'Otto'@de |                          | ^1987-11-08T04:56:34Z/10 |
+| Kaiser  | Joe      | "Joe"     | ^1996-02-23T08:02:56Z/09 |                          |
+| Renal   | Molly    | "Molly"   |                          | ^2001-04-09T06:16:27Z/08 |
+| Cakes   | Susi     | "Susi"    | ^2008-10-01T12:49:18Z/07 |                          |
+
+
+Optional match patterns have the exact same syntax and expressive
+power as strict match patterns, so they can have multiple clauses,
+reference different graphs, use node and label restrictions, node and
+edge properties, etc.  They do not inherit the last graph used by any
+preceding match clause, so they start again with the default graph.
+
+For example, in the next query we use a more complex optional pattern
+that joins multiple edges and restricts matches with an additional
+`--where` clause.  Note that we could have omitted the `g`
+specification, since optionals do not inherit the current graph of the
+previous match clause.  `kgtk_lqstring_lang` is undefined for values
+that aren't language-qualified strings.  For that reason we wrap it
+with `kgtk_null_to_empty`, otherwise the condition will always be
+false if one of its arguments is NULL (see [<b>Null
+values</b>](#null-values) for more details):
+
+```
+kgtk query -i $GRAPH -i $WORKS \
+     --match 'w: (p)-[r:works]->(c)' \
+     --opt   'g: (p)-[r2]->(l)-[:name]->(ln)' \
+     --where 'r2.label != "name" and kgtk_null_to_empty(kgtk_lqstring_lang(ln)) != "de"' \
+     --return 'c as company, p as employee, r2.label as affrel, l as affiliate, ln as name'
+```
+Result:
+
+| company | employee | affrel | affiliate | name    |
+|---------|----------|--------|-----------|---------|
+| ACME    | Hans     | loves  | Molly     | "Molly" |
+| Kaiser  | Otto     | loves  | Susi      | "Susi"  |
+| Kaiser  | Joe      | loves  | Joe       | "Joe"   |
+| Renal   | Molly    |        |           |         |
+| Cakes   | Susi     |        |           |         |
+
+In the previous query the optional clause was quite restrictive and
+only selected edge pairs where the name edge led to a string not
+qualified with `de`.  For this reason we do not get `Otto` as an
+affiliate.  In the next query we relax this by moving the name edge
+pattern into its own optional with associated `--where` clause, and
+now we do get `Otto` as an affiliate but without a name:
+
+```
+kgtk query -i $GRAPH -i $WORKS \
+     --match 'w: (p)-[r:works]->(c)' \
+     --opt   'g: (p)-[r2]->(l)' \
+     --where 'r2.label != "name"' \
+     --opt   'g: (l)-[:name]->(ln)' \
+     --where 'kgtk_null_to_empty(kgtk_lqstring_lang(ln)) != "de"' \
+     --return 'c as company, p as employee, r2.label as affrel, l as affiliate, ln as name'
+```
+Result:
+
+| company | employee | affrel | affiliate | name    |
+|---------|----------|--------|-----------|---------|
+| ACME    | Hans     | loves  | Molly     | "Molly" |
+| Kaiser  | Otto     | loves  | Susi      | "Susi"  |
+| Kaiser  | Joe      | friend | Otto      |         |
+| Kaiser  | Joe      | loves  | Joe       | "Joe"   |
+| Renal   | Molly    |        |           |         |
+| Cakes   | Susi     |        |           |         |
+
+
+For completeness, here is another variant of this query that uses a
+`--where` clause for each individual match clause (aka "Where Mania"),
+but semantically the query is the same as before:
+
+```
+kgtk query -i $GRAPH -i $WORKS \
+     --match 'w: (p)-[r]->(c)' \
+     --where 'r.label = "works"' \
+     --opt   'g: (p)-[r2]->(l)' \
+     --where 'r2.label != "name"' \
+     --opt   'g: (l)-[:name]->(ln)' \
+     --where 'kgtk_null_to_empty(kgtk_lqstring_lang(ln)) != "de"' \
+     --return 'c as company, p as employee, r2.label as affrel, l as affiliate, ln as name'
+```
+Result:
+
+| company | employee | affrel | affiliate | name    |
+|---------|----------|--------|-----------|---------|
+| ACME    | Hans     | loves  | Molly     | "Molly" |
+| Kaiser  | Otto     | loves  | Susi      | "Susi"  |
+| Kaiser  | Joe      | friend | Otto      |         |
+| Kaiser  | Joe      | loves  | Joe       | "Joe"   |
+| Renal   | Molly    |        |           |         |
+| Cakes   | Susi     |        |           |         |
+
+
+Each optional match clause is run in strict match mode against the
+data, so we cannot test whether any of the variables bound by it are
+in fact NULL.  Remember that these NULL values are not coming from the
+match clause itself, but from its intersection or joining with the
+bindings generated by previous strict or optional matches.  However,
+we can test whether a variable from a prior optional clause is NULL.
+
+For example, in the following query we again retrieve an optional
+employment start date, but with the second optional clause, we
+retrieve a default date for cases where the start date `s` is
+undefined.  Here we simply use the date of the first edge `w11` as the
+default value.  `coalesce` is an SQLite built-in function that returns
+the first non-NULL argument as its value:
+
+```
+kgtk query -i $GRAPH -i $WORKS -i $QUALS \
+     --match '(p)-[:name]->(n), works: (p)-[r:works]->(c)' \
+     --opt   'quals: (r)-[:starts]->(s)' \
+     --opt   'quals: (:w11)-[:starts]->(d)' \
+     --where 's is NULL' \
+     --return 'r as id, p, n as name, c as company, s as start, coalesce(s, d) as defstart'
+```
+Result:
+
+| id  | node1 | name      | company | start                    | defstart                 |
+|-----|-------|-----------|---------|--------------------------|--------------------------|
+| w11 | Hans  | 'Hans'@de | ACME    | ^1984-12-17T00:03:12Z/11 | ^1984-12-17T00:03:12Z/11 |
+| w12 | Otto  | 'Otto'@de | Kaiser  |                          | ^1984-12-17T00:03:12Z/11 |
+| w13 | Joe   | "Joe"     | Kaiser  | ^1996-02-23T08:02:56Z/09 | ^1996-02-23T08:02:56Z/09 |
+| w14 | Molly | "Molly"   | Renal   |                          | ^1984-12-17T00:03:12Z/11 |
+| w15 | Susi  | "Susi"    | Cakes   | ^2008-10-01T12:49:18Z/07 | ^2008-10-01T12:49:18Z/07 |
+
+
+But what if we want to test whether a value generated by the last
+optional match clause is NULL?  For this purpose Kypher has a special
+global `--where:` clause that scopes over all match clauses after they
+have been joined (the colon is a mnemonic for "final").  For example,
+in the next query we look for all employees and optional affiliates
+that do not have a qualifying names.  This query basically emulates a
+"not exists" on the pattern defined by the last optional clause:
+
+```
+kgtk query -i $GRAPH -i $WORKS \
+     --match  'w: (p)-[r]->(c)' \
+     --where  'r.label = "works"' \
+     --opt    'g: (p)-[r2]->(l)' \
+     --where  'r2.label != "name"' \
+     --opt    'g: (l)-[:name]->(ln)' \
+     --where  'kgtk_null_to_empty(kgtk_lqstring_lang(ln)) != "de"' \
+     --where: 'ln is null' \
+     --return 'c as company, p as employee, r2.label as affrel, l as affiliate, ln as name'
+```
+Result:
+
+| company | employee | affrel | affiliate | name    |
+|---------|----------|--------|-----------|---------|
+| Kaiser  | Joe      | friend | Otto      |         |
+| Renal   | Molly    |        |           |         |
+| Cakes   | Susi     |        |           |         |
+
+
+Cypher has a `WITH ... WHERE ...` clause for such and other purposes,
+and `--where:` is simply a shorthand for `--with * --where...` in
+Kypher.  For example, the next query uses the `--with` syntax for the
+same result:
+
+```
+kgtk query -i $GRAPH -i $WORKS \
+     --match 'w: (p)-[r]->(c)' \
+     --where 'r.label = "works"' \
+     --opt   'g: (p)-[r2]->(l)' \
+     --where 'r2.label != "name"' \
+     --opt   'g: (l)-[:name]->(ln)' \
+     --where 'kgtk_null_to_empty(kgtk_lqstring_lang(ln)) != "de"' \
+     --with  '*' \
+     --where 'ln is null' \
+     --return 'c as company, p as employee, r2.label as affrel, l as affiliate, ln as name'
+```
+Result:
+
+| company | employee | affrel | affiliate | name    |
+|---------|----------|--------|-----------|---------|
+| Kaiser  | Joe      | friend | Otto      |         |
+| Renal   | Molly    |        |           |         |
+| Cakes   | Susi     |        |           |         |
+
+For now `--with * ...` is all that is supported by Kypher.  A more
+comprehensive implementation of the `--with` clause is planned as a
+future extension.
+
+
+For comparison, here is an **incorrect** version of this "not exists"
+query pattern.  As described above, we cannot really test for NULL
+inside the optional clause that generates the tested value, and
+therefore now that clause always fails and all retrieved names are
+NULL:
+
+```
+kgtk query -i $GRAPH -i $WORKS \
+     --match 'w: (p)-[r]->(c)' \
+     --where 'r.label = "works"' \
+     --opt   'g: (p)-[r2]->(l)' \
+     --where 'r2.label != "name"' \
+     --opt   'g: (l)-[:name]->(ln)' \
+     --where 'kgtk_null_to_empty(kgtk_lqstring_lang(ln)) != "de" and ln is null' \
+     --return 'c as company, p as employee, r2.label as affrel, l as affiliate, ln as name'
+```
+Result:
+
+| company | employee | affrel | affiliate | name    |
+|---------|----------|--------|-----------|---------|
+| ACME    | Hans     | loves  | Molly     |         |
+| Kaiser  | Otto     | loves  | Susi      |         |
+| Kaiser  | Joe      | friend | Otto      |         |
+| Kaiser  | Joe      | loves  | Joe       |         |
+| Renal   | Molly    |        |           |         |
+| Cakes   | Susi     |        |           |         |
+
+
+Finally, here is an example query that marks symmetric edges
+in the data if they exist:
+
+```
+kgtk query -i $GRAPH -i $WORKS \
+     --match 'g: (x)-[r]->(y)' \
+     --where 'r.label != "name"' \
+     --opt   'g: (y)-[r2]->(x)' \
+     --where 'r.label = r2.label' \
+     --return 'x, r.label, y, r2 is not null as symmetric'
+```
+Result:
+
+| node1 | label  | node2 | symmetric |
+|-------|--------|-------|-----------|
+| Hans  | loves  | Molly | 0         |
+| Otto  | loves  | Susi  | 0         |
+| Joe   | friend | Otto  | 0         |
+| Joe   | loves  | Joe   | 1         |
+
+
 <A NAME="input-output"></A>
 ## Input and output specifications
 
@@ -1090,7 +1457,7 @@ simple greedy match process:
     * it has a numeric suffix (e.g., `g42`) and its non-numeric prefix
       is contained as a substring in the base name of the input file
 4. if no match can be found for a particular handle, an error will be raised
-5. once a handle is matched is matching input is removed from the pool of
+5. once a handle is matched its matching input is removed from the pool of
    available inputs and the next handle (if any) is matched against the
    remaining ones
 
@@ -1295,11 +1662,11 @@ the query can execute right away without having to import anything.
 Any indexes built by the system to speed up queries are also cached in
 the graph cache.
 
-The location of the cache file can be controlled with the
-`--graph-cache FILE` option.  If that is not explicitly specified,
-the system will create or reuse a cache file in the computer's temp
-directory which will look like this (where `UID` is replaced by the
-current user name):
+The location of the cache file can be controlled with the `--graph-cache FILE`
+option.  If that is not explicitly specified, the environment variable
+KGTK_GRAPH_CACHE will be checked.  If that is not found, the system will
+create or reuse a cache file in the computer's temp directory which will look
+like this (where `UID` is replaced by the current user name):
 
 ```
         /tmp/kgtk-graph-cache-UID.sqlite3.db 
@@ -1355,6 +1722,45 @@ stable format across database versions and can be compressed and
 shipped to others for quick and easy reuse.  In that case it is
 advised to first replace any absolute input file names with logical
 names using the `--as` option.
+
+The `--show-cache` option can be used to describe the current location
+and content of the cache along with any comments specified for inputs
+with the `--comment` option.  For example:
+
+```
+kgtk query --show-cache
+```
+
+Result:
+```
+Graph Cache:
+DB file: /tmp/kgtk-graph-cache-XXX.sqlite3.db
+  size:  64.00 KB   	free:  0 Bytes   	modified:  2021-07-16 16:06:45
+
+KGTK File Information:
+graph:
+  size:  211 Bytes   	modified:  2021-02-08 13:46:39   	graph:  graph_2
+quals:
+  size:  253 Bytes   	modified:  2021-02-08 13:46:39   	graph:  graph_3
+works:
+  size:  377 Bytes   	modified:  2021-02-08 13:46:39   	graph:  graph_1
+  comment:  Company data
+
+Graph Table Information:
+graph_1:
+  size:  16.00 KB   	created:  2021-07-16 16:02:33
+  header:  ['id', 'node1', 'label', 'node2', 'node1;salary', 'graph']
+graph_2:
+  size:  12.00 KB   	created:  2021-07-16 16:02:33
+  header:  ['id', 'node1', 'label', 'node2']
+graph_3:
+  size:  16.00 KB   	created:  2021-07-16 16:02:33
+  header:  ['id', 'node1', 'label', 'node2', 'graph']
+```
+
+This command will ignore all other query-related options and not
+actually import any data or run a query.  The only other useful option
+is `--graph-cache` to point to a specific graph cache to be described.
 
 
 ## Kypher language features
@@ -1462,6 +1868,7 @@ TO DO: describe backtick quoting for graph variables, column names, etc.
 TO DO
 
 
+<A NAME="null-values"></A>
 ### Null values
 
 The KGTK file format cannot distinguish empty and `NULL` values, so when
@@ -1507,7 +1914,7 @@ The two built-in functions `kgtk_null_to_empty` and `kgtk_empty_to_null` can be
 used for that purpose.  For example:
 
 ```
-kgtk query -i graph \
+kgtk query -i $GRAPH \
      --match '(x)-[r:name]->(y)' \
      --where 'kgtk_null_to_empty(kgtk_lqstring_text(y)) != ""'
 ```
@@ -1670,6 +2077,274 @@ example, `x.kgtk_lqstring_text` instead of `kgtk_lqstring_text(x)`.
 | kgtk_geo_coords_long(x) | Return the longitude component of a KGTK geo coordinates literal as a float. |
 
 
+<A NAME="text-search-functions"></A>
+#### Full-text search functions
+
+The following functions support efficient full-text search and
+matching based on text indexes.  Full-text search is based on SQLite's
+FTS5 module whose implementation, options and match syntax is
+described in more detail [here](https://www.sqlite.org/fts5.html).
+In the functions below, `x` must be a match variable that can be
+uniquely linked to a specific unnamed or named text index.  If no or
+multiple indexes are applicable, an error will be raised.  Text indexes
+can be built with a `text:` index spec, for example,  `--idx text:node2`.
+
+| Function                          | Description                                                       |
+|-----------------------------------|-------------------------------------------------------------------|
+| textmatch(x, pat)                 | Return True if `x` matches the full-text MATCH pattern `pat`.     |
+| textlike(x, pat)                  | Return True if `x` matches the LIKE pattern `pat`.                |
+| textglobl(x, pat)                 | Return True if `x` matches the GLOB pattern `pat`.                |
+| matchscore(x)                     | Return the BM25 match score for the text match on `x` (scores are negative, smaller are better). |
+| bm25(x)                           | Synonym for `matchscore`.                                         |
+
+For example, here we define a text index on the `node2` column of
+`GRAPH` and then use `textmatch` to match against the values of that
+column.  For now text indexes need to be explicitly defined before
+they can be used.  We also give the index a name using the
+`//name=myidx` option which is optional but will allow us to
+demonstrate access to named indexes.
+
+```
+kgtk query -i $GRAPH --idx auto text:node2//name=myidx \
+     --match '(x)-[r]->(y)' \
+     --where 'textmatch(y, "ott")' \
+     --return 'x, r.label, y, matchscore(y) as score' \
+     --order 'score'
+```
+Result:
+
+| node1 | label  |  node2     |  score               |
+|-------|--------|------------|----------------------|
+| Joe   | friend |  Otto      |  -1.3605330992115003 |
+| Otto  | name   |  'Otto'@de |  -0.8144321029967752 |
+
+Note how all the scores are negative with the best being the smallest
+(most negative) which allows the use of default ascending ordering to
+get the best matches first.
+
+`textmatch` patterns use a phrase-based language that allows
+multi-word phrases, Boolean expressions, multi-column expressions,
+suffix patterns, etc.  See
+[here](https://www.sqlite.org/fts5.html#full_text_query_syntax) for a
+full exposition.  What is handled exactly and efficiently depends on
+the options used when the text index was defined (which are
+unfortunately somewhat complex).  By default, the `trigram` tokenizer
+is used here which supports a large number of different operations
+efficiently.
+
+Here is an example of a Boolean expression:
+
+```
+kgtk query -i $GRAPH --idx auto text:node2//name=myidx \
+     --match '(x)-[r]->(y)' \
+     --where 'textmatch(y, "ott OR hans")' \
+     --return 'x, r.label, y, matchscore(y) as score' \
+     --order 'score'
+```
+Result:
+
+| node1 | label  |  node2     |  score               |
+|-------|--------|------------|----------------------|
+| Joe   | friend | Otto       | -1.3605330992115003  |
+| Hans  | name   | 'Hans'@de  | -1.2859084137069412  |
+| Otto  | name   | 'Otto'@de  | -0.8144321029967752  |
+
+The `trigram` tokenizer also supports case-insensitive SQL `LIKE`
+patterns and case-sensitive `GLOB` patterns.  In general, with a
+trigram index, a pattern must contain at least one trigram for a
+`MATCH` pattern to be successful or for the `LIKE` and `GLOB` patterns
+to work efficiently.  Here are some more examples:
+
+```
+kgtk query -i $GRAPH --idx auto text:node2//name=myidx \
+     --match '(x)-[r]->(y)' \
+     --where 'textlike(y, "%ott%")' \
+     --return 'x, r.label, y, matchscore(y) as score' \
+     --order 'score'
+```
+Result:
+
+| node1 | label  |  node2     |  score               |
+|-------|--------|------------|----------------------|
+| Joe   | friend | Otto       | -1.3605330992115003  |
+| Otto  | name   | 'Otto'@de  | -0.8144321029967752  |
+
+```
+kgtk query -i $GRAPH --idx auto text:node2//name=myidx \
+     --match '(x)-[r]->(y)' \
+     --where 'textglob(y, "*Ott*")' \
+     --return 'x, r.label, y, matchscore(y) as score' \
+     --order 'score'
+```
+Result:
+
+| node1 | label  |  node2     |  score               |
+|-------|--------|------------|----------------------|
+| Joe   | friend | Otto       | -1.3605330992115003  |
+| Otto  | name   | 'Otto'@de  | -0.8144321029967752  |
+
+It is possible to define more than one text index for a particular graph
+or column, e.g., to allow differently optimized indexes to coexist for
+certain types of fuzzy matching.  In such cases the optional name of an
+index can be used to indicate which index should be used.  Such names
+must be used as the first element of the match variable.  For example:
+
+```
+kgtk query -i $GRAPH --idx auto text:node2//name=myidx \
+     --match '(x)-[r]->(y)' \
+     --where 'textmatch(myidx.y, "ott")' \
+     --return 'x, r.label, y, matchscore(myidx.y) as score' \
+     --order 'score'
+```
+Result:
+
+| node1 | label  |  node2     |  score               |
+|-------|--------|------------|----------------------|
+| Joe   | friend |  Otto      |  -1.3605330992115003 |
+| Otto  | name   |  'Otto'@de |  -0.8144321029967752 |
+
+Finally, a text index may index more than one column in which case the
+match expression can use column-specific filters which can be combined
+in arbitrary Boolean expressions.  For multi-column matching, the
+relation variable must be used as the variable to be matched on (`r`
+in the examples below):
+
+```
+kgtk query -i $GRAPH --idx auto text:node1,node2//name=multi \
+     --match '(x)-[r]->(y)' \
+     --where 'textmatch(multi.r, "node1: joe AND node2 : ott")' \
+     --return 'x, r.label, y, matchscore(multi.r) as score' \
+     --order 'score'
+```
+Result:
+
+| node1 | label  |  node2     |  score               |
+|-------|--------|------------|----------------------|
+| Joe   | friend | Otto       | -2.1158081150971633  |
+
+```
+kgtk query -i $GRAPH --idx auto text:node1,node2//name=multi \
+     --match '(x)-[r]->(y)' \
+     --where 'textmatch(multi.r, "node2: ott NOT node1 : joe")' \
+     --return 'x, r.label, y, matchscore(multi.r) as score' \
+     --order 'score'
+```
+Result:
+
+| node1 | label  |  node2     |  score               |
+|-------|--------|------------|----------------------|
+| Otto  | name   | 'Otto'@de  | -0.8763404768201021  |
+
+Finally, full-text indexing is really only necessary on reasonably
+large data (e.g., the text labels of Wikidata), on small data like the
+example `GRAPH` used here, everything could have been done just as
+efficiently with standard regular expression matching.
+
+TO DO: full documentation of all text index definition options
+
+
+#### Defining and using custom functions
+
+When the built-in functions provided by SQLite and Kypher are not enough, the functions below
+can be used to execute arbitrary Python code as part of a Kypher query.  To allow users to
+execute their own special-purpose code in such circumstances, the `--import` argument can be
+used to import any required library or user modules before the query is exectuted.
+
+| Function               | Description                                                                               |
+|------------------------|-------------------------------------------------------------------------------------------|
+| pyeval(expression...)  | Python-eval `expression` and return the result (coerce value to string if necessary).  Multiple `expression` arguments will be concatenated first.                             |
+| pycall(fun, arg...)    | Python-call `fun(arg...)` and return the result (coerce value to string if necessary).  `fun` must name a function and may be qualified with a module imported by `--import`.  |
+
+Here is an example that uses both of these facilities.  First we are
+importing the `uuid` and `math` modules (the latter with an alias), so
+we can refer to them in the `pycall` expressions.  The `--import`
+argument takes anything that would be a legal argument to a single
+Python `import` statement.  Here we used some standard Python modules,
+but any user-defined module(s) could be used as long as they are
+findable in the current `PYTHONPATH`.  `pyeval` parses and evaluates
+an arbitrary Python expression which here we assemble via a `printf`
+function call.  `pycall` is slightly more efficient, since it only has
+to look up the function object based on the provided (qualified) name:
+
+```
+kgtk query -i $GRAPH --import 'uuid, math as m' \
+     --match '(x)-[r:name]->(y)' \
+     --where 'kgtk_lqstring(y)' \
+     --return 'y as name, \
+               pyeval(printf($FMT, y)) as swapname, \
+               pycall("m.fmod", length(y), 2) as isodd, \
+               pycall("uuid.uuid4") as uuid' \
+     --para FMT='"%s".swapcase()'
+```
+Result:
+
+|  name     |  swapname  |  isodd  |   uuid                                |
+|-----------|------------|---------|---------------------------------------|
+| 'Hans'@de |  'hANS'@DE |  1.0    |  5742f943-9bbe-4c5c-a4ac-98ffda145642 |
+| 'Otto'@de |  'oTTO'@DE |  1.0    |  a3d720e8-c331-4a9a-b5db-ab188ccb3e53 |
+
+The values returned by `pyeval` and `pycall` must be simple literals
+such as numbers, strings or booleans.  Anything else would cause a
+database error and is therefore converted to a string first (e.g., the
+`UUID` objects returned by `uuid.uuid4`).
+
+Here is an alternative invocation of `pyeval` that uses multiple arguments
+which will be implicitly string-concatenated before evaluation.  The
+`char(34)` term produces a double quote to avoid shell quoting issues:
+
+```
+kgtk query -i $GRAPH \
+     --match '(x)-[r:name]->(y)' \
+     --where 'kgtk_lqstring(y)' \
+     --return 'y as name, \
+               pyeval(char(34), y, char(34), ".swapcase()") as swapname'
+```
+Result:
+
+| name      | swapname  |
+|-----------|-----------|
+| 'Hans'@de | 'hANS'@DE |
+| 'Otto'@de | 'oTTO'@DE |
+
+
+!!! note
+    Functions will often be executed in the inner loop of a database query
+    and are therefore expected to be simple and fast.  Long-running functions
+    might lead to very long query times.
+
+Users may also implement their own built-ins directly which will
+generally be more efficient than going through the `pyeval`
+mechanisms.  For example, suppose the file `mybuiltins.py` has the
+following content and is visible in the current `PYTHONPATH` (note
+that `num_params` can also be -1 to allow functions with a variable
+number of arguments):
+
+```
+from kgtk.kypher.sqlstore import SqliteStore
+
+def swapcase(x):
+    return str(x).swapcase()
+
+SqliteStore.register_user_function(name='swapcase', num_params=1, func=swapcase)
+```
+
+Then we can import it in a query and call the defined function just as any
+other Kypher built-in:
+
+```
+kgtk query -i $GRAPH --import 'mybuiltins' \
+     --match '(x)-[r:name]->(y)' \
+     --where 'kgtk_lqstring(y)' \
+     --return 'y as name, swapcase(y) as swapname'
+```
+Result:
+
+|  name     |   swapname   |
+|-----------|--------------|
+| 'Hans'@de |   'hANS'@DE  |
+| 'Otto'@de |   'oTTO'@DE  |
+
+
 <A NAME="differences-to-cypher"></A>
 ### Important differences to Cypher
 
@@ -1677,7 +2352,6 @@ example, `x.kgtk_lqstring_text` instead of `kgtk_lqstring_text(x)`.
 * supports querying across multiple graphs
 * no graph update commands
 * single match clause only
-* no (transitive) path range patterns which would be expensive to implement in SQL
 * no relationship isomorphism
 * no dynamic properties such as `x[fn(y)]`
 * lists can only contain literals
@@ -1686,7 +2360,7 @@ example, `x.kgtk_lqstring_text` instead of `kgtk_lqstring_text(x)`.
 
 Features that are currently missing but might become available in future versions:
 
-* optional match
+* transitive path range patterns
 * `exists` subqueries
 * `with` clause variable bindings
 * `union` queries
@@ -1717,9 +2391,105 @@ Proper indexing of KGTK graph file columns is important for good query
 performance on large files.  Appropriate indexes are created
 automatically as needed before a query is run.  However, sometimes
 more fine-grained control of index generation is needed which can be
-achieved with the `--index [MODE]` option (experts only).  Mode can
-be one of `auto` (the default), `expert`, `quad`, `triple`, `node1+label`,
-`node1`, `label`, `node2` and `none`.
+achieved with the `--index [MODE ...]` and `--idx [SPEC ...]` options
+(experts only).
+
+`--index` describes one or more default indexing modes or actions that
+should be applied to all inputs of the current query (the default is
+`mode:auto` or `auto` for short).  `--idx` or its long form
+`--input-index` describe one or more indexing modes/specs that should
+be applied for the preceding input only which will override any
+defaults coming from `--index` for that particular input.
+
+The following pre-defined indexing modes are currently supported:
+
+| Macro Modes               | Description                                                                                            |
+|---------------------------|--------------------------------------------------------------------------------------------------------|
+| mode:none                 | do not create any new indexes                                                                          |
+| mode:auto                 | automatically create indexes needed for good performance (the default)                                 |
+| mode:autotext             | automatically create text search indexes as needed (not yet implemented)                               |
+| mode:clear                | delete all currently defined indexes                                                                   |
+| mode:cleartext            | delete all currently defined text search indexes                                                       |
+| mode:expert               | use SQLite's expert mode to determine which indexes to build (deprecated)                              |
+
+| Graph modes               |                                                                                                        |
+|---------------------------|--------------------------------------------------------------------------------------------------------|
+| mode:graph                | build covering indexes on `node1` and `node2`, single column index on `label` (for general graphs)     |
+| mode:monograph            | build covering indexes on `node1` and `node2` (for mono-relational graphs)                             |
+| mode:valuegraph           | build a single-column index on `node1` (for mono-relational attribute-value graphs)                    |
+| mode:textgraph            | build a single-column index on `node1`, default unnamed text index on `node2` (for mono-relational attribute-value graphs with text values) |
+
+| Legacy modes              |                                                                                                        |
+|---------------------------|--------------------------------------------------------------------------------------------------------|
+| mode:node1+label          | build single-column indexes on `node1` and `label`                                                     |
+| mode:triple               | build single-column indexes on `node1`, `label` and `node2`                                            |
+| mode:quad                 | build single-column indexes on `node1`, `label`, `node2` and `id`                                      |
+
+All of the modes listed above except for `mode:clear` and
+`mode:cleartext` can be supplied without the `mode:` prefix.  Clearing
+modes need to be explicitly qualified to reduce the chance of
+accidental deletion of indexes.  Note that these modes will be applied
+only locally to the listed input most closely preceding an `--idx`
+option, or globally to all listed query inputs if the `--index` option
+is used.  If a local indexing option is given for an input, none
+of the global default options will be applied to it.
+
+Multiple index options can be supplied locally and globally.
+For example, here we first clear any pre-existing indexes on the
+qualifiers graph and then create a single-column index on `node1`
+using the `valuegraph` mode:
+
+```
+kgtk query -i $QUALS --idx mode:clear valuegraph
+```
+
+Indexing modes can safely be resupplied over multiple queries.
+Indexes will only be built if they are not yet available.  If an index
+implied by a mode has already been constructed, it will simply be reused.
+
+Besides high-level modes, a concise more fine-grained language of
+index specs is also available to allow highly custom-tailored
+specification of graph indexes.  This is particularly useful for text
+search indexing which provides a number of different indexing options
+(see [<b>Full text search functions</b>](#text-search-functions) for
+more details).
+
+Index specs are indicated with the `index:` prefix for graph indexes
+and the `text:` prefix for text search indexes.  For example, a
+two-column unique index starting from `node2` that ignores the label
+column can be specified like this:
+
+```
+index:node2,node1//unique
+```
+
+Options can be supplied with the slash syntax.  Double slashes indicate global
+options that apply to the whole index, single slashes indicate column-local
+options.  `unique` is the only option currently supported for graph indexes,
+it indicates and enforces that the listed columns form a unique key, that is,
+there are no two rows in the graph that have the same values for those columns.
+
+Columns containing special characters can be quoted using backtick
+syntax.  For example, to index on an extra column do this (but note the
+extra quotes necessary to prevent the shell from interpreting those
+backticks):
+
+```
+--idx 'index:node1,`node1;region`'
+```
+
+`index:` is the default prefix implied for specs without a prefix.  For example,
+`node1` can be used instead of `index:node1`.  For cases where a column name
+matches one of the modes listed above, an explicit qualification is needed,
+for example, to index a column named `cleartext` use `index:cleartext`.
+
+Multiple modes and specs can be specified locally and globally and will be
+interpreted in sequence.  For example:
+
+```
+kgtk query -i $GRAPH --idx mode:clear node1,node2 node2,node1 -i $WORKS --index none ...
+```
+
 
 #### Sorting the data before querying
 
@@ -1754,12 +2524,34 @@ as `node1`.  In a Wikidata-style dataset, however, `node1` skew is
 generally much less than `label` skew, so `node1` queries will be less
 affected by this resorting.  In the end what is the best strategy is
 an experimental question that will vary from dataset to dataset and
-use case.
+use case.  Note also the next section on covering indexes which can
+help with implicit sorting along multiple directions.
 
 Another thing to consider for very large datasets is to split them
 into separate files with different sets of edge labels.  This will
 keep data tables smaller, improve locality, but for the cost of some
 extra query complexity due to the multiple data files.
+
+
+#### Covering indexes
+
+Several of the indexing modes listed above will generate *covering
+indexes* for graphs.  A covering index is an index where the database
+can retrieve all the required values in a join directly from the index
+as opposed to first looking up a table row from the index and then
+accessing that table row to get a relevant value which requires
+additional disk accesses and will often break access locality.
+
+For example a `node2` covering index such as `index:node2,label,node1`
+will allow the database to join on `node2` and `label` which is useful
+for highly ambiguous labels (e.g., Wikidata's `P31`) and then be able
+to get `node1` directly from the index entry instead of having to go
+back to the data table to look it up.  Such an index also implicitly
+sorts the data which greatly improves locality, even if the data is
+not sorted in the data table.  Such covering indexes can therefore
+greatly speed up complex queries on large graphs.  The price for the
+performance gain is the extra disk space needed for such indexes which
+might be significant.
 
 
 ### Explanation

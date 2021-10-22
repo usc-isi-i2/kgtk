@@ -183,10 +183,15 @@ usage: kgtk validate [-h] [-i INPUT_FILE [INPUT_FILE ...]]
                      [--mgzip-threads MGZIP_THREADS]
                      [--gzip-in-parallel [optional True|False]]
                      [--gzip-queue-size GZIP_QUEUE_SIZE]
+                     [--implied-label IMPLIED_LABEL]
+                     [--use-graph-cache-envar [optional True|False]]
+                     [--graph-cache GRAPH_CACHE]
+                     [--graph-cache-fetchmany-size GRAPH_CACHE_FETCHMANY_SIZE]
+                     [--graph-cache-filter-batch-size GRAPH_CACHE_FILTER_BATCH_SIZE]
                      [--mode {NONE,EDGE,NODE,AUTO}]
-                     [--force-column-names FORCE_COLUMN_NAMES [FORCE_COLUMN_NAMES ...]]
+                     [--input-column-names FORCE_COLUMN_NAMES [FORCE_COLUMN_NAMES ...]]
+                     [--no-input-header [optional True|False]]
                      [--header-error-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                     [--skip-header-record [optional True|False]]
                      [--unsafe-column-name-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
                      [--prohibit-whitespace-in-column-names [optional True|False]]
                      [--initial-skip-count INITIAL_SKIP_COUNT]
@@ -291,27 +296,48 @@ File options:
                         Execute gzip in parallel. (default=False).
   --gzip-queue-size GZIP_QUEUE_SIZE
                         Queue size for parallel gzip. (default=1000).
+  --implied-label IMPLIED_LABEL
+                        When specified, imply a label colum with the specified
+                        value (default=None).
+  --use-graph-cache-envar [optional True|False]
+                        use KGTK_GRAPH_CACHE if --graph-cache is not
+                        specified. (default=True).
+  --graph-cache GRAPH_CACHE
+                        When specified, look for input files in a graph cache.
+                        (default=None).
+  --graph-cache-fetchmany-size GRAPH_CACHE_FETCHMANY_SIZE
+                        Graph cache transfer buffer size. (default=1000).
+  --graph-cache-filter-batch-size GRAPH_CACHE_FILTER_BATCH_SIZE
+                        Graph cache filter batch size. (default=1000).
   --mode {NONE,EDGE,NODE,AUTO}
                         Determine the KGTK file mode
                         (default=KgtkReaderMode.AUTO).
-  --prohibit-whitespace-in-column-names [optional True|False]
-                        Prohibit whitespace in column names. (default=False).
 
 Header parsing:
   Options affecting header parsing.
 
-  --force-column-names FORCE_COLUMN_NAMES [FORCE_COLUMN_NAMES ...]
-                        Force the column names (default=None).
+  --input-column-names FORCE_COLUMN_NAMES [FORCE_COLUMN_NAMES ...], --force-column-names FORCE_COLUMN_NAMES [FORCE_COLUMN_NAMES ...]
+                        Supply input column names when the input file does not
+                        have a header record (--no-input-header=True), or
+                        forcibly override the column names when a header row
+                        exists (--no-input-header=False) (default=None).
+  --no-input-header [optional True|False]
+                        When the input file does not have a header record,
+                        specify --no-input-header=True and --input-column-
+                        names. When the input file does have a header record
+                        that you want to forcibly override, specify --input-
+                        column-names and --no-input-header=False. --no-input-
+                        header has no effect when --input-column-names has not
+                        been specified. (default=False).
   --header-error-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
                         The action to take when a header error is detected.
                         Only ERROR or EXIT are supported
                         (default=ValidationAction.EXIT).
-  --skip-header-record [optional True|False]
-                        Skip the first record when forcing column names
-                        (default=False).
   --unsafe-column-name-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
                         The action to take when a column name is unsafe
                         (default=ValidationAction.REPORT).
+  --prohibit-whitespace-in-column-names [optional True|False]
+                        Prohibit whitespace in column names. (default=False).
 
 Pre-validation sampling:
   Options affecting pre-validation data line sampling.
@@ -412,7 +438,7 @@ Data value parsing:
   --ignore-maximum-year [IGNORE_MAXIMUM_YEAR]
                         Ignore the maximum year constraint. (default=False).
   --validate-fromisoformat [VALIDATE_FROMISOFORMAT]
-                        Validate that datetim.fromisoformat(...) can parse
+                        Validate that datetime.fromisoformat(...) can parse
                         this date and time. This checks that the
                         year/month/day combination is valid. The year must be
                         in the range 1..9999, inclusive. (default=False).
@@ -491,6 +517,10 @@ Data errors reported: 2
 The first data line was flagged because it contained "00" in the day
 field, which violates the ISO 8601 specification.
 
+The following error message is sent to stderr. The return status is 1.
+
+    Errors detected
+
 ### Validate with Verbose Feedback
 
 Sometimes you may wish to get more feedback about what `kgtk validate` is
@@ -507,10 +537,10 @@ This results in the following output:
 
 ====================================================
 Validating 'examples/docs/validate-date-with-day-zero.tsv'
+input format: kgtk
 KgtkReader: File_path.suffix: .tsv
 KgtkReader: reading file examples/docs/validate-date-with-day-zero.tsv
 header: node1	label	node2
-input format: kgtk
 node1 column found, this is a KGTK edge file
 KgtkReader: Special columns: node1=0 label=1 node2=2 id=-1
 KgtkReader: Reading an edge file.
@@ -530,6 +560,10 @@ Data lines passed: 0
 Data lines excluded due to invalid values: 2
 Data errors reported: 2
 ~~~
+
+The following error message is sent to stderr. The return status is 1.
+
+    Errors detected
 
 ### Validate Only the Header
 
@@ -561,13 +595,9 @@ This generates the following message on standard output:
 Error: No header line in file
 ~~~
 
-This also generates the following message on standard error:
+The following error message is sent to stderr. The return status is 1.
 
     Exiting due to error
-
-!!! note
-    At the present time, the latter error message is not routable
-    to standard output.
 
 ### Supply a Missing Header Line
 
@@ -575,7 +605,8 @@ Validate an empty input file, supplying a header line:
 
 ```bash
 kgtk validate -i examples/docs/validate-empty-file.tsv \
-              --force-column-names node1 label node2
+              --force-column-names node1 label node2 \
+	      --no-input-header
 ```
 
 This generates the following message on standard output:
@@ -594,8 +625,7 @@ Validate an empty input file, skipping a nonexistant header line.
 
 ```bash
 kgtk validate -i examples/docs/validate-empty-file.tsv \
-              --force-column-names node1 label node2 \
-	      --skip-header-record 
+              --force-column-names node1 label node2
 ```
 
 This generates the following message on standard output:
@@ -604,13 +634,9 @@ This generates the following message on standard output:
 Error: No header line to skip
 ~~~
 
-This also generates the following message on standard error:
+The following error message is sent to stderr. The return status is 1.
 
     Exiting due to error
-
-!!! note
-    At the present time, this latter error message is not routable
-    to standard output.
 
 ### Header Error: Column Name Is Empty
 
@@ -633,13 +659,10 @@ The following error is reported on standard output:
 In input header '	label	node2': Column 0 has an empty name in the file header
 ~~~
 
-The following message appears on standard error:
+The following error message is sent to stderr. The return status is 1.
 
     Exit requested
 
-!!! note
-    The `Exit requested` message cannot be routed to standard output at the present time.
-    
 ### Header Error: See All Header Errors
 
 Validate an input file with an empty column name.  This will generate an error
@@ -671,6 +694,9 @@ Data lines passed: 0
 
 Processing continues without exiting.
 
+!!! note
+    No error message is sent to stderr and the return status is 0.
+
 
 ### Header Error: Column Name Starts with White Space
 
@@ -688,7 +714,7 @@ id	 node1	 label	 node2
 kgtk validate -i examples/docs/validate-column-names-initial-whitespace.tsv
 ```
 
-The following error is reported on standard output:
+The following message is reported on standard output:
 
 ~~~
 In input header 'id	 node1	 label	 node2': 
@@ -700,6 +726,43 @@ Column name ' node2' starts with leading white space
 Data lines read: 0
 Data lines passed: 0
 ~~~
+
+By default, this message is reported but processing continues without
+exiting.  An error return status is not generated.
+
+
+### Header Error: Column Name Starts with White Space: Exit Requested
+
+Validate an input file where the intended `node1`, `label`, and `node2`
+column names have initial whitespace, exiting with an error if initial
+whitespace is detected.
+
+```bash
+cat examples/docs/validate-column-names-initial-whitespace.tsv
+```
+~~~
+id	 node1	 label	 node2
+~~~
+
+```bash
+
+kgtk validate -i examples/docs/validate-column-names-initial-whitespace.tsv \
+              --unsafe-column-name-action EXIT
+```
+
+The following message is reported on standard output:
+
+~~~
+In input header 'id	 node1	 label	 node2': 
+Column name ' node1' starts with leading white space
+Column name ' label' starts with leading white space
+Column name ' node2' starts with leading white space
+~~~
+
+The following error message is sent to stderr. The return status is 1.
+
+    Exit requested
+
 
 ### Header Error: Column Name Ends with White Space
 
@@ -717,7 +780,7 @@ id	node1 	label 	node2
 kgtk validate -i examples/docs/validate-column-names-trailing-whitespace.tsv
 ```
 
-The following error is reported on standard output:
+The following message is reported on standard output:
 
 ~~~
 In input header 'id	node1 	label 	node2 ': 
@@ -730,10 +793,45 @@ Data lines read: 0
 Data lines passed: 0
 ~~~
 
+By default, this message is reported but processing continues without
+exiting.  An error return status is not generated.
+
+### Header Error: Column Name Ends with White Space: Exit Requested
+
+Validate an input file where the intended `node1`, `label`, and `node2`
+column names have trailing whitespace, exiting with an error if trailing
+whitespace is detected.
+
+```bash
+cat examples/docs/validate-column-names-trailing-whitespace.tsv
+```
+~~~
+id	node1 	label 	node2 
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-column-names-trailing-whitespace.tsv \
+              --unsafe-column-name-action EXIT
+```
+
+The following error is reported on standard output:
+
+~~~
+In input header 'id	node1 	label 	node2 ': 
+Column name 'node1 ' ends with trailing white space
+Column name 'label ' ends with trailing white space
+Column name 'node2 ' ends with trailing white space
+~~~
+
+The following error message is sent to stderr. The return status is 1.
+
+    Exit requested
+
 ### Header Error: Column Name Contains Internal White Space
 
 Validate an input file where the intended `node1` and `node2`
-column names have internal whitespace.
+column names have internal whitespace.  By default, this is allowed,
+but it may be prohibited on request.
 
 ```bash
 cat examples/docs/validate-column-names-internal-whitespace.tsv
@@ -743,17 +841,55 @@ id	node 1	label	node 2
 ~~~
 
 ```bash
-kgtk validate -i examples/docs/validate-column-names-internal-whitespace.tsv
+kgtk validate -i examples/docs/validate-column-names-internal-whitespace.tsv \
+              --prohibit-whitespace-in-column-names
 ```
 
 The following error is reported on standard output:
 
 ~~~
+In input header 'id	node 1	label	node 2': 
+Column name 'node 1' contains internal white space
+Column name 'node 2' contains internal white space
 
 ====================================================
 Data lines read: 0
 Data lines passed: 0
 ~~~
+
+By default, this message is reported but processing continues without
+exiting.  An error return status is not generated.
+
+### Header Error: Column Name Contains Internal White Space: Exit Requested
+
+Validate an input file where the intended `node1` and `node2`
+column names have internal whitespace, exiting with an error if trailing
+whitespace is detected.
+
+```bash
+cat examples/docs/validate-column-names-internal-whitespace.tsv
+```
+~~~
+id	node 1	label	node 2
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-column-names-internal-whitespace.tsv \
+              --prohibit-whitespace-in-column-names \
+              --unsafe-column-name-action EXIT
+```
+
+The following error is reported on standard output:
+
+~~~
+In input header 'id	node 1	label	node 2': 
+Column name 'node 1' contains internal white space
+Column name 'node 2' contains internal white space
+~~~
+
+The following error message is sent to stderr. The return status is 1.
+
+    Exit requested
 
 ### Header Error: Column Name Contains a Comma (`,`)
 
@@ -784,6 +920,40 @@ Data lines read: 0
 Data lines passed: 0
 ~~~
 
+By default, this message is reported but processing continues without
+exiting.  An error return status is not generated.
+
+### Header Error: Column Name Contains a Comma (`,`), Exit Requested
+
+Validate an input file where the intended `node1`, `label`, and `node2`
+column names have a comma (`,`) at the end, exiting with an error if trailing
+whitespace is detected.
+
+```bash
+cat examples/docs/validate-column-names-with-comma.tsv
+```
+~~~
+node1,	label,	node2,	id
+~~~
+
+```bash
+kgtk validate -i examples/docs/validate-column-names-with-comma.tsv \
+              --unsafe-column-name-action EXIT
+```
+
+The following error is reported on standard output:
+
+~~~
+In input header 'node1,	label,	node2,	id': 
+Warning: Column name 'node1,' contains a comma (,)
+Warning: Column name 'label,' contains a comma (,)
+Warning: Column name 'node2,' contains a comma (,)
+~~~
+
+The following error message is sent to stderr. The return status is 1.
+
+    Exit requested
+
 ### Header Error: Column Name Contains a Vertical Bar (`|`)
 
 Validate an input file where the intended `node1`, `label`, and `node2`
@@ -805,6 +975,33 @@ Warning: Column name 'node2|' contains a vertical bar (|)
 Data lines read: 0
 Data lines passed: 0
 ~~~
+
+By default, this message is reported but processing continues without
+exiting.  An error return status is not generated.
+
+### Header Error: Column Name Contains a Vertical Bar (`|`): Exit Requested
+
+Validate an input file where the intended `node1`, `label`, and `node2`
+column names have a vertical bar (`|) at the end, exiting with an error if trailing
+whitespace is detected.
+
+```bash
+kgtk validate -i examples/docs/validate-column-names-with-vertical-bar.tsv \
+              --unsafe-column-name-action EXIT
+```
+
+The following warnings is reported on standard output:
+
+~~~
+In input header 'node1|	label|	node2|	id': 
+Warning: Column name 'node1|' contains a vertical bar (|)
+Warning: Column name 'label|' contains a vertical bar (|)
+Warning: Column name 'node2|' contains a vertical bar (|)
+~~~
+
+The following error message is sent to stderr. The return status is 1.
+
+    Exit requested
 
 ### Header Error: Column Name Is a Duplicate
 
@@ -828,7 +1025,7 @@ The following error is reported on standard output:
 In input header 'node1	label	node1	id': Column 2 (node1) is a duplicate of column 0
 ~~~
 
-The following is reported on standard error:
+The following error message is sent to stderr. The return status is 1.
 
     Exit requested
 
@@ -856,7 +1053,7 @@ The following error is reported on standard output:
 In input header 'col1	col2	col3': Missing required column: id | ID
 ~~~
 
-The following is reported on standard error:
+The following error message is sent to stderr. The return status is 1.
 
     Exit requested
 
@@ -884,7 +1081,7 @@ The following error is reported on standard output:
 In input header 'col1	col2	col3': Missing required column: node1 | from | subject
 ~~~
 
-The following is reported on standard error:
+The following error message is sent to stderr. The return status is 1.
 
     Exit requested
 
@@ -912,7 +1109,7 @@ The following error is reported on standard output:
 In input header 'col1	col2	col3': Missing required column: id | ID
 ~~~
 
-The following is reported on standard error:
+The following error message is sent to stderr. The return status is 1.
 
     Exit requested
 
@@ -963,7 +1160,7 @@ The following error is reported on standard output:
 In input header 'node1	label	node2	id	from': Ambiguous required column names node1 and from
 ~~~
 
-The following is reported on standard error:
+The following error message is sent to stderr. The return status is 1.
 
     Exit requested
 
@@ -1079,6 +1276,8 @@ line3	isa	line
 kgtk validate -i examples/docs/validate-short-lines.tsv
 ```
 
+The following is reported on standard output:
+
 ~~~
 Data line 2:
 line2	isashortline
@@ -1090,6 +1289,9 @@ Data lines passed: 2
 Data lines excluded due to too few columns: 1
 Data errors reported: 1
 ~~~
+
+The following error is reported on standard error:
+    Errors detected
 
 !!! note
     See the table of Action Codes for a discussion of other
@@ -1157,6 +1359,9 @@ Data lines excluded due to too many columns: 1
 Data errors reported: 1
 ~~~
 
+The following error is reported on standard error:
+    Errors detected
+
 !!! note
     See the table of Action Codes for a discussion of other
     `--long-line-action` values.
@@ -1220,6 +1425,9 @@ Data lines excluded due to prohibited lists: 1
 Data errors reported: 1
 ~~~
 
+The following error is reported on standard error:
+    Errors detected
+
 !!! note
     This constraint does not apply to KGTK node files or to
     quasi-KGTK (`--mode=NONE`) files.
@@ -1258,6 +1466,9 @@ Data lines excluded due to prohibited lists: 1
 Data errors reported: 1
 ~~~
 
+The following error is reported on standard error:
+    Errors detected
+
 !!! note
     This constraint does not apply to KGTK node files or to
     quasi-KGTK (`--mode=NONE`) files.
@@ -1295,6 +1506,9 @@ Data lines passed: 0
 Data lines excluded due to prohibited lists: 1
 Data errors reported: 1
 ~~~
+
+The following error is reported on standard error:
+    Errors detected
 
 !!! note
     This constraint does not apply to KGTK node files or to
@@ -1351,6 +1565,9 @@ Data lines read: 1
 Data lines passed: 1
 Data errors reported: 1
 ~~~
+
+The following error is reported on standard error:
+    Errors detected
 
 !!! note
     This constraint does not apply to KGTK node files or to
@@ -1623,6 +1840,10 @@ Data lines excluded due to invalid values: 8
 Data errors reported: 8
 ~~~
 
+The following error is reported on standard error:
+    Errors detected
+
+
 ### Value Check: Lax QNodes in Quantities
 
 By default, standard QNodes (Wikidata QIDs or Q identifiers) are allowed as dimension
@@ -1683,10 +1904,10 @@ kgtk cat -i examples/docs/validate-strings.tsv
 | node1 | label | node2 |
 | -- | -- | -- |
 | line1 | invalid | "xxx |
-| line2 | valid | "xxx\"yyy" |
+| line2 | valid | "xxx\\"yyy" |
 | line3 | invalid | "xxx"yyy" |
-| line4 | valid | "xxx\\yyy" |
-| line5 | valid | "xxx\tyyy" |
+| line4 | valid | "xxx\\\\yyy" |
+| line5 | valid | "xxx\\tyyy" |
 
 ```bash
 kgtk validate -i examples/docs/validate-strings.tsv
@@ -1707,6 +1928,9 @@ Data lines excluded due to invalid values: 2
 Data errors reported: 2
 ~~~
 
+The following error is reported on standard error:
+    Errors detected
+
 ### Value Check: Lax Strings
 
 Strings with internal double quote characters(`"`) that are not escaped
@@ -1721,10 +1945,10 @@ kgtk cat -i examples/docs/validate-lax-strings.tsv
 | node1 | label | node2 |
 | -- | -- | -- |
 | line1 | invalid | "xxx |
-| line2 | valid | "xxx\"yyy" |
+| line2 | valid | "xxx\\"yyy" |
 | line3 | valid | "xxx"yyy" |
-| line4 | valid | "xxx\\yyy" |
-| line5 | valid | "xxx\tyyy" |
+| line4 | valid | "xxx\\\\yyy" |
+| line5 | valid | "xxx\\tyyy" |
 
 
 ```bash
@@ -1743,6 +1967,9 @@ Data lines passed: 4
 Data lines excluded due to invalid values: 1
 Data errors reported: 1
 ~~~
+
+The following error is reported on standard error:
+    Errors detected
 
 ### Value Check: Language-Qualified Strings
 
@@ -1782,7 +2009,7 @@ kgtk cat -i examples/docs/validate-language-qualified-strings.tsv
 | node1 | label | node2 |
 | -- | -- | -- |
 | line1 | valid | 'abc'@en |
-| line2 | valid | 'a\'bc'@en |
+| line2 | valid | 'a\\'bc'@en |
 | line3 | invalid | 'a'bc'@en |
 | line4 | invalid | 'abc'@en-gb |
 | line5 | invalid | 'abc'@xxx |
@@ -1808,6 +2035,9 @@ Data lines passed: 2
 Data lines excluded due to invalid values: 3
 Data errors reported: 3
 ~~~
+
+The following error is reported on standard error:
+    Errors detected
 
 ### Value Check: Language-Qualified Strings with Suffixes
 
@@ -1999,6 +2229,9 @@ Data lines excluded due to invalid values: 5
 Data errors reported: 5
 ~~~
 
+The following error is reported on standard error:
+    Errors detected
+
 ### Value Check: Allow Lax Location Coordinates
 
 ```bash
@@ -2044,6 +2277,9 @@ Data lines excluded due to invalid values: 5
 Data errors reported: 5
 ~~~
 
+The following error is reported on standard error:
+    Errors detected
+
 ### Value Check: Allow Out of Range Location Coordinates
 
 ```bash
@@ -2076,6 +2312,9 @@ Data lines passed: 6
 Data lines excluded due to invalid values: 1
 Data errors reported: 1
 ~~~
+
+The following error is reported on standard error:
+    Errors detected
 
 ### Value Check: Clamp Out of Range Location Coordinates
 
@@ -2110,6 +2349,9 @@ Data lines passed: 6
 Data lines excluded due to invalid values: 1
 Data errors reported: 1
 ~~~
+
+The following error is reported on standard error:
+    Errors detected
 
 ### Value Check: Dates with Month or Day Zero
 
@@ -2147,6 +2389,9 @@ Data lines passed: 0
 Data lines excluded due to invalid values: 2
 Data errors reported: 2
 ~~~
+
+The following error is reported on standard error:
+    Errors detected
 
 ### Value Check: Allow Dates with Month or Day Zero
 
@@ -2241,6 +2486,9 @@ Data lines excluded due to invalid values: 1
 Data errors reported: 1
 ~~~
 
+The following error is reported on standard error:
+    Errors detected
+
 ### Value Check: Minimum Valid Year (1583 by Default)
 
 The [KGTK File Specification v2](../../specification) uses [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601)
@@ -2312,6 +2560,10 @@ Data lines excluded due to invalid values: 6
 Data errors reported: 6
 ~~~
 
+The following error message is sent to stderr. The return status is 1.
+
+    Errors detected
+
 ### Value Check: Change the Minimum Valid Year
 
 Suppose we want to exclude all dates before the year 1000.
@@ -2361,6 +2613,10 @@ Data lines passed: 2
 Data lines excluded due to invalid values: 5
 Data errors reported: 5
 ~~~
+
+The following error message is sent to stderr. The return status is 1.
+
+    Errors detected
 
 ### Value Check: Clamp the Minimum Valid Year
 
@@ -2484,6 +2740,10 @@ Data lines excluded due to invalid values: 5
 Data errors reported: 5
 ~~~
 
+The following error message is sent to stderr. The return status is 1.
+
+    Errors detected
+
 ### Value Check: Changing the Maximum Valid Year
 
 Let's change the maximum valid year to 9999:
@@ -2524,6 +2784,9 @@ Data lines excluded due to invalid values: 2
 Data errors reported: 2
 ~~~
 
+The following error message is sent to stderr. The return status is 1.
+
+    Errors detected
 
 ### Value Check: Changing the Maximum Valid Year #2
 

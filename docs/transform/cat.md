@@ -158,7 +158,7 @@ selection extensions, e.g. `.kgtk.gz`, `.csv.gz`, `.json.bz2`.
 
 ```bash
 usage: kgtk cat [-h] [-i INPUT_FILE [INPUT_FILE ...]] [-o OUTPUT_FILE]
-                [--output-format {csv,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}]
+                [--output-format {csv,html,html-compact,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,table,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}]
                 [-v [optional True|False]]
 
 Concatenate two or more KGTK files, merging the columns appropriately. All files must be KGTK edge files or all files must be KGTK node files (unless overridden with --mode=NONE). 
@@ -173,7 +173,7 @@ optional arguments:
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
                         The KGTK output file. (May be omitted or '-' for
                         stdout.)
-  --output-format {csv,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}
+  --output-format {csv,html,html-compact,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,table,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}
                         The file format (default=kgtk)
 
   -v [optional True|False], --verbose [optional True|False]
@@ -305,7 +305,8 @@ kgtk cat -i examples/docs/movies_reduced.tsv.gz examples/docs/tutorial_people_fu
 
 ### Expert Topic: Processing Files Not in KGTK Format
 
-Suppose that `not-kgtk.tsv` contains the following data **not** in KGTK format:
+Suppose that `not-kgtk.tsv` contains the following data **not** in KGTK format
+(`--mode=NONE` has been added to allow the file to be processed by `kgtk cat`):
 
 ```bash
 kgtk cat -i examples/docs/not-kgtk.tsv --mode=NONE
@@ -318,21 +319,23 @@ kgtk cat -i examples/docs/not-kgtk.tsv --mode=NONE
 | h23 | robert_patrick | birth_date | ^1958-11-05T00:00:00Z/11 |
 | h24 | robert_patrick | country | "United States of America" |
 
-Trying to run the command:
+Trying to run the command without `--mode=NONE`:
 
-    ```
-    kgtk cat -i file1.tsv.gz file3.tsv 
-    ```
+```bash
+kgtk cat -i examples/docs/not-kgtk.tsv
+```
 
 will result in an error message:
 
-    ```
-    In input 2 header 'a	b	c	d': Missing required column: id | ID
+    In input 1 header 'a	b	c	d': Missing required column: id | ID
     Exit requested
-    ```
 
 We can force the `kgtk cat` command to process the file by using the `--mode NONE` option,
 as shown above.
+
+!!! note
+    `--mode NONE` is implemented by KgtkReader.  It can be used by many KGTK commands.
+    
 
 ### Expert Topic: Adding Column Names
 
@@ -366,7 +369,6 @@ The result will be the following file in KGTK format:
 
 | id | node1 | label | node2 |
 | -- | -- | -- | -- |
-| a | b | c | d |
 | h21 | robert_patrick | label | "Robert Patrick" |
 | h22 | robert_patrick | instance_of | human |
 | h23 | robert_patrick | birth_date | ^1958-11-05T00:00:00Z/11 |
@@ -380,7 +382,7 @@ The result will be the following file in KGTK format:
 
 ### Expert Topic: Renaming Column Names on Input
 
-There is a special KGTK command, `kgtk rename_columns`, for renaming columns.
+There is a special KGTK command, `kgtk rename-columns`, for renaming columns.
 However, you may want to rename columns while also using other features of
 the `kgtk cat` command, such as combining multiple input files or sampling
 data lines.
@@ -393,7 +395,6 @@ header record and supplying a replacement list of column names.
 
 ```bash
 kgtk cat -i examples/docs/not-kgtk.tsv \
-         --skip-header-record \
 	 --force-column-names id node1 label node2
 ```
 
@@ -401,7 +402,6 @@ The result will be the following file in KGTK format:
 
 | id | node1 | label | node2 |
 | -- | -- | -- | -- |
-| a | b | c | d |
 | h21 | robert_patrick | label | "Robert Patrick" |
 | h22 | robert_patrick | instance_of | human |
 | h23 | robert_patrick | birth_date | ^1958-11-05T00:00:00Z/11 |
@@ -648,3 +648,111 @@ The result will be the following table in KGTK format:
 !!! note
     See [`kgtk normalize-nodes`](../normalize_nodes) for an example of
     converting a CSV file without an `id` column to a KGTK edge file.
+
+### Expert Topic: Implying a Label Column
+
+It is not uncommon to encounter two-column files (TSV or CSV) which represent an
+edge with an implied `label` column value (`predicate`).  The `--implied-label VALUE`
+option may be used to convert the input data into a three-column format.
+
+Consider the following file, which lists some cities in the State of Massachusettes
+and the year that they were founded.  Since this is neither a KGTK edge file
+nor a KGTK node file, we need to specify `--mode=NONE` to bypass certain
+validity checks:
+
+```bash
+kgtk cat --mode=NONE -i examples/docs/cat-two-columns.tsv
+```
+
+| node1 | node2 |
+| -- | -- |
+| Boston | 1630 |
+| Concord | 1635 |
+| Scituate | 1636 |
+| Springfield | 1636 |
+| Cambridge | 1638 |
+| Lexington | 1642 |
+| Worcester | 1673 |
+
+We can convert this file into a KGTK edge file on input by
+specifying an implied `label` column and value:
+
+```bash
+kgtk cat --implied-label=founded -i examples/docs/cat-two-columns.tsv
+```
+
+| node1 | node2 | label |
+| -- | -- | -- |
+| Boston | 1630 | founded |
+| Concord | 1635 | founded |
+| Scituate | 1636 | founded |
+| Springfield | 1636 | founded |
+| Cambridge | 1638 | founded |
+| Lexington | 1642 | founded |
+| Worcester | 1673 | founded |
+
+!!! note
+    The `--implied-label=VALUE` option is implemented by KgtkReader, and
+    can be used with most KGTK subcommands.
+
+### Expert Example: Supressing the Output Header
+
+Sometimes it is desired to produce a TSV file without an output header.
+
+kgtk cat -i examples/docs/movies_reduced.tsv --no-output-header
+
+The result will be the following file in KGTK format except
+for missing the header line.
+
+| t1 | terminator | label | 'The Terminator'@en |
+| t2 | terminator | instance_of | film |
+| t3 | terminator | genre | action |
+| t4 | terminator | genre | science_fiction |
+| t5 | terminator | publication_date | ^1984-10-26T00:00:00Z/11 |
+| t6 | t5 | location | united_states |
+| t7 | terminator | publication_date | ^1985-02-08T00:00:00Z/11 |
+| t8 | t7 | location | sweden |
+| t9 | terminator | director | james_cameron |
+| t10 | terminator | cast | arnold_schwarzenegger |
+| t11 | t10 | role | terminator |
+| t12 | terminator | cast | michael_biehn |
+| t13 | t12 | role | kyle_reese |
+| t14 | terminator | cast | linda_hamilton |
+| t15 | t14 | role | sarah_connor |
+| t16 | terminator | duration | 108 |
+| t17 | terminator | award | national_film_registry |
+| t18 | t17 | point_in_time | ^2008-01-01T00:00:00Z/9 |
+
+### Expert Example: Reading Files without Header Records
+
+Sometimes you may wish to read a TSV file that does not contain a
+header record.
+
+```
+kgtk cat -i examples/docs/cat-file-without-header.tsv --mode=NONE
+```
+
+| john | woke | ^2020-05-02T00:00 |
+| -- | -- | -- |
+| john | woke | ^2020-05-00T00:00 |
+| john | slept | ^2020-05-02T24:00 |
+| lionheart | born | ^1157-09-08T00:00 |
+| year0001 | starts | ^0001-01-01T00:00 |
+| year9999 | ends | ^9999-12-31T11:59:59 |
+
+Copy the file, supplying column names:
+
+```
+kgtk cat -i examples/docs/cat-file-without-header.tsv \
+         --input-column-names node1 label node2
+```
+
+The result will be the following file in KGTK format:
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| john | woke | ^2020-05-00T00:00 |
+| john | slept | ^2020-05-02T24:00 |
+| lionheart | born | ^1157-09-08T00:00 |
+| year0001 | starts | ^0001-01-01T00:00 |
+| year9999 | ends | ^9999-12-31T11:59:59 |

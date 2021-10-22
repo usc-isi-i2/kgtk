@@ -10,6 +10,7 @@ import math
 from   odictliteral import odict
 import time
 import csv
+import io
 import re
 from   functools import lru_cache
 import pprint
@@ -32,16 +33,14 @@ pp = pprint.PrettyPrinter(indent=4)
 # + absolute file names are an issue when distributing the store
 # - support some minimal sanity checking such as empty files, etc.
 # - handle column name dealiasing and normalization
-# - explanation runs outside the sqlite connection and thus does not see
+# o explanation runs outside the sqlite connection and thus does not see
 #   user functions such as kgtk_stringify and friends which causes errors;
-#   see if we can fix this somehow
+#   fixed for --explain
 # - support declaring and dropping of (temporary) graphs that are only used
 #   once or a few times
 # - allow in-memory graphs, or better, support memory-mapped IO via
 #   PRAGMA mmap_size=NNN bytes, which would be transparent and usable on demand
-# - support other DB maintenance ops such as drop, list, info, etc.
-# - see how we could better support fine-grained querying via prepared statements
-#   and persistent connections that avoid the KGTK startup overhead, or scripts
+# o support other DB maintenance ops such as drop, list, info, etc.
 # - check for version of sqlite3, since older versions do not support ascii mode
 # - protect graph data import from failure or aborts through transactions
 # - handle table/index creation locking when we might have parallel invocations,
@@ -116,6 +115,16 @@ def get_cat_command(file, _piped=False):
     else:
         return sh.cat.bake(file, _piped=_piped)
 
+def format_memory_size(bytes):
+    """Return a humanly readable formatting of 'bytes' using powers of 1024.
+    """
+    units = ('Bytes', 'KB', 'MB', 'GB', 'TB')
+    if bytes < 1024:
+        return '%d %s' % (bytes, units[0])
+    else:
+        scale = min(math.floor(math.log(bytes, 1024)), len(units)-1)
+        return "%.2f %s" % (bytes / math.pow(1024, scale), units[scale])
+
 
 ### SQL Store
 
@@ -128,11 +137,11 @@ class SqlStore(object):
     pass
 
 
-def sql_quote_ident(ident):
+def sql_quote_ident(ident, quote='"'):
     # - standard SQL quoting for identifiers such as table and column names is via double quotes
     # - double quotes within identifiers can be escaped via two double quotes
     # - sqlite also supports MySQL's backtick syntax and SQLServer's [] syntax
-    return '"' + ident.replace('"', '""') + '"'
+    return quote + ident.replace(quote, quote+quote) + quote
 
 class sdict(odict):
     """Ordered schema dict that supports property access of its elements.
@@ -145,7 +154,14 @@ class sdict(odict):
 
     def __setattr__(self, name, value):
         self[name] = value
-        
+
+    def __repr__(self):
+        """Create an eval-able repr that will recreate 'self' identically."""
+        if len(self) == 0:
+            return "sdict()"
+        else:
+            return "sdict[%s]" % (", ".join("%s: %s" % (repr(k),repr(v)) for k,v in self.items()),)
+
 
 class SqliteStore(SqlStore):
     """SQL store implemented via sqlite3 (which is supported as a Python builtin library.
@@ -162,16 +178,28 @@ class SqliteStore(SqlStore):
             'sql':      sdict['_name_': 'sql',      'type': 'TEXT'],
         ]
     ]
-    
+
+    # Files contain KGTK data defining graphs, and graphs are SQL tables representing that data.
+    # They are represented as separate object types, but for now the association is 1-1 where each
+    # file points to the graph it defines and each graph is named by its associated file.
+    # However, in the future we might redefine this association, e.g., multiple files could define
+    # a graph, in which case graphs should have their own external names.  This is the main reason
+    # these object types are represented in separate tables, even though we could use just a single one.
+    # Over time we will need to store additional information in these tables.  The current implementation
+    # allows for transparent addition of new columns without invalidating existing graph cache DBs.
+    # No other changes such as renaming or deleting columns are supported (see 'InfoTable.handle_schema_update()').
+
     FILE_TABLE = sdict[
         '_name_': 'fileinfo',
         'columns': sdict[
             'file':    sdict['_name_': 'file',    'type': 'TEXT', 'key': True, 'doc': 'real path of the file containing the data'],
             'size':    sdict['_name_': 'size',    'type': 'INTEGER'],
             'modtime': sdict['_name_': 'modtime', 'type': 'FLOAT'],
-            'md5sum':  sdict['_name_': 'md5sum',  'type': 'TEXT'],
+            'md5sum':  sdict['_name_': 'md5sum',  'type': 'TEXT', 'default': None], # just for illustration of defaults
             'graph':   sdict['_name_': 'graph',   'type': 'TEXT', 'doc': 'the graph defined by the data of this file'],
-        ]
+            'comment': sdict['_name_': 'comment', 'type': 'TEXT', 'doc': 'comment describing the data of this file'],
+        ],
+        'without_rowid': False, # just for illustration
     ]
 
     GRAPH_TABLE = sdict[
@@ -182,7 +210,9 @@ class SqliteStore(SqlStore):
             'header':  sdict['_name_': 'header',  'type': 'TEXT'],
             'size':    sdict['_name_': 'size',    'type': 'INTEGER', 'doc': 'total size in bytes used by this graph including indexes'],
             'acctime': sdict['_name_': 'acctime', 'type': 'FLOAT', 'doc': 'last time this graph was accessed'],
-        ]
+            'indexes': sdict['_name_': 'indexes', 'type': 'TEXT',  'doc': 'list of sdicts for indexes defined on this graph'],
+        ],
+        'without_rowid': False,
     ]
 
     def __init__(self, dbfile=None, create=False, loglevel=0, conn=None):
@@ -190,7 +220,8 @@ class SqliteStore(SqlStore):
         or SQLite connection object 'conn'.  If 'dbfile' is provided and does
         not yet exist, it will only be created if 'create' is True.  Passing
         in a connection object directly provides more flexibility with creation
-        options.  In that case any 'dbfile' value will be ignored.
+        options.  In that case any 'dbfile' value will be ignored and instead
+        looked up directly from 'conn'.
         """
         self.loglevel = loglevel
         self.dbfile = dbfile
@@ -202,6 +233,8 @@ class SqliteStore(SqlStore):
                 raise KGTKException('no sqlite DB file or connection object provided')
             if not os.path.exists(self.dbfile) and not create:
                 raise KGTKException('sqlite DB file does not exist: %s' % self.dbfile)
+        else:
+            self.dbfile = self.pragma('database_list')[0][2]
         self.user_functions = set()
         self.init_meta_tables()
         self.configure()
@@ -213,16 +246,36 @@ class SqliteStore(SqlStore):
             sys.stderr.flush()
 
     def init_meta_tables(self):
-        if not self.has_table(self.FILE_TABLE._name_):
-            self.execute(self.get_table_definition(self.FILE_TABLE))
-        if not self.has_table(self.GRAPH_TABLE._name_):
-            self.execute(self.get_table_definition(self.GRAPH_TABLE))
+        self.fileinfo = InfoTable(self, self.FILE_TABLE)
+        self.graphinfo = InfoTable(self, self.GRAPH_TABLE)
+        self.fileinfo.init_table()
+        self.graphinfo.init_table()
 
-    CACHE_SIZE = 2 ** 32 # 4GB
+    def describe_meta_tables(self, out=sys.stderr):
+        """Describe the current content of the internal bookkeeping tables to 'out'.
+        """
+        out.write('Graph Cache:\n')
+        out.write('DB file: %s\n' % self.dbfile)
+        out.write('  size:  %s' % format_memory_size(self.get_db_size()))
+        out.write('   \tfree:  %s' % format_memory_size(self.get_db_free_size()))
+        out.write('   \tmodified:  %s\n' % time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(os.path.getmtime(self.dbfile))))
+        out.write('\n')
+        out.write('KGTK File Information:\n')
+        self.describe_file_info_table(out=out)
+        out.write('\n')
+        out.write('Graph Table Information:\n')
+        self.describe_graph_info_table(out=out)
+
+    # TO DO: consider reducing this or making it configurable, since its effect on runtime
+    #        seems to be small (5-10%) compared to the memory it additionally consumes:
+    CACHE_SIZE = 2 ** 32            #  4GB
+    #CACHE_SIZE = 2 ** 34           # 16GB
+    #CACHE_SIZE = 2 ** 34 + 2 ** 33 # 24GB
 
     def configure(self):
         """Configure various settings of the store.
         """
+        #self.pragma('main.page_size = 65536') # for zfs only
         self.pragma('main.cache_size = %d' % int(self.CACHE_SIZE / self.pragma('page_size')))
 
 
@@ -260,7 +313,7 @@ class SqliteStore(SqlStore):
         res = list(self.execute('PRAGMA ' + expression))
         if len(res) == 0:
             return None
-        elif len(res) == 1:
+        elif len(res) == 1 and len(res[0]) == 1:
             return res[0][0]
         else:
             return res
@@ -310,6 +363,11 @@ class SqliteStore(SqlStore):
         """
         return (self.pragma('page_count') - self.pragma('freelist_count')) * self.pragma('page_size')
 
+    def get_db_free_size(self):
+        """Return the size of all currently allocated but free data pages in bytes.
+        """
+        return self.pragma('freelist_count') * self.pragma('page_size')
+
     def has_table(self, table_name):
         """Return True if a table with name 'table_name' exists in the store.
         """
@@ -343,6 +401,7 @@ class SqliteStore(SqlStore):
     def get_key_column(self, table_schema, error=True):
         """Return the name of the first column in 'schema' designated as a 'key',
         or raise an error if no key column has been designated (unless 'error' is False).
+        This should only be used for single-key tables such as info tables.
         """
         for col in table_schema.columns.values():
             if col.get('key') == True:
@@ -352,38 +411,42 @@ class SqliteStore(SqlStore):
         return None
 
     def get_table_definition(self, table_schema):
-        colspec = ', '.join([sql_quote_ident(col._name_) + ' ' + col.type for col in table_schema.columns.values()])
-        return 'CREATE TABLE %s (%s)' % (table_schema._name_, colspec)
+        """Generate an SQLite table definition for 'table_schema'.  Requires each column
+        to have at least a 'type' property.  Optional 'default' properties will be translated
+        into appropriate 'DEFAULT <value>' column constraints.  One or more columns with a
+        'key' property will be translated into a 'PRIMARY KEY (col...)' constraint.  If there
+        is more than one column with a key, they will be sorted by their values to order them.
+        A 'without_rowid' property on the table will produce a 'WITHOUT ROWID' table (which
+        requires a primary key to be legal!).  For some simple attribute tables such as 'labels',
+        etc. that only index on 'node1' those might be more space efficient than regular tables.
+        """
+        colspecs = []
+        keys = []
+        for col in table_schema.columns.values():
+            spec = sql_quote_ident(col._name_) + ' ' + col.type
+            dflt = col.get('default')
+            if dflt is not None:
+                dflt = isinstance(dflt, (int, float)) and '{:+g}'.format(dflt) or '"%s"' % dflt
+                spec += ' DEFAULT ' + dflt
+            key = col.get('key')
+            key is not None and keys.append((col._name_, key))
+            colspecs.append(spec)
+        if len(keys) > 0:
+            keys.sort(key=lambda x: x[1])
+            keys = 'PRIMARY KEY (%s)' % ', '.join(map(lambda x: x[0], keys))
+            colspecs.append(keys)
+        without_rowid = table_schema.get('without_rowid') and ' WITHOUT ROWID' or ''
+        return 'CREATE TABLE %s (%s)%s' % (table_schema._name_, ', '.join(colspecs), without_rowid)
 
-    def get_index_name(self, table_schema, column):
-        """Return a global name for the index for 'column' on 'table_schema'.
+    def get_table_index(self, table_or_schema, columns, unique=False):
+        """Return a TableIndex object for an index on 'columns' for 'table_or_schema'.
+        Create a unique or primary key index if 'unique' is True.
         """
-        table_name = table_schema._name_
-        column_name = table_schema.columns[column]._name_
-        index_name = '%s_%s_idx' % (table_name, column_name)
-        return index_name
-
-    def get_index_definition(self, table_schema, column, unique=False):
-        """Return a definition statement to create an index for 'column' on 'table_schema'.
-        Create a 'unique' or primary key index if 'unique' is True.  We are currently
-        only considering single-column indexes, however, we might generalize this down
-        the road to two-column indices such as '(node1, label)', '(label, node2)', etc.
-        """
-        table_name = table_schema._name_
-        column_name = table_schema.columns[column]._name_
-        index_name = self.get_index_name(table_schema, column)
-        unique = unique and 'UNIQUE' or ''
-        return 'CREATE %s INDEX %s on %s (%s)' % (
-            unique, sql_quote_ident(index_name), table_name, sql_quote_ident(column_name))
-    
-    def has_index(self, table_schema, column):
-        """Return True if table 'table_schema' has an index defined for 'column'.
-        """
-        table_name = table_schema._name_
-        column_name = table_schema.columns[column]._name_
-        index_name = '%s_%s_idx' % (table_name, column_name)
-        # we just key in on the name, not the table type, given how the names are constructed:
-        return self.has_table(index_name)
+        columns = [columns] if isinstance(columns, str) else columns # coerce to list
+        index_spec = f'index: {", ".join([sql_quote_ident(col) for col in columns])}'
+        if unique:
+            index_spec += '//unique'
+        return TableIndex(table_or_schema, index_spec)
 
     def get_column_list(self, *columns):
         return ', '.join([sql_quote_ident(col._name_) for col in columns])
@@ -391,54 +454,6 @@ class SqliteStore(SqlStore):
     def get_full_column_list(self, table_schema):
         return ', '.join([sql_quote_ident(col._name_) for col in table_schema.columns.values()])
 
-
-    ### Generic record access:
-    
-    def get_record_info(self, schema, key):
-        """Return a dict info structure for the row identified by 'key' in table 'schema',
-        or None if this key does not exist in the table.  All column keys will be set
-        although some values may be None.
-        """
-        table = schema._name_
-        cols = schema.columns
-        keycol = self.get_key_column(schema)
-        query = 'SELECT %s FROM %s WHERE %s=?' % (self.get_full_column_list(schema), table, cols[keycol]._name_)
-        for row in self.execute(query, (key,)):
-            result = sdict()
-            for col, val in zip(cols.keys(), row):
-                result[col] = val
-            return result
-        return None
-
-    def set_record_info(self, schema, info):
-        table = schema._name_
-        cols = schema.columns
-        keycol = self.get_key_column(schema)
-        key = info[keycol]
-        columns = [cols[name] for name in info.keys()]
-        collist = self.get_column_list(*columns)
-        if self.get_record_info(schema, key) is None:
-            vallist = ','.join(['?'] * len(columns))
-            stmt = 'INSERT INTO %s (%s) VALUES (%s)' % (table, collist, vallist)
-            self.execute(stmt, list(info.values()))
-        else:
-            collist = collist.replace(', ', '=?, ')
-            stmt = 'UPDATE %s SET %s=? WHERE %s=?' % (table, collist, keycol)
-            values = list(info.values())
-            values.append(key)
-            self.execute(stmt, values)
-        self.commit()
-
-    def drop_record_info(self, schema, key):
-        """Delete any rows identified by 'key' in table 'schema'.
-        """
-        table = schema._name_
-        cols = schema.columns
-        keycol = self.get_key_column(schema)
-        stmt = 'DELETE FROM %s WHERE %s=?' % (table, cols[keycol]._name_)
-        self.execute(stmt, (key,))
-        self.commit()
-        
 
     ### File information and access:
 
@@ -454,34 +469,70 @@ class SqliteStore(SqlStore):
 
     def is_standard_input(self, file):
         return self.normalize_file_path(file) == '/dev/stdin'
+
+    def is_input_alias_name(self, name):
+        """Return true if 'name' is a legal input alias.  We require aliases to not
+        contain any path separators to distinguish them from file names which are
+        stored as absolute pathnames in the file info table.
+        """
+        return name.find(os.sep) < 0
     
+    def is_input_file_name(self, name):
+        return not self.is_input_alias_name(name)
+
     def get_file_info(self, file, alias=None, exact=False):
         """Return a dict info structure for the file info for 'file' (or 'alias') or None
         if this file does not exist in the file table.  All column keys will be set in
         the result although some values may be None.  If 'exact', use 'file' as is and
-        do not try to normalize it to an absolute path.
+        do not try to normalize it to an absolute path.  Matches based on 'file' will
+        have preference over matches based on 'alias', for example, a file named 'graph'
+        will match the entry for '/data/graph' (if that is its full name) before it
+        matches an entry named by the alias 'mygraph', for example.
         """
-        info = self.get_record_info(self.FILE_TABLE, file)
-        if info is None and alias is not None:
-            info = self.get_record_info(self.FILE_TABLE, alias)
+        info = self.fileinfo.get_info(file)
         if info is None and not exact:
             file = self.normalize_file_path(file)
-            info = self.get_record_info(self.FILE_TABLE, file)
+            info = self.fileinfo.get_info(file)
+        if info is None and alias is not None:
+            info = self.fileinfo.get_info(alias)
         return info
 
-    def set_file_info(self, file, size=None, modtime=None, graph=None):
-        info = sdict()
-        info.file = file
-        info.size = size
-        info.modtime = modtime
-        info.graph = graph
-        self.set_record_info(self.FILE_TABLE, info)
+    def get_normalized_file(self, file, alias=None, exact=False):
+        """Return the stored normalized name of 'file' (or 'alias') or None
+        if this file does not exist in the file table.
+        """
+        info = self.get_file_info(file, alias=alias, exact=exact)
+        return info and info.file or None
+        
+    def set_file_info(self, _file, **kwargs):
+        # TRICKY: we use '_file' so we can also use and update 'file' in 'kwargs'
+        self.fileinfo.set_info(_file, kwargs)
 
+    def update_file_info(self, _file, **kwargs):
+        self.fileinfo.update_info(_file, kwargs)
+        
     def drop_file_info(self, file):
         """Delete the file info record for 'file'.
         IMPORTANT: this does not delete any graph data associated with 'file'.
         """
-        self.drop_record_info(self.FILE_TABLE, file)
+        self.fileinfo.drop_info(file)
+        
+    def describe_file_info(self, file, out=sys.stderr):
+        """Describe a single 'file' (or its info) to 'out'.
+        """
+        info = isinstance(file, dict) and file or self.get_file_info(file)
+        out.write('%s:\n' % info.file)
+        out.write('  size:  %s' % (info.size and format_memory_size(info.size) or '???   '))
+        out.write('   \tmodified:  %s' % time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(info.modtime)))
+        out.write('   \tgraph:  %s\n' % info.graph)
+        if info.comment:
+            out.write('  comment:  %s\n' % info.comment)
+
+    def describe_file_info_table(self, out=sys.stderr):
+        """Describe all files in the FILE_TABLE to 'out'.
+        """
+        for info in self.fileinfo.get_all_infos():
+            self.describe_file_info(info, out=out)
 
     def set_file_alias(self, file, alias):
         """Set the file column of the file info identified by 'file' (or 'alias') to 'alias'.
@@ -496,9 +547,14 @@ class SqliteStore(SqlStore):
             # this can happen if we imported 'file' without an alias, then another file
             # with 'alias', and then we try to associate 'alias' to 'file':
             raise KGTKException('alias %s is already in use for different file' % alias)
-        # we don't have an update yet, instead we delete first and then create the new record:
-        self.drop_file_info(finfo.file)
-        self.set_file_info(alias, size=finfo.size, modtime=finfo.modtime, graph=finfo.graph)
+        # update current file name to 'alias':
+        self.update_file_info(finfo.file, file=alias)
+
+    def set_file_comment(self, file, comment):
+        """Set the comment property for 'file'.
+        """
+        # We might need some text normalization here:
+        self.update_file_info(file, comment=comment)
 
     def get_file_graph(self, file):
         """Return the graph table name created from the data of 'file'.
@@ -517,7 +573,7 @@ class SqliteStore(SqlStore):
         keycol = self.get_key_column(schema)
         query = 'SELECT %s FROM %s WHERE %s=?' % (cols.file._name_, table, cols.graph._name_)
         return [file for (file,) in self.execute(query, (table_name,))]
-        
+
 
     ### Graph information and access:
 
@@ -529,21 +585,34 @@ class SqliteStore(SqlStore):
         or None if this graph does not exist in the graph table.  All column keys will be set
         although some values may be None.
         """
-        return self.get_record_info(self.GRAPH_TABLE, table_name)
+        return self.graphinfo.get_info(table_name)
 
-    def set_graph_info(self, table_name, header=None, size=None, acctime=None):
-        info = sdict()
-        info.name = table_name
-        info.header = header
-        info.size = size
-        info.acctime = acctime
-        self.set_record_info(self.GRAPH_TABLE, info)
+    def set_graph_info(self, table_name, **kwargs):
+        self.graphinfo.set_info(table_name, kwargs)
     
+    def update_graph_info(self, table_name, **kwargs):
+        self.graphinfo.update_info(table_name, kwargs)
+        
     def drop_graph_info(self, table_name):
         """Delete the graph info record for 'table_name'.
         IMPORTANT: this does not delete any graph data stored in 'table_name'.
         """
-        self.drop_record_info(self.GRAPH_TABLE, table_name)
+        self.graphinfo.drop_info(table_name)
+
+    def describe_graph_info(self, graph, out=sys.stderr):
+        """Describe a single 'graph' (or its info) to 'out'.
+        """
+        info = isinstance(graph, dict) and graph or self.get_graph_info(graph)
+        out.write('%s:\n' % info.name)
+        out.write('  size:  %s' % format_memory_size(info.size))
+        out.write('   \tcreated:  %s\n' % time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(info.acctime)))
+        out.write('  header:  %s\n' % info.header)
+
+    def describe_graph_info_table(self, out=sys.stderr):
+        """Describe all graphs in the GRAPH_TABLE to 'out'.
+        """
+        for info in self.graphinfo.get_all_infos():
+            self.describe_graph_info(info, out=out)
 
     def get_graph_table_schema(self, table_name):
         """Get a graph table schema definition for graph 'table_name'.
@@ -552,27 +621,69 @@ class SqliteStore(SqlStore):
         header = eval(info.header)
         return self.kgtk_header_to_graph_table_schema(table_name, header)
 
-    def ensure_graph_index(self, table_name, column, unique=False, explain=False):
-        """Ensure an index for 'table_name' on 'column' already exists or gets created.
+    def get_graph_indexes(self, table_name):
+        """Return the list of indexes currently defined for graph 'table_name'.
+        This will lookup from the 'indexes' column of the corresponding graph info,
+        but will also be backwards-compatible and use the SQLite master table if needed.
         """
-        schema = self.get_graph_table_schema(table_name)
-        if not self.has_index(schema, column):
-            index_stmt = self.get_index_definition(schema, column, unique=unique)
+        info = self.get_graph_info(table_name)
+        indexes = info.indexes
+        if indexes is None:
+            # we have an old-style graph info table that just got updated, retrieve index definitions
+            # from the master table and store them (maybe the 'sql:...' mode should support parsing those):
+            schema = self.MASTER_TABLE
+            columns = schema.columns
+            query = (f"""SELECT {columns.name._name_}, {columns.sql._name_} FROM {schema._name_}""" +
+                     f""" WHERE {columns.type._name_}="index" and {columns.tbl_name._name_}=?""")
+            indexes = [TableIndex(table_name, 'sql: ' + idx_sql) for _, idx_sql in self.execute(query, (table_name,))]
+            indexes = TableIndex.encode(indexes)
+            self.set_graph_info(table_name, indexes=indexes)
+        return TableIndex.decode(indexes)
+
+    def has_graph_index(self, table_name, index):
+        """Return True if graph 'table_name' has an index that subsumes 'index'.
+        """
+        for idx in self.get_graph_indexes(table_name):
+            if idx.subsumes(index) and not index.redefines(idx):
+                return True
+        else:
+            return False
+
+    def ensure_graph_index(self, table_name, index, explain=False):
+        """Ensure a qualifying 'index' for 'table_name' already exists or gets created.
+        Checks whether the existing index is at least as selective as requested, for
+        example, an existing index on columns (node1, node2) will qualify even if 'index'
+        has 'node1' as its only column.
+        """
+        if not self.has_graph_index(table_name, index):
             loglevel = explain and 0 or 1
-            self.log(loglevel, 'CREATE INDEX on table %s column %s ...' % (table_name, column))
+            indexes = self.get_graph_indexes(table_name)
+            # delete anything that is redefined by this 'index':
+            for idx in indexes[:]:
+                if index.redefines(idx) and not explain:
+                    self.drop_graph_index(table_name, idx)
+            indexes = self.get_graph_indexes(table_name)
             # we also measure the increase in allocated disk space here:
             oldsize = self.get_db_size()
-            if not explain:
-                self.execute(index_stmt)
-            # do this unconditionally for now, given that it only takes about 10% of creation time:
-            self.log(loglevel, 'ANALYZE INDEX on table %s column %s ...' % (table_name, column))
-            if not explain:
-                self.execute('ANALYZE %s' % sql_quote_ident(self.get_index_name(schema, column)))
+            for index_stmt in index.get_create_script():
+                self.log(loglevel, index_stmt)
+                if not explain:
+                    self.execute(index_stmt)
             idxsize = self.get_db_size() - oldsize
             ginfo = self.get_graph_info(table_name)
             ginfo.size += idxsize
             if not explain:
-                self.set_record_info(self.GRAPH_TABLE, ginfo)
+                indexes = TableIndex.encode(indexes + [index])
+                self.update_graph_info(table_name, indexes=indexes)
+                self.update_graph_info(table_name, size=ginfo.size)
+
+    def ensure_graph_index_for_columns(self, table_name, columns, unique=False, explain=False):
+        """Ensure an index for 'table_name' on 'columns' already exists or gets created.
+        Checks whether the existing index is at least as selective as requested, for example,
+        an existing index on columns (node1, node2) will qualify even if only node1 is requested.
+        """
+        index = self.get_table_index(table_name, columns, unique=unique)
+        self.ensure_graph_index(table_name, index, explain=explain)
 
     def number_of_graphs(self):
         """Return the number of graphs currently stored in 'self'.
@@ -590,41 +701,83 @@ class SqliteStore(SqlStore):
                 return table
             graphid += 1
 
+    def determine_graph_action(self, file, alias=None, error=True):
+        """Determine which action to perform for the KGTK graph indicated by input 'file' (or 'alias').
+        Returns one of 'add', 'replace', 'reuse' or 'error'.  Raises an exception for error cases in
+        case 'error' was set to True (the default).
+
+        Returns 'add' if no matching file info based on 'file/alias' could be found, in which case
+        the data needs to be newly imported.
+
+        Returns 'reuse' if a matching file info was found and 'file' is an existing regular file whose
+        properties match exactly what was previously loaded, or is not an existing regular file in which
+        case its properties cannot be checked.  This latter case allows us to delete large input files
+        after import without losing the ability to query them, or to query files by using their alias
+        instead of a real filename.
+
+        Returns 'replace' if a matching file info was found and 'file' is an existing regular file
+        whose properties do not match what was previously loaded, or if 'file' names standard input.
+        If so an obsolete graph table for 'file' will have to be removed before new data gets imported.
+
+        Checks for errors such as invalid alias names, aliases that are already in use for other
+        inputs, and cases where an existing file might conflict with an existing input alias.
+        """
+        if alias is not None and not self.is_input_alias_name(alias):
+            if error:
+                raise KGTKException(f'invalid input alias name: {alias}')
+            else:
+                return 'error'
+        
+        info = self.get_file_info(file, alias=alias)
+        if info is None:
+            return 'add'
+        
+        is_aliased = self.is_input_alias_name(info.file)
+        defines_alias = alias is not None
+        if defines_alias:
+            alias_info = self.get_file_info(alias, exact=True)
+            if alias_info is not None and info.file != alias_info.file:
+                if error:
+                    raise KGTKException(f"input alias '{alias}' already in use")
+                else:
+                    return 'error'
+        
+        if self.is_standard_input(file):
+            # we never reuse plain stdin, it needs to be aliased to a new name for that:
+            return 'replace'
+        
+        if os.path.exists(file):
+            if is_aliased and not defines_alias:
+                if error:
+                    raise KGTKException(f"input '{file}' conflicts with existing alias; "+
+                                        f"to replace use explicit '--as {info.file}'")
+                else:
+                    return 'error'
+            if info.size !=  os.path.getsize(file):
+                return 'replace'
+            if info.modtime != os.path.getmtime(file):
+                return 'replace'
+            # don't check md5sum for now
+        return 'reuse'
+
     def has_graph(self, file, alias=None):
         """Return True if the KGTK graph represented/named by 'file' (or its 'alias' if not None)
-        has already been imported and is up-to-date.  If this returns false, an obsolete graph
-        table for 'file' might exist and will have to be removed before new data gets imported.
-        This returns True iff a matching file info was found (named by 'file' or 'alias'), and
-        'file' is an existing regular file whose properties match exactly what was previously loaded,
-        or 'file' is not an existing regular file in which case its properties cannot be checked.
-        This latter case allows us to delete large files used for import without losing the ability
-        to query them, or to query files by using their alias only instead of a real filename.
+        has already been imported and is up-to-date (see 'determine_graph_action' for the full story).
         """
-        info = self.get_file_info(file, alias=alias)
-        if info is not None:
-            if self.is_standard_input(file):
-                # we never reuse plain stdin, it needs to be aliased to a new name for that:
-                return False
-            if os.path.exists(file):
-                if info.size !=  os.path.getsize(file):
-                    return False
-                if info.modtime != os.path.getmtime(file):
-                    return False
-            # don't check md5sum for now:
-            return True
-        return False
+        return self.determine_graph_action(file, alias=alias, error=False) == 'reuse'
 
     def add_graph(self, file, alias=None):
         """Import a graph from 'file' (and optionally named by 'alias') unless a matching
         graph has already been imported earlier according to 'has_graph' (which see).
         """
-        if self.has_graph(file, alias=alias):
+        graph_action = self.determine_graph_action(file, alias=alias)
+        if graph_action == 'reuse':
             if alias is not None:
                 # this allows us to do multiple renamings:
                 self.set_file_alias(file, alias)
             return
         file_info = self.get_file_info(file, alias=alias)
-        if file_info is not None:
+        if graph_action == 'replace':
             # we already have an earlier version of the file in store, delete its graph data:
             self.drop_graph(file_info.graph)
         file = self.normalize_file_path(file)
@@ -643,7 +796,7 @@ class SqliteStore(SqlStore):
             self.set_file_info(file, size=0, modtime=time.time(), graph=table)
         else:
             self.set_file_info(file, size=os.path.getsize(file), modtime=os.path.getmtime(file), graph=table)
-        self.set_graph_info(table, header=header, size=graphsize, acctime=time.time())
+        self.set_graph_info(table, header=header, size=graphsize, acctime=time.time(), indexes=TableIndex.encode([]))
         if alias is not None:
             self.set_file_alias(file, alias)
 
@@ -659,6 +812,32 @@ class SqliteStore(SqlStore):
         # now delete the graph table and all associated indexes:
         if self.has_table(table_name):
             self.execute('DROP TABLE %s' % table_name)
+
+    def drop_graph_index(self, table_name, index):
+        """Delete 'index' for graph 'table_name' and its associated info records.
+        """
+        ginfo = self.get_graph_info(table_name)
+        indexes = self.get_graph_indexes(table_name)
+        if index not in indexes:
+            raise KGTKException(f'No such index for {table_name}: {index}]')
+        oldsize = self.get_db_size()
+        for index_stmt in index.get_drop_script():
+            self.log(1, index_stmt)
+            self.execute(index_stmt)
+        idxsize = oldsize - self.get_db_size()
+        indexes.remove(index)
+        ginfo.size -= idxsize
+        self.update_graph_info(table_name, indexes=TableIndex.encode(indexes), size=ginfo.size)
+
+    def drop_graph_indexes(self, table_name, index_type=None):
+        """Delete all indexes for graph 'table_name'.  If 'index_type' is not None,
+        restrict to indexes of that type (can be a short name or a class).
+        """
+        if isinstance(index_type, str):
+            index_type = TableIndex.get_index_type_class(index_type)
+        for index in self.get_graph_indexes(table_name)[:]:
+            if index_type is None or isinstance(index, index_type):
+                self.drop_graph_index(table_name, index)
 
 
     ### Data import:
@@ -703,21 +882,22 @@ class SqliteStore(SqlStore):
         # however, sqlite doesn't have an option to then skip the header, so we need to use 'tail';
         # also, eventually we might want to supply more elaborate table defs such as 'without rowid';
         # finally, we have to guard against multi-character line-endings which can't be handled right:
-        with open_to_read(file, 'r') as inp:
+        with open_to_read(file, 'rt') as inp:
             #csvreader = csv.reader(inp, dialect=None, delimiter='\t', quoting=csv.QUOTE_NONE)
             header = inp.readline()
-            header = isinstance(header, bytes) and header.decode('utf8') or header
-            if header.endswith('\r\n'):
-                # SQLite import can only handle single-character line endings,
-                # if we import anyway, \r winds up in the values of the last column:
-                raise KGTKException('cannot handle multi-character line endings')
-            eol = header[-1]
+            if inp.newlines != '\n':
+                # SQLite import can only handle single-character line endings, if we import anyway,
+                # \r winds up in the values of the last column; we also can't handle \r by itself
+                # (which should be rare - not used since MacOS X), since that will not work with 'tail'.
+                # We could handle both cases by mapping to \n with 'tr', but that introduces an extra
+                # pipe and command complication - maybe later:
+                raise KGTKException('unsupported line endings')
             header = header[:-1].split('\t')
             schema = self.kgtk_header_to_graph_table_schema(table, header)
             self.execute(self.get_table_definition(schema))
             self.commit()
         
-        separators = '\\t %s' % repr(eol)[1:-1] # \r or \n for EOL
+        separators = '\\t \\n'
         args = ['-cmd', '.mode ascii', '-cmd', '.separator ' + separators,
                 self.dbfile, '.import /dev/stdin %s' % table]
 
@@ -754,9 +934,16 @@ class SqliteStore(SqlStore):
         proc = sqlite3(*args)
         return proc.stdout, proc.stderr
 
-    def explain(self, sql_query, mode='plan'):
+    def explain(self, sql_query, parameters=None, mode='plan'):
+        """Generate a query execution plan explanation for 'sql_query' and return it as a string.
+        If the query contains any parameter place holders, a set of actual 'parameters' needs to
+        be supplied.  'mode' needs to be one of 'plan' (the default), 'full' or 'expert'.  Except
+        for 'plan' mode, 'sql_query' may not contain any KGTK user function references.
+        """
         if mode == 'plan':
-            out, err = self.shell('EXPLAIN QUERY PLAN ' + sql_query)
+            plan = self.get_query_plan(sql_query, parameters)
+            return self.get_query_plan_description(plan)
+        # for the other two modes we use an SQLite shell command which doesn't require parameters:
         elif mode == 'full':
             out, err = self.shell('EXPLAIN ' + sql_query)
         elif mode == 'expert':
@@ -764,6 +951,35 @@ class SqliteStore(SqlStore):
         else:
             raise KGTKException('illegal explanation mode: %s' % str(mode))
         return out.decode('utf8')
+
+    def get_query_plan(self, sql_query, parameters=None):
+        """Return a list of query plan steps for 'sql_query' and 'parameters'.
+        Each step is a tuple of id, parent_id and description string.
+        """
+        explain_cmd = 'EXPLAIN QUERY PLAN ' + sql_query
+        parameters = parameters is not None and parameters or ()
+        plan = []
+        for node, parent, aux, desc in self.execute(explain_cmd, parameters):
+            plan.append((node, parent, desc))
+        return plan
+
+    def get_query_plan_description(self, plan):
+        """Return a textual description of a query 'plan' generated by 'get_query_plan'.
+        This closely mirrors the top-level rendering of SQLite, but not exactly so.
+        """
+        node_depths = {}
+        out = io.StringIO()
+        out.write('QUERY PLAN\n')
+        for node, parent, desc in plan:
+            depth = node_depths.get(node)
+            if depth is None:
+                depth = node_depths.get(parent, 0) + 1
+                node_depths[node] = depth
+            out.write('|  ' * (depth-1))
+            out.write('|--')
+            out.write(desc)
+            out.write('\n')
+        return out.getvalue()
 
     def suggest_indexes(self, sql_query):
         explanation = self.explain(sql_query, mode='expert')
@@ -782,6 +998,788 @@ class SqliteStore(SqlStore):
                 columns = split_regex.split(columns)
                 indexes.append((name, table, columns))
         return indexes
+
+
+class InfoTable(object):
+    """API for access to file and graph info tables.
+    """
+
+    def __init__(self, store, schema):
+        """Create an info table object for 'schema' stored in 'store'.
+        """
+        self.store = store
+        self.schema = schema
+        self.verified_schema = False
+
+    def init_table(self):
+        """If the info table doesn't exist yet, define it from its schema.
+        """
+        if not self.store.has_table(self.schema._name_):
+            self.store.execute(self.store.get_table_definition(self.schema))
+            self.verified_schema = True
+
+    def clear_caches(self):
+        InfoTable.get_info.cache_clear()
+        InfoTable.get_all_keys.cache_clear()
+        InfoTable.get_all_infos.cache_clear()
+
+    @lru_cache(maxsize=None)
+    def get_info(self, key):
+        """Return a dict info structure for the row identified by 'key' in this info table,
+        or None if 'key' does not exist.  All column keys will be set, but some values may be None.
+        """
+        if not self.verified_schema:
+            self.handle_schema_update()
+        table = self.schema._name_
+        cols = self.schema.columns
+        keycol = self.store.get_key_column(self.schema)
+        query = 'SELECT %s FROM %s WHERE %s=?' % (self.store.get_full_column_list(self.schema), table, cols[keycol]._name_)
+        for row in self.store.execute(query, (key,)):
+            result = sdict()
+            for col, val in zip(cols.keys(), row):
+                result[col] = val
+            return result
+        return None
+
+    def set_info(self, key, info):
+        """Insert or update this info table for 'key' based on the values in 'info'.
+        If a record based on 'key' already exists, update it, otherwise insert a new one.
+        If a new record is inserted, any missing column values in 'info' will be set to None.
+        If 'info' contains a value for the key column, that value will override 'key' which
+        allows for an existing key value to be updated to a new one.
+        """
+        if self.get_info(key) is not None:
+            self.update_info(key, info)
+        else:
+            # this is not really needed, since 'get_info' already checks:
+            #if not self.verified_schema:
+            #    self.handle_schema_update()
+            table = self.schema._name_
+            cols = self.schema.columns
+            keycol = self.store.get_key_column(self.schema)
+            key = info.get(keycol) or key
+            info[keycol] = key
+            columns = [cols[name] for name in info.keys()]
+            collist = self.store.get_column_list(*columns)
+            vallist = ','.join(['?'] * len(columns))
+            stmt = 'INSERT INTO %s (%s) VALUES (%s)' % (table, collist, vallist)
+            self.store.execute(stmt, list(info.values()))
+            self.store.commit()
+            self.clear_caches()
+
+    def update_info(self, key, info):
+        """Update an existing record in this info table for 'key' and the values in 'info'.
+        Any column values undefined in 'info' will remain unaffected.
+        If 'info' contains a value for the key column, that value will override 'key' which
+        allows for an existing key value to be updated to a new one.
+        This is a no-op if no record with 'key' exists in table 'schema'.
+        """
+        if not self.verified_schema:
+            self.handle_schema_update()
+        table = self.schema._name_
+        cols = self.schema.columns
+        keycol = self.store.get_key_column(self.schema)
+        columns = [cols[name] for name in info.keys()]
+        collist = self.store.get_column_list(*columns)
+        collist = collist.replace(', ', '=?, ')
+        stmt = 'UPDATE %s SET %s=? WHERE %s=?' % (table, collist, keycol)
+        values = list(info.values())
+        values.append(key)
+        self.store.execute(stmt, values)
+        self.store.commit()
+        self.clear_caches()
+        
+    def drop_info(self, key):
+        """Delete any rows identified by 'key' in this info table.
+        """
+        if not self.verified_schema:
+            self.handle_schema_update()
+        table = self.schema._name_
+        cols = self.schema.columns
+        keycol = self.store.get_key_column(self.schema)
+        stmt = 'DELETE FROM %s WHERE %s=?' % (table, cols[keycol]._name_)
+        self.store.execute(stmt, (key,))
+        self.store.commit()
+        self.clear_caches()
+
+    @lru_cache(maxsize=None)
+    def get_all_keys(self):
+        table = self.schema._name_
+        cols = self.schema.columns
+        keycol = self.store.get_key_column(self.schema)
+        return [key for (key,) in self.store.execute('SELECT %s FROM %s' % (keycol, table))]
+
+    @lru_cache(maxsize=None)
+    def get_all_infos(self):
+        # TO DO: this generates one query per key, generalize if this becomes a performance issue
+        return [self.get_info(key) for key in self.get_all_keys()]
+    
+    def handle_schema_update(self):
+        """Check whether the schema of the info table on disk is compatible with this schema.
+        If not, try to upgrade it by adding any new missing columns.  If the schema on disk is
+        from a newer version of KGTK, raise an error.  This assumes that updates to info table
+        schemas always only add new columns.  No other schema changes are supported.
+        """
+        if self.verified_schema:
+            return
+        table = self.schema._name_
+        cols = self.schema.columns
+        current_col_names = self.store.get_table_header(table)
+        if len(current_col_names) == len(cols):
+            self.verified_schema = True
+            return
+        if len(current_col_names) > len(cols):
+            raise KGTKException('incompatible graph cache schema, please upgrade KGTK or delete the cache')
+            
+        try:
+            col_names = [col._name_ for col in cols.values()]
+            for cname in col_names:
+                if cname not in current_col_names:
+                    newcol = cols[cname]
+                    stmt = 'ALTER TABLE %s ADD COLUMN %s %s' % (table, cname, newcol.type)
+                    self.store.execute(stmt)
+            self.verified_schema = True
+        except Exception as e:
+            raise KGTKException('sorry, error during schema upgrade, please remove graph cache and retry ( %s )' % repr(e))
+
+
+### Indexing support
+
+# The functions and classes below support the following:
+# - extensible representation of arbitrary index objects (such as column, multi-column, text indexes, etc.)
+# - support for parsing concise index specs that can be supplied on the command line, for example,
+#   '... --idx text:node1,node2/text ...' to specify a full-text search index on a graph column
+# - support for storing and retrieving index objects to database info tables
+# - support for comparing indexes for equivalence and subsumption
+# - support for generating SQL definition/deletion statements specific to a particular index type
+# - mapping macro index modes onto their respective index sets or actions
+# - TO DO: detect modes such as 'mode:attgraph' automatically from computing some quick statistics
+
+INDEX_MODE_NONE        = 'mode:none'
+INDEX_MODE_AUTO        = 'mode:auto'
+INDEX_MODE_AUTO_TEXT   = 'mode:autotext'
+INDEX_MODE_CLEAR       = 'mode:clear'
+INDEX_MODE_CLEAR_TEXT  = 'mode:cleartext'
+INDEX_MODE_EXPERT      = 'mode:expert'
+
+# graph modes:
+INDEX_MODE_GRAPH       = 'mode:graph'
+INDEX_MODE_MONO_GRAPH  = 'mode:monograph'
+INDEX_MODE_VALUE_GRAPH = 'mode:valuegraph'
+INDEX_MODE_TEXT_GRAPH  = 'mode:textgraph'
+
+# legacy modes:
+INDEX_MODE_PAIR        = 'mode:node1+label'
+INDEX_MODE_TRIPLE      = 'mode:triple'
+INDEX_MODE_QUAD        = 'mode:quad'
+
+INDEX_MODES = {
+    # macro modes:
+    INDEX_MODE_NONE:        INDEX_MODE_NONE,
+    INDEX_MODE_AUTO:        INDEX_MODE_AUTO,
+    INDEX_MODE_AUTO_TEXT:   INDEX_MODE_AUTO_TEXT,
+    INDEX_MODE_CLEAR:       INDEX_MODE_CLEAR,
+    INDEX_MODE_CLEAR_TEXT:  INDEX_MODE_CLEAR_TEXT,
+    INDEX_MODE_EXPERT:      INDEX_MODE_EXPERT,
+
+    # graph modes:
+    INDEX_MODE_GRAPH:       ['index:node1,label,node2', 'index:label', 'index:node2,label,node1'],
+    INDEX_MODE_MONO_GRAPH:  ['index:node1,label,node2', 'index:node2,label,node1'],
+    INDEX_MODE_VALUE_GRAPH: ['index:node1'],
+    INDEX_MODE_TEXT_GRAPH:  ['index:node1', 'text:node2//tokenize=trigram'],
+    
+    # legacy modes:
+    INDEX_MODE_PAIR:        ['index:node1', 'index:label'],
+    INDEX_MODE_TRIPLE:      ['index:node1', 'index:label', 'index:node2'],
+    INDEX_MODE_QUAD:        ['index:node1', 'index:label', 'index:node2', 'index:id'],
+}
+
+def get_normalized_index_mode(index_spec):
+    """Normalize 'index_spec' to one of the legal macro modes such as 'mode:auto', etc.,
+    or a list of individual index specs corresponding to the mode.  If 'index_spec' is a
+    custom spec such as 'node1,node2', for example, it will also be converted to a list.
+    """
+    norm_spec = None
+    spec_type = get_index_spec_type(index_spec)
+    if spec_type and spec_type.lower() == 'mode':
+        # we have an explicit mode, look it up and ensure it is valid:
+        parse = tokenize_index_spec(index_spec)
+        if len(parse) == 2 and parse[1][1] == 'text':
+            norm_spec = INDEX_MODES.get('mode:' + parse[1][0].lower())
+        if norm_spec is None:
+            raise KGTKException(f'unsupported index mode: {index_spec}')
+    else:
+        # we might have a bare mode such as 'auto' or 'none', try to look it up as a mode
+        # (to use a bare mode as a column name, explicitly use the appropriate index type):
+        norm_spec = INDEX_MODES.get('mode:' + index_spec.strip().lower(), [index_spec])
+        # enforce that clear-modes are fully qualified for some extra protection:
+        if norm_spec in (INDEX_MODE_CLEAR, INDEX_MODE_CLEAR_TEXT):
+            raise KGTKException(f"index mode '{index_spec}' needs to be explicitly qualified")
+    return norm_spec
+
+# we use /<option> as the option syntax instead of the --<option> syntax used on the command line
+# for more concise representation, and to visually separate these specs from other command options:
+INDEX_TOKENIZER_REGEX = re.compile(
+    '|'.join([r'(?P<optsepsep>//)\s*',            # '//' (needs to come before single '/')
+              r'(?P<optsep>/)\s*',                # '/'
+              r'(?P<typesep>:)\s*',               # ':'
+              r'(?P<valuesep>=)\s*',              # '='
+              r'(?P<sep>[,()])\s*',               # (',', '(', ')')
+              r'(?P<text>[^,()/:=`"\s]+)',        # non-special-char text tokens
+              r'`(?P<quote_1>([^`]*``)*[^`]*)`',  # `-quoted tokens
+              r'"(?P<quote_2>([^"]*"")*[^"]*)"',  # "-quoted tokens
+              r'(?P<whitespace>\s+)',             # whitespace separates but is ignored
+    ]))
+
+INDEX_SPEC_TYPE_SEPARATOR = ':'
+
+@lru_cache(maxsize=None)
+def tokenize_expression(expression, regex=INDEX_TOKENIZER_REGEX):
+    """Tokenize expression into a list of '(token, type)' tuples where type is one of 'text' or 'sep'.
+    Tokens are split at separators and whitespace unless prevented by quoting (all defined by 'regex').
+    Quoting is performed just like identifier quoting in SQL or Cypher using either a backtick or
+    double quote where an explicit quote can be inserted by doubling it.
+    """
+    tokens = []
+    total_match = 0
+    for m in regex.finditer(expression):
+        ms, me = m.span()
+        token = m.group(m.lastgroup)
+        toktype = m.lastgroup.split('_')[0]
+        total_match += (me - ms)
+        if toktype == 'quote':
+            quote = expression[ms]
+            # unescape quotes:
+            token = token.replace(quote+quote, quote)
+            toktype = 'text'
+        if toktype != 'whitespace':
+            tokens.append((token, toktype))
+    # make sure we didn't skip any garbage:
+    if total_match < len(expression):
+        raise KGTKException('illegal expression syntax')
+    return tokens
+
+def tokenize_index_spec(index_spec, regex=INDEX_TOKENIZER_REGEX):
+    """Tokenizes 'index_spec' (unless it is already tokenized) and returns all
+    text tokens classified as one of ('text', 'type', 'option', 'global-option').
+    All separator tokens are interpreted and then filtered out.
+    """
+    if not isinstance(index_spec, list):
+        index_spec = tokenize_expression(index_spec, regex=regex)
+    index_spec = [list(x) for x in index_spec]
+    last = len(index_spec) - 1
+    tokens = []
+    for i, (token, toktype) in enumerate(index_spec):
+        if toktype == 'typesep':
+            if i > 0 and index_spec[i-1][1] == 'text':
+                index_spec[i-1][1] = 'type'
+            else:
+                raise KGTKException('illegal index spec syntax')
+        elif toktype in ('optsep', 'optsepsep'):
+            if i < last and index_spec[i+1][1] == 'text':
+                index_spec[i+1][1] = 'option' if toktype == 'optsep' else 'global-option'
+            else:
+                raise KGTKException('illegal index spec syntax')
+        elif toktype == 'valuesep':
+            value = '' # an option followed by non-text means the empty value
+            if i < last and index_spec[i+1][1] == 'text':
+                value = index_spec[i+1][0]
+                index_spec[i+1][1] = 'value'
+            if i > 0 and index_spec[i-1][1].endswith('option'):
+                # if we have a value, we represent it with a tuple:
+                index_spec[i-1][0] = (index_spec[i-1][0], value)
+            else:
+                raise KGTKException('illegal index spec syntax')
+    for token, toktype in index_spec:
+        if toktype in ('text', 'type', 'option', 'global-option'):
+            tokens.append((token, toktype))
+    return tokens
+
+def get_index_spec_type(index_spec):
+    """Return 'index_spec's type if it starts with one, otherwise return None.
+    This will also return None for some syntatically incorrect specs, but these
+    errors should be caught during full parsing of the spec.
+    """
+    seppos = index_spec.find(INDEX_SPEC_TYPE_SEPARATOR)
+    if seppos >= 0:
+        tokens = tokenize_expression(index_spec[0:seppos+1])
+        if len(tokens) == 2 and tokens[0][1] == 'text' and tokens[1][1] == 'typesep':
+            return tokens[0][0]
+    return None
+
+def parse_index_spec(index_spec, regex=INDEX_TOKENIZER_REGEX):
+    """Parse 'index_spec' (a string or tokenized list) into an initial sdict representation.
+    Local and global option values are parsed and appropriately assigned.  Index-specific
+    'parse_spec' methods can do any further normalizations if necessary.
+    """
+    tokens = tokenize_index_spec(index_spec, regex=regex)
+    parse = sdict['type': None, 'columns': sdict(), 'options': {}]
+    column_options = None
+    for (token, toktype) in tokens:
+        if toktype == 'text':
+            column_options = {}
+            parse.columns[token] = column_options
+        elif toktype in ('option', 'global-option'):
+            opt, value = (token, True) if isinstance(token, str) else token
+            try:
+                import ast
+                value = ast.literal_eval(value) # dwim booleans and numbers
+            except:
+                pass                            # everything else is considered a string
+            if toktype == 'global-option':
+                parse.options[opt] = value
+            elif column_options is not None:
+                column_options[opt] = value
+            else:
+                raise KGTKException('illegal index spec syntax')
+        elif toktype == 'type':
+            if parse.type is None and len(parse.columns) == 0 and len(parse.options) == 0:
+                parse.type = token
+            else:
+                raise KGTKException('illegal index spec syntax')
+        else:
+            raise KGTKException('index spec parsing error')
+    return parse
+
+
+class TableIndex(object):
+    """Represents objects to describe and manipulate database table indexes (aka indices).
+    """
+
+    def __init__(self, table, index_spec):
+        """Create an index object for 'table' based on 'index_spec' which can be
+        represented as an sdict object, string version of an sdict object, or valid
+        and parsable index_spec short form (.e.g., 'index: node1, node2').
+        """
+        self.table = table
+        self.index = index_spec
+        self.index = self.get_index()
+
+    def __repr__(self):
+        """Create an eval-able repr that will recreate 'self' identically.
+        """
+        return f"{type(self).__name__}({repr(self.table)}, {self.index})"
+
+    def __eq__(self, other):
+        return (type(self) == type(other)
+                and self.index == other.index
+                and self.get_table_name() == other.get_table_name())
+
+    @classmethod
+    def encode(self, index_tree):
+        """Return a string encoding of 'index_tree' that can be stored to the DB.
+        """
+        return repr(index_tree)
+
+    @classmethod
+    def decode(self, index_expr):
+        """Convert 'index_expr' (a string encoding of an index tree created by 'encode')
+        back into the corresponding index object(s).
+        """
+        return eval(index_expr)
+
+    def get_index(self):
+        """Return the parsed index for 'self'.
+        """
+        index = self.index
+        if isinstance(index, sdict):
+            pass
+        elif isinstance(index, str):
+            if index.startswith('sdict['):
+                index = eval(index)
+            else:
+                index = self.parse_spec(index)
+        else:
+            raise KGTKException(f'illegal index spec: {index}')
+        self.index = index
+        if type(self).__name__ != self.INDEX_TYPES.get(index.type):
+            # minor hackery to instantiate to the right class depending on the index spec:
+            if index.type not in self.INDEX_TYPES:
+                raise KGTKException(f'unsupported index spec type: {index.type}')
+            klass = eval(self.INDEX_TYPES[index.type])
+            # change-class (pretend we're in Lisp):
+            self.__class__ = klass
+        return index
+
+    INDEX_TYPES = {'index': 'StandardIndex', 'text': 'TextIndex', 'sql': 'SqlIndex'}
+    DEFAULT_INDEX_TYPE = 'index'
+
+    def get_index_type_name(self):
+        return next(k for k,v in self.INDEX_TYPES.items() if v == self.__class__.__name__)
+
+    @classmethod
+    def get_index_type_class(self, index_type):
+        class_name = self.INDEX_TYPES.get(index_type)
+        if class_name is None:
+            raise KGTKException(f'unsupported index spec type: {index_type}')
+        else:
+            return eval(class_name)
+
+    def parse_spec(self, index_spec):
+        """Parse a short-form string 'index_spec' and return the result as an sdict.
+        This simply dispatches to the appropriate index subclasses.
+        """
+        spec_type = get_index_spec_type(index_spec) or self.DEFAULT_INDEX_TYPE
+        klass = self.get_index_type_class(spec_type)
+        return klass(self.table, index_spec).index
+
+    def get_table_name(self):
+        if hasattr(self.table, '_name_'):
+            return self.table._name_
+        elif isinstance(self.table, str):
+            return self.table
+        else:
+            raise KGTKException('illegal table type')
+
+    def get_name(self):
+        """Return the SQL name to be used for this index
+        """
+        raise KGTKException('not implemented')
+
+    def get_create_script(self):
+        """Return a list of SQL statements required to create this index.
+        """
+        raise KGTKException('not implemented')
+
+    def get_drop_script(self):
+        """Return a list of SQL statements required to delete this index.
+        """
+        raise KGTKException('not implemented')
+
+    def has_primary_column(self, column):
+        """Return True if this index has 'column' as its first indexed column.
+        """
+        for key in self.index.columns.keys():
+            return key == column
+
+    def subsumes_columns(self, columns):
+        """Return True if 'columns' are a prefix of this index's columns,
+        that is, it might handle a superset of lookup requests.  Note that
+        this does not consider the type of index or any options such as 'unique',
+        so actual subsumption is determined only by the respective 'subsumes'.
+        """
+        index_columns = self.index.columns.keys()
+        columns = [columns] if isinstance(columns, str) else columns
+        for idx_column, column in zip(index_columns, columns):
+            if idx_column != column:
+                return False
+        return len(columns) <= len(index_columns)
+
+    def subsumes(self, index):
+        """Return True if 'self' subsumes or is more general than 'index',
+        that is it can handle a superset of lookup requests.
+        This does not (yet) consider any options such as 'unique'.
+        """
+        return self.table == index.table and self.subsumes_columns(index.index.columns.keys())
+
+    def redefines(self, index):
+        """Return True if 'self' is different from 'index' and redefines it.
+        """
+        return False
+
+    
+class StandardIndex(TableIndex):
+    """Standard column indexes created via 'CREATE INDEX...'.
+    """
+
+    def parse_spec(self, index_spec):
+        """Parse a standard table 'index_spec' such as, for example:
+        'index: node1, label, node2 //unique' or 'node1, label, node2' 
+        ('index' is the default index spec type if not supplied).
+        """
+        parse = parse_index_spec(index_spec)
+        type_name = self.get_index_type_name()
+        if parse.type is None:
+            parse.type = type_name
+        if parse.type != type_name:
+            raise KGTKException(f'mismatched index spec type: {parse.type}')
+        return parse
+
+    def get_name(self):
+        """Return the global SQL name to be used for this index.
+        """
+        table_name = self.get_table_name()
+        column_names = '_'.join(self.index.columns.keys())
+        index_name = '%s_%s_idx' % (table_name, column_names)
+        return index_name
+
+    def get_create_script(self):
+        """Return a list of SQL statements required to create this index.
+        """
+        table_name = self.get_table_name()
+        index_name = self.get_name()
+        options = self.index.options
+        columns = self.index.columns
+        column_names = list(columns.keys())
+        unique = 'UNIQUE ' if options.get('unique', False) or columns[column_names[0]].get('unique', False) else ''
+        column_names = ', '.join([sql_quote_ident(col) for col in column_names])
+        statements = [
+            f'CREATE {unique}INDEX {sql_quote_ident(index_name)} ON {sql_quote_ident(table_name)} ({column_names})',
+            # do this unconditionally for now, given that it only takes about 10% of index creation time:
+            f'ANALYZE {sql_quote_ident(index_name)}',
+        ]
+        return statements
+
+    def get_drop_script(self):
+        """Return a list of SQL statements required to delete this index.
+        """
+        statements = [
+            f'DROP INDEX {sql_quote_ident(self.get_name())}'
+        ]
+        return statements
+
+    def subsumes(self, index):
+        """Return True if 'self' subsumes or is more general than 'index',
+        that is it can handle a superset of lookup requests.
+        This does not (yet) consider any options such as 'unique'.
+        """
+        return (self.table == index.table
+                and isinstance(index, (StandardIndex, SqlIndex))
+                and self.subsumes_columns(index.index.columns.keys()))
+
+
+# TextIndex NOTES:
+# - all columns will be indexed unless excluded with 'unindexed'
+# - tables are contentless, since we need to match to the source table via rowid anyway
+# - trigram seems to be the most powerful tokenizer, so we use that as the default, however,
+#   it uses extra space, and it requires SQLite 3.34.0 which requires Python 3.9 or later
+# - we support optional names on indexes, which allows us to easily redefine them and to
+#   have multiple indexes on the same source
+# - indexing scores are between -20 and 0, if we rerank with pagerank, that needs to be
+#   considered, for example, additive weighting with log(pagerank) seems like an option
+# - matching on node IDs works too and doesn't require special tokenizer options
+# - we should have a //strip or //preproc option to specify a custom preprocessing function
+
+# Index/tokenizer performance tradeoffs:
+# - case-insensitive trigram (default): fast textmatch, fast textlike, fast textglob, more space
+# - case-sensitive trigram: fast textmatch, fast textglob, no textlike, more space than case-insensitive
+# - ascii, unicode61: fast textmatch on whole words, also prefixes if //prefix is specified,
+#   no textlike, no textglob, less space
+    
+class TextIndex(TableIndex):
+    """Specialized indexes to support full-text search via SQLite's FT5.
+    """
+
+    COLUMN_OPTIONS    = ('unindexed')
+    TABLE_OPTIONS     = ('tokenize', 'prefix', 'content', 'columnsize', 'detail', 'name')
+    
+    DEFAULT_TOKENIZER = 'trigram'
+    # not all of these apply to all tokenizers, but we don't model that for now:
+    TOKENIZE_OPTIONS  = ('categories', 'tokenchars', 'separators', 'remove_diacritics', 'case_sensitive')
+    
+    def parse_spec(self, index_spec):
+        """Parse a full-text 'index_spec' such as, for example:
+        'text:node1/unindexed,node2//name=labidx//prefix=2//tokenize=trigram'
+        The 'unindexed' option should be rare and is just shown for illustration.
+        """
+        parse = parse_index_spec(index_spec)
+        if parse.type != self.get_index_type_name():
+            raise KGTKException(f'mismatched index spec type: {parse.type}')
+        for key in parse.options.keys():
+            if not (key in self.TABLE_OPTIONS or key in self.TOKENIZE_OPTIONS):
+                raise KGTKException(f'unhandled text index option: {key}')
+        if 'tokenize' not in parse.options:
+            for subopt in self.TOKENIZE_OPTIONS:
+                if parse.options.get(subopt) is not None:
+                    raise KGTKException(f'missing tokenize option for {subopt}')
+        # use content-less indexes linked to graph by default (override with //content):
+        content = parse.options.get('content')
+        if not content:    # None, False, ''
+            parse.options['content'] = self.get_table_name()
+        elif content is True:
+            del parse.options['content']
+        return parse
+
+    def get_name(self):
+        """Return the global SQL name to be used for this index.
+        """
+        table_name = self.get_table_name()
+        index_name = self.index.options.get('name')
+        if index_name is None:
+            import shortuuid
+            # generate a name based on the index itself instead of external state
+            # (minor gamble on uniqueness with shortened key):
+            index_name = shortuuid.uuid(repr(self)).lower()[0:10] + '_'
+        return f'{table_name}_txtidx_{index_name}'
+
+    def get_create_script(self):
+        """Return a list of SQL statements required to create this index.
+        """
+        table_name = self.get_table_name()
+        index_name = self.get_name()
+        columns = self.index.columns
+        column_names = ', '.join([sql_quote_ident(col) for col in columns.keys()])
+        column_names_with_options = ', '.join(
+            [sql_quote_ident(col) + (' UNINDEXED' if columns[col].get('unindexed', False) else '')
+             for col in columns.keys()])
+        
+        options = self.index.options
+        index_options = []
+        if 'tokenize' in options:
+            tokopt = str(options.get('tokenize'))
+            for subopt in self.TOKENIZE_OPTIONS:
+                value = options.get(subopt)
+                if value is not None:
+                    value = str(int(value)) if isinstance(value, bool) else str(value)
+                    tokopt += f""" {subopt} {sql_quote_ident(value, "'")}"""
+            tokopt = f"""tokenize={sql_quote_ident(tokopt)}"""
+            index_options.append(tokopt)
+        else:
+            tokopt = f"""tokenize={sql_quote_ident(self.DEFAULT_TOKENIZER)}"""
+            index_options.append(tokopt)
+        if 'prefix' in options:
+            index_options.append(f"""prefix={sql_quote_ident(str(options.get('prefix')))}""")
+        if 'content' in options:
+            index_options.append(f"""content={sql_quote_ident(str(options.get('content')))}""")
+        if 'columnsize' in options:
+            index_options.append(f"""columnsize={sql_quote_ident(str(options.get('columnsize')))}""")
+        if 'detail' in options:
+            index_options.append(f"""detail={options.get('detail')}""")
+        if index_options:
+            column_names_with_options += (', ' + ', '.join(index_options))
+        
+        statements = [
+            f'CREATE VIRTUAL TABLE {sql_quote_ident(index_name)} USING FTS5 ({column_names_with_options})',
+            f'INSERT INTO {sql_quote_ident(index_name)} ({column_names}) SELECT {column_names} FROM {table_name}',
+        ]
+        return statements
+
+    def get_drop_script(self):
+        """Return a list of SQL statements required to delete this index.
+        """
+        statements = [
+            f'DROP TABLE {sql_quote_ident(self.get_name())}'
+        ]
+        return statements
+
+    def subsumes(self, index):
+        """Return True if 'self' subsumes or is more general than 'index',
+        that is it can handle a superset of lookup requests.
+        """
+        # for now we require strict equivalence:
+        return self == index
+
+    def redefines(self, index):
+        """Return True if 'self' is different from 'index' and redefines it.
+        Text indexes redefine based on a defined and equal name to another text index.
+        """
+        return (isinstance(index, TextIndex)
+                and self != index
+                and self.index.options.get('name') is not None
+                and self.index.options['name'] == index.index.options.get('name'))
+
+    
+class SqlIndex(TableIndex):
+    """Handle SQL CREATE INDEX statements.
+    """
+
+    def parse_spec(self, index_spec):
+        """Parse an SQL 'index_spec' such as, for example:
+        'sql: CREATE UNIQUE INDEX "graph_1_node1_idx" on graph_1 ("node1")'
+        This supports the subset of creation statement this module produces.
+        """
+        tokens = tokenize_expression(index_spec)
+        type_name = self.get_index_type_name()
+        if get_index_spec_type(index_spec) != type_name:
+            raise KGTKException(f'not an SQL index spec: {index_spec}')
+        definition = index_spec[index_spec.find(':')+1:].strip()
+        parse = sdict['type': type_name, 'columns': sdict(), 'options': {}, 'definition': definition]
+        tokens = tokens[2:]
+        tokens = list(reversed(tokens))
+        try:
+            if tokens.pop()[0].upper() != 'CREATE':
+                raise Exception()
+            token = tokens.pop()[0].upper()
+            if token == 'UNIQUE':
+                parse.options['unique'] = True
+                token = tokens.pop()[0].upper()
+            if token != 'INDEX':
+                raise Exception()
+            # 'IF NOT EXISTS' would go here:
+            parse.options['name'] = tokens.pop()[0]
+            if tokens.pop()[0].upper() != 'ON':
+                raise Exception()
+            parse.options['table'] = tokens.pop()[0]
+            if tokens.pop()[0] != '(':
+                raise Exception()
+            column_options = None
+            for token, toktype in reversed(tokens):
+                tokens.pop()
+                if token == ')':
+                    break
+                if toktype == 'text':
+                    if column_options is None:
+                        column_options = {}
+                        parse.columns[token] = column_options
+                    else:
+                        # 'COLLATION', 'ASC', 'DESC' would go here:
+                        raise Exception()
+                elif token == ',' and toktype == 'sep':
+                    column_options = None
+                else:
+                    raise Exception()
+            if len(tokens) > 0:
+                raise Exception()
+        except:
+            raise KGTKException(f'illegal or unhandled SQL index spec: {index_spec}')
+        if self.table is not None and self.table != parse.options['table']:
+            raise KGTKException(f'table in index object does not match index definition')
+        return parse
+
+    def get_table_name(self):
+        if self.table is None:
+            return self.index.options['table']
+        else:
+            return super().get_table_name()
+
+    def get_name(self):
+        """Return the global SQL name to be used for this index.
+        """
+        return self.index.options['name']
+
+    def get_create_script(self):
+        """Return a list of SQL statements required to create this index.
+        """
+        return [self.index.definition,
+                f'ANALYZE {sql_quote_ident(self.get_name())}',
+        ]
+
+    def get_drop_script(self):
+        """Return a list of SQL statements required to delete this index.
+        """
+        statements = [
+            f'DROP INDEX {sql_quote_ident(self.get_name())}'
+        ]
+        return statements
+
+    def subsumes(self, index):
+        """Return True if 'self' subsumes or is more general than 'index',
+        that is it can handle a superset of lookup requests.
+        This does not (yet) consider any options such as 'unique'.
+        """
+        return (self.table == index.table
+                and isinstance(index, (SqlIndex, StandardIndex))
+                and self.subsumes_columns(index.index.columns.keys()))
+    
+"""
+>>> ss.TableIndex('graph1', 'node1, label, node2')
+StandardIndex('graph1', sdict['type': 'index', 'columns': sdict['node1': {}, 'label': {}, 'node2': {}], 'options': {}])
+>>> _.get_create_script()
+['CREATE INDEX "graph1_node1_label_node2_idx" ON "graph1" ("node1", "label", "node2")',
+ 'ANALYZE "graph1_node1_label_node2_idx"']
+
+>>> ss.TableIndex('graph2', 'text:node1,node2//tokenize=trigram//case_sensitive//name=myidx')
+TextIndex('graph2', sdict['type': 'text', 'columns': sdict['node1': {}, 'node2': {}], 'options': {'tokenize': 'trigram', 'case_sensitive': True, 'name': 'myidx', 'content': 'graph2'}])
+>>> _.get_create_script()
+['CREATE VIRTUAL TABLE "graph2_txtidx_myidx" USING FTS5 ("node1", "node2", tokenize="trigram case_sensitive \'1\'", content="graph2")', 
+ 'INSERT INTO "graph2_txtidx_myidx" ("node1", "node2") SELECT "node1", "node2" FROM graph2']
+
+>>> ss.TableIndex('graph_1', 'sql: CREATE UNIQUE INDEX "graph_1_node1_idx" on graph_1 ("node1")')
+SqlIndex('graph_1', sdict['type': 'sql', 'columns': sdict['node1': {}], 'options': {'unique': True, 'name': 'graph_1_node1_idx', 'table': 'graph_1'}, 'definition': 'CREATE UNIQUE INDEX "graph_1_node1_idx" on graph_1 ("node1")'])
+>>> _.get_create_script()
+['CREATE UNIQUE INDEX "graph_1_node1_idx" on graph_1 ("node1")',
+ 'ANALYZE "graph_1_node1_idx"']
+"""
 
 
 """
@@ -1361,7 +2359,7 @@ SqliteStore.register_user_function('kgtk_empty_to_null', 1, kgtk_empty_to_null, 
 # come online - we hope.
 
 def math_acos(x):
-    """"Implement the SQLite3 math built-in 'acos' via Python.
+    """Implement the SQLite3 math built-in 'acos' via Python.
     """
     try:
         return math.acos(x)
@@ -1614,6 +2612,43 @@ SqliteStore.register_user_function('sqrt', 1, math_sqrt, deterministic=True)
 SqliteStore.register_user_function('tan', 1, math_tan, deterministic=True)
 SqliteStore.register_user_function('tanh', 1, math_tanh, deterministic=True)
 SqliteStore.register_user_function('trunc', 1, math_trunc, deterministic=True)
+
+
+# Python eval:
+
+_sqlstore_module = sys.modules[__name__]
+_builtins_module = sys.modules['builtins']
+
+def get_pyeval_fn(fnname):
+    pos = fnname.rfind('.')
+    if pos < 0:
+        return getattr(_sqlstore_module, fnname, None) or getattr(_builtins_module, fnname)
+    else:
+        # we lookup the module name relative to this module in case somebody imported an alias:
+        return getattr(getattr(_sqlstore_module, fnname[0:pos]), fnname[pos+1:])
+
+def pyeval(*expression):
+    """Python-eval 'expression' and return the result (coerce value to string if necessary).
+    Multiple 'expression' arguments will be concatenated first.
+    """
+    try:
+        val = eval(''.join(expression))
+        return isinstance(val, (str, int, float)) and val or str(val)
+    except:
+        pass
+
+def pycall(fun, *arg):
+    """Python-call 'fun(arg...)' and return the result (coerce value to string if necessary).
+    'fun' must name a function and may be qualified with a module imported by --import.
+    """
+    try:
+        val = get_pyeval_fn(fun)(*arg)
+        return isinstance(val, (str, int, float)) and val or str(val)
+    except:
+        pass
+    
+SqliteStore.register_user_function('pyeval', -1, pyeval)
+SqliteStore.register_user_function('pycall', -1, pycall)
 
 
 ### Experimental transitive taxonomy relation indexing:

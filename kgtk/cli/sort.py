@@ -103,6 +103,18 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         help="When True, sort in-memory with Python code. (default=%(default)s)",
                         type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument(      '--parallel', dest='parallel', type=int, default=None,
+                              help="Controls the number of concurrent sort runs when implemented (GNU sort). (default=%(default)s)")
+
+    parser.add_argument(      '--buffer-size', dest='buffer_size', type=str, default=None,
+                              help="Controls the main memory buffer size when implemented (GNU sort). (default=%(default)s)")
+
+    parser.add_argument(      '--batch-size', dest='batch_size', type=int, default=None,
+                              help="Controls the number of concurrent merges when implemented (GNU sort). (default=%(default)s)")
+
+    parser.add_argument('-T', '--temporary-directory', dest='temporary_directory', type=str, default=list(), nargs='*', action="append",
+                              help="Controls the temporary file folder(s) when implemented (GNU sort). (default=%(default)s)")
+
     parser.add_argument('-X', '--extra', default='', action='store', dest='extra',
                         help="extra options to supply to the sort program. (default=None)")
 
@@ -120,6 +132,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument(      '--sort-command', dest='sort_command', type=str, default="sort",
                         help=h("The sort command or its substitute. (default=%(default)s)"))
+
+    parser.add_argument(      '--sort-command-fallback', dest='sort_command_fallback', type=str, default="gsort",
+                        help=h("A fallback sort command. (default=%(default)s)"))
 
     parser.add_argument(      '--xz-command', dest='xz_command', type=str, default="xz",
                         help=h("The xz command or its substitute. (default=%(default)s)"))
@@ -192,6 +207,11 @@ def run(input_file: KGTKFiles,
         numeric_sort: bool = False,
         numeric_columns: typing.Optional[typing.List[str]] = None,
         pure_python: bool = False,
+
+        parallel: typing.Optional[int] = None,
+        buffer_size: typing.Optional[str] = None, # String because of optional suffixes.
+        batch_size: typing.Optional[int] = None,
+        temporary_directory: typing.List[typing.List[str]] = list(),
         extra: typing.Optional[str] = None,
 
         bash_command: str = "bash",
@@ -199,6 +219,7 @@ def run(input_file: KGTKFiles,
         gzip_command: str = "gzip",
         pgrep_command: str = "pgrep",
         sort_command: str = "sort",
+        sort_command_fallback: str = "gsort",
         xz_command: str = "xz",
 
         errors_to_stdout: bool = False,
@@ -213,6 +234,7 @@ def run(input_file: KGTKFiles,
     import os
     from pathlib import Path
     import sh # type: ignore
+    import shutil # type: ignore
     import sys
     import typing
 
@@ -327,6 +349,25 @@ def run(input_file: KGTKFiles,
 
     if pure_python:
         return python_sort()
+
+    # Linux has the "sort" command by default (in major distributions), but
+    # MacOS has the "gsort" command.  Let's investigate our options.
+    #
+    # Note: Setting the sort command and the fallback sort command to
+    # the same thing will bypass this check.
+    if sort_command != sort_command_fallback:
+        if shutil.which(sort_command) is None:
+            if verbose:
+                print("Unable to locate the sort command %s, trying the fallback %s." % (repr(sort_command), repr(sort_command_fallback)),
+                      file=error_file, flush=True)
+            if shutil.which(sort_command_fallback) is None:
+                raise KGTKException("Cannot find the sort command %s or its fallback %s" % (repr(sort_command), repr(sort_command_fallback)))
+            sort_command = sort_command_fallback
+            if verbose:
+                print("Using the sort command fallback %s as the sort command" % repr(sort_command), file=error_file, flush=True)
+        else:
+            if verbose:
+                print("Using the sort command %s" % repr(sort_command), file=error_file, flush=True)
 
     try:
         global header_read_fd
@@ -513,6 +554,18 @@ def run(input_file: KGTKFiles,
         if numeric_sort:
             sort_options += " --numeric"
 
+        if parallel is not None:
+            sort_options += " --parallel %d" % parallel
+        if buffer_size is not None:
+            sort_options += " --buffer-size %s" % buffer_size
+        if batch_size  is not None:
+            sort_options += " --batch-size %d" % batch_size
+        tdirs: typing.List[str]
+        for tdirs in temporary_directory:
+            tdir: str
+            for tdir in tdirs:
+                if len(tdir) > 0:
+                    sort_options += " -T %s" % tdir
         if extra is not None and len(extra) > 0:
             sort_options += " " + extra
 

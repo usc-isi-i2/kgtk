@@ -16,7 +16,7 @@ def parser():
     }
 
 
-def add_arguments_extended(parser: KGTKArgumentParser):
+def add_arguments(parser: KGTKArgumentParser):
     """
     Parse arguments
     Args:
@@ -90,8 +90,9 @@ def add_arguments_extended(parser: KGTKArgumentParser):
         "-gt",
         "--generate-truthy",
         type=optional_bool,
-        const=True,
         metavar="True|False",
+        nargs='?',
+        const=True,
         default=True,
         help="the default is to not generate truthy triples. Specify this option to generate truthy triples.",
         dest="truthy",
@@ -99,8 +100,9 @@ def add_arguments_extended(parser: KGTKArgumentParser):
     parser.add_argument(
         "-w",
         "--warning",
-        const=True,
         type=optional_bool,
+        nargs='?',
+        const=True,
         default=False,
         metavar="True|False",
         help="if specified, "
@@ -108,22 +110,14 @@ def add_arguments_extended(parser: KGTKArgumentParser):
              "rather than stopping. logging",
         dest="warning",
     )
-    parser.add_argument(
-        "-gz",
-        "--use-gz",
-        const=True,
-        type=optional_bool,
-        metavar="True|False",
-        default=False,
-        help="if set to yes, read from compressed gz file",
-        dest="use_gz",
-    )
+
     parser.add_argument(
         "-sid",
         "--use-id",
-        const=True,
         type=optional_bool,
         metavar="True|False",
+        nargs='?',
+        const=True,
         default=False,
         help="if set to yes, the id in the edge will be used as statement id when creating statement or truthy statement",
         dest="use_id",

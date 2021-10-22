@@ -7,13 +7,7 @@ import sys
 import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
-from kgtk.kgtkformat import KgtkFormat
-from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
-from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.lift.kgtklift import KgtkLift
-from kgtk.utils.argparsehelpers import optional_bool
-from kgtk.value.kgtkvalue import KgtkValue
-from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 LOWER_COMMAND: str = 'lower'
 NORMALIZE_EDGES_COMMAND: str = 'normalize-edges'
@@ -32,6 +26,11 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
+    from kgtk.reshape.kgtkidbuilder import KgtkIdBuilder, KgtkIdBuilderOptions
+    from kgtk.utils.argparsehelpers import optional_bool
+    from kgtk.value.kgtkvalue import KgtkValue
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     _expert: bool = parsed_shared_args._expert
     _command: str = parsed_shared_args._command
@@ -69,6 +68,18 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help=h("The separator between the base column and the label value. (default=%(default)s)."),
                               default=KgtkLift.DEFAULT_OUTPUT_LIFTED_COLUMN_SEPARATOR)
 
+    parser.add_argument(      "--ignore-empty-node1", dest="ignore_empty_node1",
+                              help=h("When True, ignore attempts to lower into a new record with an empty node1 value. (default=%(default)s)"),
+                              type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+
+    parser.add_argument(      "--ignore-empty-node2", dest="ignore_empty_node2",
+                              help=h("When True, ignore attempts to lower into a new record with an empty node2 value. (default=%(default)s)"),
+                              type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+
+    parser.add_argument(      "--add-id", dest="add_id",
+                              help="When True, add an id column to the output (if not already present). (default=%(default)s)",
+                              type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+
     if _command == LOWER_COMMAND:
         parser.add_argument(      "--lower", dest="lower",
                                   help=h("When True, lower columns that match a lift pattern. (default=%(default)s)"),
@@ -100,6 +111,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help="When True, deduplicate new edges. Not suitable for large files. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=True, metavar="True|False")
 
+    KgtkIdBuilderOptions.add_arguments(parser, default_style=KgtkIdBuilderOptions.CONCAT_NLN_NUM_STYLE, expert=_expert)
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, default_mode=KgtkReaderMode.EDGE, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
@@ -112,6 +124,9 @@ def run(input_file: KGTKFiles,
         columns_to_lower: typing.Optional[typing.List[str]] = None,
         label_values: typing.Optional[typing.List[str]] = None,
         lift_separator: str = KgtkLift.DEFAULT_OUTPUT_LIFTED_COLUMN_SEPARATOR,
+        ignore_empty_node1: bool = False,
+        ignore_empty_node2: bool = False,
+        add_id: bool = False,
         lower: bool = False,
         normalize: bool = False,
         deduplicate_new_edges: bool = True,
@@ -126,6 +141,12 @@ def run(input_file: KGTKFiles,
 )->int:
     # import modules locally
     from kgtk.exceptions import kgtk_exception_auto_handler, KGTKException
+    from kgtk.kgtkformat import KgtkFormat
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkwriter import KgtkWriter
+    from kgtk.reshape.kgtkidbuilder import KgtkIdBuilder, KgtkIdBuilderOptions
+    from kgtk.value.kgtkvalue import KgtkValue
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
     output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
@@ -135,6 +156,7 @@ def run(input_file: KGTKFiles,
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
 
     # Build the option structures.
+    idbuilder_options: KgtkIdBuilderOptions = KgtkIdBuilderOptions.from_dict(kwargs)
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
 
@@ -152,10 +174,14 @@ def run(input_file: KGTKFiles,
         if label_values is not None:
             print("--label-values %s" % " ".join(label_values), file=error_file)
         print("--lift-separator=%s" % lift_separator, file=error_file)
+        print("--add-id=%s" % add_id, file=error_file)
         print("--lower=%s" % lower, file=error_file)
+        print("--ignore-empty-node1=%s" % ignore_empty_node1, file=error_file)
+        print("--ignore-empty-node2=%s" % ignore_empty_node2, file=error_file)
         print("--normalize=%s" % normalize, file=error_file)
         print("--deduplicate-labels=%s" % deduplicate_new_edges, file=error_file)
 
+        idbuilder_options.show(out=error_file)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
@@ -338,6 +364,13 @@ def run(input_file: KGTKFiles,
         for idx, column_name in enumerate(kr.column_names):
             if idx not in lower_map:
                 output_column_names.append(column_name)
+
+        # Create the ID builder.
+        idb: typing.Optional[KgtkIdBuilder] = None
+        if add_id:
+            idb = KgtkIdBuilder.from_column_names(output_column_names, idbuilder_options)
+            output_column_names = idb.column_names.copy()
+
         if verbose:
             print("The output columns are: %s" % " ".join(output_column_names), file=error_file, flush=True)
 
@@ -376,9 +409,11 @@ def run(input_file: KGTKFiles,
         for row in kr:
             input_line_count += 1
 
-            kw.write(row, shuffle_list=shuffle_list)
+            output_row: typing.List[str] = kw.shuffle(row, shuffle_list=shuffle_list)
+            kw.write(output_row)
             output_line_count += 1
 
+            id_seq_num: int = 0
             column_idx: int
             for column_idx in lower_map.keys():
                 node1_idx: int
@@ -386,18 +421,36 @@ def run(input_file: KGTKFiles,
                 node1_value: str
                 node1_value = row[node1_idx]
                 if len(node1_value) == 0:
-                    continue # TODO: raise an exception
+                    if ignore_empty_node1:
+                        continue # TODO: raise an exception
+                    else:
+                        raise KGTKException("Empty node1 value when lowering %d to %d: %s in input line %d" % (column_idx,
+                                                                                                               node1_idx,
+                                                                                                               new_label_value,
+                                                                                                               input_line_count))
 
                 item: str = row[column_idx]
                 if len(item) == 0:
-                    continue # Ignore empty node2 values.
+                    if ignore_empty_node2:
+                        continue # Ignore empty node2 values.
+                    else:
+                        raise KGTKException("Empty node2 value when lowering %d to %d: %s in input line %d" % (column_idx,
+                                                                                                               node1_idx,
+                                                                                                               new_label_value,
+                                                                                                               input_line_count))
 
                 # Ths item might be a KGTK list.  Let's split it, because
                 # lists aren't allow in the node2 values we'll generate.
                 node2_value: str
                 for node2_value in KgtkValue.split_list(item):
                     if len(node2_value) == 0:
-                        continue # Ignore empty node2 values.
+                        if ignore_empty_node2:
+                            continue # Ignore empty node2 values in a list.
+                        else:
+                            raise KGTKException("Empty node2 value in a list when lowering %d to %d: %s in input line %d" % (column_idx,
+                                                                                                                             node1_idx,
+                                                                                                                             new_label_value,
+                                                                                                                             input_line_count))
 
                     if deduplicate_new_edges:
                         label_key = node1_value + KgtkFormat.KEY_FIELD_SEPARATOR + new_label_value + KgtkFormat.KEY_FIELD_SEPARATOR + node2_value
@@ -406,18 +459,22 @@ def run(input_file: KGTKFiles,
                         else:
                             label_set.add(label_key)
 
-                    output_map: typing.Mapping[str, str] = {
-                        node1_column_name: node1_value,
-                        label_column_name: new_label_value,
-                        node2_column_name: node2_value,
-                    }
-                    if lkw is None:
-                        kw.writemap(output_map)
+                    lowered_input_row: typing.List[str] = ["" for idx in range(kr.column_count)]
+                    lowered_input_row[kr.node1_column_idx] = node1_value
+                    lowered_input_row[kr.label_column_idx] = new_label_value
+                    lowered_input_row[kr.node2_column_idx] = node2_value
+
+                    lowered_output_row: typing.List[str] = kw.shuffle(lowered_input_row, shuffle_list=shuffle_list)
+                    if idb is not None:
+                        id_seq_num += 0
+                        lowered_output_row = idb.build(lowered_output_row, id_seq_num, already_added=True)
+                    if lkw is not None:
+                        lkw.write(lowered_output_row)
+                        label_line_count += 1
+                    else:
+                        kw.write(lowered_output_row)
                         label_line_count += 1
                         output_line_count += 1
-                    else:
-                        lkw.writemap(output_map)
-                        label_line_count += 1
 
         if verbose:
             print("Read %d rows, wrote %d rows with %d labels." % (input_line_count, output_line_count, label_line_count), file=error_file, flush=True)

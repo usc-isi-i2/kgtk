@@ -562,19 +562,20 @@ class TestKGTKQuery(unittest.TestCase):
                 self.assertEqual(int(row['node2;len']), 9)
 
 
-    ### Testing literal accessors:
+    ### Test helpers:
     
-    def run_literal_access_query(self, query, literals=None, output=None, db=None):
-        """Run KGTK 'query' command on literals test data and return the result as a dataframe.
+    def run_test_query(self, query, input=None, output=None, db=None):
+        """Run KGTK 'query' command on 'input' test data and return the result as a dataframe.
         """
-        literals = literals or self.literals_path
+        input = input or self.file_path
         output = output or f'{self.temp_dir}/out.tsv'
         db = db or self.sqldb
-        query = query.format(LITERALS=literals, OUTPUT=output, DB=db)
+        # we also support the LITERALS key here for compatibility:
+        query = query.format(INPUT=input, LITERALS=input, OUTPUT=output, DB=db)
         cli_entry(*shlex.split(query))
         df = pd.read_csv(output, sep='\t')
         return df
-
+    
     def result_to_dataframe(self, result):
         """Convert one or more 'result' rows into a dataframe.
         """
@@ -588,6 +589,29 @@ class TestKGTKQuery(unittest.TestCase):
         df = pd.read_csv(StringIO(out.getvalue()), sep='\t')
         return df
 
+    def assert_test_query_result(self, query_result, ok_result, rowids=None):
+        """Assert that the dataframes 'query_result' and specified by 'ok_result' are the same.
+        If 'rowids' is not None, only compare the specified rows.  This currently assumes that
+        the rows are in the same order; we could generalize that down the line if necessary.
+        """
+        qdf = query_result
+        rdf = self.result_to_dataframe(ok_result)
+        if rowids is not None:
+            if not isinstance(rowids, list):
+                rowids = [rowids]
+            qdf = qdf.loc[qdf['id'].isin(rowids)]
+            rdf = rdf.loc[rdf['id'].isin(rowids)]
+        self.assertTrue(qdf.equals(rdf))
+
+
+    ### Testing literal accessors:
+        
+    def run_literal_access_query(self, query, literals=None, output=None, db=None):
+        """Run KGTK 'query' command on literals test data and return the result as a dataframe.
+        """
+        literals = literals or self.literals_path
+        return self.run_test_query(query=query, input=literals, output=output, db=db)
+
     def assert_literal_access_query_result(self, query, result, rowids=None,
                                            literals=None, output=None, db=None):
         """Assert that the dataframes produced by 'query' and defined by 'result' are the same.
@@ -595,13 +619,7 @@ class TestKGTKQuery(unittest.TestCase):
         the rows are in the same order; we could generalize that down the line if necessary.
         """
         qdf = self.run_literal_access_query(query)
-        rdf = self.result_to_dataframe(result)
-        if rowids is not None:
-            if not isinstance(rowids, list):
-                rowids = [rowids]
-            qdf = qdf.loc[qdf['id'].isin(rowids)]
-            rdf = rdf.loc[rdf['id'].isin(rowids)]
-        self.assertTrue(qdf.equals(rdf))
+        self.assert_test_query_result(qdf, result, rowids=rowids)
 
     def test_kgtk_query_literal_access_kgtk_string(self):
         query = """kgtk query -i {LITERALS} -o {OUTPUT} --graph-cache {DB}
@@ -1116,3 +1134,274 @@ class TestKGTKQuery(unittest.TestCase):
                 + """\t1.7976931348623157e+308\t1.7976931348623157e+308\t-1.7976931348623157e+308\t"""
                 + """2.2250738585072014e-308\t2.2250738585072014e-308\t-2.2250738585072014e-308"""]
         self.assert_literal_access_query_result(query, result)
+
+
+    ### Testing pyeval:
+
+    def test_kgtk_query_pyeval(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB} --limit 1
+                        --return 'pyeval(printf($FMT, "Otto")) as value' --para FMT="'%s'.swapcase()"
+                """
+        result=["""value""",
+                """oTTO"""]
+        qdf = self.run_test_query(query)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_pyeval_multi(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB} --limit 1
+                        --return 'pyeval(char(34), "Otto", char(34), ".swapcase()") as value'
+                """
+        result=["""value""",
+                """oTTO"""]
+        qdf = self.run_test_query(query)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_pycall_0(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB} --import uuid --limit 1
+                        --return 'pycall("uuid.uuid4") as value'
+                """
+        import uuid
+        qdf = self.run_test_query(query)
+        self.assertTrue(len(qdf) == 1)
+        for i, row in qdf.iterrows():
+            self.assertEqual(len(row['value']), len(str(uuid.uuid4())))
+
+    def test_kgtk_query_pycall_1(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB} --limit 1
+                        --return 'pycall("list", "Otto") as value'
+                """
+        result=["""value""",
+                """['O', 't', 't', 'o']"""]
+        qdf = self.run_test_query(query)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_pycall_2(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB} --import math --limit 1
+                        --return 'pycall("math.fmod", 42, 17) as value'
+                """
+        result=["""value""",
+                """8.0"""]
+        qdf = self.run_test_query(query)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_pycall_3(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB} --limit 1
+                        --return 'pycall("max", 1, 2, 3) as value'
+                """
+        result=["""value""",
+                """3"""]
+        qdf = self.run_test_query(query)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_pycall_4(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB} --limit 1
+                        --return 'pycall("max", 1, 2, 3, 4) as value'
+                """
+        result=["""value""",
+                """4"""]
+        qdf = self.run_test_query(query)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_pycall_5(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB} --limit 1
+                        --return 'pycall("max", 1, 2, 3, 4, 5) as value'
+                """
+        result=["""value""",
+                """5"""]
+        qdf = self.run_test_query(query)
+        self.assert_test_query_result(qdf, result)
+
+
+    ### Testing optional match (queries straight from the manual):
+
+    def test_kgtk_query_optional_strict(self):
+        # Initial non-optional strict query - for good measure.
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match  'w: (p)-[r:works]->(c), g: (p)-[:name]->(n), q: (r)-[:starts]->(s)'
+                        --return 'c as company, p as employee, n as name, s as start'
+                """
+        result = ["""company\temployee\tname\tstart""",
+                  """ACME\tHans\t'Hans'@de\t^1984-12-17T00:03:12Z/11""",
+                  """Kaiser\tJoe\t"Joe"\t^1996-02-23T08:02:56Z/09""",
+                  """Cakes\tSusi\t"Susi"\t^2008-10-01T12:49:18Z/07"""]
+        inputs = ' '.join([self.file_path, self.works_path, self.quals_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_optional_start_date(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match  'w: (p)-[r:works]->(c), g: (p)-[:name]->(n)'
+                        --opt    'q: (r)-[:starts]->(s)'
+                        --return 'c as company, p as employee, n as name, s as start'
+                """
+        result = ["""company\temployee\tname\tstart""",
+                  """ACME\tHans\t'Hans'@de\t^1984-12-17T00:03:12Z/11""",
+                  """Kaiser\tOtto\t'Otto'@de\t""",
+                  """Kaiser\tJoe\t"Joe"\t^1996-02-23T08:02:56Z/09""",
+                  """Renal\tMolly\t"Molly"\t""",
+                  """Cakes\tSusi\t"Susi"\t^2008-10-01T12:49:18Z/07"""]
+        inputs = ' '.join([self.file_path, self.works_path, self.quals_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_optional_independent_start_and_end(self):
+        # Multiple independent optionals for start and/or end dates:
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match  'w: (p)-[r:works]->(c), g: (p)-[:name]->(n)'
+                        --opt    'q: (r)-[:starts]->(s)'
+                        --opt    'q: (r)-[:ends]->(e)'
+                        --return 'c as company, p as employee, n as name, s as start, e as end'
+                """
+        result = ["""company\temployee\tname\tstart\tend""",
+                  """ACME\tHans\t'Hans'@de\t^1984-12-17T00:03:12Z/11\t""",
+                  """Kaiser\tOtto\t'Otto'@de\t\t^1987-11-08T04:56:34Z/10""",
+                  """Kaiser\tJoe\t"Joe"\t^1996-02-23T08:02:56Z/09\t""",
+                  """Renal\tMolly\t"Molly"\t\t^2001-04-09T06:16:27Z/08""",
+                  """Cakes\tSusi\t"Susi"\t^2008-10-01T12:49:18Z/07\t"""]
+        inputs = ' '.join([self.file_path, self.works_path, self.quals_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_optional_join_with_where(self):
+        # Optional join with where (note that optional clauses do not inherit the last graph variable
+        # from the previous match clause, so we could have omitted the `g` specification):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match 'w: (p)-[r:works]->(c)'
+                        --opt   'g: (p)-[r2]->(l)-[:name]->(ln)'
+                        --where 'r2.label != "name" and kgtk_null_to_empty(kgtk_lqstring_lang(ln)) != "de"'
+                        --return 'c as company, p as employee, r2.label as affrel, l as affiliate, ln as name'
+                """
+        result = ["""company\temployee\taffrel\taffiliate\tname""",
+                  """ACME\tHans\tloves\tMolly\t"Molly\"""",
+                  """Kaiser\tOtto\tloves\tSusi\t"Susi\"""",
+                  """Kaiser\tJoe\tloves\tJoe\t"Joe\"""",
+                  """Renal\tMolly\t\t\t""",
+                  """Cakes\tSusi\t\t\t"""]
+        inputs = ' '.join([self.file_path, self.works_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_optional_on_optional_with_independent_wheres(self):
+        # Optional on optional with independent where clauses, which gives more results:
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match 'w: (p)-[r:works]->(c)'
+                        --opt   'g: (p)-[r2]->(l)'
+                        --where 'r2.label != "name"'
+                        --opt   'g: (l)-[:name]->(ln)'
+                        --where 'kgtk_null_to_empty(kgtk_lqstring_lang(ln)) != "de"'
+                        --return 'c as company, p as employee, r2.label as affrel, l as affiliate, ln as name'
+                """
+        result = ["""company\temployee\taffrel\taffiliate\tname""",
+                  """ACME\tHans\tloves\tMolly\t"Molly\"""",
+                  """Kaiser\tOtto\tloves\tSusi\t"Susi\"""",
+                  """Kaiser\tJoe\tfriend\tOtto\t""",
+                  """Kaiser\tJoe\tloves\tJoe\t"Joe\"""",
+                  """Renal\tMolly\t\t\t""",
+                  """Cakes\tSusi\t\t\t"""]
+        inputs = ' '.join([self.file_path, self.works_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_optional_where_on_every_match(self):
+        # "Where Mania" - same query as before:
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match 'w: (p)-[r]->(c)'
+                        --where 'r.label = "works"'
+                        --opt   'g: (p)-[r2]->(l)'
+                        --where 'r2.label != "name"'
+                        --opt   'g: (l)-[:name]->(ln)'
+                        --where 'kgtk_null_to_empty(kgtk_lqstring_lang(ln)) != "de"'
+                        --return 'c as company, p as employee, r2.label as affrel, l as affiliate, ln as name'
+                """
+        result = ["""company\temployee\taffrel\taffiliate\tname""",
+                  """ACME\tHans\tloves\tMolly\t"Molly\"""",
+                  """Kaiser\tOtto\tloves\tSusi\t"Susi\"""",
+                  """Kaiser\tJoe\tfriend\tOtto\t""",
+                  """Kaiser\tJoe\tloves\tJoe\t"Joe\"""",
+                  """Renal\tMolly\t\t\t""",
+                  """Cakes\tSusi\t\t\t"""]
+        inputs = ' '.join([self.file_path, self.works_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_optional_emulating_not_exists_with_global_where(self):
+        # Emulating "not exists" via optionals and global `--where:` clause:
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match  'w: (p)-[r]->(c)'
+                        --where  'r.label = "works"'
+                        --opt    'g: (p)-[r2]->(l)'
+                        --where  'r2.label != "name"'
+                        --opt    'g: (l)-[:name]->(ln)'
+                        --where  'kgtk_null_to_empty(kgtk_lqstring_lang(ln)) != "de"'
+                        --where: 'ln is null'
+                        --return 'c as company, p as employee, r2.label as affrel, l as affiliate, ln as name'
+                """
+        result = ["""company\temployee\taffrel\taffiliate\tname""",
+                  """Kaiser\tJoe\tfriend\tOtto\t""",
+                  """Renal\tMolly\t\t\t""",
+                  """Cakes\tSusi\t\t\t"""]
+        inputs = ' '.join([self.file_path, self.works_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_optional_global_where_is_with_where(self):
+        # `--where:` is a shorthand for `--with * --where...`:
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match 'w: (p)-[r]->(c)'
+                        --where 'r.label = "works"'
+                        --opt   'g: (p)-[r2]->(l)'
+                        --where 'r2.label != "name"'
+                        --opt   'g: (l)-[:name]->(ln)'
+                        --where 'kgtk_null_to_empty(kgtk_lqstring_lang(ln)) != "de"'
+                        --with  '*'
+                        --where 'ln is null'
+                        --return 'c as company, p as employee, r2.label as affrel, l as affiliate, ln as name'
+                """
+        result = ["""company\temployee\taffrel\taffiliate\tname""",
+                  """Kaiser\tJoe\tfriend\tOtto\t""",
+                  """Renal\tMolly\t\t\t""",
+                  """Cakes\tSusi\t\t\t"""]
+        inputs = ' '.join([self.file_path, self.works_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_optional_incorrect_not_exists(self):
+        # Incorrect "not exists", we cannot test for NULL inside the optional clause and
+        # now that clause always fails, therefore all names are NULL:
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match 'w: (p)-[r]->(c)'
+                        --where 'r.label = "works"'
+                        --opt   'g: (p)-[r2]->(l)'
+                        --where 'r2.label != "name"'
+                        --opt   'g: (l)-[:name]->(ln)'
+                        --where 'kgtk_null_to_empty(kgtk_lqstring_lang(ln)) != "de" and ln is null'
+                        --return 'c as company, p as employee, r2.label as affrel, l as affiliate, ln as name'
+                """
+        result = ["""company\temployee\taffrel\taffiliate\tname""",
+                  """ACME\tHans\tloves\tMolly\t""",
+                  """Kaiser\tOtto\tloves\tSusi\t""",
+                  """Kaiser\tJoe\tfriend\tOtto\t""",
+                  """Kaiser\tJoe\tloves\tJoe\t""",
+                  """Renal\tMolly\t\t\t""",
+                  """Cakes\tSusi\t\t\t"""]
+        inputs = ' '.join([self.file_path, self.works_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_optional_find_symmetric_edges(self):
+        # Finding symmetric edges:
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match 'g: (x)-[r]->(y)'
+                        --where 'r.label != "name"'
+                        --opt   'g: (y)-[r2]->(x)'
+                        --where 'r.label = r2.label'
+                        --return 'x, r.label, y, r2 is not null as symmetric'
+                """
+        result = ["""node1\tlabel\tnode2\tsymmetric""",
+                  """Hans\tloves\tMolly\t0""",
+                  """Otto\tloves\tSusi\t0""",
+                  """Joe\tfriend\tOtto\t0""",
+                  """Joe\tloves\tJoe\t1"""]
+        inputs = ' '.join([self.file_path, self.works_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
