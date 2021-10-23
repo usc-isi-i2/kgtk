@@ -28,6 +28,10 @@ RUN conda install -c conda-forge jupyterlab
 
 RUN pip install chardet
 
+RUN pip install gensim
+
+RUN pip install papermill
+
 ARG NB_USER=jovyan
 ARG NB_UID=1000
 ENV USER ${NB_USER}

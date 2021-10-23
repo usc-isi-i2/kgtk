@@ -20,6 +20,37 @@ KGTK can process Wikidata-sized KGs with billions of edges on a laptop. We have 
 
 KGTK is open source software, well documented, actively used and developed, and released using the MIT license. We invite the community to try KGTK. It is easy to get started with our tutorial notebooks available and executable online.
 
+## Installation
+
+> The following instructions install KGTK and the KGTK Jupyter Notebooks on
+    Linux and MacOS systems.
+
+    If you want to install KGTK on a Microsoft Windows system, please
+    contact the KGTK team.
+
+Our KGTK installations use a Conda virtual environment. If you
+don't have the Conda tools installed, follow this
+[guide](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) to
+install it. We recommend installing Miniconda installation rather than the
+full Anaconda installation.
+
+Next, execute the following steps to install the latest stable release
+of KGTK:
+
+```bash
+conda create -n kgtk-env python=3.8
+conda activate kgtk-env
+conda install -c conda-forge graph-tool
+conda install -c conda-forge jupyterlab
+pip --no-cache install -U kgtk
+python -m spacy download en_core_web_sm
+```
+
+Please see our [installation document](/docs/install.md) for more details.  If
+you encounter problems with your installation, or are interested in a detailed
+explanation of these commands, [read more about the installation procedure
+here](KGTK-Installation-Procedure-Details.md).
+
 ## Getting started
 
 ### Online Documentation
@@ -31,20 +62,11 @@ https://kgtk.readthedocs.io/en/latest/
 
 ### KGTK Notebooks
 
-The [examples folder](examples/) provides a larger and constantly increasing number of easy-to-follow Jupyter Notebooks which showcase different functionalities of KGTK. These include computing:
-* Embeddings for ConceptNet nodes
-* Graph statistics over a curated subset of Wikidata
-* Reachable occupations for selected people in Wikidata
-* PageRank over Wikidata
-* etc.
+For examples of using KGTK, please see our [Tutorial Notebooks](https://github.com/usc-isi-i2/kgtk-notebooks ).
 
 ## Releases
 
 * See all [source code releases](https://github.com/usc-isi-i2/kgtk/releases)
-
-## Installation
-
-Please see our [installation document](/docs/install.md) for installation procedures.
 
 ## KGTK Text Search API
 
