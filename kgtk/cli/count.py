@@ -3,14 +3,18 @@
 This is a simple command that illustrates several aspects of building
 a KGTK command.  The following features are illustrated:
 
+* Using the KGTK command line parser's extended features.
+  * Adding command alias.
+  * Adding an option with a different default for the command alias.
+  * Adding an expert option.
 * Reading a KGTK input file.
 * Writing a KGTK output file.
 * Writing non-KGTK output to stdout.
 * Writing progress feedback to etderr.
-* A command alias with a different default than the base command.
-* An expert option.
 """
 
+# We minimize the imports here because every additional global import
+# slows down `kgtk` command initialization.
 from argparse import Namespace, SUPPRESS
 import typing
 
@@ -41,24 +45,26 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:                                                                                                                                                             
         parser (argparse.ArgumentParser)                                                                                                                              
     """
-    from kgtk.exceptions import KGTKException
-    from kgtk.lift.kgtklift import KgtkLift
+    # Import modules thay we will use when declaring arguments.
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
     from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
+    # These special shared aruments inticate whether the `--expert` option
+    # was supplied and the command name that was used.
     _expert: bool = parsed_shared_args._expert
     _command: str = parsed_shared_args._command
 
-    # This helper function makes it easy to suppress options from
-    # The help message.  The options are still there, and initialize
-    # what they need to initialize.
+    # This helper function makes it easy to suppress options from the help
+    # message unless `--expert` has bee asserted.  The options are still
+    # there, and initialize what they need to initialize.
     def h(msg: str)->str:
         if _expert:
             return msg
         else:
             return SUPPRESS
 
+    # Add the primary input and output files without special features.
     parser.add_input_file()
     parser.add_output_file()
 
@@ -74,11 +80,17 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help=h("The property used for column count output edges. (default=%(default)s)."),
                               default=DEFAULT_COUNT_PROPERTY)
 
+    # Add the standard debugging arguments and the KgtkReader and KgtkValue
+    # options.
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 
+# This is our irimary entry point after command parsing.  Note the special
+# KGTKFiles type used for input and output files that were declared using the
+# extended argument parser's `add_input_file()` and `add_output_file()`
+# methods.
 def run(input_file: KGTKFiles,
         output_file: KGTKFiles,
 
@@ -94,25 +106,29 @@ def run(input_file: KGTKFiles,
         **kwargs # Whatever KgtkFileOptions and KgtkValueOptions want.
 )->int:
 
+    # Import the modules that we need for processing:
     import sys
 
     from kgtk.exceptions import KGTKException
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
     from kgtk.io.kgtkwriter import KgtkWriter
+
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
+    # Perform the final parsing steps on the primary input and output files.
+    # The naming convention is unfortunate;  these should have been called
+    # `input_kgtk_path` and `output_kgtk_path`.
     input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
     output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
 
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
 
-    # Build the option structures.
-    input_reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs, who="input", fallback=True)
+    # Build the KGTKReader and KgtkValue option structures.
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
 
-    # Show the final option structures for debugging and documentation.
+    # Show the final option values for debugging and documentation.
     if show_options:
         print("--input-file=%s" % str(input_kgtk_file), file=error_file, flush=True)
         print("--output-file=%s" % str(output_kgtk_file), file=error_file, flush=True)
@@ -124,8 +140,10 @@ def run(input_file: KGTKFiles,
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
 
+    # Prepare to catch SystemExit and Exception.
     try:
         
+        # Open the primary input file:
         if verbose:
             print("Opening the input file %s" % str(input_kgtk_file), file=error_file, flush=True)
         kr: KgtkReader = KgtkReader.open(input_kgtk_file,
@@ -136,16 +154,25 @@ def run(input_file: KGTKFiles,
                                          very_verbose=very_verbose,
         )
 
+        # We have two execution paths, depending on count_records:
         row: typing.List[str]
         if count_records:
+            # Count the number of data records in the input file.
             record_count: int = 0
             for row in kr:
                 record_count += 1
 
-            print("%d" % record_count, file=sys.stdout, flush=True)
+            if str(output_kgtk_file) == "-":
+                # Send the record count to standard output:
+                print("%d" % record_count, file=sys.stdout, flush=True)
 
+            else:
+                with open(output_kgtk_file, "w") as outf:
+                    # Send the record count to a file:
+                    print("%d" % record_count, file=outf)
 
         else:
+            # Open a KgtkWriter file for the primary output file:
             if verbose:
                 print("Opening the output file %s" % str(output_kgtk_file), file=error_file, flush=True)
             kw: KgtkWriter = KgtkWriter.open(["node1", "label", "node2" ],
@@ -153,6 +180,7 @@ def run(input_file: KGTKFiles,
                                              verbose=verbose,
                                              very_verbose=very_verbose,
                                  )
+            # Count the number of non-empty cells for each column:
             record_counts: typing.List[int] = [ 0 for idx in range(kr.column_count) ]
             idx: int
             for row in kr:
@@ -161,12 +189,15 @@ def run(input_file: KGTKFiles,
                     if len(item) > 0:
                         record_counts[idx] += 1
 
+            # Send the results to the primary output file as a series of edges.
             count: int
             for idx, count in enumerate(record_counts):
                 kw.write([ kr.column_names[idx], count_property, str(record_counts[idx]) ])
 
+            # Close the primary output file.
             kw.close()            
 
+        # Close the primary input file.
         kr.close()
         return 0
 
