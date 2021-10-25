@@ -100,16 +100,16 @@ class KgtkFormat:
         TODO: Should we octal encode <NUL>, <DEL> and any remaining ASCII control characters?
         """
         if len(language) == 0:
-            return '"' + s.translate(KgtkFormat.stringify_translate) + '"'
+            return STRING_SIGIL + s.translate(KgtkFormat.stringify_translate) + STRING_SIGIL
         else:
-            return "'" + s.translate(KgtkFormat.stringify_translate) + "'@" + language + language_suffix
+            return LANGUAGE_QUALIFIED_STRING_SIGIL + s.translate(KgtkFormat.stringify_translate) + "'@" + language + language_suffix
 
     @classmethod
     def unstringify(cls, s: str, unescape_pipe: bool = True)->str:
         """Convert a KGTK formatted string into an internal string.  The language
         code and suffix are not returned.
         """
-        if s.startswith("'"):
+        if s.startswith(LANGUAGE_QUALIFIED_STRING_SIGIL):
             language: str
             s, language = s.rsplit("@", 1)
         if unescape_pipe:
@@ -127,7 +127,7 @@ class KgtkFormat:
         """
         language: str = ""
         language_suffix: str = ""
-        if s.startswith("'"):
+        if s.startswith(LANGUAGE_QUALIFIED_STRING_SIGIL):
             s, language = s.rsplit("@", 1)
             if "-" in language:
                 language, language_suffix = language.split("-", 1)
