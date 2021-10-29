@@ -10,4 +10,4 @@ simplejson
 pyrallel.lib==0.0.9
 redis
 dill>=0.3.2
-mgzip>=0.2.1
+usc-isi-i2-mgzip>=0.2.1.3
