@@ -5,7 +5,19 @@ from pathlib import Path
 from typing import List
 from kgtk.files_config import files_config
 
-always_print_env_variables = {'EXAMPLES_DIR', 'USE_CASES_DIR', 'GRAPH', 'OUT', 'TEMP', 'STORE', 'kgtk', 'kypher'}
+always_print_env_variables = {
+    'EXAMPLES_DIR',
+    'USE_CASES_DIR',
+    'GRAPH',
+    'OUT',
+    'TEMP',
+    'STORE',
+    'kgtk',
+    'kypher',
+    'KGTK_GRAPH_CACHE',
+    'KGTK_OPTION_DEBUG',
+    'KGTK_LABEL_FILE'
+}
 
 
 class ConfigureKGTK(object):
@@ -35,8 +47,11 @@ class ConfigureKGTK(object):
         os.environ['EXAMPLES_DIR'] = self.examples_dir
         os.environ['USE_CASES_DIR'] = self.use_cases_dir
 
+        os.environ['KGTK_OPTION_DEBUG'] = "false"
+
         self.kgtk_environment_variables.add('EXAMPLES_DIR')
         self.kgtk_environment_variables.add('USE_CASES_DIR')
+        self.kgtk_environment_variables.add('KGTK_OPTION_DEBUG')
 
     def configure_kgtk(self,
                        input_graph_path: str = None,
@@ -58,10 +73,14 @@ class ConfigureKGTK(object):
         :return:
         """
 
-        self.graph_files = json.load(open(json_config_file)) \
-            if json_config_file is not None \
-            else files_config
+        self.graph_files = files_config
 
+        if json_config_file is not None:
+            try:
+                _files_config = json.load(open(json_config_file))
+                self.graph_files.update(_files_config)
+            except Exception as e:
+                print(e)
         # If the input graph path is not None, it is assumed it has the files required
         if input_graph_path is None:
             input_graph_path = f"{self.user_home}/{self.default_folder}/input"
@@ -95,6 +114,9 @@ class ConfigureKGTK(object):
         os.environ['STORE'] = graph_cache_path
         self.kgtk_environment_variables.add('STORE')
 
+        os.environ['KGTK_GRAPH_CACHE'] = os.environ['STORE']
+        self.kgtk_environment_variables.add('KGTK_GRAPH_CACHE')
+
         kgtk = "kgtk --debug" if debug else "kgtk"
         os.environ['kgtk'] = kgtk
         self.kgtk_environment_variables.add('kgtk')
@@ -126,7 +148,6 @@ class ConfigureKGTK(object):
     def load_files_into_cache(self):
         """
         Loads files into graph cache. The keys in this list should be in json_config_file
-        :param file_list:
         :return:
         """
         kypher_command = f"{os.environ['kypher']}"
