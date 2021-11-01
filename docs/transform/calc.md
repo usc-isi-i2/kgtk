@@ -43,7 +43,7 @@ cleared if an error occurs processing the input date-and-time value.
 usage: kgtk calc [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                  [-c [COLUMN_NAME [COLUMN_NAME ...]]] --into COLUMN_NAME
                  [COLUMN_NAME ...] --do
-                 {and,average,capitalize,casefold,copy,eq,fromisoformat,ge,gt,is,is_in,is_not,join,lower,le,lt,max,min,nand,ne,nor,not,or,percentage,replace,set,substitute,sum,swapcase,title,upper,xor}
+                 {and,average,capitalize,casefold,copy,eq,fromisoformat,ge,gt,is,is_in,is_not,join,lower,le,len,lt,max,min,nand,ne,nor,not,or,percentage,replace,set,substring,substitute,sum,swapcase,title,upper,xor}
                  [--values [VALUES [VALUES ...]]]
                  [--with-values [WITH_VALUES [WITH_VALUES ...]]]
                  [--limit LIMIT] [--format FORMAT_STRING]
@@ -70,7 +70,7 @@ optional arguments:
   --into COLUMN_NAME [COLUMN_NAME ...]
                         The name of the column to receive the result of the
                         calculation.
-  --do {and,average,capitalize,casefold,copy,eq,fromisoformat,ge,gt,is,is_in,is_not,join,lower,le,lt,max,min,nand,ne,nor,not,or,percentage,replace,set,substitute,sum,swapcase,title,upper,xor}
+  --do {and,average,capitalize,casefold,copy,eq,fromisoformat,ge,gt,is,is_in,is_not,join,lower,le,len,lt,max,min,nand,ne,nor,not,or,percentage,replace,set,substring,substitute,sum,swapcase,title,upper,xor}
                         The name of the operation.
   --values [VALUES [VALUES ...]]
                         An optional list of values
@@ -308,7 +308,7 @@ The output will be the following table in KGTK format:
     It also needs one `--values` argument, which may be an explicit empty value (`--values ""`),
     to provide the separator between the joined fields.
 
-```bashk
+```bash
 kgtk calc -i examples/docs/calc-file1.tsv \
           --do join --columns node1 label --value "" --into result
 ```
@@ -331,6 +331,32 @@ The output will be the following table in KGTK format:
 | P1037 | p585-count | 60 | 9317 | P1037p585-count |
 | P1040 | p585-count | 1 | 45073 | P1040p585-count |
 | P1050 | p585-count | 246 | 226380 | P1050p585-count |
+
+### Compute the length of a column value
+
+!!! info
+    Strings and language-qualified strings have their length computed after converting
+    the text of the string into an internal string.  Otherwise, the length of the KGTK
+    value is computed.
+
+!!! info
+    Multiple columns may have their length computed if there is a matching number of `--into` columns.
+
+```bash
+kgtk calc -i examples/docs/calc-file2.tsv \
+          --do len \
+          --columns  node2 \
+          --into    'node2:len'
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | node2:len |
+| -- | -- | -- | -- |
+| apple | name | "apple" | 5 |
+| apple | label | 'apple'@en | 5 |
+| apple | good_count | 1245 | 4 |
+| apple | bad_count | 99 | 2 |
 
 ### Convert the `node1` column value into lower case.
 
@@ -714,6 +740,58 @@ The output will be the following table in KGTK format:
 | P1037 | p585-count | 60 | 9317 | 9377 |
 | P1040 | p585-count | 1 | 45073 | 45074 |
 | P1050 | p585-count | 246 | 226380 | 226626 |
+
+### Extract a substring of a value: 1 Value
+
+!!! info
+    Strings and language-qualified strings have sunstrings computed after converting
+    the text of the string into an internal string.  Otherwise, the substring of the KGTK
+    value is computed.
+
+    When only one value is provided, that value is the start value.
+
+```bash
+kgtk calc -i examples/docs/calc-file2.tsv \
+          --do substring \
+          --columns  node2 \
+          --into    'node2:len' \
+	  --values 1
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | node2:len |
+| -- | -- | -- | -- |
+| apple | name | "apple" | "pple" |
+| apple | label | 'apple'@en | "pple" |
+| apple | good_count | 1245 | 245 |
+| apple | bad_count | 99 | 9 |
+
+### Extract a substring of a value: 2 Values
+
+!!! info
+    Strings and language-qualified strings have sunstrings computed after converting
+    the text of the string into an internal string.  Otherwise, the substring of the KGTK
+    value is computed.
+
+    When two values are provided, they are the etart and end values.
+
+```bash
+kgtk calc -i examples/docs/calc-file2.tsv \
+          --do substring \
+          --columns  node2 \
+          --into    'node2:len' \
+	  --values 1 3
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | node2:len |
+| -- | -- | -- | -- |
+| apple | name | "apple" | "pp" |
+| apple | label | 'apple'@en | "pp" |
+| apple | good_count | 1245 | 24 |
+| apple | bad_count | 99 | 9 |
 
 ### Convert the `node1` column value by swapping case.
 
