@@ -49,6 +49,7 @@ SPLIT_OP: str = " split"
 SPLITLINES_OP: str = "splitlines"
 STARTSWITH_OP: str = "startswith"
 STRIP_OP: str = "strip"
+SUBSTRING_OP: str = "substring"
 ZFILL_OP: str = "zfill"
 
 # Implemented:
@@ -78,9 +79,11 @@ NE_OP: str = "ne" # (column != column) or (column != value) -> boolean
 CAPITALIZE_OP: str = "capitalize"
 CASEFOLD_OP: str = "casefold"
 JOIN_OP: str = "join"
+LEN_OP: str = "len"
 LOWER_OP: str = "lower"
 REPLACE_OP: str = "replace"
 SUBSTITUTE_OP: str = "substitute"
+SUBSTRING_OP: str = "substring"
 SWAPCASE_OP: str = "swapcase"
 TITLE_OP: str = "title"
 UPPER_OP: str = "upper"
@@ -110,6 +113,7 @@ OPERATIONS: typing.List[str] = [ AND_OP,
                                  JOIN_OP,
                                  LOWER_OP,
                                  LE_OP,
+                                 LEN_OP,
                                  LT_OP,
                                  MAX_OP,
                                  MIN_OP,
@@ -121,6 +125,7 @@ OPERATIONS: typing.List[str] = [ AND_OP,
                                  PERCENTAGE_OP,
                                  REPLACE_OP,
                                  SET_OP,
+                                 SUBSTRING_OP,
                                  SUBSTITUTE_OP,
                                  SUM_OP,
                                  SWAPCASE_OP,
@@ -400,6 +405,8 @@ def run(input_file: KGTKFiles,
             limit = 0
 
         substitute_re: typing.Optional[typing.Pattern] = None
+        start_slice: typing.Optional[int] = None
+        end_slice: typing.Optional[int] = None
 
         if operation == AND_OP:
             if len(sources) == 0:
@@ -489,6 +496,12 @@ def run(input_file: KGTKFiles,
             if len(into_column_idxs) != 1:
                 raise KGTKException("Le needs 1 destination columns, got %d" % len(into_column_idxs))
 
+        elif operation == LEN_OP:
+            if len(sources) == 0:
+                raise KGTKException("Len needs at least one source, got %d" % len(sources))
+            if len(sources) != len(into_column_idxs):
+                raise KGTKException("Len needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
+
         elif operation == LT_OP:
             if (len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1):
                 raise KGTKException("Lt needs two sources or one source and one value, got %d sources and %d values" % (len(sources), len(values)))
@@ -562,6 +575,19 @@ def run(input_file: KGTKFiles,
                 raise KGTKException("Set needs at least one value, got %d" % len(values))
             if len(into_column_idxs) != len(values):
                 raise KGTKException("Set needs the same number of destination columns and values, got %d and %d" % (len(into_column_idxs), len(values)))
+
+        elif operation == SUBSTRING_OP:
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Substring needs 1 destination column, got %d" % len(into_column_idxs))
+            if len(selected_names) != 1:
+                raise KGTKException("Substring needs 1 input column, got %d" % len(selected_names))
+            if len(values) not in (1, 2):
+                raise KGTKException("Substring needs one or two values, got %d" % len(values))
+            if len(values) == 1:
+                start_slice = int(values[0])
+            else:
+                start_slice = int(values[0])
+                end_slice = int(values[1])
 
         elif operation == SUBSTITUTE_OP:
             if len(into_column_idxs) != 1:
@@ -791,6 +817,14 @@ def run(input_file: KGTKFiles,
                     else:
                         output_row[into_column_idx] = ""
 
+            elif operation == LEN_OP:
+                for idx in range(len(sources)):
+                    item = row[sources[idx]]
+                    if item.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)):
+                        output_row[into_column_idxs[idx]] = str(len(KgtkFormat.unstringify(item)))
+                    else:
+                        output_row[into_column_idxs[idx]] = str(len(item))
+
             elif operation == LT_OP:
                 if len(sources) == 1:
                     if len(row[sources[0]]) > 0 and len(row[sources[1]]) > 0:
@@ -886,6 +920,20 @@ def run(input_file: KGTKFiles,
             elif operation == SET_OP:
                 for idx in range(len(values)):
                     output_row[into_column_idxs[idx]] = values[idx]
+
+            elif operation == SUBSTRING_OP and start_slice is not None:
+                item = row[sources[0]]
+                if item.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)):
+                    item = KgtkFormat.unstringify(item)
+                    if end_slice is None:
+                        output_row[into_column_idx] = KgtkFormat.stringify(item[start_slice:])
+                    else:
+                        output_row[into_column_idx] = KgtkFormat.stringify(item[start_slice:end_slice])
+                else:
+                    if end_slice is None:
+                        output_row[into_column_idx] = item[start_slice:]
+                    else:
+                        output_row[into_column_idx] = item[start_slice:end_slice]
 
             elif operation == SUBSTITUTE_OP and substitute_re is not None:
                 output_row[into_column_idx] = substitute_re.sub(with_values[0], row[sources[0]], count=limit)
