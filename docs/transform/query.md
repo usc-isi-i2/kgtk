@@ -1695,6 +1695,9 @@ from the cache:
   to names that do not correspond to files on disk
 * the data file does not exist in the cache or on disk: this raises an error
 
+
+### Managing very large datasets
+
 Graph cache files can become quite large when large or a large number
 of different data files are being queried over time.  Cache size is
 generally around 1-2.5 times the uncompressed size of all imported
@@ -1716,6 +1719,26 @@ example:
 ```
 sqlite3 /tmp/my-graph-cache.sqlite3.db vacuum
 ```
+
+When the database imports and indexes files, it creates temporary
+files in a temp directory, so changes can be rolled back in case
+something goes wrong.  The default location of that temporary
+directory (see [SQLite manual](https://sqlite.org/tempfiles.html)) is
+usually one of the standard temp file locations such as `/var/tmp`,
+`/usr/tmp` or `/tmp`) which is often in a separate root partition and
+might not have the same amount of disk space available as the location
+selected for the graph cache.  This can lead to `"database or disk is
+full"` errors when large data files are being imported.  The
+environment variable `SQLITE_TMPDIR` can be used to direct the
+database to allocate temporary files in a storage area where there is
+room (preferably the same directory where the graph cache is created).
+For example:
+
+```
+export SQLITE_TMPDIR=/data/tmp
+```
+
+### Distributing the graph cache
 
 The graph cache file is an SQLite database file which has a very
 stable format across database versions and can be compressed and
