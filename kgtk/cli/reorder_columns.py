@@ -56,7 +56,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument(      "--output-format", dest="output_format", help=h("The file format (default=kgtk)"), type=str)
 
-    parser.add_argument('-c', "--columns", dest="column_names", required=True, nargs='+',
+    parser.add_argument('-c', "--columns", "--column", dest="column_names", required=True, nargs='+',
                               metavar="COLUMN_NAME",
                               help="The list of reordered column names, optionally containing '...' for column names not explicitly mentioned.")
 

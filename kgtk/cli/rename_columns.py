@@ -101,6 +101,21 @@ def run(input_file: KGTKFiles,
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
 
+    # Condense the old and new columns names lists.
+    old_column_names_compact: typing.List[str] = list()
+    column_name_list: typing.List[str]
+    column_names: str
+    if old_column_names is not None:
+        for column_name_list in old_column_names:
+            for column_name in column_name_list:
+                old_column_names_compact.append(column_name)
+
+    new_column_names_compact: typing.List[str] = list()
+    if new_column_names is not None:
+        for column_name_list in new_column_names:
+            for column_name in column_name_list:
+                new_column_names_compact.append(column_name)
+
     # Show the final option structures for debugging and documentation.
     if show_options:
         print("--input-file=%s" % str(input_file_path), file=error_file, flush=True)
@@ -109,10 +124,10 @@ def run(input_file: KGTKFiles,
             print("--output-format=%s" % output_format, file=error_file, flush=True)
         if output_column_names is not None:
             print("--output-columns %s" % " ".join(output_column_names), file=error_file, flush=True)
-        if old_column_names is not None:
-            print("--old-columns %s" % " ".join(old_column_names), file=error_file, flush=True)
-        if new_column_names is not None:
-            print("--new-columns %s" % " ".join(new_column_names), file=error_file, flush=True)
+        if len(old_column_names_compact) > 0:
+            print("--old-columns %s" % " ".join(old_column_names_compact), file=error_file, flush=True)
+        if len(new_column_names_compact) > 0:
+            print("--new-columns %s" % " ".join(new_column_names_compact), file=error_file, flush=True)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
@@ -132,21 +147,6 @@ def run(input_file: KGTKFiles,
             raise KGTKException("Both --old-columns and --new-columns must be used when either is used.")
     else:
         raise KGTKException("You must specify --output-columns or both of --old-columns and --new-columns.")
-
-    # Condense the old and new columns names lists.
-    old_column_names_compact: typing.List[str] = list()
-    column_name_list: typing.List[str]
-    column_names: str
-    if old_column_names is not None:
-        for column_name_list in old_column_names:
-            for column_name in column_name_list:
-                old_column_names_compact.append(column_name)
-
-    new_column_names_compact: typing.List[str] = list()
-    if new_column_names is not None:
-        for column_name_list in new_column_names:
-            for column_name in column_name_list:
-                new_column_names_compact.append(column_name)
 
     try:
         kc: KgtkCat = KgtkCat(input_file_paths=[input_file_path],
