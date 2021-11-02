@@ -799,6 +799,8 @@ def run(input_file: KGTKFiles,
     description_collector_q: typing.Optional[pyrallel.ShmQueue] = None
     sitelink_collector_q: typing.Optional[pyrallel.ShmQueue] = None
 
+    mp.set_start_method("fork")
+
     class MyMapper(pyrallel.Mapper):
 
         def enter(self):
