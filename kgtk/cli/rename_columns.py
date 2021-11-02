@@ -55,11 +55,11 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "--old-columns", dest="old_column_names",
                               metavar="OLD_COLUMN_NAME",
                               help="The list of old column names for selective renaming.",
-                              type=str, nargs='+')
+                              type=str, nargs='+', action="append", default=list())
     parser.add_argument(      "--new-columns", dest="new_column_names",
                               metavar="NEW_COLUMN_NAME",
                               help="The list of new column names for selective renaming.",
-                              type=str, nargs='+')
+                              type=str, nargs='+', action="append", default=list())
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
@@ -70,8 +70,8 @@ def run(input_file: KGTKFiles,
         output_format: typing.Optional[str],
 
         output_column_names: typing.Optional[typing.List[str]],
-        old_column_names: typing.Optional[typing.List[str]],
-        new_column_names: typing.Optional[typing.List[str]],
+        old_column_names: typing.Optional[typing.List[typing.List[str]]],
+        new_column_names: typing.Optional[typing.List[typing.List[str]]],
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -133,13 +133,28 @@ def run(input_file: KGTKFiles,
     else:
         raise KGTKException("You must specify --output-columns or both of --old-columns and --new-columns.")
 
+    # Condense the old and new columns names lists.
+    old_column_names_compact: typing.List[str] = list()
+    column_name_list: typing.List[str]
+    column_names: str
+    if old_column_names is not None:
+        for column_name_list in old_column_names:
+            for column_name in column_name_list:
+                old_column_names_compact.append(column_name)
+
+    new_column_names_compact: typing.List[str] = list()
+    if new_column_names is not None:
+        for column_name_list in new_column_names:
+            for column_name in column_name_list:
+                new_column_names_compact.append(column_name)
+
     try:
         kc: KgtkCat = KgtkCat(input_file_paths=[input_file_path],
                               output_path=output_file_path,
                               output_format=output_format,
                               output_column_names=output_column_names,
-                              old_column_names=old_column_names,
-                              new_column_names=new_column_names,
+                              old_column_names=old_column_names_compact,
+                              new_column_names=new_column_names_compact,
                               reader_options=reader_options,
                               value_options=value_options,
                               error_file=error_file,
