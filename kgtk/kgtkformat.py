@@ -100,9 +100,9 @@ class KgtkFormat:
         TODO: Should we octal encode <NUL>, <DEL> and any remaining ASCII control characters?
         """
         if len(language) == 0:
-            return STRING_SIGIL + s.translate(KgtkFormat.stringify_translate) + STRING_SIGIL
+            return cls.STRING_SIGIL + s.translate(KgtkFormat.stringify_translate) + cls.STRING_SIGIL
         else:
-            return LANGUAGE_QUALIFIED_STRING_SIGIL + s.translate(KgtkFormat.stringify_translate) + "'@" + language + language_suffix
+            return cls.LANGUAGE_QUALIFIED_STRING_SIGIL + s.translate(KgtkFormat.stringify_translate) + "'@" + language + language_suffix
 
     @classmethod
     def unstringify(cls, s: str, unescape_pipe: bool = True)->str:

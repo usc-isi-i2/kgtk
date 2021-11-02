@@ -3,12 +3,12 @@
 # This script expects to be executed with the current working directory.
 
 # This is the Wikidata version we will analyze:
-WIKIDATA_VERSION=wikidata-20210510
-KGTK_WORK_DIR=/data02/wikidata_import
+WIKIDATA_VERSION=wikidata-20211021
+KGTK_WORK_DIR=/Volumes/saggu-ssd/wikidata_import
 
 # The `kgtk validate-properties` pattern files are expected to
 # be in:
-PATTERNDIR=/nas/home/rogers/kgtk/github/kgtk/wikidata/patterns
+PATTERNDIR=/Users/amandeep/Github/kgtk/wikidata/patterns
 
 # This will be our working directory:
 WIKIDATA_WORK_DIR=${KGTK_WORK_DIR}/${WIKIDATA_VERSION}
@@ -34,7 +34,8 @@ WIKIDATA_JSON_DIR=${WIKIDATA_WORK_DIR}/dumps
 
 # The Wikidata JSON file is named as follows:
 WIKIDATA_ALL=${WIKIDATA_VERSION}-all
-WIKIDATA_ALL_JSON=${WIKIDATA_JSON_DIR}/${WIKIDATA_ALL}.json.gz
+#WIKIDATA_ALL_JSON=${WIKIDATA_JSON_DIR}/${WIKIDATA_ALL}.json.gz
+WIKIDATA_ALL_JSON=${WIKIDATA_JSON_DIR}/latest-all.json.bz2
 
 # Work file extensions
 UNSORTED_KGTK=unsorted.tsv.gz
@@ -44,7 +45,7 @@ SORTED_KGTK=tsv.gz
 USE_MGZIP=True
 
 # Select on of the following gzip implementations:
-# GZIP_CMD=gzip
+# GZIP_CMD=bzip
 GZIP_CMD=pigz
 
 # Ensure that sort has enough space for its temporary files.
@@ -56,9 +57,10 @@ export TMPDIR
 CLEAN=0
 
 # Some common flags:
-KGTK_FLAGS="--debug --timing --progress --progress-tty `tty`"
+#KGTK_FLAGS="--debug --timing --progress --progress-tty `tty`"
+KGTK_FLAGS="--debug --timing"
 VERBOSE="--verbose"
-SORT_EXTRAS="--parallel 64 --buffer-size 50% -T ${TMPDIR}"
+SORT_EXTRAS="--parallel 6 --buffer-size 50% -T ${TEMPDIR}"
 
 # The Wikidata datatypes:
 WIKIDATATYPES=( \
