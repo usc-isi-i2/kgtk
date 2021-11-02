@@ -134,6 +134,10 @@ OPERATIONS: typing.List[str] = [ AND_OP,
                                  XOR_OP,
                                 ]
 
+OVERWRITE_FALSE_OPERATIONS: typing.List[str] = [ COPY_OP,
+                                                 SET_OP,
+                                                ]
+
 def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Namespace):
     """
     Parse arguments
@@ -183,6 +187,13 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument(      "--format", dest="format_string", help="The format string for the calculation.")
 
+    parser.add_argument(      "--overwrite", dest="overwrite",
+                              help="If true, overwrite non-empty values in the result column(s). " +
+                              "If false, do not overwrite non-empty values in the result column(s). " +
+                              "Only certain operations support --overwrite False. (default=%(default)s).",
+                              metavar="True|False",
+                              type=optional_bool, nargs='?', const=True, default=(_command == SELECT_COLUMNS_COMMAND))
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
@@ -212,6 +223,7 @@ def run(input_file: KGTKFiles,
         with_values_list: typing.List[typing.List[str]],
         limit: typing.Optional[int],
         format_string: typing.Optional[str],
+        overwrite: bool,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -273,6 +285,9 @@ def run(input_file: KGTKFiles,
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
+
+    if not overwrite and operation not in OVERWRITE_FALSE_OPERATIONS:
+        raise KGTKException("--overwrite false is not supported by operation %s." % repr(operation))
 
     try:
 
@@ -386,20 +401,6 @@ def run(input_file: KGTKFiles,
                 output_column_names.append(into_column_name)
                 if verbose:
                     print("Putting result %d of the calculation into new column %d (%s)." % (idx + 1, into_column_idx, into_column_name), file=error_file, flush=True)
-
-        if verbose:
-            print("Opening the output file %s" % str(output_kgtk_file), file=error_file, flush=True)
-        kw: KgtkWriter = KgtkWriter.open(output_column_names,
-                                         output_kgtk_file,
-                                         require_all_columns=True,
-                                         prohibit_extra_columns=True,
-                                         fill_missing_columns=False,
-                                         gzip_in_parallel=False,
-                                         mode=KgtkWriter.Mode[kr.mode.name],
-                                         output_format=output_format,
-                                         verbose=verbose,
-                                         very_verbose=very_verbose,
-        )
 
         if limit is None:
             limit = 0
@@ -630,6 +631,19 @@ def run(input_file: KGTKFiles,
             if len(into_column_idxs) != 1:
                 raise KGTKException("Xor needs 1 destination column, got %d" % len(into_column_idxs))
 
+        if verbose:
+            print("Opening the output file %s" % str(output_kgtk_file), file=error_file, flush=True)
+        kw: KgtkWriter = KgtkWriter.open(output_column_names,
+                                         output_kgtk_file,
+                                         require_all_columns=True,
+                                         prohibit_extra_columns=True,
+                                         fill_missing_columns=False,
+                                         gzip_in_parallel=False,
+                                         mode=KgtkWriter.Mode[kr.mode.name],
+                                         output_format=output_format,
+                                         verbose=verbose,
+                                         very_verbose=very_verbose,
+        )
 
         fs: str = format_string if format_string is not None else "%5.2f"
         item: str
@@ -676,8 +690,13 @@ def run(input_file: KGTKFiles,
                     output_row[into_column_idxs[idx]] = row[sources[idx]].casefold()
 
             elif operation == COPY_OP:
-                for idx in range(len(sources)):
-                    output_row[into_column_idxs[idx]] = row[sources[idx]]
+                if overwrite:
+                    for idx in range(len(sources)):
+                        output_row[into_column_idxs[idx]] = row[sources[idx]]
+                else:
+                    for idx in range(len(sources)):
+                        if len(output_row[into_column_idxs[idx]]) == 0:
+                            output_row[into_column_idxs[idx]] = row[sources[idx]]
 
             elif operation == EQ_OP:
                 if len(sources) == 1:
@@ -918,8 +937,13 @@ def run(input_file: KGTKFiles,
                     output_row[into_column_idx] = row[sources[0]].replace(values[0], with_values[0], limit)
 
             elif operation == SET_OP:
-                for idx in range(len(values)):
-                    output_row[into_column_idxs[idx]] = values[idx]
+                if overwrite:
+                    for idx in range(len(values)):
+                        output_row[into_column_idxs[idx]] = values[idx]
+                else:
+                    for idx in range(len(values)):
+                        if len(output_row[into_column_idxs[idx]]) == 0:
+                            output_row[into_column_idxs[idx]] = values[idx]
 
             elif operation == SUBSTRING_OP and start_slice is not None:
                 item = row[sources[0]]
@@ -984,6 +1008,8 @@ def run(input_file: KGTKFiles,
 
     except SystemExit as e:
         raise KGTKException("Exit requested")
+    except KGTKException as e:
+        raise
     except Exception as e:
         raise KGTKException(str(e))
 
