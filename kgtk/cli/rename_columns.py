@@ -104,7 +104,7 @@ def run(input_file: KGTKFiles,
     # Condense the old and new columns names lists.
     old_column_names_compact: typing.List[str] = list()
     column_name_list: typing.List[str]
-    column_names: str
+    column_name: str
     if old_column_names is not None:
         for column_name_list in old_column_names:
             for column_name in column_name_list:
