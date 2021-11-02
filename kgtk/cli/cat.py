@@ -165,6 +165,8 @@ def run(input_files: KGTKFiles,
 
     except SystemExit as e:
         raise KGTKException("Exit requested")
+    except KGTKException as e:
+        raise
     except Exception as e:
         raise KGTKException(str(e))
 

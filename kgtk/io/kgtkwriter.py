@@ -390,14 +390,14 @@ class KgtkWriter(KgtkBase):
         if output_format == cls.OUTPUT_FORMAT_CSV:
             column_separator = "," # What a cheat!
                 
-        if output_column_names is None:
+        if output_column_names is None or len(output_column_names) == 0:
             output_column_names = column_names
         else:
             # Rename all output columns.
             if len(output_column_names) != len(column_names):
                 raise ValueError("%s: %d column names but %d output column names" % (who, len(column_names), len(output_column_names)))
 
-        if old_column_names is not None or new_column_names is not None:
+        if (old_column_names is not None and len(old_column_names) > 0) or (new_column_names is not None and len(new_column_names) > 0):
             # Rename selected output columns:
             if old_column_names is None or new_column_names is None:
                 raise ValueError("%s: old/new column name mismatch" % who)

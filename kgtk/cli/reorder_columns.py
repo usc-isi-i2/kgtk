@@ -2,6 +2,9 @@
 Reorder KGTK file columns (while copying)
 
 TODO: Need KgtkWriterOptions
+
+TODO: Make --as-columns modify the preceeding --columns such that
+--as-columns can be applied selectively.
 """
 
 from argparse import Namespace, SUPPRESS
@@ -56,9 +59,13 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument(      "--output-format", dest="output_format", help=h("The file format (default=kgtk)"), type=str)
 
-    parser.add_argument('-c', "--columns", dest="column_names", required=True, nargs='+',
+    parser.add_argument('-c', "--columns", "--column", dest="column_names_list", required=True, nargs='+', action="append", default=list(),
                               metavar="COLUMN_NAME",
                               help="The list of reordered column names, optionally containing '...' for column names not explicitly mentioned.")
+
+    parser.add_argument(      "--as", "--as-columns", "--as-column", dest="as_column_names_list", nargs='+', action="append", default=list(),
+                              metavar="COLUMN_NAME",
+                              help="Replacement column names.")
 
     parser.add_argument(      "--trim", dest="omit_remaining_columns",
                               help="If true, omit unmentioned columns. (default=%(default)s).",
@@ -73,7 +80,8 @@ def run(input_file: KGTKFiles,
         output_file: KGTKFiles,
         output_format: typing.Optional[str],
 
-        column_names: typing.List[str],
+        column_names_list: typing.List[typing.List[str]],
+        as_column_names_list: typing.List[typing.List[str]],
 
         omit_remaining_columns: bool,
 
@@ -105,6 +113,21 @@ def run(input_file: KGTKFiles,
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
 
+    # Condense the old and new columns names lists.
+    column_names: typing.List[str] = list()
+    column_name_list: typing.List[str]
+    column_name: str
+    if column_names_list is not None:
+        for column_name_list in column_names_list:
+            for column_name in column_name_list:
+                column_names.append(column_name)
+
+    as_column_names: typing.List[str] = list()
+    if as_column_names_list is not None:
+        for column_name_list in as_column_names_list:
+            for column_name in column_name_list:
+                as_column_names.append(column_name)
+
     # Show the final option structures for debugging and documentation.
     if show_options:
         print("--input-file=%s" % str(input_kgtk_file), file=error_file, flush=True)
@@ -112,10 +135,16 @@ def run(input_file: KGTKFiles,
         if output_format is not None:
             print("--output-format=%s" % output_format, file=error_file, flush=True)
         print("--columns %s" % " ".join(column_names), file=error_file, flush=True)
+        if len(as_column_names) > 0:
+            print("--as-columns %s" % " ".join(as_column_names), file=error_file, flush=True)
         print("--trim=%s" % str(omit_remaining_columns), file=error_file, flush=True)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
+
+    # Check for consistent options.  argparse doesn't support this yet.
+    if len(as_column_names) > 0 and len(as_column_names) != len(column_names):
+        raise KGTKException("Both --columns and --as-columns must have the same number of columns when --as-columns is used.")
 
     try:
 
@@ -137,14 +166,17 @@ def run(input_file: KGTKFiles,
         ranger: str = ".." # All columns between two columns.
 
         saw_ranger: bool = False
+        idx: int
         column_name: str
-        for column_name in column_names:
+        for idx, column_name in enumerate(column_names):
             if column_name == ellipses:
+                if len(as_column_names) > 0:
+                    raise  KGTKException("The elipses operator ('...') may not appear when --as-columns is specified.")
                 if save_reordered_names is not None:
                     raise KGTKException("Elipses may appear only once")
 
                 if saw_ranger:
-                    raise KGTKException("ELipses may not appear directly after a range operator ('..').")
+                    raise KGTKException("Elipses may not appear directly after a range operator ('..').")
 
                 save_reordered_names = reordered_names
                 reordered_names = [ ]
@@ -153,6 +185,8 @@ def run(input_file: KGTKFiles,
             if column_name == ranger:
                 if len(reordered_names) == 0:
                     raise KGTKException("The column range operator ('..') may not appear without a preceeding column name.")
+                if len(as_column_names) > 0:
+                    raise  KGTKException("The column range operator ('..') may not appear when --as-columns is specified.")
                 saw_ranger = True
                 continue
 
@@ -212,6 +246,7 @@ def run(input_file: KGTKFiles,
             print("Opening the output file %s" % str(output_kgtk_file), file=error_file, flush=True)
         kw: KgtkWriter = KgtkWriter.open(reordered_names,
                                          output_kgtk_file,
+                                         output_column_names=as_column_names,
                                          require_all_columns=True,
                                          prohibit_extra_columns=True,
                                          fill_missing_columns=False,

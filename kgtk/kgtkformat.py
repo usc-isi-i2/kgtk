@@ -109,7 +109,7 @@ class KgtkFormat:
         """Convert a KGTK formatted string into an internal string.  The language
         code and suffix are not returned.
         """
-        if s.startswith(LANGUAGE_QUALIFIED_STRING_SIGIL):
+        if s.startswith(cls.LANGUAGE_QUALIFIED_STRING_SIGIL):
             language: str
             s, language = s.rsplit("@", 1)
         if unescape_pipe:
@@ -127,7 +127,7 @@ class KgtkFormat:
         """
         language: str = ""
         language_suffix: str = ""
-        if s.startswith(LANGUAGE_QUALIFIED_STRING_SIGIL):
+        if s.startswith(cls.LANGUAGE_QUALIFIED_STRING_SIGIL):
             s, language = s.rsplit("@", 1)
             if "-" in language:
                 language, language_suffix = language.split("-", 1)
