@@ -192,7 +192,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               "If false, do not overwrite non-empty values in the result column(s). " +
                               "Only certain operations support --overwrite False. (default=%(default)s).",
                               metavar="True|False",
-                              type=optional_bool, nargs='?', const=True, default=(_command == SELECT_COLUMNS_COMMAND))
+                              type=optional_bool, nargs='?', const=True, default=True)
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
