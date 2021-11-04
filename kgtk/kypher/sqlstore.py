@@ -3,6 +3,7 @@ SQLStore to support Kypher queries over KGTK graphs.
 """
 
 import sys
+import os
 import os.path
 import sqlite3
 # sqlite3 already loads math, so no extra cost:
@@ -277,6 +278,16 @@ class SqliteStore(SqlStore):
         """
         #self.pragma('main.page_size = 65536') # for zfs only
         self.pragma('main.cache_size = %d' % int(self.CACHE_SIZE / self.pragma('page_size')))
+
+    def configure_temp_dir(self):
+        """Configure the SQLite temp directory to be in the same location as the database file,
+        unless that is explicitly overridden by a different settings from SQLITE_TMPDIR.
+        This tries to avoid disk-full errors when large files are imported and indexed, since
+        standard temp directories are usually located in smaller OS disk partitions.
+        """
+        if not self.pragma('temp_store_directory') and not os.getenv('SQLITE_TMPDIR') and self.dbfile:
+            tmpdir = os.path.dirname(os.path.realpath(self.dbfile))
+            self.pragma(f'temp_store_directory={sql_quote_ident(tmpdir)}')
 
 
     ### DB control:
@@ -656,6 +667,7 @@ class SqliteStore(SqlStore):
         has 'node1' as its only column.
         """
         if not self.has_graph_index(table_name, index):
+            self.configure_temp_dir()
             loglevel = explain and 0 or 1
             indexes = self.get_graph_indexes(table_name)
             # delete anything that is redefined by this 'index':
@@ -676,6 +688,7 @@ class SqliteStore(SqlStore):
                 indexes = TableIndex.encode(indexes + [index])
                 self.update_graph_info(table_name, indexes=indexes)
                 self.update_graph_info(table_name, size=ginfo.size)
+                self.commit()
 
     def ensure_graph_index_for_columns(self, table_name, columns, unique=False, explain=False):
         """Ensure an index for 'table_name' on 'columns' already exists or gets created.
@@ -820,6 +833,7 @@ class SqliteStore(SqlStore):
         indexes = self.get_graph_indexes(table_name)
         if index not in indexes:
             raise KGTKException(f'No such index for {table_name}: {index}]')
+        self.configure_temp_dir()
         oldsize = self.get_db_size()
         for index_stmt in index.get_drop_script():
             self.log(1, index_stmt)
@@ -847,6 +861,7 @@ class SqliteStore(SqlStore):
         handles conversion of different kinds of line endings, but 2x slower than direct import.
         """
         self.log(1, 'IMPORT graph via csv.reader into table %s from %s ...' % (table, file))
+        self.configure_temp_dir()
         if self.is_standard_input(file):
             file = sys.stdin
         with open_to_read(file) as inp:
@@ -902,6 +917,7 @@ class SqliteStore(SqlStore):
                 self.dbfile, '.import /dev/stdin %s' % table]
 
         self.log(1, 'IMPORT graph directly into table %s from %s ...' % (table, file))
+        self.configure_temp_dir()
         try:
             if isplain:
                 tailproc = tail('-n', '+2', file, _piped=True)
