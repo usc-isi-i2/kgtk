@@ -1727,12 +1727,13 @@ directory (see [SQLite manual](https://sqlite.org/tempfiles.html)) is
 usually one of the standard temp file locations such as `/var/tmp`,
 `/usr/tmp` or `/tmp`) which is often in a separate root partition and
 might not have the same amount of disk space available as the location
-selected for the graph cache.  This can lead to `"database or disk is
-full"` errors when large data files are being imported.  The
-environment variable `SQLITE_TMPDIR` can be used to direct the
-database to allocate temporary files in a storage area where there is
-room (preferably the same directory where the graph cache is created).
-For example:
+selected for the graph cache.  For that reason, the query command sets
+the temp file location to be the same directory as the graph cache
+under the assumption that that's where most space will be available.
+That behavior can be overridden if necessary by explicitly setting the
+environment variable `SQLITE_TMPDIR` to a different storage area where
+there is room (e.g., if the graph cache location is getting close to
+capacity).  For example:
 
 ```
 export SQLITE_TMPDIR=/data/tmp
