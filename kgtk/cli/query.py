@@ -133,10 +133,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args):
                         help="explain the query execution and indexing plan according to MODE"
                         + " (%(choices)s, default: %(const)s)."
                         + " This will not actually run or create anything.")
-    parser.add_argument('--graph-cache', action='store', dest='graph_cache_file',
+    parser.add_argument('--graph-cache', '--gc', action='store', dest='graph_cache_file',
                         help="database cache where graphs will be imported before they are queried"
                         + " (defaults to per-user temporary file)")
-    parser.add_argument('--show-cache', action='store_true', dest='show_cache',
+    parser.add_argument('--show-cache', '--sc', action='store_true', dest='show_cache',
                         help="describe the current content of the graph cache and exit"
                         + " (does not actually run a query or import data)")
     parser.add_argument('--import', metavar='MODULE_LIST', default=None, action='store', dest='import',
