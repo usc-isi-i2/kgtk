@@ -1533,12 +1533,12 @@ kgtk query -i data/graph-a.tsv -i data/graph-b.tsv \
      --match 'graph1: (x)-[r]->(y), graph2: (y)-[]->(z)' ...
 ```
 
-Example with an input coming from standard input.  This currently requires naming
-the input via an alias, future versions will implicitly define a filename using `stdin`
-as its basename:
+Example with an input coming from standard input which is implicitly
+given a filename using `stdin` as its basename (mapped to the graph
+handle `s` here):
 
 ```
-kgtk cat -i file1.tsv -i file2.tsv / query -i - --as stdin -i data/works.tsv \
+kgtk cat -i file1.tsv -i file2.tsv / query -i - -i data/works.tsv \
      --match 's: (x)-[r]->(y), w: (y)-[]->(z)' ...
 ```
 
@@ -1738,6 +1738,15 @@ capacity).  For example:
 ```
 export SQLITE_TMPDIR=/data/tmp
 ```
+
+Note that temporary files created by the database are not (easily)
+visible so it might seem strange to see a `"database or disk is full"`
+error even though there is room available before and after a query
+operation that, for example, tried to create new indexes.  If that
+happens `SQLITE_TMPDIR` can be used to point to a different location
+to allow such an indexing operation to succeed even if there is not
+enough room on the disk the graph cache is on.
+
 
 ### Distributing the graph cache
 
