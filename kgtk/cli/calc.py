@@ -138,6 +138,9 @@ OVERWRITE_FALSE_OPERATIONS: typing.List[str] = [ COPY_OP,
                                                  SET_OP,
                                                 ]
 
+TO_STRING_TRUE_OPERATIONS: typing.List[str] = [ SUBSTRING_OP,
+                                               ]
+
 def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Namespace):
     """
     Parse arguments
@@ -194,6 +197,13 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               metavar="True|False",
                               type=optional_bool, nargs='?', const=True, default=True)
 
+    parser.add_argument(      "--to-string", dest="to_string",
+                              help="If true, ensure that the result is a string. " +
+                              "If false, the result might be a symbol or some other type. " +
+                              "Only certain operations support --to-string. (default=%(default)s).",
+                              metavar="True|False",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
@@ -224,6 +234,7 @@ def run(input_file: KGTKFiles,
         limit: typing.Optional[int],
         format_string: typing.Optional[str],
         overwrite: bool,
+        to_string: bool,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -281,6 +292,8 @@ def run(input_file: KGTKFiles,
             print("--limit %d" % limit, file=error_file, flush=True)
         if format_string is not None:
             print("--format=%s" % format_string, file=error_file, flush=True)
+        print("--overwrite=%s" % repr(overwrite), file=error_file, flush=True)
+        print("--to-string=%s" % repr(to_string), file=error_file, flush=True)
 
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
@@ -288,6 +301,9 @@ def run(input_file: KGTKFiles,
 
     if not overwrite and operation not in OVERWRITE_FALSE_OPERATIONS:
         raise KGTKException("--overwrite false is not supported by operation %s." % repr(operation))
+
+    if to_string and operation not in TO_STRING_TRUE_OPERATIONS:
+        raise KGTKException("--to-string is not supported by operation %s." % repr(operation))
 
     try:
 
@@ -955,9 +971,15 @@ def run(input_file: KGTKFiles,
                         output_row[into_column_idx] = KgtkFormat.stringify(item[start_slice:end_slice])
                 else:
                     if end_slice is None:
-                        output_row[into_column_idx] = item[start_slice:]
+                        if to_string:
+                            output_row[into_column_idx] = KgtkFormat.stringify(item[start_slice:])
+                        else:
+                            output_row[into_column_idx] = item[start_slice:]
                     else:
-                        output_row[into_column_idx] = item[start_slice:end_slice]
+                        if to_string:
+                            output_row[into_column_idx] = KgtkFormat.stringify(item[start_slice:end_slice])
+                        else:
+                            output_row[into_column_idx] = item[start_slice:end_slice]
 
             elif operation == SUBSTITUTE_OP and substitute_re is not None:
                 output_row[into_column_idx] = substitute_re.sub(with_values[0], row[sources[0]], count=limit)
