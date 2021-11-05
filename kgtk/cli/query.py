@@ -139,6 +139,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args):
     parser.add_argument('--show-cache', '--sc', action='store_true', dest='show_cache',
                         help="describe the current content of the graph cache and exit"
                         + " (does not actually run a query or import data)")
+    parser.add_argument('--read-only', '--ro', action='store_true', dest='readonly',
+                        help="do not create or update the graph cache in any way"
+                        + ", only run queries against already imported and indexed data")
     parser.add_argument('--import', metavar='MODULE_LIST', default=None, action='store', dest='import',
                         help="Python modules needed to define user extensions to built-in functions")
     parser.add_argument('-o', '--out', default='-', action='store', dest='output',
@@ -217,7 +220,8 @@ def run(input_files: KGTKFiles,
                 graph_cache = os.getenv('KGTK_GRAPH_CACHE')
                 if graph_cache is None or len(graph_cache) == 0:
                     graph_cache = DEFAULT_GRAPH_CACHE_FILE
-            store = sqlstore.SqliteStore(graph_cache, create=not os.path.exists(graph_cache), loglevel=loglevel)
+            store = sqlstore.SqliteStore(graph_cache, create=not os.path.exists(graph_cache),
+                                         loglevel=loglevel, readonly=options.get('readonly'))
 
             if options.get('show_cache', False):
                 store.describe_meta_tables(out=sys.stdout)
