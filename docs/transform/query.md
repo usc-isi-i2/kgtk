@@ -25,7 +25,8 @@ usage: kgtk query [-h] [-i INPUT_FILE [INPUT_FILE ...]] [--as NAME]
                   [--spara NAME=VAL] [--lqpara NAME=VAL] [--no-header]
                   [--force] [--index MODE [MODE ...]] [--idx SPEC [SPEC ...]]
                   [--explain [MODE]] [--graph-cache GRAPH_CACHE_FILE]
-                  [--show-cache] [--import MODULE_LIST] [-o OUTPUT]
+                  [--show-cache] [--read-only] [--import MODULE_LIST]
+                  [-o OUTPUT]
 
 Query one or more KGTK files with Kypher.
 IMPORTANT: input can come from stdin but chaining queries is not yet supported.
@@ -74,11 +75,13 @@ optional arguments:
   --explain [MODE]      explain the query execution and indexing plan
                         according to MODE (plan, full, expert, default: plan).
                         This will not actually run or create anything.
-  --graph-cache GRAPH_CACHE_FILE
+  --graph-cache GRAPH_CACHE_FILE, --gc GRAPH_CACHE_FILE
                         database cache where graphs will be imported before
                         they are queried (defaults to per-user temporary file)
-  --show-cache          describe the current content of the graph cache and
+  --show-cache, --sc    describe the current content of the graph cache and
                         exit (does not actually run a query or import data)
+  --read-only, --ro     do not create or update the graph cache in any way, only
+                        run queries against already imported and indexed data
   --import MODULE_LIST  Python modules needed to define user extensions to
                         built-in functions
   -o OUTPUT, --out OUTPUT
@@ -1694,6 +1697,35 @@ from the cache:
   the ability to query them, and it also allows renaming via the `--as` option
   to names that do not correspond to files on disk
 * the data file does not exist in the cache or on disk: this raises an error
+
+
+### Read-only processing
+
+Sometimes it is useful to protect the graph cache from any unintended
+updates such as data imports or index creation.  For example, one
+might want to debug certain queries without risking any unintended
+index creation based on incorrect queries.  For this purpose, the
+graph cache can be opened in read-only mode by supplying the
+`--read-only` or `--ro` option.  In read-only mode it is assumed that
+the graph cache exists, and that all data necessary to run the query
+has been previously imported and indexed.
+
+Note that even if the query systems determines that a certain index is
+necessary to run the query efficiently, this index will not actually
+be built when executing read-only, which in turn could lead to very
+long execution times.  For that reason it is useful to run queries
+with small result limits first.  Moreover, if the query requires
+import of data that is not yet available in the cache, an error will
+be raised.  In general, read-only processing can lead to query errors
+if data or indexes required to run a query is not available or cannot
+be built (for example, full-text indexes).  However, such errors are
+harmless, since they cannot lead to any corruption of the graph cache.
+
+Read-only processing can also be used to safely run multiple queries
+in parallel over the same graph cache.  Note, however, that disk
+access contention from parallel queries might lead to performance
+degredation that could completely eliminate any gains from parallel
+processing.
 
 
 ### Managing very large datasets
