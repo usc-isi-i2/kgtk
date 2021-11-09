@@ -109,7 +109,7 @@ head arnold_family.tsv
 ```
 
 | 'Joseph P. Kennedy Jr.'@en     | P3373 | 'Robert F. Kennedy'@en                             | 
-|--------------------------------|-------|----------------------------------------------------| 
+| -- | -- | -- | 
 | 'Joseph P. Kennedy Jr.'@en     | P3373 | 'Rosemary Kennedy'@en                              | 
 | 'Joseph P. Kennedy Jr.'@en     | P3373 | 'Kathleen Cavendish, Marchioness of Hartington'@en | 
 | 'Joseph P. Kennedy Jr.'@en     | P3373 | 'Jean Kennedy Smith'@en                            | 
@@ -130,120 +130,7 @@ head arnold_family.tsv
 | 'Christopher G. Kennedy'@en    | P3373 | 'Max Kennedy'@en                                   | 
 | 'Courtney Kennedy Hill'@en     | P22   | 'Robert F. Kennedy'@en                             | 
 | 'Courtney Kennedy Hill'@en     | P25   | 'Ethel Skakel Kennedy'@en                          | 
-| 'Courtney Kennedy Hill'@en     | P3373 | 'Robert F. Kennedy Jr.'@en                         | 
-| 'Courtney Kennedy Hill'@en     | P3373 | 'Joseph P. Kennedy II'@en                          | 
-| 'Courtney Kennedy Hill'@en     | P3373 | 'Michael LeMoyne Kennedy'@en                       | 
-| 'Courtney Kennedy Hill'@en     | P3373 | 'David A. Kennedy'@en                              | 
-| 'Courtney Kennedy Hill'@en     | P3373 | 'Rory Kennedy'@en                                  | 
-| 'Courtney Kennedy Hill'@en     | P3373 | 'Kathleen Kennedy Townsend'@en                     | 
-| 'Courtney Kennedy Hill'@en     | P3373 | 'Kerry Kennedy'@en                                 | 
-| 'Courtney Kennedy Hill'@en     | P3373 | 'Christopher G. Kennedy'@en                        | 
-| 'Courtney Kennedy Hill'@en     | P3373 | 'Douglas Harriman Kennedy'@en                      | 
-| 'Courtney Kennedy Hill'@en     | P3373 | 'Max Kennedy'@en                                   | 
-| 'Douglas Harriman Kennedy'@en  | P22   | 'Robert F. Kennedy'@en                             | 
-| 'Douglas Harriman Kennedy'@en  | P25   | 'Ethel Skakel Kennedy'@en                          | 
-| 'Douglas Harriman Kennedy'@en  | P3373 | 'Robert F. Kennedy Jr.'@en                         | 
-| 'Douglas Harriman Kennedy'@en  | P3373 | 'Joseph P. Kennedy II'@en                          | 
-| 'Douglas Harriman Kennedy'@en  | P3373 | 'Michael LeMoyne Kennedy'@en                       | 
-| 'Douglas Harriman Kennedy'@en  | P3373 | 'David A. Kennedy'@en                              | 
-| 'Douglas Harriman Kennedy'@en  | P3373 | 'Rory Kennedy'@en                                  | 
-| 'Douglas Harriman Kennedy'@en  | P3373 | 'Kathleen Kennedy Townsend'@en                     | 
-| 'Douglas Harriman Kennedy'@en  | P3373 | 'Kerry Kennedy'@en                                 | 
-| 'Douglas Harriman Kennedy'@en  | P3373 | 'Christopher G. Kennedy'@en                        | 
-| 'Douglas Harriman Kennedy'@en  | P3373 | 'Courtney Kennedy Hill'@en                         | 
-| 'Douglas Harriman Kennedy'@en  | P3373 | 'Max Kennedy'@en                                   | 
-| 'Malissa Feruzzi'@en           | P26   | 'Bobby Shriver'@en                                 | 
-| 'Alina Shriver'@en             | P26   | 'Anthony Shriver'@en                               | 
-| 'Mark Shriver'@en              | P22   | 'Sargent Shriver'@en                               | 
-| 'Mark Shriver'@en              | P25   | 'Eunice Kennedy Shriver'@en                        | 
-| 'Mark Shriver'@en              | P3373 | 'Maria Shriver'@en                                 | 
-| 'Mark Shriver'@en              | P3373 | 'Bobby Shriver'@en                                 | 
-| 'Mark Shriver'@en              | P3373 | 'Timothy Shriver'@en                               | 
-| 'Mark Shriver'@en              | P3373 | 'Anthony Shriver'@en                               | 
-| 'Max Kennedy'@en               | P22   | 'Robert F. Kennedy'@en                             | 
-| 'Max Kennedy'@en               | P25   | 'Ethel Skakel Kennedy'@en                          | 
-| 'Max Kennedy'@en               | P3373 | 'Robert F. Kennedy Jr.'@en                         | 
-| 'Max Kennedy'@en               | P3373 | 'Joseph P. Kennedy II'@en                          | 
-| 'Max Kennedy'@en               | P3373 | 'Michael LeMoyne Kennedy'@en                       | 
-| 'Max Kennedy'@en               | P3373 | 'David A. Kennedy'@en                              | 
-| 'Max Kennedy'@en               | P3373 | 'Rory Kennedy'@en                                  | 
-| 'Max Kennedy'@en               | P3373 | 'Kathleen Kennedy Townsend'@en                     | 
-| 'Max Kennedy'@en               | P3373 | 'Kerry Kennedy'@en                                 | 
-| 'Max Kennedy'@en               | P3373 | 'Christopher G. Kennedy'@en                        | 
-| 'Max Kennedy'@en               | P3373 | 'Courtney Kennedy Hill'@en                         | 
-| 'Max Kennedy'@en               | P3373 | 'Douglas Harriman Kennedy'@en                      | 
-| 'Arabelle Kennedy'@en          | P22   | 'John F. Kennedy'@en                               | 
-| 'Arabelle Kennedy'@en          | P25   | 'Jacqueline Kennedy Onassis'@en                    | 
-| 'Arabelle Kennedy'@en          | P3373 | 'Caroline Kennedy'@en                              | 
-| 'Arabelle Kennedy'@en          | P3373 | 'John F. Kennedy Jr.'@en                           | 
-| 'Arabelle Kennedy'@en          | P3373 | 'Patrick Bouvier Kennedy'@en                       | 
-| 'Victoria Lawford'@en          | P22   | 'Peter Lawford'@en                                 | 
-| 'Victoria Lawford'@en          | P25   | 'Patricia Kennedy Lawford'@en                      | 
-| 'Victoria Lawford'@en          | P3373 | 'Christopher Lawford'@en                           | 
-| 'Victoria Lawford'@en          | P3373 | 'Sydney Lawford'@en                                | 
-| 'Victoria Lawford'@en          | P3373 | 'Robin Lawford'@en                                 | 
-| 'Sydney Lawford'@en            | P22   | 'Peter Lawford'@en                                 | 
-| 'Sydney Lawford'@en            | P25   | 'Patricia Kennedy Lawford'@en                      | 
-| 'Sydney Lawford'@en            | P3373 | 'Christopher Lawford'@en                           | 
-| 'Sydney Lawford'@en            | P3373 | 'Victoria Lawford'@en                              | 
-| 'Sydney Lawford'@en            | P3373 | 'Robin Lawford'@en                                 | 
-| 'Sydney Lawford'@en            | P3448 | 'Mary Rowan'@en                                    | 
-| 'Sydney Lawford'@en            | P3448 | 'Deborah Gould'@en                                 | 
-| 'Sydney Lawford'@en            | P3448 | 'Patricia Seaton'@en                               | 
-| 'Robin Lawford'@en             | P22   | 'Peter Lawford'@en                                 | 
-| 'Robin Lawford'@en             | P25   | 'Patricia Kennedy Lawford'@en                      | 
-| 'Robin Lawford'@en             | P3373 | 'Christopher Lawford'@en                           | 
-| 'Robin Lawford'@en             | P3373 | 'Victoria Lawford'@en                              | 
-| 'Robin Lawford'@en             | P3373 | 'Sydney Lawford'@en                                | 
-| 'Jean Edith Olssen'@en         | P26   | 'Christopher Lawford'@en                           | 
-| 'Jean Edith Olssen'@en         | P40   | 'David Christopher Lawford'@en                     | 
-| 'Jean Edith Olssen'@en         | P40   | 'Savannah Rose Lawford'@en                         | 
-| 'Jean Edith Olssen'@en         | P40   | 'Matthew Valentine Lawford'@en                     | 
-| 'Mildred Patricia Baena'@en    | P26   | 'Rogelio Baena'@en                                 | 
-| 'Mildred Patricia Baena'@en    | P40   | 'Joseph Baena'@en                                  | 
-| 'Mildred Patricia Baena'@en    | P451  | 'Arnold Schwarzenegger'@en                         | 
-| 'Rogelio Baena'@en             | P26   | 'Mildred Patricia Baena'@en                        | 
-| 'David Christopher Lawford'@en | P22   | 'Christopher Lawford'@en                           | 
-| 'David Christopher Lawford'@en | P25   | 'Jean Edith Olssen'@en                             | 
-| 'Savannah Rose Lawford'@en     | P22   | 'Christopher Lawford'@en                           | 
-| 'Savannah Rose Lawford'@en     | P25   | 'Jean Edith Olssen'@en                             | 
-| 'Matthew Valentine Lawford'@en | P22   | 'Christopher Lawford'@en                           | 
-| 'Matthew Valentine Lawford'@en | P25   | 'Jean Edith Olssen'@en                             | 
-| 'Victoria Reggie Kennedy'@en   | P26   | 'Ted Kennedy'@en                                   | 
-| 'Patrick Schwarzenegger'@en    | P22   | 'Arnold Schwarzenegger'@en                         | 
-| 'Patrick Schwarzenegger'@en    | P25   | 'Maria Shriver'@en                                 | 
-| 'Patrick Schwarzenegger'@en    | P3373 | 'Joseph Baena'@en                                  | 
-| 'Patrick Schwarzenegger'@en    | P3373 | 'Christina Schwarzenegger'@en                      | 
-| 'Patrick Schwarzenegger'@en    | P3373 | 'Christopher Schwarzenegger'@en                    | 
-| 'Patrick Schwarzenegger'@en    | P3373 | 'Katherine Schwarzenegger'@en                      | 
-| 'Patrick J. Kennedy'@en        | P22   | 'Ted Kennedy'@en                                   | 
-| 'Patrick J. Kennedy'@en        | P25   | 'Joan Bennett Kennedy'@en                          | 
-| 'Patrick J. Kennedy'@en        | P3373 | 'Kara Kennedy'@en                                  | 
-| 'Patrick J. Kennedy'@en        | P3373 | 'Edward M. Kennedy Jr.'@en                         | 
-| 'Jadrny'@en                    | P26   | 'Aurelia Schwarzenegger'@en                        | 
-| 'Robert Sargent Shriver'@en    | P26   | 'Hilda Shriver'@en                                 | 
-| 'Robert Sargent Shriver'@en    | P40   | 'Sargent Shriver'@en                               | 
-| 'Hilda Shriver'@en             | P26   | 'Robert Sargent Shriver'@en                        | 
-| 'Hilda Shriver'@en             | P40   | 'Sargent Shriver'@en                               | 
-| 'Mary Rowan'@en                | P26   | 'Peter Lawford'@en                                 | 
-| 'Deborah Gould'@en             | P26   | 'Peter Lawford'@en                                 | 
-| 'Patricia Seaton'@en           | P26   | 'Peter Lawford'@en                                 | 
-| 'John F. Kennedy'@en           | P22   | 'Joseph P. Kennedy Sr.'@en                         | 
-| 'John F. Kennedy'@en           | P25   | 'Rose Kennedy'@en                                  | 
-| 'John F. Kennedy'@en           | P26   | 'Jacqueline Kennedy Onassis'@en                    | 
-| 'John F. Kennedy'@en           | P3373 | 'Ted Kennedy'@en                                   | 
-| 'John F. Kennedy'@en           | P3373 | 'Robert F. Kennedy'@en                             | 
-| 'John F. Kennedy'@en           | P3373 | 'Rosemary Kennedy'@en                              | 
-| 'John F. Kennedy'@en           | P3373 | 'Kathleen Cavendish, Marchioness of Hartington'@en | 
-| 'John F. Kennedy'@en           | P3373 | 'Jean Kennedy Smith'@en                            | 
-| 'John F. Kennedy'@en           | P3373 | 'Eunice Kennedy Shriver'@en                        | 
-| 'John F. Kennedy'@en           | P3373 | 'Patricia Kennedy Lawford'@en                      | 
-| 'John F. Kennedy'@en           | P3373 | 'Joseph P. Kennedy Jr.'@en                         | 
-| 'John F. Kennedy'@en           | P40   | 'Caroline Kennedy'@en                              | 
-| 'John F. Kennedy'@en           | P40   | 'John F. Kennedy Jr.'@en                           | 
-| 'John F. Kennedy'@en           | P40   | 'Patrick Bouvier Kennedy'@en                       | 
-| 'John F. Kennedy'@en           | P40   | 'Arabelle Kennedy'@en                              | 
-| 'John F. Kennedy'@en           | P451  | 'Marilyn Monroe'@en                                | 
+
 
 Find the communities using blockmodel.
 
