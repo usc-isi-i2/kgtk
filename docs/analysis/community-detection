@@ -1,18 +1,5 @@
 ## Summary
 
-| node1 | label | node2 |
-| -- | -- | -- |
-| gold-block | reachable | metal-block |
-| gold-block | reachable | block |
-| gold-block | reachable | thing |
-| gold-block | reachable | metal |
-| gold-block | reachable | gold |
-| silver-block | reachable | metal-block |
-| silver-block | reachable | block |
-| silver-block | reachable | thing |
-| silver-block | reachable | metal |
-| silver-block | reachable | silver |
-
 This command will return a clutering results from the input kgtk file.
 The algorithms are provided by graph_tool (blockmodel, nested and mcmc)
 
@@ -312,78 +299,78 @@ kgtk community-detection -i arnold_family.tsv --method nested
 ```bash
 kgtk community-detection -i arnold_family.tsv --method mcmc
 ```
-
-node1	label	node2	node2;prob
-'Christopher Lawford'@en	in	cluster_0	1.0
-'Peter Lawford'@en	in	cluster_0	1.0
-'Patricia Kennedy Lawford'@en	in	cluster_1	0.7833783378337834
-'Jean Edith Olssen'@en	in	cluster_0	1.0
-'Victoria Lawford'@en	in	cluster_0	1.0
-'Sydney Lawford'@en	in	cluster_0	1.0
-'Robin Lawford'@en	in	cluster_0	1.0
-'Mary Rowan'@en	in	cluster_0	0.9998999899989999
-'Deborah Gould'@en	in	cluster_0	1.0
-'Patricia Seaton'@en	in	cluster_0	0.9997999799979999
-'David Christopher Lawford'@en	in	cluster_0	1.0
-'Savannah Rose Lawford'@en	in	cluster_0	1.0
-'Matthew Valentine Lawford'@en	in	cluster_0	1.0
-'Andrew Cuomo'@en	in	cluster_2	0.9464946494649465
-'Kerry Kennedy'@en	in	cluster_2	1.0
-'Ted Kennedy'@en	in	cluster_3	0.9551955195519551
-'John F. Kennedy'@en	in	cluster_3	0.8343834383438344
-'Joseph P. Kennedy Sr.'@en	in	cluster_4	0.9995999599959996
-'Rose Kennedy'@en	in	cluster_4	0.9992999299929993
-'Joan Bennett Kennedy'@en	in	cluster_5	0.7983798379837984
-'Victoria Reggie Kennedy'@en	in	cluster_5	0.49744974497449745
-'Robert F. Kennedy'@en	in	cluster_6	1.0
-'Rosemary Kennedy'@en	in	cluster_4	0.9995999599959996
-'Kathleen Cavendish, Marchioness of Hartington'@en	in	cluster_4	0.9992999299929993
-'Jean Kennedy Smith'@en	in	cluster_4	0.9995999599959996
-'Eunice Kennedy Shriver'@en	in	cluster_1	0.9248924892489249
-'Joseph P. Kennedy Jr.'@en	in	cluster_4	0.9994999499949995
-'Kara Kennedy'@en	in	cluster_5	0.7983798379837984
-'Edward M. Kennedy Jr.'@en	in	cluster_5	0.7983798379837984
-'Patrick J. Kennedy'@en	in	cluster_5	0.7983798379837984
-'Robert F. Kennedy Jr.'@en	in	cluster_2	1.0
-'Ethel Skakel Kennedy'@en	in	cluster_2	1.0
-'Joseph P. Kennedy II'@en	in	cluster_2	1.0
-'Michael LeMoyne Kennedy'@en	in	cluster_2	1.0
-'David A. Kennedy'@en	in	cluster_2	1.0
-'Rory Kennedy'@en	in	cluster_2	1.0
-'Kathleen Kennedy Townsend'@en	in	cluster_2	1.0
-'Christopher G. Kennedy'@en	in	cluster_2	1.0
-'Courtney Kennedy Hill'@en	in	cluster_2	1.0
-'Douglas Harriman Kennedy'@en	in	cluster_2	1.0
-'Max Kennedy'@en	in	cluster_2	1.0
-'Jacqueline Kennedy Onassis'@en	in	cluster_5	1.0
-'Caroline Kennedy'@en	in	cluster_5	0.9998999899989999
-'John F. Kennedy Jr.'@en	in	cluster_5	1.0
-'Patrick Bouvier Kennedy'@en	in	cluster_5	1.0
-'Arabelle Kennedy'@en	in	cluster_5	1.0
-'Maria Shriver'@en	in	cluster_7	0.9817981798179818
-'Sargent Shriver'@en	in	cluster_7	1.0
-'Arnold Schwarzenegger'@en	in	cluster_8	1.0
-'Bobby Shriver'@en	in	cluster_7	1.0
-'Timothy Shriver'@en	in	cluster_7	0.9998999899989999
-'Anthony Shriver'@en	in	cluster_7	0.9998999899989999
-'Mark Shriver'@en	in	cluster_7	0.9998999899989999
-'Christina Schwarzenegger'@en	in	cluster_8	1.0
-'Christopher Schwarzenegger'@en	in	cluster_8	1.0
-'Katherine Schwarzenegger'@en	in	cluster_8	1.0
-'Patrick Schwarzenegger'@en	in	cluster_8	1.0
-'Joseph Baena'@en	in	cluster_8	1.0
-'Mildred Patricia Baena'@en	in	cluster_8	0.9997999799979999
-'Aurelia Schwarzenegger'@en	in	cluster_8	0.9996999699969997
-'Gustav Schwarzenegger'@en	in	cluster_8	1.0
-'Jadrny'@en	in	cluster_8	0.9852985298529853
-'Meinhard Schwarzenegger'@en	in	cluster_8	1.0
-'Patrick M. Knapp Schwarzenegger'@en	in	cluster_8	0.9873987398739874
-'Robert Sargent Shriver'@en	in	cluster_7	0.9942994299429943
-'Hilda Shriver'@en	in	cluster_7	0.9931993199319932
-'Malissa Feruzzi'@en	in	cluster_7	0.9417941794179417
-'Jack Pratt'@en	in	cluster_8	0.9722972297229723
-'Chris Pratt'@en	in	cluster_8	0.9746974697469747
-'Anna Faris'@en	in	cluster_8	0.9726972697269727
-'Alina Shriver'@en	in	cluster_7	0.9391939193919392
-'Rogelio Baena'@en	in	cluster_8	0.9862986298629863
-'Marilyn Monroe'@en	in	cluster_5	0.502050205020502
+|node1                                        |label|node2    |node2;prob         |
+|---------------------------------------------|-----|---------|-------------------|
+|Christopher Lawford                          |in   |cluster_0|1.0                |
+|Peter Lawford                                |in   |cluster_0|1.0                |
+|Patricia Kennedy Lawford                     |in   |cluster_1|0.806980698069807  |
+|Jean Edith Olssen                            |in   |cluster_0|1.0                |
+|Victoria Lawford                             |in   |cluster_0|1.0                |
+|Sydney Lawford                               |in   |cluster_0|1.0                |
+|Robin Lawford                                |in   |cluster_0|1.0                |
+|Mary Rowan                                   |in   |cluster_0|0.9998999899989999 |
+|Deborah Gould                                |in   |cluster_0|0.9998999899989999 |
+|Patricia Seaton                              |in   |cluster_0|1.0                |
+|David Christopher Lawford                    |in   |cluster_0|0.9998999899989999 |
+|Savannah Rose Lawford                        |in   |cluster_0|0.9998999899989999 |
+|Matthew Valentine Lawford                    |in   |cluster_0|0.9997999799979999 |
+|Andrew Cuomo                                 |in   |cluster_2|0.9457945794579458 |
+|Kerry Kennedy                                |in   |cluster_2|1.0                |
+|Ted Kennedy                                  |in   |cluster_3|0.8140814081408141 |
+|John F. Kennedy                              |in   |cluster_3|0.9794979497949795 |
+|Joseph P. Kennedy Sr.                        |in   |cluster_4|0.9993999399939995 |
+|Rose Kennedy                                 |in   |cluster_4|0.9992999299929993 |
+|Joan Bennett Kennedy                         |in   |cluster_5|0.7872787278727873 |
+|Victoria Reggie Kennedy                      |in   |cluster_5|0.48514851485148514|
+|Robert F. Kennedy                            |in   |cluster_6|1.0                |
+|Rosemary Kennedy                             |in   |cluster_4|0.9994999499949995 |
+|Kathleen Cavendish, Marchioness of Hartington|in   |cluster_4|0.9991999199919992 |
+|Jean Kennedy Smith                           |in   |cluster_4|0.9995999599959996 |
+|Eunice Kennedy Shriver                       |in   |cluster_1|0.866986698669867  |
+|Joseph P. Kennedy Jr.                        |in   |cluster_4|0.9990999099909991 |
+|Kara Kennedy                                 |in   |cluster_5|0.7872787278727873 |
+|Edward M. Kennedy Jr.                        |in   |cluster_5|0.7872787278727873 |
+|Patrick J. Kennedy                           |in   |cluster_5|0.787078707870787  |
+|Robert F. Kennedy Jr.                        |in   |cluster_2|1.0                |
+|Ethel Skakel Kennedy                         |in   |cluster_2|1.0                |
+|Joseph P. Kennedy II                         |in   |cluster_2|1.0                |
+|Michael LeMoyne Kennedy                      |in   |cluster_2|1.0                |
+|David A. Kennedy                             |in   |cluster_2|1.0                |
+|Rory Kennedy                                 |in   |cluster_2|1.0                |
+|Kathleen Kennedy Townsend                    |in   |cluster_2|1.0                |
+|Christopher G. Kennedy                       |in   |cluster_2|1.0                |
+|Courtney Kennedy Hill                        |in   |cluster_2|1.0                |
+|Douglas Harriman Kennedy                     |in   |cluster_2|1.0                |
+|Max Kennedy                                  |in   |cluster_2|1.0                |
+|Jacqueline Kennedy Onassis                   |in   |cluster_5|1.0                |
+|Caroline Kennedy                             |in   |cluster_5|1.0                |
+|John F. Kennedy Jr.                          |in   |cluster_5|1.0                |
+|Patrick Bouvier Kennedy                      |in   |cluster_5|0.9998999899989999 |
+|Arabelle Kennedy                             |in   |cluster_5|1.0                |
+|Maria Shriver                                |in   |cluster_7|0.9790979097909791 |
+|Sargent Shriver                              |in   |cluster_7|0.9998999899989999 |
+|Arnold Schwarzenegger                        |in   |cluster_8|1.0                |
+|Bobby Shriver                                |in   |cluster_7|0.9998999899989999 |
+|Timothy Shriver                              |in   |cluster_7|0.9998999899989999 |
+|Anthony Shriver                              |in   |cluster_7|1.0                |
+|Mark Shriver                                 |in   |cluster_7|0.9998999899989999 |
+|Christina Schwarzenegger                     |in   |cluster_8|0.9998999899989999 |
+|Christopher Schwarzenegger                   |in   |cluster_8|1.0                |
+|Katherine Schwarzenegger                     |in   |cluster_8|1.0                |
+|Patrick Schwarzenegger                       |in   |cluster_8|1.0                |
+|Joseph Baena                                 |in   |cluster_8|1.0                |
+|Mildred Patricia Baena                       |in   |cluster_8|0.9997999799979999 |
+|Aurelia Schwarzenegger                       |in   |cluster_8|0.9998999899989999 |
+|Gustav Schwarzenegger                        |in   |cluster_8|0.9997999799979999 |
+|Jadrny                                       |in   |cluster_8|0.987998799879988  |
+|Meinhard Schwarzenegger                      |in   |cluster_8|1.0                |
+|Patrick M. Knapp Schwarzenegger              |in   |cluster_8|0.98999899989999   |
+|Robert Sargent Shriver                       |in   |cluster_7|0.9921992199219922 |
+|Hilda Shriver                                |in   |cluster_7|0.9938993899389938 |
+|Malissa Feruzzi                              |in   |cluster_7|0.9416941694169417 |
+|Jack Pratt                                   |in   |cluster_8|0.9837983798379838 |
+|Chris Pratt                                  |in   |cluster_8|0.9858985898589859 |
+|Anna Faris                                   |in   |cluster_8|0.9840984098409841 |
+|Alina Shriver                                |in   |cluster_7|0.9413941394139413 |
+|Rogelio Baena                                |in   |cluster_8|0.9873987398739874 |
+|Marilyn Monroe                               |in   |cluster_5|0.49194919491949196|
