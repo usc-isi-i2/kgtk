@@ -138,80 +138,81 @@ Find the communities using blockmodel.
 kgtk community-detection -i arnold_family.tsv --method blockmodel
 ```
 
-node1	label	node2
-'Christopher Lawford'@en	in	cluster_2
-'Peter Lawford'@en	in	cluster_2
-'Patricia Kennedy Lawford'@en	in	cluster_7
-'Jean Edith Olssen'@en	in	cluster_2
-'Victoria Lawford'@en	in	cluster_2
-'Sydney Lawford'@en	in	cluster_2
-'Robin Lawford'@en	in	cluster_2
-'Mary Rowan'@en	in	cluster_2
-'Deborah Gould'@en	in	cluster_2
-'Patricia Seaton'@en	in	cluster_2
-'David Christopher Lawford'@en	in	cluster_2
-'Savannah Rose Lawford'@en	in	cluster_2
-'Matthew Valentine Lawford'@en	in	cluster_2
-'Andrew Cuomo'@en	in	cluster_33
-'Kerry Kennedy'@en	in	cluster_33
-'Ted Kennedy'@en	in	cluster_27
-'John F. Kennedy'@en	in	cluster_7
-'Joseph P. Kennedy Sr.'@en	in	cluster_19
-'Rose Kennedy'@en	in	cluster_19
-'Joan Bennett Kennedy'@en	in	cluster_20
-'Victoria Reggie Kennedy'@en	in	cluster_52
-'Robert F. Kennedy'@en	in	cluster_22
-'Rosemary Kennedy'@en	in	cluster_19
-'Kathleen Cavendish, Marchioness of Hartington'@en	in	cluster_19
-'Jean Kennedy Smith'@en	in	cluster_19
-'Eunice Kennedy Shriver'@en	in	cluster_27
-'Joseph P. Kennedy Jr.'@en	in	cluster_19
-'Kara Kennedy'@en	in	cluster_20
-'Edward M. Kennedy Jr.'@en	in	cluster_20
-'Patrick J. Kennedy'@en	in	cluster_20
-'Robert F. Kennedy Jr.'@en	in	cluster_33
-'Ethel Skakel Kennedy'@en	in	cluster_33
-'Joseph P. Kennedy II'@en	in	cluster_33
-'Michael LeMoyne Kennedy'@en	in	cluster_33
-'David A. Kennedy'@en	in	cluster_33
-'Rory Kennedy'@en	in	cluster_33
-'Kathleen Kennedy Townsend'@en	in	cluster_33
-'Christopher G. Kennedy'@en	in	cluster_33
-'Courtney Kennedy Hill'@en	in	cluster_33
-'Douglas Harriman Kennedy'@en	in	cluster_33
-'Max Kennedy'@en	in	cluster_33
-'Jacqueline Kennedy Onassis'@en	in	cluster_45
-'Caroline Kennedy'@en	in	cluster_45
-'John F. Kennedy Jr.'@en	in	cluster_45
-'Patrick Bouvier Kennedy'@en	in	cluster_45
-'Arabelle Kennedy'@en	in	cluster_45
-'Maria Shriver'@en	in	cluster_52
-'Sargent Shriver'@en	in	cluster_52
-'Arnold Schwarzenegger'@en	in	cluster_57
-'Bobby Shriver'@en	in	cluster_52
-'Timothy Shriver'@en	in	cluster_52
-'Anthony Shriver'@en	in	cluster_52
-'Mark Shriver'@en	in	cluster_52
-'Christina Schwarzenegger'@en	in	cluster_57
-'Christopher Schwarzenegger'@en	in	cluster_57
-'Katherine Schwarzenegger'@en	in	cluster_57
-'Patrick Schwarzenegger'@en	in	cluster_57
-'Joseph Baena'@en	in	cluster_57
-'Mildred Patricia Baena'@en	in	cluster_57
-'Aurelia Schwarzenegger'@en	in	cluster_57
-'Gustav Schwarzenegger'@en	in	cluster_57
-'Jadrny'@en	in	cluster_57
-'Meinhard Schwarzenegger'@en	in	cluster_57
-'Patrick M. Knapp Schwarzenegger'@en	in	cluster_57
-'Robert Sargent Shriver'@en	in	cluster_52
-'Hilda Shriver'@en	in	cluster_52
-'Malissa Feruzzi'@en	in	cluster_52
-'Jack Pratt'@en	in	cluster_57
-'Chris Pratt'@en	in	cluster_57
-'Anna Faris'@en	in	cluster_57
-'Alina Shriver'@en	in	cluster_52
-'Rogelio Baena'@en	in	cluster_57
-'Marilyn Monroe'@en	in	cluster_45
+|node1                                        |label|node2    |
+|---------------------------------------------|-----|---------|
+|Christopher Lawford                          |in   |cluster_6|
+|Peter Lawford                                |in   |cluster_2|
+|Patricia Kennedy Lawford                     |in   |cluster_7|
+|Jean Edith Olssen                            |in   |cluster_13|
+|Victoria Lawford                             |in   |cluster_2|
+|Sydney Lawford                               |in   |cluster_2|
+|Robin Lawford                                |in   |cluster_6|
+|Mary Rowan                                   |in   |cluster_6|
+|Deborah Gould                                |in   |cluster_6|
+|Patricia Seaton                              |in   |cluster_6|
+|David Christopher Lawford                    |in   |cluster_13|
+|Savannah Rose Lawford                        |in   |cluster_13|
+|Matthew Valentine Lawford                    |in   |cluster_13|
+|Andrew Cuomo                                 |in   |cluster_31|
+|Kerry Kennedy                                |in   |cluster_31|
+|Ted Kennedy                                  |in   |cluster_19|
+|John F. Kennedy                              |in   |cluster_23|
+|Joseph P. Kennedy Sr.                        |in   |cluster_24|
+|Rose Kennedy                                 |in   |cluster_24|
+|Joan Bennett Kennedy                         |in   |cluster_20|
+|Victoria Reggie Kennedy                      |in   |cluster_20|
+|Robert F. Kennedy                            |in   |cluster_22|
+|Rosemary Kennedy                             |in   |cluster_24|
+|Kathleen Cavendish, Marchioness of Hartington|in   |cluster_24|
+|Jean Kennedy Smith                           |in   |cluster_24|
+|Eunice Kennedy Shriver                       |in   |cluster_23|
+|Joseph P. Kennedy Jr.                        |in   |cluster_24|
+|Kara Kennedy                                 |in   |cluster_20|
+|Edward M. Kennedy Jr.                        |in   |cluster_20|
+|Patrick J. Kennedy                           |in   |cluster_20|
+|Robert F. Kennedy Jr.                        |in   |cluster_31|
+|Ethel Skakel Kennedy                         |in   |cluster_31|
+|Joseph P. Kennedy II                         |in   |cluster_31|
+|Michael LeMoyne Kennedy                      |in   |cluster_31|
+|David A. Kennedy                             |in   |cluster_31|
+|Rory Kennedy                                 |in   |cluster_31|
+|Kathleen Kennedy Townsend                    |in   |cluster_31|
+|Christopher G. Kennedy                       |in   |cluster_31|
+|Courtney Kennedy Hill                        |in   |cluster_31|
+|Douglas Harriman Kennedy                     |in   |cluster_31|
+|Max Kennedy                                  |in   |cluster_31|
+|Jacqueline Kennedy Onassis                   |in   |cluster_42|
+|Caroline Kennedy                             |in   |cluster_42|
+|John F. Kennedy Jr.                          |in   |cluster_42|
+|Patrick Bouvier Kennedy                      |in   |cluster_42|
+|Arabelle Kennedy                             |in   |cluster_42|
+|Maria Shriver                                |in   |cluster_57|
+|Sargent Shriver                              |in   |cluster_52|
+|Arnold Schwarzenegger                        |in   |cluster_63|
+|Bobby Shriver                                |in   |cluster_52|
+|Timothy Shriver                              |in   |cluster_48|
+|Anthony Shriver                              |in   |cluster_52|
+|Mark Shriver                                 |in   |cluster_48|
+|Christina Schwarzenegger                     |in   |cluster_58|
+|Christopher Schwarzenegger                   |in   |cluster_58|
+|Katherine Schwarzenegger                     |in   |cluster_58|
+|Patrick Schwarzenegger                       |in   |cluster_63|
+|Joseph Baena                                 |in   |cluster_58|
+|Mildred Patricia Baena                       |in   |cluster_57|
+|Aurelia Schwarzenegger                       |in   |cluster_60|
+|Gustav Schwarzenegger                        |in   |cluster_60|
+|Jadrny                                       |in   |cluster_60|
+|Meinhard Schwarzenegger                      |in   |cluster_60|
+|Patrick M. Knapp Schwarzenegger              |in   |cluster_60|
+|Robert Sargent Shriver                       |in   |cluster_48|
+|Hilda Shriver                                |in   |cluster_48|
+|Malissa Feruzzi                              |in   |cluster_48|
+|Jack Pratt                                   |in   |cluster_69|
+|Chris Pratt                                  |in   |cluster_69|
+|Anna Faris                                   |in   |cluster_69|
+|Alina Shriver                                |in   |cluster_48|
+|Rogelio Baena                                |in   |cluster_48|
+|Marilyn Monroe                               |in   |cluster_42|
 
 
 ### nested model
