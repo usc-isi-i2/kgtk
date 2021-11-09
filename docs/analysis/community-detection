@@ -1,4 +1,4 @@
-## Summary
+## Summarys
 
 This command will return a clutering results from the input kgtk file.
 The algorithms are provided by graph_tool (blockmodel, nested and mcmc)
