@@ -108,7 +108,7 @@ The following file will be used to illustrate some of the capabilities of `kgtk 
 head arnold_family.tsv
 ```
 
-| 'Joseph P. Kennedy Jr.'@en     | P3373 | 'Robert F. Kennedy'@en                             | 
+| node1 | label | node2 |                             | 
 | -- | -- | -- | 
 | 'Joseph P. Kennedy Jr.'@en     | P3373 | 'Rosemary Kennedy'@en                              | 
 | 'Joseph P. Kennedy Jr.'@en     | P3373 | 'Kathleen Cavendish, Marchioness of Hartington'@en | 
