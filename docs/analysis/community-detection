@@ -28,7 +28,7 @@ The output file is an edge file that contains the following columns:
 - `node2;prob`: this column contains the probability/confidence of clustering
 
 
-## Usage 
+## Usage
 ```
 usage: kgtk community-detection [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                                 [--method METHOD]
