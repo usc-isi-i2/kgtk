@@ -134,9 +134,6 @@ def run(input_file: KGTKFiles,
             for i in range(0, len(nodes)):
                 arr.append('cluster_' + str(state.get_blocks()[i]))
 
-            for i in range(0, len(nodes)):
-                arr[i] = 'cluster_' + '_'.join(arr[i])
-
             kw: KgtkWriter = KgtkWriter.open(["node1", "label", "node2"],
                                                  output_kgtk_file,
                                                  verbose=verbose,
