@@ -1,5 +1,18 @@
 ## Summary
 
+| node1 | label | node2 |
+| -- | -- | -- |
+| gold-block | reachable | metal-block |
+| gold-block | reachable | block |
+| gold-block | reachable | thing |
+| gold-block | reachable | metal |
+| gold-block | reachable | gold |
+| silver-block | reachable | metal-block |
+| silver-block | reachable | block |
+| silver-block | reachable | thing |
+| silver-block | reachable | metal |
+| silver-block | reachable | silver |
+
 This command will return a clutering results from the input kgtk file.
 The algorithms are provided by graph_tool (blockmodel, nested and mcmc)
 
