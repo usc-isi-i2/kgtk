@@ -43,7 +43,7 @@ cleared if an error occurs processing the input date-and-time value.
 usage: kgtk calc [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                  [-c [COLUMN_NAME [COLUMN_NAME ...]]] --into COLUMN_NAME
                  [COLUMN_NAME ...] --do
-                 {and,average,capitalize,casefold,copy,eq,fromisoformat,ge,gt,is,is_in,is_not,join,lower,le,len,lt,max,min,nand,ne,nor,not,or,percentage,replace,set,substring,substitute,sum,swapcase,title,upper,xor}
+                 {abs,and,average,capitalize,casefold,copy,div,eq,fromisoformat,ge,gt,is,is_in,is_not,join,lower,le,len,lt,max,min,minus,nand,ne,negate,nor,not,or,percentage,replace,reverse_div,reverse_minus,set,substring,substitute,sum,swapcase,title,upper,xor}
                  [--values [VALUES [VALUES ...]]]
                  [--with-values [WITH_VALUES [WITH_VALUES ...]]]
                  [--limit LIMIT] [--format FORMAT_STRING]
@@ -72,7 +72,7 @@ optional arguments:
   --into COLUMN_NAME [COLUMN_NAME ...]
                         The name of the column to receive the result of the
                         calculation.
-  --do {and,average,capitalize,casefold,copy,eq,fromisoformat,ge,gt,is,is_in,is_not,join,lower,le,len,lt,max,min,nand,ne,nor,not,or,percentage,replace,set,substring,substitute,sum,swapcase,title,upper,xor}
+  --do {abs,and,average,capitalize,casefold,copy,div,eq,fromisoformat,ge,gt,is,is_in,is_not,join,lower,le,len,lt,max,min,minus,nand,ne,negate,nor,not,or,percentage,replace,reverse_div,reverse_minus,set,substring,substitute,sum,swapcase,title,upper,xor}
                         The name of the operation.
   --values [VALUES [VALUES ...]]
                         An optional list of values
