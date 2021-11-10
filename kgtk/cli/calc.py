@@ -421,9 +421,14 @@ def run(input_file: KGTKFiles,
         if limit is None:
             limit = 0
 
-        substitute_re: typing.Optional[typing.Pattern] = None
-        start_slice: typing.Optional[int] = None
-        end_slice: typing.Optional[int] = None
+        fs: str = format_string if format_string is not None else "%5.2f"
+
+        row: typing.List[str]
+        output_row: typing.List[str]
+        opfunc = None
+        kw: KgtkWriter
+
+        into_column_idx = into_column_idxs[0] # for convenience
 
         if operation == AND_OP:
             if len(sources) == 0:
@@ -431,11 +436,36 @@ def run(input_file: KGTKFiles,
             if len(into_column_idxs) != 1:
                 raise KGTKException("And needs 1 destination column, got %d" % len(into_column_idxs))
 
+            def and_op():
+                bresult: bool = True
+                src_idx: int
+                for src_idx in sources:
+                    kv: Kgtkvalue = KgtkValue(row[src_idx])
+                    if kv.is_boolean():
+                        bresult = bresult and kv.is_true()
+
+                output_row[into_column_idx] = KgtkValue.to_boolean(bresult)
+                kw.write(output_row)
+            opfunc = and_op
+
         elif operation == AVERAGE_OP:
             if len(sources) == 0:
                 raise KGTKException("Average needs at least one source, got %d" % len(sources))
             if len(into_column_idxs) != 1:
                 raise KGTKException("Average needs 1 destination column, got %d" % len(into_column_idxs))
+
+            def average_op():
+                atotal: float = 0
+                acount: int = 0
+                src_idx: int
+                for src_idx in sources:
+                    item: str = row[src_idx]
+                    if len(item) > 0:
+                        atotal += float(item)
+                        acount += 1
+                output_row[into_column_idx] = (fs % (atotal / float(acount))) if acount > 0 else ""                
+                kw.write(output_row)
+            opfunc = average_op
 
         elif operation == CAPITALIZE_OP:
             if len(sources) == 0:
@@ -443,17 +473,43 @@ def run(input_file: KGTKFiles,
             if len(sources) != len(into_column_idxs):
                 raise KGTKException("Capitalize needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
 
+            def capitalize_op():
+                src_idx: int
+                for src_idx in range(len(sources)):
+                    output_row[into_column_idxs[src_idx]] = row[sources[src_idx]].capitalize()
+                kw.write(output_row)
+            opfunc = capitalize_op
+
         elif operation == CASEFOLD_OP:
             if len(sources) == 0:
                 raise KGTKException("Casefold needs at least one source, got %d" % len(sources))
             if len(sources) != len(into_column_idxs):
                 raise KGTKException("Casefold needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
 
+            def casefold_op():
+                src_idx: int
+                for src_idx in range(len(sources)):
+                    output_row[into_column_idxs[src_idx]] = row[sources[src_idx]].casefold()
+                kw.write(output_row)
+            opfunc = casefold_op
+
         elif operation == COPY_OP:
             if len(sources) == 0:
                 raise KGTKException("Copy needs at least one source, got %d" % len(sources))
             if len(selected_names) != len(into_column_idxs):
                 raise KGTKException("Copy needs the same number of input columns and into columns, got %d and %d" % (len(selected_names), len(into_column_idxs)))
+            
+            def copy_op():
+                src_idx: int
+                if overwrite:
+                    for src_idx in range(len(sources)):
+                        output_row[into_column_idxs[src_idx]] = row[sources[src_idx]]
+                else:
+                    for src_idx in range(len(sources)):
+                        if len(output_row[into_column_idxs[src_idx]]) == 0:
+                            output_row[into_column_idxs[src_idx]] = row[sources[src_idx]]
+                kw.write(output_row)
+            opfunc = copy_op
 
         elif operation == EQ_OP:
             if (len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1):
@@ -461,260 +517,7 @@ def run(input_file: KGTKFiles,
             if len(into_column_idxs) != 1:
                 raise KGTKException("Eq needs 1 destination columns, got %d" % len(into_column_idxs))
 
-        elif operation == FROMISOFORMAT_OP:
-            if len(sources) != 1:
-                raise KGTKException("Fromisoformat needs one source, got %d" % len(sources))
-            if len(values) != len(into_column_idxs):
-                raise KGTKException("Fromisoformat needs the same number of values and into columns, got %d and %d" % (len(values), len(into_column_idxs)))
-
-        elif operation == GE_OP:
-            if (len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1):
-                raise KGTKException("Ge needs two sources or one source and one value, got %d sources and %d values" % (len(sources), len(values)))
-            if len(into_column_idxs) != 1:
-                raise KGTKException("Ge needs 1 destination columns, got %d" % len(into_column_idxs))
-
-        elif operation == GT_OP:
-            if (len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1):
-                raise KGTKException("Gt needs two sources or one source and one value, got %d sources and %d values" % (len(sources), len(values)))
-            if len(into_column_idxs) != 1:
-                raise KGTKException("Gt needs 1 destination columns, got %d" % len(into_column_idxs))
-
-        elif operation == IS_OP:
-            if (len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1):
-                raise KGTKException("Is needs two sources or one source and one value, got %d sources and %d values" % (len(sources), len(values)))
-            if len(into_column_idxs) != 1:
-                raise KGTKException("Is needs 1 destination columns, got %d" % len(into_column_idxs))
-
-        elif operation == IS_IN_OP:
-            if len(sources) != 1:
-                raise KGTKException("Is in needs one source, got %d" % len(sources))
-            if len(values) == 0:
-                raise KGTKException("Is in needs at least one value, got %d" % len(values))
-            if len(into_column_idxs) != 1:
-                raise KGTKException("Is in needs 1 destination columns, got %d" % len(into_column_idxs))
-
-        elif operation == IS_NOT_OP:
-            if (len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1):
-                raise KGTKException("Is not needs two sources or one source and one value, got %d sources and %d values" % (len(sources), len(values)))
-            if len(into_column_idxs) != 1:
-                raise KGTKException("Is not needs 1 destination columns, got %d" % len(into_column_idxs))
-
-        elif operation == JOIN_OP:
-            if len(sources) == 0:
-                raise KGTKException("Join needs at least one source, got %d" % len(sources))
-            if len(into_column_idxs) != 1:
-                raise KGTKException("Join needs 1 destination columns, got %d" % len(into_column_idxs))
-            if len(values) != 1:
-                raise KGTKException("Join needs 1 value, got %d" % len(values))
-
-        elif operation == LE_OP:
-            if (len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1):
-                raise KGTKException("Le needs two sources or one source and one value, got %d sources and %d values" % (len(sources), len(values)))
-            if len(into_column_idxs) != 1:
-                raise KGTKException("Le needs 1 destination columns, got %d" % len(into_column_idxs))
-
-        elif operation == LEN_OP:
-            if len(sources) == 0:
-                raise KGTKException("Len needs at least one source, got %d" % len(sources))
-            if len(sources) != len(into_column_idxs):
-                raise KGTKException("Len needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
-
-        elif operation == LT_OP:
-            if (len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1):
-                raise KGTKException("Lt needs two sources or one source and one value, got %d sources and %d values" % (len(sources), len(values)))
-            if len(into_column_idxs) != 1:
-                raise KGTKException("Lt needs 1 destination columns, got %d" % len(into_column_idxs))
-
-        elif operation == LOWER_OP:
-            if len(sources) == 0:
-                raise KGTKException("Lower needs at least one source, got %d" % len(sources))
-            if len(sources) != len(into_column_idxs):
-                raise KGTKException("Lower needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
-
-        elif operation == MAX_OP:
-            if len(sources) == 0:
-                raise KGTKException("Max needs at least one source, got %d" % len(sources))
-            if len(into_column_idxs) != 1:
-                raise KGTKException("Max needs 1 destination columns, got %d" % len(into_column_idxs))
-
-        elif operation == MIN_OP:
-            if len(sources) == 0:
-                raise KGTKException("Min needs at least one source, got %d" % len(sources))
-            if len(into_column_idxs) != 1:
-                raise KGTKException("Min needs 1 destination columns, got %d" % len(into_column_idxs))
-
-        elif operation == NE_OP:
-            if (len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1):
-                raise KGTKException("Ne needs two sources or one source and one value, got %d sources and %d values" % (len(sources), len(values)))
-            if len(into_column_idxs) != 1:
-                raise KGTKException("Ne needs 1 destination columns, got %d" % len(into_column_idxs))
-
-        elif operation == NOR_OP:
-            if len(sources) == 0:
-                raise KGTKException("Nor needs at least one source, got %d" % len(sources))
-            if len(into_column_idxs) != 1:
-                raise KGTKException("Nor needs 1 destination column, got %d" % len(into_column_idxs))
-
-        elif operation == NOT_OP:
-            if len(sources) == 0:
-                raise KGTKException("Not needs at least one source, got %d" % len(sources))
-            if len(into_column_idxs) != len(sources):
-                raise KGTKException("Nand needs the same number of input columns and into colums, got %d and %d" % (len(sources), len(into_column_idxs)))
-
-        elif operation == OR_OP:
-            if len(sources) == 0:
-                raise KGTKException("Or needs at least one source, got %d" % len(sources))
-            if len(into_column_idxs) != 1:
-                raise KGTKException("Or needs 1 destination column, got %d" % len(into_column_idxs))
-
-        elif operation == PERCENTAGE_OP:
-            if len(into_column_idxs) != 1:
-                raise KGTKException("Percent needs 1 destination columns, got %d" % len(into_column_idxs))
-            if len(selected_names) != 2:
-                raise KGTKException("Percent needs 2 input columns, got %d" % len(selected_names))
-
-        elif operation == REPLACE_OP:
-            if len(into_column_idxs) != 1:
-                raise KGTKException("Replace needs 1 destination column, got %d" % len(into_column_idxs))
-            if len(selected_names) != 1:
-                raise KGTKException("Replace needs 1 input column, got %d" % len(selected_names))
-            if len(values) != 1:
-                raise KGTKException("Replace needs one value, got %d" % len(values))
-            if len(with_values) != 1:
-                raise KGTKException("Replace needs one with-value, got %d" % len(with_values))
-
-        elif operation == SET_OP:
-            if len(sources) != 0:
-                raise KGTKException("Set needs no sources, got %d" % len(sources))
-            if len(into_column_idxs) == 0:
-                raise KGTKException("Set needs at least one destination column, got %d" % len(into_column_idxs))
-            if len(values) == 0:
-                raise KGTKException("Set needs at least one value, got %d" % len(values))
-            if len(into_column_idxs) != len(values):
-                raise KGTKException("Set needs the same number of destination columns and values, got %d and %d" % (len(into_column_idxs), len(values)))
-
-        elif operation == SUBSTRING_OP:
-            if len(into_column_idxs) != 1:
-                raise KGTKException("Substring needs 1 destination column, got %d" % len(into_column_idxs))
-            if len(selected_names) != 1:
-                raise KGTKException("Substring needs 1 input column, got %d" % len(selected_names))
-            if len(values) not in (1, 2):
-                raise KGTKException("Substring needs one or two values, got %d" % len(values))
-            if len(values) == 1:
-                start_slice = int(values[0])
-            else:
-                start_slice = int(values[0])
-                end_slice = int(values[1])
-
-        elif operation == SUBSTITUTE_OP:
-            if len(into_column_idxs) != 1:
-                raise KGTKException("Substitute needs 1 destination column, got %d" % len(into_column_idxs))
-            if len(selected_names) != 1:
-                raise KGTKException("Substitute needs 1 input column, got %d" % len(selected_names))
-            if len(values) != 1:
-                raise KGTKException("Substitute needs one value, got %d" % len(values))
-            if len(with_values) != 1:
-                raise KGTKException("Substitute needs one with-value, got %d" % len(with_values))
-            substitute_re = re.compile(values[0])
-
-        elif operation == SUM_OP:
-            if len(sources) == 0:
-                raise KGTKException("Sum needs at least one source, got %d" % len(sources))
-            if len(into_column_idxs) != 1:
-                raise KGTKException("Sum needs 1 destination columns, got %d" % len(into_column_idxs))
-
-        elif operation == SWAPCASE_OP:
-            if len(sources) == 0:
-                raise KGTKException("Swapcase needs at least one source, got %d" % len(sources))
-            if len(sources) != len(into_column_idxs):
-                raise KGTKException("Swapcase needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
-
-        elif operation == TITLE_OP:
-            if len(sources) == 0:
-                raise KGTKException("Title needs at least one source, got %d" % len(sources))
-            if len(sources) != len(into_column_idxs):
-                raise KGTKException("Title needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
-
-        elif operation == UPPER_OP:
-            if len(sources) == 0:
-                raise KGTKException("Upper needs at least one source, got %d" % len(sources))
-            if len(sources) != len(into_column_idxs):
-                raise KGTKException("Upper needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
-
-        elif operation == XOR_OP:
-            if len(sources) == 0:
-                raise KGTKException("Xor needs at least one source, got %d" % len(sources))
-            if len(into_column_idxs) != 1:
-                raise KGTKException("Xor needs 1 destination column, got %d" % len(into_column_idxs))
-
-        if verbose:
-            print("Opening the output file %s" % str(output_kgtk_file), file=error_file, flush=True)
-        kw: KgtkWriter = KgtkWriter.open(output_column_names,
-                                         output_kgtk_file,
-                                         require_all_columns=True,
-                                         prohibit_extra_columns=True,
-                                         fill_missing_columns=False,
-                                         gzip_in_parallel=False,
-                                         mode=KgtkWriter.Mode[kr.mode.name],
-                                         output_format=output_format,
-                                         verbose=verbose,
-                                         very_verbose=very_verbose,
-        )
-
-        fs: str = format_string if format_string is not None else "%5.2f"
-        item: str
-        item2: str
-        kv: KgtkValue
-        bresult: bool
-
-        into_column_idx = into_column_idxs[0] # for convenience
-
-        input_data_lines: int = 0
-        row: typing.List[str]
-        for row in kr:
-            input_data_lines += 1
-
-            output_row: typing.List[str] = row.copy()
-            for idx in range(new_column_count):
-                output_row.append("") # Easiest way to add a new column.
-
-            if operation == AND_OP:
-                bresult = True
-                for idx in sources:
-                    kv = KgtkValue(row[idx])
-                    if kv.is_boolean():
-                        bresult = bresult and kv.is_true()
-
-                output_row[into_column_idx] = KgtkValue.to_boolean(bresult)
-
-            elif operation == AVERAGE_OP:
-                atotal: float = 0
-                acount: int = 0
-                for idx in sources:
-                    item = row[idx]
-                    if len(item) > 0:
-                        atotal += float(item)
-                        acount += 1
-                output_row[into_column_idx] = (fs % (atotal / float(acount))) if acount > 0 else ""                
-
-            elif operation == CAPITALIZE_OP:
-                for idx in range(len(sources)):
-                    output_row[into_column_idxs[idx]] = row[sources[idx]].capitalize()
-
-            elif operation == CASEFOLD_OP:
-                for idx in range(len(sources)):
-                    output_row[into_column_idxs[idx]] = row[sources[idx]].casefold()
-
-            elif operation == COPY_OP:
-                if overwrite:
-                    for idx in range(len(sources)):
-                        output_row[into_column_idxs[idx]] = row[sources[idx]]
-                else:
-                    for idx in range(len(sources)):
-                        if len(output_row[into_column_idxs[idx]]) == 0:
-                            output_row[into_column_idxs[idx]] = row[sources[idx]]
-
-            elif operation == EQ_OP:
+            def eq_op():
                 if len(sources) == 1:
                     if len(row[sources[0]]) > 0 and len(row[sources[1]]) > 0:
                         output_row[into_column_idx] = KgtkValue.to_boolean(float(row[sources[0]]) == float(row[sources[1]]))
@@ -725,8 +528,16 @@ def run(input_file: KGTKFiles,
                         output_row[into_column_idx] = KgtkValue.to_boolean(float(row[sources[0]]) == float(values[0]))
                     else:
                         output_row[into_column_idx] = ""
+                kw.write(output_row)
+            opfunc = eq_op
 
-            elif operation == FROMISOFORMAT_OP:
+        elif operation == FROMISOFORMAT_OP:
+            if len(sources) != 1:
+                raise KGTKException("Fromisoformat needs one source, got %d" % len(sources))
+            if len(values) != len(into_column_idxs):
+                raise KGTKException("Fromisoformat needs the same number of values and into columns, got %d and %d" % (len(values), len(into_column_idxs)))
+
+            def fromisoformat_op():
                 dtval: str = row[sources[0]]
                 if dtval.startswith(KgtkFormat.DATE_AND_TIMES_SIGIL):
                     kgtkdatestr: str = row[sources[0]][1:] # Strip the leading ^
@@ -744,9 +555,10 @@ def run(input_file: KGTKFiles,
                     value_name: str
                     try:
                         dtvar: dt.datetime = dt.datetime.fromisoformat(isodatestr)
-                        for idx in range(len(values)):
-                            value_name = values[idx]
-                            into_idx = into_column_idxs[idx]
+                        value_idx: int
+                        for value_idx in range(len(values)):
+                            value_name: str = values[value_idx]
+                            into_idx: int = into_column_idxs[value_idx]
                             
                             if value_name == "year":
                                 output_row[into_idx] = str(dtvar.year)
@@ -791,8 +603,16 @@ def run(input_file: KGTKFiles,
                     # Not a date/time value, clear the result columns.
                     for idx in range(len(values)):
                         output_row[into_column_idxs[idx]] = ""
-                    
-            elif operation == GE_OP:
+                kw.write(output_row)
+            opfunc = fromisoformat_op
+
+        elif operation == GE_OP:
+            if (len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1):
+                raise KGTKException("Ge needs two sources or one source and one value, got %d sources and %d values" % (len(sources), len(values)))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Ge needs 1 destination columns, got %d" % len(into_column_idxs))
+
+            def ge_op():
                 if len(sources) == 1:
                     if len(row[sources[0]]) > 0 and len(row[sources[1]]) > 0:
                         output_row[into_column_idx] = KgtkValue.to_boolean(float(row[sources[0]]) >= float(row[sources[1]]))
@@ -803,8 +623,16 @@ def run(input_file: KGTKFiles,
                         output_row[into_column_idx] = KgtkValue.to_boolean(float(row[sources[0]]) >= float(values[0]))
                     else:
                         output_row[into_column_idx] = ""
+                kw.write(output_row)
+            opfunc = ge_op
 
-            elif operation == GT_OP:
+        elif operation == GT_OP:
+            if (len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1):
+                raise KGTKException("Gt needs two sources or one source and one value, got %d sources and %d values" % (len(sources), len(values)))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Gt needs 1 destination columns, got %d" % len(into_column_idxs))
+
+            def gt_op():
                 if len(sources) == 1:
                     if len(row[sources[0]]) > 0 and len(row[sources[1]]) > 0:
                         output_row[into_column_idx] = KgtkValue.to_boolean(float(row[sources[0]]) > float(row[sources[1]]))
@@ -815,32 +643,77 @@ def run(input_file: KGTKFiles,
                         output_row[into_column_idx] = KgtkValue.to_boolean(float(row[sources[0]]) > float(values[0]))
                     else:
                         output_row[into_column_idx] = ""
+                kw.write(output_row)
+            opfunc = gt_op
 
-            elif operation == IS_OP:
+        elif operation == IS_OP:
+            if (len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1):
+                raise KGTKException("Is needs two sources or one source and one value, got %d sources and %d values" % (len(sources), len(values)))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Is needs 1 destination columns, got %d" % len(into_column_idxs))
+
+            def is_op():
                 if len(sources) == 1:
                     output_row[into_column_idx] = KgtkValue.to_boolean(row[sources[0]] == row[sources[1]])
                 else:
                     output_row[into_column_idx] = KgtkValue.to_boolean(row[sources[0]] == values[0])
+                kw.write(output_row)
+            opfunc = is_op
 
-            elif operation == IS_IN_OP:
-                bresult = False
-                item = row[sources[0]]
+        elif operation == IS_IN_OP:
+            if len(sources) != 1:
+                raise KGTKException("Is in needs one source, got %d" % len(sources))
+            if len(values) == 0:
+                raise KGTKException("Is in needs at least one value, got %d" % len(values))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Is in needs 1 destination columns, got %d" % len(into_column_idxs))
+
+            def is_in_op():
+                bresult: bool = False
+                item: str = row[sources[0]]
+                item2: str
                 for item2 in values:
                     if item == item2:
                         bresult = True
                         break
                 output_row[into_column_idx] = KgtkValue.to_boolean(bresult)
+                kw.write(output_row)
+            opfunc = is_in_op
 
-            elif operation == IS_NOT_OP:
+        elif operation == IS_NOT_OP:
+            if (len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1):
+                raise KGTKException("Is not needs two sources or one source and one value, got %d sources and %d values" % (len(sources), len(values)))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Is not needs 1 destination columns, got %d" % len(into_column_idxs))
+
+            def is_not_op():
                 if len(sources) == 1:
                     output_row[into_column_idx] = KgtkValue.to_boolean(row[sources[0]] != row[sources[1]])
                 else:
                     output_row[into_column_idx] = KgtkValue.to_boolean(row[sources[0]] != values[0])
+                kw.write(output_row)
+            opfunc = is_not_op
 
-            elif operation == JOIN_OP:
+        elif operation == JOIN_OP:
+            if len(sources) == 0:
+                raise KGTKException("Join needs at least one source, got %d" % len(sources))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Join needs 1 destination columns, got %d" % len(into_column_idxs))
+            if len(values) != 1:
+                raise KGTKException("Join needs 1 value, got %d" % len(values))
+
+            def join_op():
                 output_row[into_column_idx] = values[0].join((row[sources[idx]] for idx in range(len(sources))))
+                kw.write(output_row)
+            opfunc = join_op
 
-            elif operation == LE_OP:
+        elif operation == LE_OP:
+            if (len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1):
+                raise KGTKException("Le needs two sources or one source and one value, got %d sources and %d values" % (len(sources), len(values)))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Le needs 1 destination columns, got %d" % len(into_column_idxs))
+
+            def le_op():
                 if len(sources) == 1:
                     if len(row[sources[0]]) > 0 and len(row[sources[1]]) > 0:
                         output_row[into_column_idx] = KgtkValue.to_boolean(float(row[sources[0]]) <= float(row[sources[1]]))
@@ -851,16 +724,34 @@ def run(input_file: KGTKFiles,
                         output_row[into_column_idx] = KgtkValue.to_boolean(float(row[sources[0]]) <= float(values[0]))
                     else:
                         output_row[into_column_idx] = ""
+                kw.write(output_row)
+            opfunc = le_op
 
-            elif operation == LEN_OP:
-                for idx in range(len(sources)):
-                    item = row[sources[idx]]
+        elif operation == LEN_OP:
+            if len(sources) == 0:
+                raise KGTKException("Len needs at least one source, got %d" % len(sources))
+            if len(sources) != len(into_column_idxs):
+                raise KGTKException("Len needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
+
+            def len_op():
+                src_idx: int
+                for src_idx in range(len(sources)):
+                    item: str = row[sources[src_idx]]
                     if item.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)):
-                        output_row[into_column_idxs[idx]] = str(len(KgtkFormat.unstringify(item)))
+                        output_row[into_column_idxs[src_idx]] = str(len(KgtkFormat.unstringify(item)))
                     else:
-                        output_row[into_column_idxs[idx]] = str(len(item))
+                        output_row[into_column_idxs[src_idx]] = str(len(item))
+                kw.write(output_row)
+            opfunc = len_op
 
-            elif operation == LT_OP:
+
+        elif operation == LT_OP:
+            if (len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1):
+                raise KGTKException("Lt needs two sources or one source and one value, got %d sources and %d values" % (len(sources), len(values)))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Lt needs 1 destination columns, got %d" % len(into_column_idxs))
+
+            def lt_op():
                 if len(sources) == 1:
                     if len(row[sources[0]]) > 0 and len(row[sources[1]]) > 0:
                         output_row[into_column_idx] = KgtkValue.to_boolean(float(row[sources[0]]) < float(row[sources[1]]))
@@ -871,41 +762,85 @@ def run(input_file: KGTKFiles,
                         output_row[into_column_idx] = KgtkValue.to_boolean(float(row[sources[0]]) < float(values[0]))
                     else:
                         output_row[into_column_idx] = ""
+                kw.write(output_row)
+            opfunc = lt_op
 
-            elif operation == LOWER_OP:
-                for idx in range(len(sources)):
-                    output_row[into_column_idxs[idx]] = row[sources[idx]].lower()
+        elif operation == LOWER_OP:
+            if len(sources) == 0:
+                raise KGTKException("Lower needs at least one source, got %d" % len(sources))
+            if len(sources) != len(into_column_idxs):
+                raise KGTKException("Lower needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
 
-            elif operation == MAX_OP:
+            def lower_op():
+                src_idx: int
+                for src_idx in range(len(sources)):
+                    output_row[into_column_idxs[src_idx]] = row[sources[src_idx]].lower()
+                kw.write(output_row)
+            opfunc = lower_op
+
+        elif operation == MAX_OP:
+            if len(sources) == 0:
+                raise KGTKException("Max needs at least one source, got %d" % len(sources))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Max needs 1 destination columns, got %d" % len(into_column_idxs))
+
+            def max_op():
                 max_result: typing.Optional[float] = None
-                for idx in sources:
-                    item = row[idx]
+                src_idx: int
+                for src_idx in sources:
+                    item: str = row[src_idx]
                     if len(item) > 0:
                         max_value: float = float(item)
                         if max_result is None or max_value > max_result:
                             max_result = max_value
                 output_row[into_column_idx] = (fs % max_result) if max_result is not None else ""
+                kw.write(output_row)
+            opfunc = max_op
 
-            elif operation == MIN_OP:
+        elif operation == MIN_OP:
+            if len(sources) == 0:
+                raise KGTKException("Min needs at least one source, got %d" % len(sources))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Min needs 1 destination columns, got %d" % len(into_column_idxs))
+
+            def min_op():
                 min_result: typing.Optional[float] = None
-                for idx in sources:
-                    item = row[idx]
+                src_idx: int
+                for src_idx in sources:
+                    item: str = row[src_idx]
                     if len(item) > 0:
                         min_value: float = float(item)
                         if min_result is None or min_value < min_result:
                             min_result = min_value
                 output_row[into_column_idx] = (fs % min_result) if min_result is not None else ""
+                kw.write(output_row)
+            opfunc = min_op
 
-            elif operation == NAND_OP:
-                bresult = True
-                for idx in sources:
-                    kv = KgtkValue(row[idx])
+        if operation == NAND_OP:
+            if len(sources) == 0:
+                raise KGTKException("Nand needs at least one source, got %d" % len(sources))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Nand needs 1 destination column, got %d" % len(into_column_idxs))
+
+            def nand_op():
+                bresult: bool = True
+                src_idx: int
+                for src_idx in sources:
+                    kv: KgtkValue = KgtkValue(row[src_idx])
                     if kv.is_boolean():
                         bresult = bresult and kv.is_true()
 
                 output_row[into_column_idx] = KgtkValue.to_boolean(not bresult)
+                kw.write(output_row)
+            opfunc = nand_op
 
-            elif operation == NE_OP:
+        elif operation == NE_OP:
+            if (len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1):
+                raise KGTKException("Ne needs two sources or one source and one value, got %d sources and %d values" % (len(sources), len(values)))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Ne needs 1 destination columns, got %d" % len(into_column_idxs))
+
+            def ne_op():
                 if len(sources) == 1:
                     if len(row[sources[0]]) > 0 and len(row[sources[1]]) > 0:
                         output_row[into_column_idx] = KgtkValue.to_boolean(float(row[sources[0]]) != float(row[sources[1]]))
@@ -916,53 +851,131 @@ def run(input_file: KGTKFiles,
                         output_row[into_column_idx] = KgtkValue.to_boolean(float(row[sources[0]]) != float(values[0]))
                     else:
                         output_row[into_column_idx] = ""
+                kw.write(output_row)
+            opfunc = ne_op
 
-            elif operation == NOR_OP:
-                bresult = False
-                for idx in sources:
-                    kv = KgtkValue(row[idx])
+        elif operation == NOR_OP:
+            if len(sources) == 0:
+                raise KGTKException("Nor needs at least one source, got %d" % len(sources))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Nor needs 1 destination column, got %d" % len(into_column_idxs))
+
+            def nor_op():
+                bresult: bool = False
+                for src_idx in sources:
+                    kv: KgtkValue = KgtkValue(row[src_idx])
                     if kv.is_boolean():
                         bresult = bresult or kv.is_true()
 
                 output_row[into_column_idx] = KgtkValue.to_boolean(not bresult)
+                kw.write(output_row)
+            opfunc = nor_op
 
-            elif operation == NOT_OP:
-                for idx in sources:
-                    kv = KgtkValue(row[idx])
+        elif operation == NOT_OP:
+            if len(sources) == 0:
+                raise KGTKException("Not needs at least one source, got %d" % len(sources))
+            if len(into_column_idxs) != len(sources):
+                raise KGTKException("Nand needs the same number of input columns and into colums, got %d and %d" % (len(sources), len(into_column_idxs)))
+
+            def not_op():
+                src_idx: int
+                for src_idx in sources:
+                    kv: KgtkValue = KgtkValue(row[src_idx])
                     if kv.is_boolean():
-                        output_row[into_column_idxs[idx]] = KgtkValue.to_boolean(not kv.is_true())
+                        output_row[into_column_idxs[src_idx]] = KgtkValue.to_boolean(not kv.is_true())
                     else:
-                        output_row[into_column_idxs[idx]] = ""
+                        output_row[into_column_idxs[src_idx]] = ""
+                kw.write(output_row)
+            opfunc = not_op
 
-            elif operation == OR_OP:
-                bresult = False
-                for idx in sources:
-                    kv = KgtkValue(row[idx])
+        elif operation == OR_OP:
+            if len(sources) == 0:
+                raise KGTKException("Or needs at least one source, got %d" % len(sources))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Or needs 1 destination column, got %d" % len(into_column_idxs))
+
+            def or_op():
+                bresult: bool = False
+                src_idx: int
+                for src_idx in sources:
+                    kv: Kgtkvalue = KgtkValue(row[src_idx])
                     if kv.is_boolean():
                         bresult = bresult or kv.is_true()
 
                 output_row[into_column_idx] = KgtkValue.to_boolean(bresult)
+                kw.write(output_row)
+            opfunc = or_op
 
-            elif operation == PERCENTAGE_OP:
+        elif operation == PERCENTAGE_OP:
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Percent needs 1 destination columns, got %d" % len(into_column_idxs))
+            if len(selected_names) != 2:
+                raise KGTKException("Percent needs 2 input columns, got %d" % len(selected_names))
+
+            def percentage_op():
                 output_row[into_column_idx] = fs % (float(row[sources[0]]) * 100 / float(row[sources[1]]))
+                kw.write(output_row)
+            opfunc = percentage_op
 
-            elif operation == REPLACE_OP:
+        elif operation == REPLACE_OP:
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Replace needs 1 destination column, got %d" % len(into_column_idxs))
+            if len(selected_names) != 1:
+                raise KGTKException("Replace needs 1 input column, got %d" % len(selected_names))
+            if len(values) != 1:
+                raise KGTKException("Replace needs one value, got %d" % len(values))
+            if len(with_values) != 1:
+                raise KGTKException("Replace needs one with-value, got %d" % len(with_values))
+
+            def replace_op():
                 if limit == 0:
                     output_row[into_column_idx] = row[sources[0]].replace(values[0], with_values[0])
                 else:
                     output_row[into_column_idx] = row[sources[0]].replace(values[0], with_values[0], limit)
+                kw.write(output_row)
+            opfunc = replace_op
+            
+        elif operation == SET_OP:
+            if len(sources) != 0:
+                raise KGTKException("Set needs no sources, got %d" % len(sources))
+            if len(into_column_idxs) == 0:
+                raise KGTKException("Set needs at least one destination column, got %d" % len(into_column_idxs))
+            if len(values) == 0:
+                raise KGTKException("Set needs at least one value, got %d" % len(values))
+            if len(into_column_idxs) != len(values):
+                raise KGTKException("Set needs the same number of destination columns and values, got %d and %d" % (len(into_column_idxs), len(values)))
 
-            elif operation == SET_OP:
+            def set_op():
+                value_idx: int
                 if overwrite:
-                    for idx in range(len(values)):
-                        output_row[into_column_idxs[idx]] = values[idx]
+                    for value_idx in range(len(values)):
+                        output_row[into_column_idxs[value_idx]] = values[value_idx]
                 else:
-                    for idx in range(len(values)):
-                        if len(output_row[into_column_idxs[idx]]) == 0:
-                            output_row[into_column_idxs[idx]] = values[idx]
+                    for value_idx in range(len(values)):
+                        if len(output_row[into_column_idxs[value_idx]]) == 0:
+                            output_row[into_column_idxs[value_idx]] = values[value_idx]
+                kw.write(output_row)
+            opfunc = set_op
 
-            elif operation == SUBSTRING_OP and start_slice is not None:
-                item = row[sources[0]]
+        elif operation == SUBSTRING_OP:
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Substring needs 1 destination column, got %d" % len(into_column_idxs))
+            if len(selected_names) != 1:
+                raise KGTKException("Substring needs 1 input column, got %d" % len(selected_names))
+            if len(values) not in (1, 2):
+                raise KGTKException("Substring needs one or two values, got %d" % len(values))
+
+            start_slice: int
+            end_slice: typing.Optional[int]
+            if len(values) == 1:
+                start_slice = int(values[0])
+                end_slice = None
+            else:
+                start_slice = int(values[0])
+                end_slice = int(values[1])
+
+            def substring_op():
+                item: str = row[sources[0]]
                 if item.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)):
                     item = KgtkFormat.unstringify(item)
                     if end_slice is None:
@@ -980,43 +993,126 @@ def run(input_file: KGTKFiles,
                             output_row[into_column_idx] = KgtkFormat.stringify(item[start_slice:end_slice])
                         else:
                             output_row[into_column_idx] = item[start_slice:end_slice]
+                kw.write(output_row)
+            opfunc = substring_op
 
-            elif operation == SUBSTITUTE_OP and substitute_re is not None:
+        elif operation == SUBSTITUTE_OP:
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Substitute needs 1 destination column, got %d" % len(into_column_idxs))
+            if len(selected_names) != 1:
+                raise KGTKException("Substitute needs 1 input column, got %d" % len(selected_names))
+            if len(values) != 1:
+                raise KGTKException("Substitute needs one value, got %d" % len(values))
+            if len(with_values) != 1:
+                raise KGTKException("Substitute needs one with-value, got %d" % len(with_values))
+            substitute_re: typing.Pattern = re.compile(values[0])
+
+            def substitute_op():
                 output_row[into_column_idx] = substitute_re.sub(with_values[0], row[sources[0]], count=limit)
+                kw.write(output_row)
+            opfunc = substitute_op
 
-            elif operation == SUM_OP:
+        elif operation == SUM_OP:
+            if len(sources) == 0:
+                raise KGTKException("Sum needs at least one source, got %d" % len(sources))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Sum needs 1 destination columns, got %d" % len(into_column_idxs))
+
+            def sum_op():
                 total: float = 0
-                for idx in sources:
-                    item = row[idx]
+                src_idx: int
+                item: str
+                for src_idx in sources:
+                    item = row[src_idx]
                     if len(item) > 0:
                         total += float(item)
                 for item in values:
                     if len(item) > 0:
                         total += float(item)
                 output_row[into_column_idx] = fs % total
-                
-            elif operation == SWAPCASE_OP:
-                for idx in range(len(sources)):
-                    output_row[into_column_idxs[idx]] = row[sources[idx]].swapcase()
+                kw.write(output_row)
+            opfunc = sum_op
 
-            elif operation == TITLE_OP:
-                for idx in range(len(sources)):
-                    output_row[into_column_idxs[idx]] = row[sources[idx]].title()
+        elif operation == SWAPCASE_OP:
+            if len(sources) == 0:
+                raise KGTKException("Swapcase needs at least one source, got %d" % len(sources))
+            if len(sources) != len(into_column_idxs):
+                raise KGTKException("Swapcase needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
 
-            elif operation == UPPER_OP:
-                for idx in range(len(sources)):
-                    output_row[into_column_idxs[idx]] = row[sources[idx]].upper()
+            def swapcase_op():
+                src_idx: int
+                for src_idx in range(len(sources)):
+                    output_row[into_column_idxs[src_idx]] = row[sources[src_idx]].swapcase()
+                kw.write(output_row)
+            opfunc = swapcase_op
 
-            elif operation == XOR_OP:
-                bresult = False
-                for idx in sources:
-                    kv = KgtkValue(row[idx])
+        elif operation == TITLE_OP:
+            if len(sources) == 0:
+                raise KGTKException("Title needs at least one source, got %d" % len(sources))
+            if len(sources) != len(into_column_idxs):
+                raise KGTKException("Title needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
+
+            def title_op():
+                src_idx: int
+                for src_idx in range(len(sources)):
+                    output_row[into_column_idxs[src_idx]] = row[sources[src_idx]].title()
+                kw.write(output_row)
+            opfunc = title_op
+
+        elif operation == UPPER_OP:
+            if len(sources) == 0:
+                raise KGTKException("Upper needs at least one source, got %d" % len(sources))
+            if len(sources) != len(into_column_idxs):
+                raise KGTKException("Upper needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
+
+            def upper_op():
+                src_idx: int
+                for src_idx in range(len(sources)):
+                    output_row[into_column_idxs[src_idx]] = row[sources[src_idx]].upper()
+                kw.write(output_row)
+            opfunc = upper_op
+
+        elif operation == XOR_OP:
+            if len(sources) == 0:
+                raise KGTKException("Xor needs at least one source, got %d" % len(sources))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Xor needs 1 destination column, got %d" % len(into_column_idxs))
+
+            def xor_op():
+                bresult: bool = False
+                src_idx: int
+                for src_idx in sources:
+                    kv: KgtkValue = KgtkValue(row[src_idx])
                     if kv.is_boolean():
                         bresult = bresult != kv.is_true()
 
                 output_row[into_column_idx] = KgtkValue.to_boolean(bresult)
+                kw.write(output_row)
+            opfunc = xor_op
 
-            kw.write(output_row)
+        if verbose:
+            print("Opening the output file %s" % str(output_kgtk_file), file=error_file, flush=True)
+        kw = KgtkWriter.open(output_column_names,
+                             output_kgtk_file,
+                             require_all_columns=True,
+                             prohibit_extra_columns=True,
+                             fill_missing_columns=False,
+                             gzip_in_parallel=False,
+                             mode=KgtkWriter.Mode[kr.mode.name],
+                             output_format=output_format,
+                             verbose=verbose,
+                             very_verbose=very_verbose,
+        )
+
+        input_data_lines: int = 0
+        for row in kr:
+            input_data_lines += 1
+
+            output_row = row.copy()
+            for idx in range(new_column_count):
+                output_row.append("") # Easiest way to add a new column.
+
+            opfunc()
 
         # Flush the output file so far:
         kw.flush()

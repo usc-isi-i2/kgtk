@@ -47,6 +47,7 @@ usage: kgtk calc [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                  [--values [VALUES [VALUES ...]]]
                  [--with-values [WITH_VALUES [WITH_VALUES ...]]]
                  [--limit LIMIT] [--format FORMAT_STRING]
+                 [--overwrite [True|False]] [--to-string [True|False]]
                  [-v [optional True|False]]
 
 This command performs calculations on one or more columns in a KGTK file. 
@@ -79,6 +80,16 @@ optional arguments:
   --limit LIMIT         A limit count.
   --format FORMAT_STRING
                         The format string for the calculation.
+  --overwrite [True|False]
+                        If true, overwrite non-empty values in the result
+                        column(s). If false, do not overwrite non-empty values
+                        in the result column(s). Only certain operations
+                        support --overwrite False. (default=True).
+  --to-string [True|False]
+                        If true, ensure that the result is a string. If false,
+                        the result might be a symbol or some other type. Only
+                        certain operations support --to-string.
+                        (default=False).
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).
