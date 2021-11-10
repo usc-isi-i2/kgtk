@@ -52,6 +52,8 @@ STRIP_OP: str = "strip"
 SUBSTRING_OP: str = "substring"
 ZFILL_OP: str = "zfill"
 
+# KgtkValue fields
+
 # Implemented:
 
 # Boolean
@@ -227,6 +229,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               metavar="True|False",
                               type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument(      "--group-by-label", dest="group_by_label", type=str,
+                              help=h("When specified, add a label column to the group-by output."))
+
+    parser.add_argument(      "--group-by-output-names", dest="group_by_output_names_list", nargs='*', metavar="COLUMN_NAME", action='append',
+                              help=h("When specified, rename the --group-by columns on output."))
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
@@ -260,6 +268,8 @@ def run(input_file: KGTKFiles,
         to_string: bool,
         group_by_names_list: typing.List[typing.List[str]],
         presorted: bool,
+        group_by_label: typing.Optional[str],
+        group_by_output_names_list: typing.List[typing.List[str]],
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -296,6 +306,7 @@ def run(input_file: KGTKFiles,
     column_names: typing.List[str] = flatten_arg_list(column_names_list)
     into_column_names: typing.List[str] = flatten_arg_list(into_column_names_list)
     group_by_names: typing.List[str] = flatten_arg_list(group_by_names_list)
+    group_by_output_names: typing.List[str] = flatten_arg_list(group_by_output_names_list)
     values: typing.List[str] = flatten_arg_list(values_list)
     with_values: typing.List[str] = flatten_arg_list(with_values_list)
 
@@ -311,6 +322,8 @@ def run(input_file: KGTKFiles,
             print("--into %s" % " ".join(into_column_names), file=error_file, flush=True)
         if len(group_by_names) > 0:
             print("--group-by %s" % " ".join(group_by_names), file=error_file, flush=True)
+        if len(group_by_output_names) > 0:
+            print("--group-by-output-names %s" % " ".join(group_by_output_names), file=error_file, flush=True)
         print("--operation=%s" % str(operation), file=error_file, flush=True)
         if len(values) > 0:
             print("--values %s" % " ".join(values), file=error_file, flush=True)
@@ -323,6 +336,8 @@ def run(input_file: KGTKFiles,
         print("--overwrite=%s" % repr(overwrite), file=error_file, flush=True)
         print("--to-string=%s" % repr(to_string), file=error_file, flush=True)
         print("--presorted=%s" % repr(presorted), file=error_file, flush=True)
+        if group_by_label is not None:
+            print("--group-by-label=%s" % group_by_label, file=error_file, flush=True)
 
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
@@ -442,15 +457,32 @@ def run(input_file: KGTKFiles,
 
         group_by: typing.List[int] = parse_column_names_with_ranges(kr, group_by_names)
 
+        if len(group_by_output_names) > 0:
+            if len(group_by_output_names) != len(group_by):
+                raise KGTKException("There are %d --group-by-output-names but %d --group-by columns" % (len(group_by_output_names), len(group_by)))
+
         new_column_count: int = 0
         into_column_idxs: typing.List[int] = [ ]
         into_column_idx: int
+
+        group_by_label_idx: int = -1
 
         output_column_names: typing.List[str]
         if len(group_by) == 0:
             output_column_names = kr.column_names.copy()
         else:
-            output_column_names = [ kr.column_names[i] for i in group_by ]
+            if len(group_by_output_names) == 0:
+                output_column_names = [ kr.column_names[i] for i in group_by ]
+            else:
+                output_column_names = group_by_output_names.copy()
+            if group_by_label is not None and len(group_by_label) > 0:
+                new_column_count += 1
+                group_by_label_idx = len(output_column_names)
+                output_column_names.append(KgtkFormat.LABEL) # TODO: implement --group-by-label-column-name
+                if verbose:
+                    print("Adding label %s into new column %d (%s)." % (repr(group_by_label),
+                                                                        group_by_label_idx,
+                                                                        repr(KgtkFormat.LABEL)), file=error_file, flush=True)
 
         into_column_name: str
         for idx, into_column_name in enumerate(into_column_names):
@@ -1288,8 +1320,9 @@ def run(input_file: KGTKFiles,
                     for in_idx in group_by:
                         previous_group_by_values.append(row[in_idx])
                 else:
-                    for in_idx in group_by:
-                        if row[in_idx] != previous_group_by_values[in_idx]:
+                    group_by_idx: int
+                    for group_by_idx, in_idx in enumerate(group_by):
+                        if row[in_idx] != previous_group_by_values[group_by_idx]:
                             finish = True
                             break
 
@@ -1299,6 +1332,8 @@ def run(input_file: KGTKFiles,
                         output_row.append("") # Easiest way to add a new column.
                     total, count, do_output = opfunc(total, count, finish=True)
                     if do_output:
+                        if group_by_label_idx >= 0:
+                            output_row[group_by_label_idx] = group_by_label
                         kw.write(output_row)
                     previous_group_by_values = list()
                     for in_idx in group_by:
@@ -1310,6 +1345,8 @@ def run(input_file: KGTKFiles,
                 output_row.append("") # Easiest way to add a new column.
             total, count, do_output = opfunc(total, count, finish=True)
             if do_output:
+                if group_by_label_idx >= 0:
+                    output_row[group_by_label_idx] = group_by_label
                 kw.write(output_row)
 
         # Flush the output file so far:
