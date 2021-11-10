@@ -48,7 +48,8 @@ usage: kgtk calc [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                  [--with-values [WITH_VALUES [WITH_VALUES ...]]]
                  [--limit LIMIT] [--format FORMAT_STRING]
                  [--overwrite [True|False]] [--to-string [True|False]]
-                 [-v [optional True|False]]
+                 [--group-by [COLUMN_NAME [COLUMN_NAME ...]]]
+                 [--presorted [True|False]] [-v [optional True|False]]
 
 This command performs calculations on one or more columns in a KGTK file. 
 If no input filename is provided, the default is to read standard input. 
@@ -83,12 +84,23 @@ optional arguments:
   --overwrite [True|False]
                         If true, overwrite non-empty values in the result
                         column(s). If false, do not overwrite non-empty values
-                        in the result column(s). Only certain operations
-                        support --overwrite False. (default=True).
+                        in the result column(s). --overwrite=False may be used
+                        with the following operations: ['copy', 'set']
+                        (default=True).
   --to-string [True|False]
                         If true, ensure that the result is a string. If false,
-                        the result might be a symbol or some other type. Only
-                        certain operations support --to-string.
+                        the result might be a symbol or some other type. --to-
+                        string=True may be used with the following operations:
+                        ['substring'] (default=False).
+  --group-by [COLUMN_NAME [COLUMN_NAME ...]]
+                        The list of group-by column names, optionally
+                        containing '..' for column ranges and '...' for column
+                        names not explicitly mentioned. --group-by may be used
+                        with the following operations: ['average', 'min',
+                        'max', 'sum']. At the present time, --group-by
+                        requires --presorted.
+  --presorted [True|False]
+                        If true, the input file is presorted for --group-by.
                         (default=False).
 
   -v [optional True|False], --verbose [optional True|False]
