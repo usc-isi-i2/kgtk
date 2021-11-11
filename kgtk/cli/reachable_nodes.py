@@ -297,15 +297,18 @@ def run(input_file: KGTKFiles,
     for index in index_list:
         if selflink_bool:
             kw.writerow([name[index], label, name[index]])
-                
+        
         if breadth_first:
             count = 0
-            last = G.vertex(index)
+            past = set()
             for e in bfs_iterator(G, G.vertex(index)):
-                kw.writerow([name[index], label, name[e.target()], count+1])
-                if e.source() != last:
+                if e.source() in past:
                     count += 1
-                    last = e.source()
+                    past = set()
+                kw.writerow([name[index], label, name[e.target()], count+1])
+                past.add(e.target())
+                
+                    
         else:
             for e in dfs_iterator(G, G.vertex(index)):
                 kw.writerow([name[index], label, name[e.target()]])
