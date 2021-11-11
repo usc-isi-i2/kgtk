@@ -41,15 +41,16 @@ cleared if an error occurs processing the input date-and-time value.
 
 ```
 usage: kgtk calc [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
-                 [-c [COLUMN_NAME [COLUMN_NAME ...]]] --into COLUMN_NAME
-                 [COLUMN_NAME ...] --do
+                 [-c [COLUMN_NAME [COLUMN_NAME ...]]]
+                 [--into COLUMN_NAME [COLUMN_NAME ...]] --do
                  {abs,and,average,capitalize,casefold,copy,div,eq,fromisoformat,ge,gt,is,is_in,is_not,join,lower,le,len,lt,max,min,minus,nand,ne,negate,nor,not,or,percentage,replace,reverse_div,reverse_minus,set,substring,substitute,sum,swapcase,title,upper,xor}
                  [--values [VALUES [VALUES ...]]]
                  [--with-values [WITH_VALUES [WITH_VALUES ...]]]
                  [--limit LIMIT] [--format FORMAT_STRING]
                  [--overwrite [True|False]] [--to-string [True|False]]
                  [--group-by [COLUMN_NAME [COLUMN_NAME ...]]]
-                 [--presorted [True|False]] [-v [optional True|False]]
+                 [--presorted [True|False]] [--filter [True|False]]
+                 [-v [optional True|False]]
 
 This command performs calculations on one or more columns in a KGTK file. 
 If no input filename is provided, the default is to read standard input. 
@@ -102,6 +103,11 @@ optional arguments:
   --presorted [True|False]
                         If true, the input file is presorted for --group-by.
                         (default=False).
+  --filter [True|False]
+                        When --filter=True, and a boolean operation is
+                        specified, records for which the result is False will
+                        not be written to the output stream. Also, --into is
+                        optional when --filter is provided. (default=False).
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).
