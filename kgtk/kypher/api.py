@@ -302,7 +302,8 @@ class KypherApi(object):
                  maxresults=None,
                  maxcache=None,
                  loglevel=None,
-                 config=None):
+                 config=None,
+                 readonly=False):
         """Create a new API object and initialize a number of configuration values.
         'graphcache' should be a filename for a Kypher graph cache to create or reuse.
         It uses the same default as the --graph-cache option of the 'query' command.
@@ -332,11 +333,15 @@ class KypherApi(object):
         configuration object which may have additional user-defined key/value pairs.
         Standard configuration values for the keys described above will default to their
         values in 'DEFAULT_CONFIG' if no user-defined values are provided.
+
+        'readonly' controls whether the graph cache is opened in read-only mode or not.
+        For read-only, the graph cache must exist and contain data that is properly indexed.
         """
         self.config = config or {}
         self.graph_cache = graphcache
         if graphcache is None:
             self.graph_cache = self.get_config('GRAPH_CACHE')
+        self.readonly = readonly
         self.index_mode = index
         if index is None:
             self.index_mode = self.get_config('INDEX_MODE')
@@ -432,10 +437,14 @@ class KypherApi(object):
         """Create a new SQL store object from the configured graph_cache file or return a cached value.
         """
         if self.sql_store is None:
-            conn = sqlite3.connect(self.graph_cache, check_same_thread=False)
+            if self.readonly:
+                conn = sqlite3.connect(f'file:{self.graph_cache}?mode=ro', uri=True, check_same_thread=False)
+            else:
+                conn = sqlite3.connect(self.graph_cache, check_same_thread=False)
             # don't do this for now, since we get the aliases as keys() which would require further mapping:
             #conn.row_factory = sqlite3.Row
-            self.sql_store = sqlstore.SqliteStore(dbfile=self.graph_cache, conn=conn, loglevel=self.loglevel)
+            self.sql_store = sqlstore.SqliteStore(dbfile=self.graph_cache, conn=conn,
+                                                  loglevel=self.loglevel, readonly=self.readonly)
         return self.sql_store
 
     def get_lock(self):
