@@ -574,6 +574,9 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
+    COMPRESSED_FILE_EXTENSIONS: typing.List[str] =  [ ".bz2", ".gz", ".lz4", ".xz" ]
+    ALL_CSV_FILE_EXTENSIONS: typing.List[str] = [ ".csv" ] + [ ".csv" + x for x in [ ".bz2", ".gz", ".lz4", ".xz" ] ]
+
     @classmethod
     def _default_options(
             cls,
@@ -643,10 +646,12 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
         # Supply the default input_format:
         input_format: str
-        if options.input_format is None:
-            input_format = KgtkReaderOptions.INPUT_FORMAT_KGTK
-        else:
+        if options.input_format is not None:
             input_format = options.input_format
+        elif file_path is not None and file_path.suffix in cls.ALL_CSV_FILE_EXTENSIONS:
+            input_format = KgtkReaderOptions.INPUT_FORMAT_CSV
+        else:
+            input_format = KgtkReaderOptions.INPUT_FORMAT_KGTK
         if verbose:
             print("input format: %s" % input_format, file=error_file, flush=True)
 
@@ -956,7 +961,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                                                    options.mgzip_threads,
                                                    error_file,
                                                    verbose)
-        elif file_path.suffix in [".bz2", ".gz", ".lz4", ".xz"]:
+        elif file_path.suffix in cls.COMPRESSED_FILE_EXTENSIONS:
             input_file = cls._open_compressed_file(file_path.suffix,
                                                    str(file_path),
                                                    file_path,
