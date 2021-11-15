@@ -45,7 +45,8 @@ format names shown in the table below:
 | csv    | .csv      | A simple comma separated value file with doubled quoting and column headers. |
 
 When the `--input-format` option has not been specified, the default is to use `kgtk` format
-for input files.
+for input files unless the filename extension (suffix) is `.csv` (optionally followed
+by one of the compressed file extensions, see below.)
 
 !!! note
     The expert option `--input-format INPUT_FORMAT` applies to all input files in
@@ -55,9 +56,8 @@ for input files.
     (although their compression format may vary, as described below).
 
 !!! note
-    At the present time, filename extensions are not used to select an input
-    file format in the absence of the `--input-format` option.  This behavior
-    may change in the future.
+    CSV input file conversion is very simple at the moment.  It may be extended in the
+    future to accomodate KGTK datatypes such as date/time.
 
 ### Input File Decompression
 
@@ -87,7 +87,7 @@ table above, with or without the leading period.
 This option may be used to specify decompression of standard input (`-`).
 
 If `--compression-type` is not specified and the the filename extension is not
-a recognized compression fielname extension, the input file will not be
+a recognized compression filename extension, the input file will not be
 decompressed.
 
 !!! Note
