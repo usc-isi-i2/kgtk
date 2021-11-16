@@ -138,7 +138,7 @@ class KgtkWriter(KgtkBase):
     @classmethod
     def open(cls,
              column_names: typing.List[str],
-             file_path: typing.Optional[Path],
+             file_path: typing.Optional[typing.Union[Path, str]],
              who: str = "output",
              require_all_columns: bool = True,
              prohibit_extra_columns: bool = True,
@@ -158,6 +158,9 @@ class KgtkWriter(KgtkBase):
              no_header: bool = False,
              verbose: bool = False,
              very_verbose: bool = False)->"KgtkWriter":
+
+        if file_path is not None and isinstance(file_path, str):
+            file_path = Path(file_path)
 
         if file_path is None or str(file_path) == "-":
             if verbose:
