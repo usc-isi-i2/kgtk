@@ -56,6 +56,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         help='When True, search the graph breadth first.  When false, search depth first. (default=%(default)s)',
                         type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
 
+    parser.add_argument('--distance',dest='distance',
+                        help='When True, also given breadth first true, append another column showing the shortest distance, default col name is distance',
+                        type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+
+    parser.add_argument('--dist-col-name', action='store', type=str, dest='dist_col_name', help='The column name for distance, default is distance',default="distance")
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="input", expert=_expert, defaults=False)
@@ -77,6 +83,8 @@ def run(input_file: KGTKFiles,
         selflink_bool: bool,
         show_properties: bool,
         breadth_first: bool,
+        distance: bool,
+        dist_col_name: str,
 
         errors_to_stdout: bool,
         errors_to_stderr: bool,
@@ -281,8 +289,8 @@ def run(input_file: KGTKFiles,
         G.clear_edges()
         G.add_edge_list(list(edge_filter_set))
 
-    if breadth_first:
-        output_header: typing.List[str] = ['node1','label','node2', 'node2;distance']
+    if breadth_first and distance:
+        output_header: typing.List[str] = ['node1','label','node2', dist_col_name]
     else:
         output_header: typing.List[str] = ['node1','label','node2']
 
@@ -298,7 +306,7 @@ def run(input_file: KGTKFiles,
         if selflink_bool:
             kw.writerow([name[index], label, name[index]])
         
-        if breadth_first:
+        if breadth_first and distance:
             count = 0
             past = set()
             for e in bfs_iterator(G, G.vertex(index)):
@@ -307,6 +315,10 @@ def run(input_file: KGTKFiles,
                     past = set()
                 kw.writerow([name[index], label, name[e.target()], count+1])
                 past.add(e.target())
+
+        elif breadth_first and not distance:
+            for e in bfs_iterator(G, G.vertex(index)):
+                kw.writerow([name[index], label, name[e.target()]])
                 
                     
         else:
