@@ -50,7 +50,7 @@ def progress_startup(pid: typing.Optional[int] = None, fd: typing.Optional[int] 
     # This can be called multiple times, if it desired to monitor several
     # input files in sequence.
     #
-    # If pid is None, the cirrent process will be monitored.  If pid is not
+    # If pid is None, the current process will be monitored.  If pid is not
     # None, the specified process will be monitored.
     #
     # If target_fd is None, them all fds will be monitored.  If target is not
@@ -291,6 +291,11 @@ def cli_entry(*args):
     shared_args.add_argument('--expert', dest='_expert', action='store_true',
                              default=os.getenv('KGTK_OPTION_EXPERT', 'False').lower() in ['y', 'yes', 'true'],
                              help='enable expert mode')
+    
+    shared_args.add_argument('--mode', dest='_mode', action='store',
+                             default=os.getenv('KGTK_OPTION_MODE', 'AUTO').upper(),
+                             choices=['NONE', 'EDGE', 'NODE', 'AUTO' ],
+                             help='File reading mode (default=AUTO)')
     
     shared_args.add_argument('--pipedebug', dest='_pipedebug', action='store_true',
                              default=os.getenv('KGTK_OPTION_PIPEDEBUG', 'False').lower() in ['y', 'yes', 'true'],

@@ -47,7 +47,11 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                            optional=True)
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, validate_by_default=True, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser,
+                                    mode_options=True,
+                                    default_mode=KgtkReaderMode[parsed_shared_args._mode],
+                                    validate_by_default=True,
+                                    expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 
