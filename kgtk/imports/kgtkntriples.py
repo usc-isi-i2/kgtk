@@ -73,6 +73,7 @@ class KgtkNtriples(KgtkFormat):
     DEFAULT_LANG_STRING_TAG: str = LANG_STRING_TAG_NONE
     DEFAULT_BUILD_DATATYPE_COLUMN: bool = False
     DEFAULT_DATATYPE_COLUMN_NAME: str = "datatype"
+    DEFAULT_WRITE_NAMESPACES: bool = True
 
     COLUMN_NAMES: typing.List[str] = [KgtkFormat.NODE1, KgtkFormat.LABEL, KgtkFormat.NODE2]
     
@@ -220,6 +221,8 @@ class KgtkNtriples(KgtkFormat):
     value_options: KgtkValueOptions = attr.ib(validator=attr.validators.instance_of(KgtkValueOptions), default=DEFAULT_KGTK_VALUE_OPTIONS)
 
     override_uuid: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+
+    write_namespaces: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_WRITE_NAMESPACES)
 
     build_datatype_column: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_BUILD_DATATYPE_COLUMN)
     datatype_column_name: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_DATATYPE_COLUMN_NAME)
@@ -666,15 +669,16 @@ class KgtkNtriples(KgtkFormat):
         return namespace_line_count
         
     def write_namespaces_to_output(self, ew: KgtkWriter, count_records: bool = True):
-        # Append the namespaces to the output file.
-        namespace_id: str
-        for namespace_id in sorted(self.namespace_ids.keys()):
-            if self.output_only_used_namespaces:
-                if namespace_id in self.used_namespaces:
+        if self.write_namespaces:
+            # Append the namespaces to the output file.
+            namespace_id: str
+            for namespace_id in sorted(self.namespace_ids.keys()):
+                if self.output_only_used_namespaces:
+                    if namespace_id in self.used_namespaces:
+                        self.write_row(ew, namespace_id, self.prefix_expansion_label, '"' + self.namespace_ids[namespace_id] + '"', "")
+                else:
                     self.write_row(ew, namespace_id, self.prefix_expansion_label, '"' + self.namespace_ids[namespace_id] + '"', "")
-            else:
-                self.write_row(ew, namespace_id, self.prefix_expansion_label, '"' + self.namespace_ids[namespace_id] + '"', "")
-
+ 
     def write_updated_namespace_file(self):
         # Is there an updated namespaces file?
         if self.updated_namespace_file_path is None:
@@ -933,11 +937,15 @@ class KgtkNtriples(KgtkFormat):
 
         parser.add_argument(      "--summary", dest="summary",
                                   help="When true, print summary statistics when done processing (also implied by --verbose). (default=%(default)s).",
-                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_VALIDATE)
+                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_SUMMARY)
 
         parser.add_argument(      "--override-uuid", dest="override_uuid",
                                   help="When specified, override UUID generation for debugging. (default=%(default)s).",
                                   default=None)
+
+        parser.add_argument(      "--write-namespaces", dest="write_namespaces",
+                                  help="When true, append namespaces to the output file. (default=%(default)s).",
+                                  default=cls.DEFAULT_WRITE_NAMESPACES)
 
 def main():
     """
@@ -1014,6 +1022,7 @@ def main():
         print("--summary=%s" % repr(args.summary), file=error_file, flush=True)
         if args.override_uuid is not None:
             print("--override_uuid=%s" % repr(args.override_uuid), file=error_file, flush=True)            
+        print("--write-namespaces=%s" % repr(args.write_namespaces), file=error_file, flush=True)
 
         idbuilder_options.show(out=error_file)
         reader_options.show(out=error_file)
@@ -1052,6 +1061,7 @@ def main():
         validate=args.validate,
         summary=args.summary,
         override_uuid=args.override_uuid,
+        write_namespaces=args.write_namespaces,
         reader_options=reader_options,
         value_options=value_options,
         error_file=error_file,

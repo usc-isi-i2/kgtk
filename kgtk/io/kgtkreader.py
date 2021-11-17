@@ -627,7 +627,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
     @classmethod
     def open(cls,
-             file_path: typing.Optional[Path],
+             file_path: typing.Optional[typing.Union[Path, str]],
              who: str = "input",
              error_file: typing.TextIO = sys.stderr,
              reject_file: typing.Optional[typing.TextIO] = None,
@@ -640,6 +640,9 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         """
         Opens a KGTK file, which may be an edge file or a node file.  The appropriate reader is returned.
         """
+
+        if file_path is not None and isinstance(file_path, str):
+            file_path = Path(file_path)
 
         # Supply the default reader and value options:
         (options, value_options) = cls._default_options(options, value_options)
