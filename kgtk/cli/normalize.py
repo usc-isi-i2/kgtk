@@ -34,6 +34,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     _expert: bool = parsed_shared_args._expert
     _command: str = parsed_shared_args._command
+    _mode: str = parsed_shared_args._mode
 
     # This helper function makes it easy to suppress options from
     # The help message.  The options are still there, and initialize
@@ -113,7 +114,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     KgtkIdBuilderOptions.add_arguments(parser, default_style=KgtkIdBuilderOptions.CONCAT_NLN_NUM_STYLE, expert=_expert)
     KgtkReader.add_debug_arguments(parser, expert=_expert)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, default_mode=KgtkReaderMode.EDGE, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser,
+                                    mode_options=True,
+                                    default_mode=KgtkReaderMode.NONE if _mode == "NONE" else KgtkReaderMode.EDGE,
+                                    expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 def run(input_file: KGTKFiles,

@@ -33,7 +33,9 @@ primary intended purpose.
 usage: kgtk tee [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] --into-file INTO_FILE
                 [--enable [ENABLE]] [-v [optional True|False]]
 
-Remove specific columns from a KGTK file.
+Copy the primary input to the primary output, making a copy to a specified file. This can be used to make a copy of a pipe's data.
+
+This command defaults to --mode=NONE so it will work with TSV files that do not follow KGTK column naming conventions.
 
 optional arguments:
   -h, --help            show this help message and exit

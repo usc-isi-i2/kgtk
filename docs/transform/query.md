@@ -80,8 +80,9 @@ optional arguments:
                         they are queried (defaults to per-user temporary file)
   --show-cache, --sc    describe the current content of the graph cache and
                         exit (does not actually run a query or import data)
-  --read-only, --ro     do not create or update the graph cache in any way, only
-                        run queries against already imported and indexed data
+  --read-only, --ro     do not create or update the graph cache in any way,
+                        only run queries against already imported and indexed
+                        data
   --import MODULE_LIST  Python modules needed to define user extensions to
                         built-in functions
   -o OUTPUT, --out OUTPUT

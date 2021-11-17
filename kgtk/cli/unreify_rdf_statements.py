@@ -30,7 +30,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
-    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
     from kgtk.unreify.kgtkunreifyrdfstatements import KgtkUnreifyRdfStatements
     from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
@@ -66,7 +66,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     KgtkUnreifyRdfStatements.add_arguments(parser)
     KgtkReader.add_debug_arguments(parser, expert=_expert)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser,
+                                    mode_options=True,
+                                    default_mode=KgtkReaderMode[parsed_shared_args._mode],
+                                    expert=_expert)
     KgtkValueOptions.add_arguments(parser)
 
 def run(input_file: KGTKFiles,

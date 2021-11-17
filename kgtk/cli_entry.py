@@ -44,6 +44,7 @@ def cmd_done(cmd, success, exit_code):
 
 
 _save_progress: bool = False
+_save_progress_debug: bool = False
 _save_progress_tty: typing.Optional[str] = None
 _save_progress_command: typing.Optional[typing.Any] = None
 def progress_startup(pid: typing.Optional[int] = None, fd: typing.Optional[int] = None):
@@ -59,7 +60,7 @@ def progress_startup(pid: typing.Optional[int] = None, fd: typing.Optional[int] 
     # input files other than calling this routine sequentially
     #
     # TODO: use the envar KGTK_PV_COMMAND to get the `pv` command.
-    global _save_progress, _save_progress_tty
+    global _save_progress, _save_progress_tty, _save_progress_debug
     if _save_progress and _save_progress_tty is not None:
         global _save_progress_command
         if _save_progress_command is not None:
@@ -77,11 +78,16 @@ def progress_startup(pid: typing.Optional[int] = None, fd: typing.Optional[int] 
         # Start a process monitor.
         if pid is None:
             pid = os.getpid()
-        if fd is None:
-            _save_progress_command = sh.pv("-d {}".format(pid), _out=_save_progress_tty, _err=_save_progress_tty, _bg=True)
-        else:
-            _save_progress_command = sh.pv("-d {}:{}".format(pid, fd),
-                                           _out=_save_progress_tty, _err=_save_progress_tty, _bg=True)
+        try:
+            if fd is None:
+                _save_progress_command = sh.pv("-d {}".format(pid), _out=_save_progress_tty, _err=_save_progress_tty, _bg=True)
+            else:
+                _save_progress_command = sh.pv("-d {}:{}".format(pid, fd),
+                                               _out=_save_progress_tty, _err=_save_progress_tty, _bg=True)
+        except Exception:
+            # Ignore the exception unless _save_progress_debug is True.
+            if _save_progress_debug:
+                raise
 
 def progress_shutdown():
     global _save_progress_command
@@ -144,6 +150,9 @@ def cli_entry_pipe(args, parsed_shared_args, shared_args, parser, sub_parsers, s
 
             # set shared arguments
             for sa in vars(parsed_shared_args):
+                # Shared arguments that have been accepted by the subcommand
+                # (see KGTKArgumentParser.accept_shared_argument(...))
+                # will be passed as keyword arguments to the subcommand.
                 if sa not in sub_parsers.choices[h].shared_arguments:
                     del kwargs[sa]
                 else:
@@ -151,6 +160,8 @@ def cli_entry_pipe(args, parsed_shared_args, shared_args, parser, sub_parsers, s
 
         global _save_progress
         _save_progress = parsed_shared_args._progress
+        global _save_progress_debug
+        _save_progress = parsed_shared_args._progressdebug
         global _save_progress_tty
         _save_progress_tty = parsed_shared_args._progress_tty
         if parsed_shared_args._progress:
@@ -288,14 +299,14 @@ def cli_entry(*args):
                              default=os.getenv('KGTK_OPTION_DEBUG', 'False').lower() in ['y', 'yes', 'true'],
                              help='enable debug mode')
     
+    shared_args.add_argument('--default-mode', dest='_mode', action='store',
+                             default=os.getenv('KGTK_OPTION_DEFAULT_MODE', 'AUTO').upper(),
+                             choices=['NONE', 'EDGE', 'NODE', 'AUTO' ],
+                             help='File reading mode (default=AUTO)')
+    
     shared_args.add_argument('--expert', dest='_expert', action='store_true',
                              default=os.getenv('KGTK_OPTION_EXPERT', 'False').lower() in ['y', 'yes', 'true'],
                              help='enable expert mode')
-    
-    shared_args.add_argument('--mode', dest='_mode', action='store',
-                             default=os.getenv('KGTK_OPTION_MODE', 'AUTO').upper(),
-                             choices=['NONE', 'EDGE', 'NODE', 'AUTO' ],
-                             help='File reading mode (default=AUTO)')
     
     shared_args.add_argument('--pipedebug', dest='_pipedebug', action='store_true',
                              default=os.getenv('KGTK_OPTION_PIPEDEBUG', 'False').lower() in ['y', 'yes', 'true'],
@@ -304,6 +315,10 @@ def cli_entry(*args):
     shared_args.add_argument('--progress', dest='_progress', action='store_true',
                              default=os.getenv('KGTK_OPTION_PROGRESS', 'False').lower() in ['y', 'yes', 'true'],
                              help='enable progress monitoring')
+    
+    shared_args.add_argument('--progressdebug', dest='_progressdebug', action='store_true',
+                             default=os.getenv('KGTK_OPTION_PROGRESSDEBUG', 'False').lower() in ['y', 'yes', 'true'],
+                             help='enable progress debug mode, which will show exceptions occuring during progress monitoring startup')
     
     shared_args.add_argument('--progress-tty', dest='_progress_tty', action='store',
                              default=os.getenv('KGTK_OPTION_PROGRESS_TTY', "/dev/tty"),

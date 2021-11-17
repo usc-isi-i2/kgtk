@@ -34,7 +34,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
-    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
     from kgtk.reshape.kgtkidbuilder import KgtkIdBuilder, KgtkIdBuilderOptions
     from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions

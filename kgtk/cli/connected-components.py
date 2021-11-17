@@ -19,7 +19,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         parser (argparse.ArgumentParser)
     """
     from kgtk.gt.connected_components import ConnectedComponents
-    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
     from kgtk.utils.enumnameaction import EnumLowerNameAction
 
     _expert: bool = parsed_shared_args._expert

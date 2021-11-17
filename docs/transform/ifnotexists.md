@@ -459,7 +459,7 @@ kgtk ifnotexists --input-file examples/docs/ifexists-file1.tsv \
 | k2 | kathy | zipcode | 12040 | home |  |
 | k3 | kathy | zipcode | 12040 | work | 6 |
 
-! note
+!!! note
     This used the key field comparison:
 
     > input.id == filter.id

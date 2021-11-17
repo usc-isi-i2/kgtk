@@ -46,7 +46,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         parser (argparse.ArgumentParser)                                                                                                                              
     """
     # Import modules thay we will use when declaring arguments.
-    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
     from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 

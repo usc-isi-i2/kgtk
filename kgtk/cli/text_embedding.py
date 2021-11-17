@@ -8,11 +8,12 @@
 #
 # TODO: Convert EmbeddingVector to use KgtkFormat and KgtkWriter.
 #
+from argparse import Namespace, SUPPRESS
 import typing
 from kgtk.exceptions import KGTKException
 from kgtk.cli_argparse import KGTKArgumentParser
 from kgtk.kgtkformat import KgtkFormat
-from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 from pathlib import Path
 import sys
@@ -271,8 +272,10 @@ def parser():
     }
 
 
-def add_arguments(parser: KGTKArgumentParser):
+def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Namespace):
     from kgtk.utils.argparsehelpers import optional_bool
+
+    _expert: bool = parsed_shared_args._expert
 
     parser.accept_shared_argument('_debug')
 
@@ -333,6 +336,14 @@ def add_arguments(parser: KGTKArgumentParser):
                         help="output path for the metadata file, default will be current user's home directory")
     parser.add_argument('--output-data-format', action='store', dest='output_data_format',
                         default="kgtk_format", choices=("tsv_format", "kgtk_format"),
+
+
+
+
+
+
+
+
                         help="output format, can either be `tsv_format` or `kgtk_format`. \nIf choose `tsv_format`, the output "
                              "will be a tsv file, with each row contains only the vector representation of a node. Each "
                              "dimension is separated by a tab")
@@ -381,7 +392,10 @@ def add_arguments(parser: KGTKArgumentParser):
                         )
 
     KgtkReader.add_debug_arguments(parser, expert=False)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=False)
+    KgtkReaderOptions.add_arguments(parser,
+                                    mode_options=True,
+                                    default_mode=KgtkReaderMode[parsed_shared_args._mode],
+                                    expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=False)
 
 def run(**kwargs):
