@@ -43,6 +43,7 @@ usage: kgtk import-ntriples [-h] [-i INPUT_FILE [INPUT_FILE ...]]
                             [--datatype-column-name DATATYPE_COLUMN_NAME]
                             [--validate [VALIDATE]] [--summary [SUMMARY]]
                             [--override-uuid OVERRIDE_UUID]
+                            [--write-namespaces WRITE_NAMESPACES]
                             [--overwrite-id [optional true|false]]
                             [--verify-id-unique [optional true|false]]
                             [--value-hash-width VALUE_HASH_WIDTH]
@@ -156,6 +157,9 @@ optional arguments:
   --override-uuid OVERRIDE_UUID
                         When specified, override UUID generation for
                         debugging. (default=None).
+  --write-namespaces WRITE_NAMESPACES
+                        When true, append namespaces to the output file.
+                        (default=True).
   --overwrite-id [optional true|false]
                         When true, replace existing ID values. When false,
                         copy existing ID values. When --overwrite-id is
