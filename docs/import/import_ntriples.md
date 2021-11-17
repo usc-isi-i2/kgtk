@@ -362,6 +362,9 @@ prefixes.
   --build-new-namespaces [BUILD_NEW_NAMESPACES]
                         When True, create new namespaces. When False, use only
                         existing namespaces. (default=True).
+  --write-namespaces WRITE_NAMESPACES
+                        When true, append namespaces to the output file.
+                        (default=True).
 ```
 
 The order is <prefix><uuid>-<counter>, such as `noBugQcoEt6xNnqGsHDXfTA-7`.   By default,
@@ -370,6 +373,9 @@ the UUID is omitted, but the examples shown above were generated using the UUID.
 When `--build-new-namespaces=FALSE`, new namespaces will not be generated.  If
 the namespace file (`--namespace-file NAMESPACE_FILE`) is not specified or
 is empty, URI prefixes will not be generated.
+
+When `--write-namespaces=FALSE`, namespaces will not be written to the primary
+output file.
 
 ### Language-Qualified Strings
 
@@ -928,7 +934,7 @@ kgtk import-ntriples \
 | -- | -- | -- |
 | http://example.org/vocab/show/218 | http://www.w3.org/2000/01/rdf-schema#label | ^2021-01-21T23:04:00 |
 
-Here is a namespace file with oneentry for the `rdf-schema` namespace:
+Here is a namespace file with one entry for the `rdf-schema` namespace:
 
 ```
 kgtk cat -i ./examples/docs/import-ntriples-rdf-schema-namespace.tsv
@@ -953,6 +959,48 @@ kgtk import-ntriples \
 | http://example.org/vocab/show/218 | rdf-schema:label | ^2021-01-21T23:04:00 |
 | rdf-schema | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
 
+
+### Importing Without Writing Namespace Prefixes
+
+When `--write-namespaces=False`, namespace prefixes will not be written to the
+primary output file.
+
+Reusing the date/times input N-Triples file:
+
+```bash
+cat examples/docs/import-ntriples-dates.nt
+```
+
+~~~
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "2021-01-21T23:04:00"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+~~~
+
+Import this file, writing namespace prefixes (the default setting):
+
+```
+kgtk import-ntriples \
+     -i ./examples/docs/import-ntriples-dates.nt
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| n1:218 | n2:label | ^2021-01-21T23:04:00 |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
+
+Import this file, without writing namespace prefixes:
+
+```
+kgtk import-ntriples \
+     -i ./examples/docs/import-ntriples-dates.nt \
+     --write-namespaces=False
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| n1:218 | n2:label | ^2021-01-21T23:04:00 |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
 
 ### Importing with `--summary`
 
