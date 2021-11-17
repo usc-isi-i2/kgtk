@@ -812,7 +812,7 @@ class KgtkNtriples(KgtkFormat):
                 infile.close()
 
 
-                self.save_namespaces(ew)
+        self.save_namespaces(ew)
 
         if self.verbose or self.summary:
             print("Processed %d known namespaces." % (namespace_line_count), file=self.error_file, flush=True)
