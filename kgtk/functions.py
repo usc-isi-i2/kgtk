@@ -15,6 +15,7 @@ import json
 import os
 import pandas
 import sh
+import sys
 import typing
 
 def kgtk(arg1: typing.Union[str, pandas.DataFrame],
@@ -216,7 +217,16 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
 
     try:
         sh_bash = sh.Command(bash_command)
-        sh_bash("-c", pipeline, _in=in_tsv, _out=outbuf, _err=errbuf)
+        p = sh_bash("-c", pipeline, _in=in_tsv, _out=outbuf, _err=errbuf, _bg=True)
+        try:
+            p.wait()
+
+        except KeyboardInterrupt:
+            print("kgtk: received KeyboardInterrupt", file=sys.stderr, flush=True)
+            try:
+                p.terminate()
+            except Exception:
+                pass
 
     except sh.ErrorReturnCode as e:
         # The pipeline returned an error.  stderr should hav ean error message.

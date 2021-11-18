@@ -34,7 +34,7 @@ except ImportError:
 
 pipe_delimiter = '/'
 sequential_delimiter = '/,'
-parallel_delimiter = '/:'
+parallel_delimiter = '//'
 ret_code = 0
 
 def cmd_done(cmd, success, exit_code):
@@ -118,105 +118,117 @@ def split_list(sequence, sep):
             chunk.append(val)
     yield chunk
 
-def cli_entry_pipe(args, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)->int:
-    # parse internal pipe
+def cli_single_command(args, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)->int:
     import copy
+    if parsed_shared_args._pipedebug:
+        print("pid %d: Executing a single command: %s" % (os.getpid(), repr(args)), file=sys.stderr, flush=True)
     ret_code: int = 0
-    pipe = [list(y) for x, y in itertools.groupby(args, lambda a: a == pipe_delimiter) if not x]
-    if len(pipe) == 0:
-        parser.print_usage()
-        parser.exit(KGTKArgumentParseException.return_code)
-    elif len(pipe) == 1:  # single command
-        cmd_args = pipe[0]
-        cmd_name = cmd_args[0].replace("_", "-")
-        cmd_args[0] = cmd_name
-        # build sub-parser
-        if cmd_name in subparser_lookup:
-            mod, sub_parser = subparser_lookup[cmd_name]
-            add_default_arguments(sub_parser)  # call this before adding other arguments
-            if cmd_name not in subparsers_built:
-                if hasattr(mod, 'add_arguments_extended'):
-                    psa = copy.deepcopy(parsed_shared_args)
-                    psa._command = cmd_name
-                    mod.add_arguments_extended(sub_parser, psa)
-                else:
-                    mod.add_arguments(sub_parser)
-                subparsers_built.add(cmd_name)
-        parsed_args = parser.parse_args(cmd_args)
-
-        # load module
-        kwargs = {}
-        func = None
-        if parsed_args.cmd:
-            h = parsed_args.cmd
-            func = mod.run
-
-            # remove sub-command name
-            kwargs = vars(parsed_args)
-            del kwargs['cmd']
-
-            # set shared arguments
-            for sa in vars(parsed_shared_args):
-                # Shared arguments that have been accepted by the subcommand
-                # (see KGTKArgumentParser.accept_shared_argument(...))
-                # will be passed as keyword arguments to the subcommand.
-                if sa not in sub_parsers.choices[h].shared_arguments:
-                    del kwargs[sa]
-                else:
-                    kwargs[sa] = getattr(parsed_shared_args, sa)
-
-        global _save_progress
-        _save_progress = parsed_shared_args._progress
-        global _save_progress_debug
-        _save_progress_debug = parsed_shared_args._progress_debug
-        global _save_progress_tty
-        _save_progress_tty = parsed_shared_args._progress_tty
-        if parsed_shared_args._progress:
-            if hasattr(mod, 'custom_progress') and mod.custom_progress():
-                if _save_progress_debug:
-                    print("custom progress", file=sys.stderr, flush=True)
-                pass
+    cmd_args = copy.deepcopy(args)
+    cmd_name = cmd_args[0].replace("_", "-")
+    cmd_args[0] = cmd_name
+    # build sub-parser
+    if cmd_name in subparser_lookup:
+        mod, sub_parser = subparser_lookup[cmd_name]
+        add_default_arguments(sub_parser)  # call this before adding other arguments
+        if cmd_name not in subparsers_built:
+            if hasattr(mod, 'add_arguments_extended'):
+                psa = copy.deepcopy(parsed_shared_args)
+                psa._command = cmd_name
+                mod.add_arguments_extended(sub_parser, psa)
             else:
-                progress_startup()
+                mod.add_arguments(sub_parser)
+            subparsers_built.add(cmd_name)
+    parsed_args = parser.parse_args(cmd_args)
 
-        # run module
-        try: 
-          kgtk_exception_handler = KGTKExceptionHandler(debug=parsed_shared_args._debug)
-          ret_code = kgtk_exception_handler(func, **kwargs)
-        except KeyboardInterrupt as e:
-            print("\nKeyboard interrupt in %s." % " ".join(args), file=sys.stderr, flush=True)
-            progress_shutdown()
-            if hasattr(mod, 'keyboard_interrupt'):
-                mod.keyboard_interrupt()
+    # load module
+    kwargs = {}
+    func = None
+    if parsed_args.cmd:
+        h = parsed_args.cmd
+        func = mod.run
 
-            # Silently exit instead of re-raising the KeyboardInterrupt.
-            # raise
+        # remove sub-command name
+        kwargs = vars(parsed_args)
+        del kwargs['cmd']
 
-    else:  # piped commands
-        if parsed_shared_args._pipedebug:
-            print("Building a KGTK pipe.  pid=%d" % (os.getpid()), file=sys.stderr, flush=True)
-        processes = [ ]
-        try:
-            for idx, cmd_args in enumerate(pipe):
+        # set shared arguments
+        for sa in vars(parsed_shared_args):
+            # Shared arguments that have been accepted by the subcommand
+            # (see KGTKArgumentParser.accept_shared_argument(...))
+            # will be passed as keyword arguments to the subcommand.
+            if sa not in sub_parsers.choices[h].shared_arguments:
+                del kwargs[sa]
+            else:
+                kwargs[sa] = getattr(parsed_shared_args, sa)
+
+    global _save_progress
+    _save_progress = parsed_shared_args._progress
+    global _save_progress_debug
+    _save_progress = parsed_shared_args._progressdebug
+    global _save_progress_tty
+    _save_progress_tty = parsed_shared_args._progress_tty
+    if parsed_shared_args._progress:
+        if hasattr(mod, 'custom_progress') and mod.custom_progress():
+            pass
+        else:
+            progress_startup()
+
+    # run module
+    try: 
+      kgtk_exception_handler = KGTKExceptionHandler(debug=parsed_shared_args._debug)
+      ret_code = kgtk_exception_handler(func, **kwargs)
+    except KeyboardInterrupt as e:
+        print("\nKeyboard interrupt in %s." % " ".join(args), file=sys.stderr, flush=True)
+        progress_shutdown()
+        if hasattr(mod, 'keyboard_interrupt'):
+            mod.keyboard_interrupt()
+
+        # Silently exit instead of re-raising the KeyboardInterrupt.
+        # raise
+    return ret_code
+
+def cli_piped_commands(parallel_pipes, args, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)->int:
+    ret_code: int = 0
+    if parsed_shared_args._pipedebug:
+        print("pid %d: Building a KGTK pipe" % (os.getpid()), file=sys.stderr, flush=True)
+    processes = [ ]
+    try:
+        # TODO: Restore the prior signal handler when done.
+        def sigterm_handler(signal, frame):
+            # This handles pipe shutdowns.
+            if parsed_shared_args._pipedebug:
+                print("\npipe: sigterm_handler", file=sys.stderr, flush=True)
+            raise KeyboardInterrupt
+
+        signal.signal(signal.SIGTERM, sigterm_handler)
+
+        for parallel_idx, pipe in enumerate(parallel_pipes):
+            if parallel_idx > 0 and parsed_shared_args._pipedebug:
+                print("*** in parallel with ***", file=sys.stderr, flush=True)
+
+            prior_process = None
+            for pipe_idx, cmd_args in enumerate(pipe):
                 # add shared arguments
                 full_args = [ ]
                 for shared_arg in shared_args:
-                    if idx == 0 or str(shared_arg) != "--progress":
+                    if (parallel_idx == 0 and pipe_idx == 0) or str(shared_arg) != "--progress":
                         full_args.append(shared_arg)
                 full_args.extend(cmd_args)
+
                 kwargs = {
                     "_bg_exc": False,
                     "_done": cmd_done,
                     "_err": sys.stderr,
                     "_bg": True,
                     "_internal_bufsize": 1,
+                    "_new_session": False,
                 }
 
                 # add specific arguments
-                if idx == 0:  # The first commamd reads from our STDIN.
+                if pipe_idx == 0:  # The first command reads from our STDIN.
                     kwargs["_in"] = sys.stdin
 
-                if idx + 1 < len(pipe):
+                if pipe_idx + 1 < len(pipe):
                     # All commands but the last pipe their output to the next command.
                     kwargs["_piped"] = True
                 else:
@@ -227,47 +239,94 @@ def cli_entry_pipe(args, parsed_shared_args, shared_args, parser, sub_parsers, s
                     cmd_str = " ".join(full_args)
                     for key in kwargs:
                         cmd_str += " " + key + "=" + str(kwargs[key])
-                    print("pipe[%d]: kgtk %s" % (idx, cmd_str), file=sys.stderr, flush=True)
+                    print("pipe[%d][%d]: kgtk %s" % (parallel_idx, pipe_idx, cmd_str), file=sys.stderr, flush=True)
 
-                if idx == 0:
-                    processes.append(sh.kgtk(*full_args, **kwargs))
+                if prior_process is None:
+                    new_process = sh.kgtk(*full_args, **kwargs)
                 else:
-                    processes.append(sh.kgtk(processes[idx - 1], *full_args, **kwargs))
+                    new_process = sh.kgtk(prior_process, *full_args, **kwargs)
+                processes.append(new_process)
+                prior_process = new_process                
                 
-            for idx in range(len(pipe)):
-                processes[idx].wait()
+        if parsed_shared_args._pipedebug:
+            print("*** waiting ***", file=sys.stderr, flush=True)
+        for process in processes:
+            process.wait()
 
-        except sh.SignalException_SIGPIPE:
-            if parsed_shared_args._pipedebug:
-                print("\npipe: sh.SignalException_SIGPIPE", file=sys.stderr, flush=True)
+    except sh.SignalException_SIGPIPE:
+        if parsed_shared_args._pipedebug:
+            print("\npipe: sh.SignalException_SIGPIPE", file=sys.stderr, flush=True)
 
-        except sh.SignalException_SIGTERM:
-            if parsed_shared_args._pipedebug:
-                print("\npipe: sh.SignalException_SIGTERM", file=sys.stderr, flush=True)
-            raise
+    except sh.SignalException_SIGTERM:
+        if parsed_shared_args._pipedebug:
+            print("\npipe: sh.SignalException_SIGTERM", file=sys.stderr, flush=True)
+        if len(processes) > 0:
+            for process in processes:
+                try:
+                    process.terminate()
+                except Exception:
+                    pass
+        # raise
 
-        except KeyboardInterrupt as e:
-            if parsed_shared_args._pipedebug:
-                print("\npipe: KeyboardInterrupt", file=sys.stderr, flush=True)
-            if len(processes) > 0:
-                for idx in range(len(processes)):
-                    process = processes[idx]
-                    pgid = process.pgid
-                    print("Killing cmd %d process group %d" % (idx, pgid), file=sys.stderr, flush=True)
+    except KeyboardInterrupt as e:
+        if parsed_shared_args._pipedebug:
+            print("\npipe: KeyboardInterrupt", file=sys.stderr, flush=True)
+        if len(processes) > 0:
+            for idx in range(len(processes)):
+                process = processes[idx]
+                pgid = process.pgid
+                print("Killing cmd %d process group %d" % (idx, pgid), file=sys.stderr, flush=True)
+                try:
                     process.signal_group(signal.SIGINT)
+                except Exception:
+                    pass
+        return -1
 
-        except sh.ErrorReturnCode as e:
-            if parsed_shared_args._pipedebug:
-                print("\npipe: sh.ErrorReturnCode", file=sys.stderr, flush=True)
-            # mimic parser exit
-            parser.exit(KGTKArgumentParseException.return_code, e.stderr.decode('utf-8'))
-    
+    except sh.ErrorReturnCode as e:
+        if parsed_shared_args._pipedebug:
+            print("\npipe: sh.ErrorReturnCode", file=sys.stderr, flush=True)
+        # mimic parser exit
+        parser.exit(KGTKArgumentParseException.return_code, e.stderr.decode('utf-8'))
     return ret_code
 
+def cli_entry_pipe(args, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)->int:
+    if pipe_delimiter not in args and parallel_delimiter not in args:
+        return cli_single_command(args, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)
+
+    # parse internal pipe
+    parallel_pipes: typing.List[typing.List[typing.List[str]]] = list()
+    pipe: typing.List[typing.List[str]] = list()
+    cmd_args: typing.List[str] = list()
+    for arg in args:
+        if arg == parallel_delimiter:
+            if len(cmd_args) > 0:
+                pipe.append(cmd_args)
+                cmd_args = list()
+            if len(pipe) > 0:
+                parallel_pipes.append(pipe)
+                pipe = list()
+        elif arg == pipe_delimiter:
+            if len(cmd_args) > 0:
+                pipe.append(cmd_args)
+                cmd_args = list()
+        else:
+            cmd_args.append(arg)
+    if len(cmd_args) > 0:
+        pipe.append(cmd_args)
+    if len(pipe) > 0:
+        parallel_pipes.append(pipe)
+
+    if len(parallel_pipes) == 0:
+        parser.print_usage()
+        parser.exit(KGTKArgumentParseException.return_code)
+    return cli_piped_commands(parallel_pipes, args, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)
+    
 def cli_entry_sequential_commands(args, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)->int:
     # parse internal sequence of pipes
     ret_code: int = 0
-    for commands in split_list(args, sequential_delimiter):
+    for sequential_idx, commands in enumerate(split_list(args, sequential_delimiter)):
+        if sequential_idx > 0 and parsed_shared_args._pipedebug:
+            print("*** followed by ***", file=sys.stderr, flush=True)
         ret_code = cli_entry_pipe(commands, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)
         if ret_code != 0:
             break
