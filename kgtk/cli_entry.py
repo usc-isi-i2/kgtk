@@ -73,6 +73,8 @@ def progress_startup(pid: typing.Optional[int] = None, fd: typing.Optional[int] 
 
         # Give up if cannot find `pv`:
         if shutil.which('pv') is None:
+            if _save_progress_debug:
+                print("progress_startup: cannot find pv.", file=sys.stderr, flush=True)
             return
 
         # Start a process monitor.
@@ -80,13 +82,18 @@ def progress_startup(pid: typing.Optional[int] = None, fd: typing.Optional[int] 
             pid = os.getpid()
         try:
             if fd is None:
+                if _save_progress_debug:
+                    print("progress_startup: starting pv with pid %d" % pid, file=sys.stderr, flush=True)
                 _save_progress_command = sh.pv("-d {}".format(pid), _out=_save_progress_tty, _err=_save_progress_tty, _bg=True)
             else:
+                if _save_progress_debug:
+                    print("progress_startup: starting pv with pid %d fd %d" % (pid, fd), file=sys.stderr, flush=True)
                 _save_progress_command = sh.pv("-d {}:{}".format(pid, fd),
                                                _out=_save_progress_tty, _err=_save_progress_tty, _bg=True)
-        except Exception:
+        except Exception as e:
             # Ignore the exception unless _save_progress_debug is True.
             if _save_progress_debug:
+                print("progress_startup: %s" % str(e), file=sys.stderr, flush=True)
                 raise
 
 def progress_shutdown():
@@ -161,11 +168,13 @@ def cli_entry_pipe(args, parsed_shared_args, shared_args, parser, sub_parsers, s
         global _save_progress
         _save_progress = parsed_shared_args._progress
         global _save_progress_debug
-        _save_progress = parsed_shared_args._progressdebug
+        _save_progress_debug = parsed_shared_args._progress_debug
         global _save_progress_tty
         _save_progress_tty = parsed_shared_args._progress_tty
         if parsed_shared_args._progress:
             if hasattr(mod, 'custom_progress') and mod.custom_progress():
+                if _save_progress_debug:
+                    print("custom progress", file=sys.stderr, flush=True)
                 pass
             else:
                 progress_startup()
@@ -316,7 +325,7 @@ def cli_entry(*args):
                              default=os.getenv('KGTK_OPTION_PROGRESS', 'False').lower() in ['y', 'yes', 'true'],
                              help='enable progress monitoring')
     
-    shared_args.add_argument('--progressdebug', dest='_progressdebug', action='store_true',
+    shared_args.add_argument('--progress-debug', dest='_progress_debug', action='store_true',
                              default=os.getenv('KGTK_OPTION_PROGRESSDEBUG', 'False').lower() in ['y', 'yes', 'true'],
                              help='enable progress debug mode, which will show exceptions occuring during progress monitoring startup')
     
