@@ -149,6 +149,7 @@ OPERATIONS: typing.List[str] = [
 OVERWRITE_FALSE_OPERATIONS: typing.List[str] = [
     COPY_OP,
     SET_OP,
+    SUBSTRING_OP,
 ]
 
 TO_STRING_TRUE_OPERATIONS: typing.List[str] = [
@@ -646,16 +647,19 @@ def run(input_file: KGTKFiles,
             if len(sources) != len(into_column_idxs):
                 raise KGTKException("Copy needs the same number of source columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
             
-            def copy_op()->bool:
-                src_idx: int
-                if overwrite:
+            if overwrite:
+                def copy_op()->bool:
+                    src_idx: int
                     for src_idx in range(len(sources)):
                         output_row[into_column_idxs[src_idx]] = row[sources[src_idx]]
-                else:
+                    return True
+            else:
+                def copy_op()->bool:
+                    src_idx: int
                     for src_idx in range(len(sources)):
                         if len(output_row[into_column_idxs[src_idx]]) == 0:
                             output_row[into_column_idxs[src_idx]] = row[sources[src_idx]]
-                return True
+                    return True
             opfunc = copy_op
 
         elif operation == DIV_OP:
@@ -1323,16 +1327,19 @@ def run(input_file: KGTKFiles,
             if len(into_column_idxs) != len(values):
                 raise KGTKException("Set needs the same number of destination columns and values, got %d and %d" % (len(into_column_idxs), len(values)))
 
-            def set_op()->bool:
-                value_idx: int
-                if overwrite:
+            if overwrite:
+                def set_op()->bool:
+                    value_idx: int
                     for value_idx in range(len(values)):
                         output_row[into_column_idxs[value_idx]] = values[value_idx]
-                else:
+                    return True
+            else:
+                def set_op()->bool:
+                    value_idx: int
                     for value_idx in range(len(values)):
                         if len(output_row[into_column_idxs[value_idx]]) == 0:
                             output_row[into_column_idxs[value_idx]] = values[value_idx]
-                return True
+                    return True
             opfunc = set_op
 
         elif operation == SUBSTRING_OP:
@@ -1352,26 +1359,50 @@ def run(input_file: KGTKFiles,
                 start_slice = int(values[0])
                 end_slice = int(values[1])
 
-            def substring_op()->bool:
-                item: str = row[sources[0]]
-                if item.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)):
-                    item = KgtkFormat.unstringify(item)
-                    if end_slice is None:
-                        output_row[into_column_idx] = KgtkFormat.stringify(item[start_slice:])
-                    else:
-                        output_row[into_column_idx] = KgtkFormat.stringify(item[start_slice:end_slice])
-                else:
-                    if end_slice is None:
-                        if to_string:
+            if overwrite:
+                def substring_op()->bool:
+                    item: str = row[sources[0]]
+                    if item.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)):
+                        item = KgtkFormat.unstringify(item)
+                        if end_slice is None:
                             output_row[into_column_idx] = KgtkFormat.stringify(item[start_slice:])
                         else:
-                            output_row[into_column_idx] = item[start_slice:]
-                    else:
-                        if to_string:
                             output_row[into_column_idx] = KgtkFormat.stringify(item[start_slice:end_slice])
+                    else:
+                        if end_slice is None:
+                            if to_string:
+                                output_row[into_column_idx] = KgtkFormat.stringify(item[start_slice:])
+                            else:
+                                output_row[into_column_idx] = item[start_slice:]
                         else:
-                            output_row[into_column_idx] = item[start_slice:end_slice]
-                return True
+                            if to_string:
+                                output_row[into_column_idx] = KgtkFormat.stringify(item[start_slice:end_slice])
+                            else:
+                                output_row[into_column_idx] = item[start_slice:end_slice]
+                    return True
+            else:
+                def substring_op()->bool:
+                    if len(output_row[into_column_idx]) >0:
+                        return
+                    item: str = row[sources[0]]
+                    if item.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)):
+                        item = KgtkFormat.unstringify(item)
+                        if end_slice is None:
+                            output_row[into_column_idx] = KgtkFormat.stringify(item[start_slice:])
+                        else:
+                            output_row[into_column_idx] = KgtkFormat.stringify(item[start_slice:end_slice])
+                    else:
+                        if end_slice is None:
+                            if to_string:
+                                output_row[into_column_idx] = KgtkFormat.stringify(item[start_slice:])
+                            else:
+                                output_row[into_column_idx] = item[start_slice:]
+                        else:
+                            if to_string:
+                                output_row[into_column_idx] = KgtkFormat.stringify(item[start_slice:end_slice])
+                            else:
+                                output_row[into_column_idx] = item[start_slice:end_slice]
+                    return True
             opfunc = substring_op
 
         elif operation == SUBSTITUTE_OP:
