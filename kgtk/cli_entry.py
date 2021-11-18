@@ -34,7 +34,7 @@ except ImportError:
 
 pipe_delimiter = '/'
 sequential_delimiter = '/,'
-parallel_delimiter = '/:'
+parallel_delimiter = '//'
 ret_code = 0
 
 def cmd_done(cmd, success, exit_code):
@@ -111,10 +111,12 @@ def split_list(sequence, sep):
             chunk.append(val)
     yield chunk
 
-def cli_single_command(pipe, args, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)->int:
+def cli_single_command(args, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)->int:
     import copy
+    if parsed_shared_args._pipedebug:
+        print("pid %d: Executing a single command: %s" % (os.getpid(), repr(args)), file=sys.stderr, flush=True)
     ret_code: int = 0
-    cmd_args = pipe[0]
+    cmd_args = copy.deepcopy(args)
     cmd_name = cmd_args[0].replace("_", "-")
     cmd_args[0] = cmd_name
     # build sub-parser
@@ -178,23 +180,25 @@ def cli_single_command(pipe, args, parsed_shared_args, shared_args, parser, sub_
         # raise
     return ret_code
 
-def cli_piped_commands(bigpipe, args, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)->int:
+def cli_piped_commands(parallel_pipes, args, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)->int:
     ret_code: int = 0
     if parsed_shared_args._pipedebug:
-        print("Building a KGTK pipe.  pid=%d" % (os.getpid()), file=sys.stderr, flush=True)
+        print("pid %d: Building a KGTK pipe" % (os.getpid()), file=sys.stderr, flush=True)
     processes = [ ]
     try:
-        for parallel_idx, pipe in enumerate(split_list(bigpipe, parallel_delimiter)):
+        for parallel_idx, pipe in enumerate(parallel_pipes):
             if parallel_idx > 0 and parsed_shared_args._pipedebug:
                 print("*** in parallel with ***", file=sys.stderr, flush=True)
+
             prior_process = None
-            for idx, cmd_args in enumerate(pipe):
+            for pipe_idx, cmd_args in enumerate(pipe):
                 # add shared arguments
                 full_args = [ ]
                 for shared_arg in shared_args:
-                    if idx == 0 or str(shared_arg) != "--progress":
+                    if (parallel_idx == 0 and pipe_idx == 0) or str(shared_arg) != "--progress":
                         full_args.append(shared_arg)
                 full_args.extend(cmd_args)
+
                 kwargs = {
                     "_bg_exc": False,
                     "_done": cmd_done,
@@ -204,10 +208,10 @@ def cli_piped_commands(bigpipe, args, parsed_shared_args, shared_args, parser, s
                 }
 
                 # add specific arguments
-                if idx == 0:  # The first command reads from our STDIN.
+                if pipe_idx == 0:  # The first command reads from our STDIN.
                     kwargs["_in"] = sys.stdin
 
-                if idx + 1 < len(pipe):
+                if pipe_idx + 1 < len(pipe):
                     # All commands but the last pipe their output to the next command.
                     kwargs["_piped"] = True
                 else:
@@ -218,7 +222,7 @@ def cli_piped_commands(bigpipe, args, parsed_shared_args, shared_args, parser, s
                     cmd_str = " ".join(full_args)
                     for key in kwargs:
                         cmd_str += " " + key + "=" + str(kwargs[key])
-                    print("pipe[%d]: kgtk %s" % (idx, cmd_str), file=sys.stderr, flush=True)
+                    print("pipe[%d][%d]: kgtk %s" % (parallel_idx, pipe_idx, cmd_str), file=sys.stderr, flush=True)
 
                 if prior_process is None:
                     new_process = sh.kgtk(*full_args, **kwargs)
@@ -259,20 +263,37 @@ def cli_piped_commands(bigpipe, args, parsed_shared_args, shared_args, parser, s
     return ret_code
 
 def cli_entry_pipe(args, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)->int:
+    if pipe_delimiter not in args and parallel_delimiter not in args:
+        return cli_single_command(args, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)
+
     # parse internal pipe
-    ret_code: int = 0
-    pipe = [list(y) for x, y in itertools.groupby(args, lambda a: a == pipe_delimiter) if not x]
-    if len(pipe) == 0:
+    parallel_pipes: typing.List[typing.List[typing.List[str]]] = list()
+    pipe: typing.List[typing.List[str]] = list()
+    cmd_args: typing.List[str] = list()
+    for arg in args:
+        if arg == parallel_delimiter:
+            if len(cmd_args) > 0:
+                pipe.append(cmd_args)
+                cmd_args = list()
+            if len(pipe) > 0:
+                parallel_pipes.append(pipe)
+                pipe = list()
+        elif arg == pipe_delimiter:
+            if len(cmd_args) > 0:
+                pipe.append(cmd_args)
+                cmd_args = list()
+        else:
+            cmd_args.append(arg)
+    if len(cmd_args) > 0:
+        pipe.append(cmd_args)
+    if len(pipe) > 0:
+        parallel_pipes.append(pipe)
+
+    if len(parallel_pipes) == 0:
         parser.print_usage()
         parser.exit(KGTKArgumentParseException.return_code)
-    elif len(pipe) == 1:  # single command
-        ret_code = cli_single_command(pipe, args, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)
-
-    else:  # piped commands
-        ret_code = cli_piped_commands(pipe, args, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)
+    return cli_piped_commands(parallel_pipes, args, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)
     
-    return ret_code
-
 def cli_entry_sequential_commands(args, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)->int:
     # parse internal sequence of pipes
     ret_code: int = 0
