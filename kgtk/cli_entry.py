@@ -186,6 +186,15 @@ def cli_piped_commands(parallel_pipes, args, parsed_shared_args, shared_args, pa
         print("pid %d: Building a KGTK pipe" % (os.getpid()), file=sys.stderr, flush=True)
     processes = [ ]
     try:
+        # TODO: Restore the prior signal handler when done.
+        def sigterm_handler(signal, frame):
+            # This handles pipe shutdowns.
+            if parsed_shared_args._pipedebug:
+                print("\npipe: sigterm_handler", file=sys.stderr, flush=True)
+            raise KeyboardInterrupt
+
+        signal.signal(signal.SIGTERM, sigterm_handler)
+
         for parallel_idx, pipe in enumerate(parallel_pipes):
             if parallel_idx > 0 and parsed_shared_args._pipedebug:
                 print("*** in parallel with ***", file=sys.stderr, flush=True)
@@ -205,6 +214,7 @@ def cli_piped_commands(parallel_pipes, args, parsed_shared_args, shared_args, pa
                     "_err": sys.stderr,
                     "_bg": True,
                     "_internal_bufsize": 1,
+                    "_new_session": False,
                 }
 
                 # add specific arguments
@@ -243,7 +253,13 @@ def cli_piped_commands(parallel_pipes, args, parsed_shared_args, shared_args, pa
     except sh.SignalException_SIGTERM:
         if parsed_shared_args._pipedebug:
             print("\npipe: sh.SignalException_SIGTERM", file=sys.stderr, flush=True)
-        raise
+        if len(processes) > 0:
+            for process in processes:
+                try:
+                    process.terminate()
+                except Exception:
+                    pass
+        # raise
 
     except KeyboardInterrupt as e:
         if parsed_shared_args._pipedebug:
@@ -253,7 +269,11 @@ def cli_piped_commands(parallel_pipes, args, parsed_shared_args, shared_args, pa
                 process = processes[idx]
                 pgid = process.pgid
                 print("Killing cmd %d process group %d" % (idx, pgid), file=sys.stderr, flush=True)
-                process.signal_group(signal.SIGINT)
+                try:
+                    process.signal_group(signal.SIGINT)
+                except Exception:
+                    pass
+        return -1
 
     except sh.ErrorReturnCode as e:
         if parsed_shared_args._pipedebug:
