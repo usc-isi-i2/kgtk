@@ -1070,21 +1070,33 @@ class KgtkWriter(KgtkBase):
             self.finish_table()
 
         elif self.output_format == self.OUTPUT_FORMAT_HTML:
+            if self.verbose:
+                print("Writing the HTML trailer.", file=self.error_file, flush=True)
             self.write_html_trailer()
 
         elif self.output_format == self.OUTPUT_FORMAT_HTML_COMPACT:
+            if self.verbose:
+                print("Writing the compact HTML trailer.", file=self.error_file, flush=True)
             self.write_html_trailer(compact=True)
 
         if self.gzip_thread is not None:
+            if self.verbose:
+                print("Closing the GZIP thread.", file=self.error_file, flush=True)
             self.gzip_thread.close()
         else:
-            try:
-                self.file_out.close()
-            except IOError as e:
-                if e.errno == errno.EPIPE:
-                    pass # Ignore.
-                else:
-                    raise
+            if self.file_path is None:
+                if self.verbose:
+                    print("KgtkWriter: not closing standard output", file=self.error_file, flush=True)
+            else:
+                if self.verbose:
+                    print("KgtkWriter: closing the output file", file=self.error_file, flush=True)
+                try:
+                    self.file_out.close()
+                except IOError as e:
+                    if e.errno == errno.EPIPE:
+                        pass # Ignore.
+                    else:
+                        raise
 
     def mapvalues(self, value_map: typing.Mapping[str, str])->typing.List[str]:
         # Optionally check for unexpected column names:
