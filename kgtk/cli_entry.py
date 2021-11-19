@@ -164,7 +164,7 @@ def cli_single_command(args, parsed_shared_args, shared_args, parser, sub_parser
     global _save_progress
     _save_progress = parsed_shared_args._progress
     global _save_progress_debug
-    _save_progress = parsed_shared_args._progressdebug
+    _save_progress_debug = parsed_shared_args._progress_debug
     global _save_progress_tty
     _save_progress_tty = parsed_shared_args._progress_tty
     if parsed_shared_args._progress:

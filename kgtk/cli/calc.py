@@ -87,6 +87,10 @@ JOIN_OP: str = "join"
 LEN_OP: str = "len"
 LOWER_OP: str = "lower"
 REPLACE_OP: str = "replace"
+STRING_LANG_OP: str = "string_lang"
+STRING_LANG_SUFFIX_OP: str = "string_lang_suffix"
+STRING_SUFFIX_OP: str = "string_suffix"
+STRING_TEXT_OP: str = "string_text"
 SUBSTITUTE_OP: str = "substitute"
 SUBSTRING_OP: str = "substring"
 SWAPCASE_OP: str = "swapcase"
@@ -137,6 +141,10 @@ OPERATIONS: typing.List[str] = [
     REVERSE_DIV_OP,
     REVERSE_MINUS_OP,
     SET_OP,
+    STRING_LANG_OP,
+    STRING_LANG_SUFFIX_OP,
+    STRING_SUFFIX_OP,
+    STRING_TEXT_OP,
     SUBSTRING_OP,
     SUBSTITUTE_OP,
     SUM_OP,
@@ -153,6 +161,9 @@ OVERWRITE_FALSE_OPERATIONS: typing.List[str] = [
 ]
 
 TO_STRING_TRUE_OPERATIONS: typing.List[str] = [
+    STRING_LANG_OP,
+    STRING_LANG_SUFFIX_OP,
+    STRING_SUFFIX_OP,
     SUBSTRING_OP,
 ]
 
@@ -1341,6 +1352,138 @@ def run(input_file: KGTKFiles,
                             output_row[into_column_idxs[value_idx]] = values[value_idx]
                     return True
             opfunc = set_op
+
+        elif operation == STRING_LANG_OP:
+            if len(sources) == 0:
+                raise KGTKException("String_lang needs at least one source, got %d" % len(sources))
+            if len(sources) != len(into_column_idxs):
+                raise KGTKException("String_lang needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
+
+            if to_string:
+                def string_lang_op()->bool:
+                    src_idx: int
+                    for src_idx in range(len(sources)):
+                        item: str = row[sources[src_idx]]
+                        if item.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)):
+                            # TODO: optimize this.
+                            text: str
+                            lang: str
+                            suffix: str
+                            text, lang, suffix = KgtkFormat.destringify(item)
+                            output_row[into_column_idxs[src_idx]] = KgtkFormat.stringify(lang)
+                        else:
+                            output_row[into_column_idxs[src_idx]] = ""
+                    return True
+            else:
+                def string_lang_op()->bool:
+                    src_idx: int
+                    for src_idx in range(len(sources)):
+                        item: str = row[sources[src_idx]]
+                        if item.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)):
+                            # TODO: optimize this.
+                            text: str
+                            lang: str
+                            suffix: str
+                            text, lang, suffix = KgtkFormat.destringify(item)
+                            output_row[into_column_idxs[src_idx]] = lang
+                        else:
+                            output_row[into_column_idxs[src_idx]] = ""
+                    return True
+            opfunc = string_lang_op
+
+        elif operation == STRING_LANG_SUFFIX_OP:
+            if len(sources) == 0:
+                raise KGTKException("String_lang_suffix needs at least one source, got %d" % len(sources))
+            if len(sources) != len(into_column_idxs):
+                raise KGTKException("String_lang_suffix needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
+
+            if to_string:
+                def string_lang_suffix_op()->bool:
+                    src_idx: int
+                    for src_idx in range(len(sources)):
+                        item: str = row[sources[src_idx]]
+                        if item.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)):
+                            # TODO: optimize this.
+                            text: str
+                            lang: str
+                            suffix: str
+                            text, lang, suffix = KgtkFormat.destringify(item)
+                            output_row[into_column_idxs[src_idx]] = KgtkFormat.stringify(lang + suffix)
+                        else:
+                            output_row[into_column_idxs[src_idx]] = ""
+                    return True
+            else:
+                def string_lang_suffix_op()->bool:
+                    src_idx: int
+                    for src_idx in range(len(sources)):
+                        item: str = row[sources[src_idx]]
+                        if item.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)):
+                            # TODO: optimize this.
+                            text: str
+                            lang: str
+                            suffix: str
+                            text, lang, suffix = KgtkFormat.destringify(item)
+                            output_row[into_column_idxs[src_idx]] = lang + suffix
+                        else:
+                            output_row[into_column_idxs[src_idx]] = ""
+                    return True
+            opfunc = string_lang_suffix_op
+
+        elif operation == STRING_SUFFIX_OP:
+            if len(sources) == 0:
+                raise KGTKException("String_suffix needs at least one source, got %d" % len(sources))
+            if len(sources) != len(into_column_idxs):
+                raise KGTKException("String_suffix needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
+
+            if to_string:
+                def string_suffix_op()->bool:
+                    src_idx: int
+                    for src_idx in range(len(sources)):
+                        item: str = row[sources[src_idx]]
+                        if item.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)):
+                            # TODO: optimize this.
+                            text: str
+                            lang: str
+                            suffix: str
+                            text, lang, suffix = KgtkFormat.destringify(item)
+                            output_row[into_column_idxs[src_idx]] = KgtkFormat.stringify(suffix)
+                        else:
+                            output_row[into_column_idxs[src_idx]] = ""
+                    return True
+            else:
+                def string_suffix_op()->bool:
+                    src_idx: int
+                    for src_idx in range(len(sources)):
+                        item: str = row[sources[src_idx]]
+                        if item.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)):
+                            # TODO: optimize this.
+                            text: str
+                            lang: str
+                            suffix: str
+                            text, lang, suffix = KgtkFormat.destringify(item)
+                            output_row[into_column_idxs[src_idx]] = suffix
+                        else:
+                            output_row[into_column_idxs[src_idx]] = ""
+                    return True
+            opfunc = string_suffix_op
+
+        elif operation == STRING_TEXT_OP:
+            if len(sources) == 0:
+                raise KGTKException("String_text needs at least one source, got %d" % len(sources))
+            if len(sources) != len(into_column_idxs):
+                raise KGTKException("String_text needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
+
+            def string_text_op()->bool:
+                src_idx: int
+                for src_idx in range(len(sources)):
+                    item: str = row[sources[src_idx]]
+                    if item.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)):
+                        # TODO: optimize this.
+                        output_row[into_column_idxs[src_idx]] = KgtkFormat.stringify(KgtkFormat.unstringify(item))
+                    else:
+                        output_row[into_column_idxs[src_idx]] = ""
+                return True
+            opfunc = string_text_op
 
         elif operation == SUBSTRING_OP:
             if len(into_column_idxs) != 1:
