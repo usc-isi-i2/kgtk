@@ -43,7 +43,7 @@ cleared if an error occurs processing the input date-and-time value.
 usage: kgtk calc [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                  [-c [COLUMN_NAME [COLUMN_NAME ...]]]
                  [--into COLUMN_NAME [COLUMN_NAME ...]] --do
-                 {abs,and,average,capitalize,casefold,copy,div,eq,fromisoformat,ge,gt,is,is_in,is_not,join,lower,le,len,lt,max,min,minus,nand,ne,negate,nor,not,or,percentage,replace,reverse_div,reverse_minus,set,substring,substitute,sum,swapcase,title,upper,xor}
+                 {abs,and,average,capitalize,casefold,copy,div,eq,fromisoformat,ge,gt,is,is_in,is_not,join,lower,le,len,lt,max,min,minus,nand,ne,negate,nor,not,or,percentage,replace,reverse_div,reverse_minus,set,string_lang,string_lang_suffix,string_suffix,string_text,substring,substitute,sum,swapcase,title,upper,xor}
                  [--values [VALUES [VALUES ...]]]
                  [--with-values [WITH_VALUES [WITH_VALUES ...]]]
                  [--limit LIMIT] [--format FORMAT_STRING]
@@ -73,7 +73,7 @@ optional arguments:
   --into COLUMN_NAME [COLUMN_NAME ...]
                         The name of the column to receive the result of the
                         calculation.
-  --do {abs,and,average,capitalize,casefold,copy,div,eq,fromisoformat,ge,gt,is,is_in,is_not,join,lower,le,len,lt,max,min,minus,nand,ne,negate,nor,not,or,percentage,replace,reverse_div,reverse_minus,set,substring,substitute,sum,swapcase,title,upper,xor}
+  --do {abs,and,average,capitalize,casefold,copy,div,eq,fromisoformat,ge,gt,is,is_in,is_not,join,lower,le,len,lt,max,min,minus,nand,ne,negate,nor,not,or,percentage,replace,reverse_div,reverse_minus,set,string_lang,string_lang_suffix,string_suffix,string_text,substring,substitute,sum,swapcase,title,upper,xor}
                         The name of the operation.
   --values [VALUES [VALUES ...]]
                         An optional list of values
@@ -86,13 +86,14 @@ optional arguments:
                         If true, overwrite non-empty values in the result
                         column(s). If false, do not overwrite non-empty values
                         in the result column(s). --overwrite=False may be used
-                        with the following operations: ['copy', 'set']
-                        (default=True).
+                        with the following operations: ['copy', 'set',
+                        'substring'] (default=True).
   --to-string [True|False]
                         If true, ensure that the result is a string. If false,
                         the result might be a symbol or some other type. --to-
                         string=True may be used with the following operations:
-                        ['substring'] (default=False).
+                        ['string_lang', 'string_lang_suffix', 'string_suffix',
+                        'substring'] (default=False).
   --group-by [COLUMN_NAME [COLUMN_NAME ...]]
                         The list of group-by column names, optionally
                         containing '..' for column ranges and '...' for column
