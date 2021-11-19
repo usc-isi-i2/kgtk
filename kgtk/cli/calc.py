@@ -59,6 +59,12 @@ NOT_OP: str = "not" # (boolean, ...) -> (boolean, ...)
 OR_OP: str = "or" # (boolean, boolean) -> boolean
 XOR_OP: str = "xor" # (boolean, boolean) -> boolean
 
+# Date and times
+IS_DATE_OP: str = "is_date" # -> bool
+DATE_DAY_OP: str = "date_day" # -> int or str
+DATE_MONTH_OP: str = "date_month"
+DATE_YEAR_OP: str = "date_year"
+
 # Numeric
 ABS_OP: str = "abs" # (column, ...)
 AVERAGE_OP: str = "average"
@@ -68,6 +74,7 @@ MIN_OP: str = "min"
 MINUS_OP: str = "minus" # (column1 - column2) or (column - value)
 MOD_OP: str = "mod" # (column mod column) or (column mod value)
 NEGATE_OP: str = "negate" # (column, ...)
+NUMBER_OP: str = "number" # Get a number or the numeric part of a quantity.
 PERCENTAGE_OP: str = "percentage"
 REVERSE_DIV_OP: str = "reverse_div" # (column2 / column1) or (column / value)
 REVERSE_MINUS_OP: str = "reverse_minus" # (column2 - column1) or (value - column)
@@ -83,6 +90,8 @@ NE_OP: str = "ne" # (column != column) or (column != value) -> boolean
 # String
 CAPITALIZE_OP: str = "capitalize"
 CASEFOLD_OP: str = "casefold"
+IS_LQSTRING_OP: str = "is_lqstring" # -> bool
+IS_STRING_OP: str = "is_string" # -> bool
 JOIN_OP: str = "join"
 LEN_OP: str = "len"
 LOWER_OP: str = "lower"
@@ -114,14 +123,20 @@ OPERATIONS: typing.List[str] = [
     CAPITALIZE_OP,
     CASEFOLD_OP,
     COPY_OP,
+    DATE_DAY_OP,
+    DATE_MONTH_OP,
+    DATE_YEAR_OP,
     DIV_OP,
     EQ_OP,
     FROMISOFORMAT_OP,
     GE_OP,
     GT_OP,
-    IS_OP,
+    IS_DATE_OP,
     IS_IN_OP,
+    IS_LQSTRING_OP,
     IS_NOT_OP,
+    IS_OP,
+    IS_STRING_OP,
     JOIN_OP,
     LOWER_OP,
     LE_OP,
@@ -135,6 +150,7 @@ OPERATIONS: typing.List[str] = [
     NEGATE_OP,
     NOR_OP,
     NOT_OP,
+    NUMBER_OP,
     OR_OP,
     PERCENTAGE_OP,
     REPLACE_OP,
@@ -161,6 +177,10 @@ OVERWRITE_FALSE_OPERATIONS: typing.List[str] = [
 ]
 
 TO_STRING_TRUE_OPERATIONS: typing.List[str] = [
+    DATE_DAY_OP,
+    DATE_MONTH_OP,
+    DATE_YEAR_OP,
+    NUMBER_OP,
     STRING_LANG_OP,
     STRING_LANG_SUFFIX_OP,
     STRING_SUFFIX_OP,
@@ -256,7 +276,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help=h("When specified, rename the --group-by columns on output."))
 
     parser.add_argument(      "--filter", dest="filter",
-                              help="When --filter=True, and a boolean operation is specified, records for which " +
+                              help="When --filter=True, and an operation is specified with a boolean result, records for which " +
                               "the result is False will not be written to the output stream.  Also, " +
                               "--into is optional when --filter is provided. (default=%(default)s).",
                               metavar="True|False",
@@ -673,6 +693,105 @@ def run(input_file: KGTKFiles,
                     return True
             opfunc = copy_op
 
+        elif operation == DATE_DAY_OP:
+            # TODO:  Need date/time parsing options.
+            if len(sources) == 0:
+                raise KGTKException("date_day needs at least one source, got %d" % len(sources))
+            if len(sources) != len(into_column_idxs):
+                raise KGTKException("date_day needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
+
+            if to_string:
+                def date_day_op()->bool:
+                    src_idx: int
+                    for src_idx in range(len(sources)):
+                        item: str = row[sources[src_idx]]
+                        # TODO: optimize this.
+                        kv: KgtkValue = KgtkValue(item) # TODO: Need options!
+                        if kv.is_date_and_times(item, validate=True, parse_fields=True) and kv.fields is not None:
+                            output_row[into_column_idxs[src_idx]] = KgtkFormat.STRING_SIGIL + kv.fields.daystr + KgtkFormat.STRING_SIGIL
+                        else:
+                            output_row[into_column_idxs[src_idx]] = ""
+                    return True
+            else:
+                def date_day_op()->bool:
+                    src_idx: int
+                    for src_idx in range(len(sources)):
+                        item: str = row[sources[src_idx]]
+                        # TODO: optimize this.
+                        kv: KgtkValue = KgtkValue(item) # TODO: Need options!
+                        if kv.is_date_and_times(item, validate=True, parse_fields=True) and kv.fields is not None:
+                            output_row[into_column_idxs[src_idx]] = str(kv.fields.day) # Elimiate leading 0
+                        else:
+                            output_row[into_column_idxs[src_idx]] = ""
+                    return True
+            opfunc = date_day_op
+
+        elif operation == DATE_MONTH_OP:
+            # TODO:  Need date/time parsing options.
+            if len(sources) == 0:
+                raise KGTKException("date_month needs at least one source, got %d" % len(sources))
+            if len(sources) != len(into_column_idxs):
+                raise KGTKException("date_month needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
+
+            if to_string:
+                def date_month_op()->bool:
+                    src_idx: int
+                    for src_idx in range(len(sources)):
+                        item: str = row[sources[src_idx]]
+                        # TODO: optimize this.
+                        kv: KgtkValue = KgtkValue(item) # TODO: Need options!
+                        if kv.is_date_and_times(item, validate=True, parse_fields=True) and kv.fields is not None:
+                            output_row[into_column_idxs[src_idx]] = KgtkFormat.STRING_SIGIL + kv.fields.monthstr + KgtkFormat.STRING_SIGIL
+                        else:
+                            output_row[into_column_idxs[src_idx]] = ""
+                    return True
+            else:
+                def date_month_op()->bool:
+                    src_idx: int
+                    for src_idx in range(len(sources)):
+                        item: str = row[sources[src_idx]]
+                        # TODO: optimize this.
+                        kv: KgtkValue = KgtkValue(item) # TODO: Need options!
+                        if kv.is_date_and_times(item, validate=True, parse_fields=True) and kv.fields is not None:
+                            output_row[into_column_idxs[src_idx]] = str(kv.fields.month) # Eliminate leading0.
+                        else:
+                            output_row[into_column_idxs[src_idx]] = ""
+                    return True
+            opfunc = date_month_op
+
+        elif operation == DATE_YEAR_OP:
+            # TODO:  Need date/time parsing options.
+            if len(sources) == 0:
+                raise KGTKException("date_year needs at least one source, got %d" % len(sources))
+            if len(sources) != len(into_column_idxs):
+                raise KGTKException("date_year needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
+
+            if to_string:
+                def date_year_op()->bool:
+                    src_idx: int
+                    for src_idx in range(len(sources)):
+                        item: str = row[sources[src_idx]]
+                        # TODO: optimize this.
+                        kv: KgtkValue = KgtkValue(item) # TODO: Need options!
+                        if kv.is_date_and_times(item, validate=True, parse_fields=True) and kv.fields is not None:
+                            output_row[into_column_idxs[src_idx]] = KgtkFormat.STRING_SIGIL + kv.fields.yearstr + KgtkFormat.STRING_SIGIL
+                        else:
+                            output_row[into_column_idxs[src_idx]] = ""
+                    return True
+            else:
+                def date_year_op()->bool:
+                    src_idx: int
+                    for src_idx in range(len(sources)):
+                        item: str = row[sources[src_idx]]
+                        # TODO: optimize this.
+                        kv: KgtkValue = KgtkValue(item) # TODO: Need options!
+                        if kv.is_date_and_times(item, validate=True, parse_fields=True) and kv.fields is not None:
+                            output_row[into_column_idxs[src_idx]] = str(kv.fields.year) # Eliminate leading 0.
+                        else:
+                            output_row[into_column_idxs[src_idx]] = ""
+                    return True
+            opfunc = date_year_op
+
         elif operation == DIV_OP:
             if not ((len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1)):
                 raise KGTKException("Divide needs two sources or one source and one value, got %d sources and %d values" % (len(sources), len(values)))
@@ -840,26 +959,39 @@ def run(input_file: KGTKFiles,
                 return bresult if filter else True
             opfunc = gt_op
 
-        elif operation == IS_OP:
-            if not ((len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1)):
-                raise KGTKException("Is needs two sources or one source and one value, got %d sources and %d values" % (len(sources), len(values)))
+        elif operation == IS_DATE_OP:
             if filter:
+                if len(sources) != 1:
+                    raise KGTKException("is_date needs one source when filtering, got %d" % len(sources))
                 if len(into_column_idxs) > 1:
-                    raise KGTKException("Is needs at most 1 destination column, got %d" % len(into_column_idxs))
-            else:
-                if len(into_column_idxs) != 1:
-                    raise KGTKException("Is needs 1 destination column, got %d" % len(into_column_idxs))
+                    raise KGTKException("is_date needs at most one destination column when filtering, got %d" % (len(into_column_idxs)))
 
-            def is_op()->bool:
-                bresult: bool
-                if len(sources) == 2:
-                    bresult = row[sources[0]] == row[sources[1]]
-                else:
-                    bresult = row[sources[0]] == values[0]
                 if into_column_idx >= 0:
-                    output_row[into_column_idx] = KgtkValue.to_boolean(bresult)
-                return bresult if filter else True
-            opfunc = is_op
+                    def is_date_op()->bool:
+                        src_idx: int
+                        item: str = row[sources[0]]
+                        bresult: bool = True if item.startswith(KgtkFormat.DATE_AND_TIMES_SIGIL) else False
+                        output_row[into_column_idx] = KgtkFormat.TRUE_SYMBOL if bresult else KgtkFormat.FALSE_SYMBOL
+                        return bresult
+                else:
+                    def is_date_op()->bool:
+                        src_idx: int
+                        item: str = row[sources[0]]
+                        bresult: bool = True if item.startswith(KgtkFormat.DATE_AND_TIMES_SIGIL) else False
+                        return bresult
+            else:
+                if len(sources) == 0:
+                    raise KGTKException("is_date needs at least one source, got %d" % len(sources))
+                if len(sources) != len(into_column_idxs):
+                    raise KGTKException("is_date needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
+                def is_lqstring_op()->bool:
+                    src_idx: int
+                    for src_idx in range(len(sources)):
+                        item: str = row[sources[src_idx]]
+                        bresult: bool = True if item.startswith(KgtkFormat.DATE_AND_TIMES_SIGIL) else False
+                        output_row[into_column_idxs[src_idx]] = KgtkFormat.TRUE_SYMBOL if bresult else KgtkFormat.FALSE_SYMBOL
+                    return True
+            opfunc = is_date_op
 
         elif operation == IS_IN_OP:
             if len(sources) != 1:
@@ -886,6 +1018,40 @@ def run(input_file: KGTKFiles,
                 return bresult if filter else True
             opfunc = is_in_op
 
+        elif operation == IS_LQSTRING_OP:
+            if filter:
+                if len(sources) != 1:
+                    raise KGTKException("is_lqstring needs one source when filtering, got %d" % len(sources))
+                if len(into_column_idxs) > 1:
+                    raise KGTKException("is_lqstring needs at most one destination column when filtering, got %d" % (len(into_column_idxs)))
+
+                if into_column_idx >= 0:
+                    def is_lqstring_op()->bool:
+                        src_idx: int
+                        item: str = row[sources[0]]
+                        bresult: bool = True if item.startswith(KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL) else False
+                        output_row[into_column_idx] = KgtkFormat.TRUE_SYMBOL if bresult else KgtkFormat.FALSE_SYMBOL
+                        return bresult
+                else:
+                    def is_lqstring_op()->bool:
+                        src_idx: int
+                        item: str = row[sources[0]]
+                        bresult: bool = True if item.startswith(KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL) else False
+                        return bresult
+            else:
+                if len(sources) == 0:
+                    raise KGTKException("is_lqstring needs at least one source, got %d" % len(sources))
+                if len(sources) != len(into_column_idxs):
+                    raise KGTKException("is_lqstring needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
+                def is_lqstring_op()->bool:
+                    src_idx: int
+                    for src_idx in range(len(sources)):
+                        item: str = row[sources[src_idx]]
+                        bresult: bool = True if item.startswith(KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL) else False
+                        output_row[into_column_idxs[src_idx]] = KgtkFormat.TRUE_SYMBOL if bresult else KgtkFormat.FALSE_SYMBOL
+                    return True
+            opfunc = is_lqstring_op
+
         elif operation == IS_NOT_OP:
             if not ((len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1)):
                 raise KGTKException("Is not needs two sources or one source and one value, got %d sources and %d values" % (len(sources), len(values)))
@@ -906,6 +1072,61 @@ def run(input_file: KGTKFiles,
                     output_row[into_column_idx] = KgtkValue.to_boolean(bresult)
                 return bresult if filter else True
             opfunc = is_not_op
+
+        elif operation == IS_OP:
+            if not ((len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1)):
+                raise KGTKException("Is needs two sources or one source and one value, got %d sources and %d values" % (len(sources), len(values)))
+            if filter:
+                if len(into_column_idxs) > 1:
+                    raise KGTKException("Is needs at most 1 destination column, got %d" % len(into_column_idxs))
+            else:
+                if len(into_column_idxs) != 1:
+                    raise KGTKException("Is needs 1 destination column, got %d" % len(into_column_idxs))
+
+            def is_op()->bool:
+                bresult: bool
+                if len(sources) == 2:
+                    bresult = row[sources[0]] == row[sources[1]]
+                else:
+                    bresult = row[sources[0]] == values[0]
+                if into_column_idx >= 0:
+                    output_row[into_column_idx] = KgtkValue.to_boolean(bresult)
+                return bresult if filter else True
+            opfunc = is_op
+
+        elif operation == IS_STRING_OP:
+            if filter:
+                if len(sources) != 1:
+                    raise KGTKException("is_string needs one source when filtering, got %d" % len(sources))
+                if len(into_column_idxs) > 1:
+                    raise KGTKException("is_string needs at most one destination column when filtering, got %d" % (len(into_column_idxs)))
+
+                if into_column_idx >= 0:
+                    def is_string_op()->bool:
+                        src_idx: int
+                        item: str = row[sources[0]]
+                        bresult: bool = True if item.startswith(KgtkFormat.STRING_SIGIL) else False
+                        output_row[into_column_idx] = KgtkFormat.TRUE_SYMBOL if bresult else KgtkFormat.FALSE_SYMBOL
+                        return bresult
+                else:
+                    def is_string_op()->bool:
+                        src_idx: int
+                        item: str = row[sources[0]]
+                        bresult: bool = True if item.startswith(KgtkFormat.STRING_SIGIL) else False
+                        return bresult
+            else:
+                if len(sources) == 0:
+                    raise KGTKException("is_string needs at least one source, got %d" % len(sources))
+                if len(sources) != len(into_column_idxs):
+                    raise KGTKException("is_string needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
+                def is_string_op()->bool:
+                    src_idx: int
+                    for src_idx in range(len(sources)):
+                        item: str = row[sources[src_idx]]
+                        bresult: bool = True if item.startswith(KgtkFormat.STRING_SIGIL) else False
+                        output_row[into_column_idxs[src_idx]] = KgtkFormat.TRUE_SYMBOL if bresult else KgtkFormat.FALSE_SYMBOL
+                    return True
+            opfunc = is_string_op
 
         elif operation == JOIN_OP:
             if len(sources) == 0:
@@ -1233,6 +1454,39 @@ def run(input_file: KGTKFiles,
                             output_row[into_column_idxs[src_idx]] = ""
                 return bresult if filter else True
             opfunc = not_op
+
+        elif operation == NUMBER_OP:
+            # TODO:  Need number parsing options.
+            if len(sources) == 0:
+                raise KGTKException("number needs at least one source, got %d" % len(sources))
+            if len(sources) != len(into_column_idxs):
+                raise KGTKException("number needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
+
+            if to_string:
+                def number_op()->bool:
+                    src_idx: int
+                    for src_idx in range(len(sources)):
+                        item: str = row[sources[src_idx]]
+                        # TODO: optimize this.
+                        kv: KgtkValue = KgtkValue(item) # TODO: Need options!
+                        if kv.is_number_or_quantity(item, validate=True, parse_fields=True) and kv.fields is not None:
+                            output_row[into_column_idxs[src_idx]] = KgtkFormat.STRING_SIGIL + kv.fields.numberstr + KgtkFormat.STRING_SIGIL
+                        else:
+                            output_row[into_column_idxs[src_idx]] = ""
+                    return True
+            else:
+                def number_op()->bool:
+                    src_idx: int
+                    for src_idx in range(len(sources)):
+                        item: str = row[sources[src_idx]]
+                        # TODO: optimize this.
+                        kv: KgtkValue = KgtkValue(item) # TODO: Need options!
+                        if kv.is_number_or_quantity(item, validate=True, parse_fields=True) and kv.fields is not None:
+                            output_row[into_column_idxs[src_idx]] = kv.fields.numberstr
+                        else:
+                            output_row[into_column_idxs[src_idx]] = ""
+                    return True
+            opfunc = number_op
 
         elif operation == OR_OP:
             if len(sources) == 0:
