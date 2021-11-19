@@ -707,7 +707,7 @@ def run(input_file: KGTKFiles,
                         item: str = row[sources[src_idx]]
                         # TODO: optimize this.
                         kv: KgtkValue = KgtkValue(item) # TODO: Need options!
-                        if kv.is_date_and_times(item, validate=True, parse_fields=True) and kv.fields is not None:
+                        if kv.is_date_and_times(validate=True, parse_fields=True) and kv.fields is not None:
                             output_row[into_column_idxs[src_idx]] = KgtkFormat.STRING_SIGIL + kv.fields.daystr + KgtkFormat.STRING_SIGIL
                         else:
                             output_row[into_column_idxs[src_idx]] = ""
@@ -719,7 +719,7 @@ def run(input_file: KGTKFiles,
                         item: str = row[sources[src_idx]]
                         # TODO: optimize this.
                         kv: KgtkValue = KgtkValue(item) # TODO: Need options!
-                        if kv.is_date_and_times(item, validate=True, parse_fields=True) and kv.fields is not None:
+                        if kv.is_date_and_times(validate=True, parse_fields=True) and kv.fields is not None:
                             output_row[into_column_idxs[src_idx]] = str(kv.fields.day) # Elimiate leading 0
                         else:
                             output_row[into_column_idxs[src_idx]] = ""
@@ -740,7 +740,7 @@ def run(input_file: KGTKFiles,
                         item: str = row[sources[src_idx]]
                         # TODO: optimize this.
                         kv: KgtkValue = KgtkValue(item) # TODO: Need options!
-                        if kv.is_date_and_times(item, validate=True, parse_fields=True) and kv.fields is not None:
+                        if kv.is_date_and_times(validate=True, parse_fields=True) and kv.fields is not None:
                             output_row[into_column_idxs[src_idx]] = KgtkFormat.STRING_SIGIL + kv.fields.monthstr + KgtkFormat.STRING_SIGIL
                         else:
                             output_row[into_column_idxs[src_idx]] = ""
@@ -752,7 +752,7 @@ def run(input_file: KGTKFiles,
                         item: str = row[sources[src_idx]]
                         # TODO: optimize this.
                         kv: KgtkValue = KgtkValue(item) # TODO: Need options!
-                        if kv.is_date_and_times(item, validate=True, parse_fields=True) and kv.fields is not None:
+                        if kv.is_date_and_times(validate=True, parse_fields=True) and kv.fields is not None:
                             output_row[into_column_idxs[src_idx]] = str(kv.fields.month) # Eliminate leading0.
                         else:
                             output_row[into_column_idxs[src_idx]] = ""
@@ -773,7 +773,7 @@ def run(input_file: KGTKFiles,
                         item: str = row[sources[src_idx]]
                         # TODO: optimize this.
                         kv: KgtkValue = KgtkValue(item) # TODO: Need options!
-                        if kv.is_date_and_times(item, validate=True, parse_fields=True) and kv.fields is not None:
+                        if kv.is_date_and_times(validate=True, parse_fields=True) and kv.fields is not None:
                             output_row[into_column_idxs[src_idx]] = KgtkFormat.STRING_SIGIL + kv.fields.yearstr + KgtkFormat.STRING_SIGIL
                         else:
                             output_row[into_column_idxs[src_idx]] = ""
@@ -785,7 +785,7 @@ def run(input_file: KGTKFiles,
                         item: str = row[sources[src_idx]]
                         # TODO: optimize this.
                         kv: KgtkValue = KgtkValue(item) # TODO: Need options!
-                        if kv.is_date_and_times(item, validate=True, parse_fields=True) and kv.fields is not None:
+                        if kv.is_date_and_times(validate=True, parse_fields=True) and kv.fields is not None:
                             output_row[into_column_idxs[src_idx]] = str(kv.fields.year) # Eliminate leading 0.
                         else:
                             output_row[into_column_idxs[src_idx]] = ""
@@ -1469,7 +1469,7 @@ def run(input_file: KGTKFiles,
                         item: str = row[sources[src_idx]]
                         # TODO: optimize this.
                         kv: KgtkValue = KgtkValue(item) # TODO: Need options!
-                        if kv.is_number_or_quantity(item, validate=True, parse_fields=True) and kv.fields is not None:
+                        if kv.is_number_or_quantity(validate=True, parse_fields=True) and kv.fields is not None:
                             output_row[into_column_idxs[src_idx]] = KgtkFormat.STRING_SIGIL + kv.fields.numberstr + KgtkFormat.STRING_SIGIL
                         else:
                             output_row[into_column_idxs[src_idx]] = ""
@@ -1481,7 +1481,7 @@ def run(input_file: KGTKFiles,
                         item: str = row[sources[src_idx]]
                         # TODO: optimize this.
                         kv: KgtkValue = KgtkValue(item) # TODO: Need options!
-                        if kv.is_number_or_quantity(item, validate=True, parse_fields=True) and kv.fields is not None:
+                        if kv.is_number_or_quantity(validate=True, parse_fields=True) and kv.fields is not None:
                             output_row[into_column_idxs[src_idx]] = kv.fields.numberstr
                         else:
                             output_row[into_column_idxs[src_idx]] = ""
