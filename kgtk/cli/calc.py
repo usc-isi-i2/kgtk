@@ -282,6 +282,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               metavar="True|False",
                               type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument(      "--fast", dest="be_fast",
+                              help="When --fast=True, use a fater implementation which might not be general. " +
+                              "(default=%(default)s).",
+                              metavar="True|False",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser,
                                     mode_options=True,
@@ -321,6 +327,7 @@ def run(input_file: KGTKFiles,
         group_by_label: typing.Optional[str],
         group_by_output_names_list: typing.List[typing.List[str]],
         filter: bool,
+        be_fast: bool,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -390,6 +397,7 @@ def run(input_file: KGTKFiles,
         if group_by_label is not None:
             print("--group-by-label=%s" % group_by_label, file=error_file, flush=True)
         print("--filter=%s" % repr(filter), file=error_file, flush=True)
+        print("--fast=%s" % repr(be_fast), file=error_file, flush=True)
 
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
@@ -732,31 +740,52 @@ def run(input_file: KGTKFiles,
                 raise KGTKException("date_month needs at least one source, got %d" % len(sources))
             if len(sources) != len(into_column_idxs):
                 raise KGTKException("date_month needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
-
-            if to_string:
-                def date_month_op()->bool:
-                    src_idx: int
-                    for src_idx in range(len(sources)):
-                        item: str = row[sources[src_idx]]
-                        # TODO: optimize this.
-                        kv: KgtkValue = KgtkValue(item) # TODO: Need options!
-                        if kv.is_date_and_times(validate=True, parse_fields=True) and kv.fields is not None:
-                            output_row[into_column_idxs[src_idx]] = KgtkFormat.STRING_SIGIL + kv.fields.monthstr + KgtkFormat.STRING_SIGIL
-                        else:
-                            output_row[into_column_idxs[src_idx]] = ""
-                    return True
+            if be_fast:
+                if to_string:
+                    def date_month_op()->bool:
+                        src_idx: int
+                        for src_idx in range(len(sources)):
+                            item: str = row[sources[src_idx]]
+                            if item.startswith(KgtkFormat.DATE_AND_TIMES_SIGIL):
+                                output_row[into_column_idxs[src_idx]] = KgtkFormat.STRING_SIGIL + item[6:8] + KgtkFormat.STRING_SIGIL
+                            else:
+                                output_row[into_column_idxs[src_idx]] = ""
+                        return True
+                else:
+                    def date_month_op()->bool:
+                        src_idx: int
+                        for src_idx in range(len(sources)):
+                            item: str = row[sources[src_idx]]
+                            if item.startswith(KgtkFormat.DATE_AND_TIMES_SIGIL):
+                                output_row[into_column_idxs[src_idx]] = item[6:8]
+                            else:
+                                output_row[into_column_idxs[src_idx]] = ""
+                        return True
             else:
-                def date_month_op()->bool:
-                    src_idx: int
-                    for src_idx in range(len(sources)):
-                        item: str = row[sources[src_idx]]
-                        # TODO: optimize this.
-                        kv: KgtkValue = KgtkValue(item) # TODO: Need options!
-                        if kv.is_date_and_times(validate=True, parse_fields=True) and kv.fields is not None:
-                            output_row[into_column_idxs[src_idx]] = str(kv.fields.month) # Eliminate leading0.
-                        else:
-                            output_row[into_column_idxs[src_idx]] = ""
-                    return True
+                if to_string:
+                    def date_month_op()->bool:
+                        src_idx: int
+                        for src_idx in range(len(sources)):
+                            item: str = row[sources[src_idx]]
+                            # TODO: optimize this.
+                            kv: KgtkValue = KgtkValue(item) # TODO: Need options!
+                            if kv.is_date_and_times(validate=True, parse_fields=True) and kv.fields is not None:
+                                output_row[into_column_idxs[src_idx]] = KgtkFormat.STRING_SIGIL + kv.fields.monthstr + KgtkFormat.STRING_SIGIL
+                            else:
+                                output_row[into_column_idxs[src_idx]] = ""
+                        return True
+                else:
+                    def date_month_op()->bool:
+                        src_idx: int
+                        for src_idx in range(len(sources)):
+                            item: str = row[sources[src_idx]]
+                            # TODO: optimize this.
+                            kv: KgtkValue = KgtkValue(item) # TODO: Need options!
+                            if kv.is_date_and_times(validate=True, parse_fields=True) and kv.fields is not None:
+                                output_row[into_column_idxs[src_idx]] = str(kv.fields.month) # Eliminate leading0.
+                            else:
+                                output_row[into_column_idxs[src_idx]] = ""
+                        return True
             opfunc = date_month_op
 
         elif operation == DATE_YEAR_OP:
@@ -766,30 +795,53 @@ def run(input_file: KGTKFiles,
             if len(sources) != len(into_column_idxs):
                 raise KGTKException("date_year needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
 
-            if to_string:
-                def date_year_op()->bool:
-                    src_idx: int
-                    for src_idx in range(len(sources)):
-                        item: str = row[sources[src_idx]]
-                        # TODO: optimize this.
-                        kv: KgtkValue = KgtkValue(item) # TODO: Need options!
-                        if kv.is_date_and_times(validate=True, parse_fields=True) and kv.fields is not None:
-                            output_row[into_column_idxs[src_idx]] = KgtkFormat.STRING_SIGIL + kv.fields.yearstr + KgtkFormat.STRING_SIGIL
-                        else:
-                            output_row[into_column_idxs[src_idx]] = ""
-                    return True
+            if be_fast:
+                if to_string:
+                    def date_year_op()->bool:
+                        src_idx: int
+                        for src_idx in range(len(sources)):
+                            item: str = row[sources[src_idx]]
+                            if item.startswith(KgtkFormat.DATE_AND_TIMES_SIGIL):
+                                output_row[into_column_idxs[src_idx]] = KgtkFormat.STRING_SIGIL + item[1:5] + KgtkFormat.STRING_SIGIL
+                            else:
+                                output_row[into_column_idxs[src_idx]] = ""
+                        return True
+                else:
+                    def date_year_op()->bool:
+                        src_idx: int
+                        for src_idx in range(len(sources)):
+                            item: str = row[sources[src_idx]]
+
+                            if item.startswith(KgtkFormat.DATE_AND_TIMES_SIGIL):
+                                output_row[into_column_idxs[src_idx]] = item[1:5]
+                            else:
+                                output_row[into_column_idxs[src_idx]] = ""
+                        return True
             else:
-                def date_year_op()->bool:
-                    src_idx: int
-                    for src_idx in range(len(sources)):
-                        item: str = row[sources[src_idx]]
-                        # TODO: optimize this.
-                        kv: KgtkValue = KgtkValue(item) # TODO: Need options!
-                        if kv.is_date_and_times(validate=True, parse_fields=True) and kv.fields is not None:
-                            output_row[into_column_idxs[src_idx]] = str(kv.fields.year) # Eliminate leading 0.
-                        else:
-                            output_row[into_column_idxs[src_idx]] = ""
-                    return True
+                if to_string:
+                    def date_year_op()->bool:
+                        src_idx: int
+                        for src_idx in range(len(sources)):
+                            item: str = row[sources[src_idx]]
+                            # TODO: optimize this.
+                            kv: KgtkValue = KgtkValue(item) # TODO: Need options!
+                            if kv.is_date_and_times(validate=True, parse_fields=True) and kv.fields is not None:
+                                output_row[into_column_idxs[src_idx]] = KgtkFormat.STRING_SIGIL + kv.fields.yearstr + KgtkFormat.STRING_SIGIL
+                            else:
+                                output_row[into_column_idxs[src_idx]] = ""
+                        return True
+                else:
+                    def date_year_op()->bool:
+                        src_idx: int
+                        for src_idx in range(len(sources)):
+                            item: str = row[sources[src_idx]]
+                            # TODO: optimize this.
+                            kv: KgtkValue = KgtkValue(item) # TODO: Need options!
+                            if kv.is_date_and_times(validate=True, parse_fields=True) and kv.fields is not None:
+                                output_row[into_column_idxs[src_idx]] = str(kv.fields.year) # Eliminate leading 0.
+                            else:
+                                output_row[into_column_idxs[src_idx]] = ""
+                        return True
             opfunc = date_year_op
 
         elif operation == DIV_OP:
