@@ -33,7 +33,7 @@ except ImportError:
 # signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
 pipe_delimiter = '/'
-sequential_delimiter = '/,'
+sequential_delimiter = '/.'
 parallel_delimiter = '//'
 ret_code = 0
 
@@ -367,10 +367,10 @@ def cli_entry(*args):
                              default=os.getenv('KGTK_OPTION_DEBUG', 'False').lower() in ['y', 'yes', 'true'],
                              help='enable debug mode')
     
-    shared_args.add_argument('--default-mode', dest='_mode', action='store',
-                             default=os.getenv('KGTK_OPTION_DEFAULT_MODE', 'AUTO').upper(),
+    shared_args.add_argument('--kgtkmode', dest='_mode', action='store',
+                             default=os.getenv('KGTK_OPTION_KGTK_MODE', 'AUTO').upper(),
                              choices=['NONE', 'EDGE', 'NODE', 'AUTO' ],
-                             help='File reading mode (default=AUTO)')
+                             help='KGTK file reading mode (default=AUTO)')
     
     shared_args.add_argument('--expert', dest='_expert', action='store_true',
                              default=os.getenv('KGTK_OPTION_EXPERT', 'False').lower() in ['y', 'yes', 'true'],
