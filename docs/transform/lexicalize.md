@@ -559,4 +559,4 @@ kgtk lexicalize --input-file examples/docs/lexicalize-Q75992564.tsv \
 
 | node1 | label | node2 |
 | -- | -- | -- |
-| Q75992564 | sentence | "Because of You is a music track with vocals, and has duet and cover version and studio recording." |
+| Q75992564 | sentence | "Because of You is a music track with vocals, and has cover version and duet and studio recording." |

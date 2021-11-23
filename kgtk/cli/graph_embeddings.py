@@ -134,16 +134,18 @@ def parser():
         low-level implementation '
     }
 
-def add_arguments(parser: KGTKArgumentParser):
+def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Namespace):
     """
     Parse arguments
     Args:
         parser (argparse.ArgumentParser)
     """
     # import modules locally
-    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
     from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
+
+    _expert: bool = parsed_shared_args._expert
 
     ### IO 
     parser.add_input_file()
@@ -222,7 +224,10 @@ def add_arguments(parser: KGTKArgumentParser):
                               type=optional_bool, nargs='?', const=True, default=False)
     
     KgtkReader.add_debug_arguments(parser)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=True)
+    KgtkReaderOptions.add_arguments(parser,
+                                    mode_options=True,
+                                    default_mode=KgtkReaderMode[parsed_shared_args._mode],
+                                    expert=_expert)
     KgtkValueOptions.add_arguments(parser)
 
 
