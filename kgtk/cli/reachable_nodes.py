@@ -623,6 +623,7 @@ def run(input_file: KGTKFiles,
                         bfs_search(G, G.vertex(index), DepthLimitedVisitor(name, pred, dist))
                     except DepthExceeded:
                         pass
+
         else:
             for e in dfs_iterator(G, G.vertex(index)):
                 kw.writerow([name[index], label, name[e.target()]])
