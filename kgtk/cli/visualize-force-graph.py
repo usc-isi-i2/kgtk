@@ -47,7 +47,11 @@ def add_arguments_extended(parser: KGTKArgumentParser,
 
     parser.add_argument('--node-file', dest='node_file', type=str,
                         default="None",
-                        help="Specify the clustering method to use.")
+                        help="Specify the location of node file.")
+
+    parser.add_argument('--direction', dest='direction', type=str,
+                        default="None",
+                        help="Specify direction (arrow, particle and None), default none")
 
     KgtkIdBuilderOptions.add_arguments(parser,
                                        expert=True)  # Show all the options.
@@ -64,6 +68,7 @@ def run(input_file: KGTKFiles,
         verbose: bool = False,
         very_verbose: bool = False,
         node_file: str = "None",
+        direction: str = "None",
 
         **kwargs  # Whatever KgtkFileOptions and KgtkValueOptions want.
         ) -> int:
@@ -106,37 +111,37 @@ def run(input_file: KGTKFiles,
                                           verbose=verbose,
                                           very_verbose=very_verbose,
         )
-        print(123)
+
         d = {}
         nodes = set()
-        colors = {}
         edges = []
-        print(node_file)
 
+        number = False
         l1 = kr.column_name_map['node1;label']
         l2 = kr.column_name_map['label;label']
         l3 = kr.column_name_map['node2;label']
 
-        count = 0
         for row in kr:
-            nodes.add(row[l1][1:-4])
-            nodes.add(row[l3][1:-4])
-            
-            if 'color' in kr.column_name_map:
+            if 'color' in kr.column_name_map and '@' in row[l1]:
+                nodes.add(row[l1][1:row[l1].find('@')-1])
+                nodes.add(row[l3][1:row[l3].find('@')-1])
                 if '#' in row[kr.column_name_map['color']]:
                     h = row[kr.column_name_map['color']].lstrip('#')
                     s = str(tuple(int(h[i:i+2], 16) for i in (0, 2, 4)))
                     s1 = 'rgba(' + s[1:-1]  + ', 0.8)'
-                    edges.append({'source': row[l1][1:-4], 'target': row[l3][1:-4], 'label': row[l2][1:-4], 'color': tuple(int(h[i:i+2], 16) for i in (0, 2, 4)), 'color_s' : s1})
-                else:
-                    if row[kr.column_name_map['color']] not in colors:
-                        colors[row[kr.column_name_map['color']]] = count
-                        count += 1
-                    edges.append({'source': row[l1][1:-4], 'target': row[l3][1:-4], 'label': row[l2][1:-4], 'group': colors[row[kr.column_name_map['color']]]})
-        print(1)
+                    edges.append({'source': row[l1][1:row[l1].find('@')-1], 'target': row[l3][1:row[l3].find('@')-1], 'label': row[l2][1:row[l2].find('@')-1], 'color': tuple(int(h[i:i+2], 16) for i in (0, 2, 4)), 'color_s' : s1})
+                elif row[kr.column_name_map['color']].replace('.', '').isdigit():
+                    number = True
+                    edges.append({'source': row[l1][1:row[l1].find('@')-1], 'target': row[l3][1:row[l3].find('@')-1], 'label': row[l2][1:row[l2].find('@')-1], 'color': row[kr.column_name_map['color']]})
+            else:
+                nodes.add(row[l1])
+                nodes.add(row[l3])
+                edges.append({'source': row[l1], 'target': row[l3], 'label': row[l2]})
+     
 
         d['nodes'] = []
         d['links'] = edges
+
 
         if 'None' in node_file:
             for ele in nodes:
@@ -149,18 +154,181 @@ def run(input_file: KGTKFiles,
                 d['nodes'].append({'id': df['id'][i], 'color': s})
 
         
-        print(123123123)
-        print(output_kgtk_file)
-        
         f = open(output_kgtk_file, 'w')
-        if 'color' not in kr.column_name_map:
-            f.write('<head>\n  <style> body { margin: 0; } </style>\n\n  <script src="https://unpkg.com/force-graph"></script>\n  <!--<script src="../../dist/force-graph.js"></script>-->\n</head>\n\n<body>\n  <div id="graph"></div>\n\n  <script>\n     const j = ')
+        if not number:
+            f.write('''<head>
+  <style> body { margin: 0; } </style>
+
+  <script src="https://unpkg.com/force-graph"></script>
+  <!--<script src="../../dist/force-graph.js"></script>-->
+</head>
+
+<body>
+  <div id="graph"></div>
+
+  <script>
+     const j = ''')
             f.write(json.dumps(d, indent = 4))
-            f.write('\n      const Graph = ForceGraph()\n      (document.getElementById(\'graph\'))\n        .graphData(j)\n        .nodeId(\'id\')\n        .nodeLabel(\'id\')\n        .nodeAutoColorBy(\'group\')\n        .linkColor((link) => link.color_s)\n                .linkCanvasObjectMode(() => \'after\')\n        .linkCanvasObject((link, ctx) => {\n          const MAX_FONT_SIZE = 4;\n          const LABEL_NODE_MARGIN = Graph.nodeRelSize() * 1.5;\n\n          const start = link.source;\n          const end = link.target;\n\n          // ignore unbound links\n          if (typeof start !== \'object\' || typeof end !== \'object\') return;\n\n          // calculate label positioning\n          const textPos = Object.assign(...[\'x\', \'y\'].map(c => ({\n            [c]: start[c] + (end[c] - start[c]) / 2 // calc middle point\n          })));\n\n          const relLink = { x: end.x - start.x, y: end.y - start.y };\n\n          const maxTextLength = Math.sqrt(Math.pow(relLink.x, 2) + Math.pow(relLink.y, 2)) - LABEL_NODE_MARGIN * 2;\n\n          let textAngle = Math.atan2(relLink.y, relLink.x);\n          // maintain label vertical orientation for legibility\n          if (textAngle > Math.PI / 2) textAngle = -(Math.PI - textAngle);\n          if (textAngle < -Math.PI / 2) textAngle = -(-Math.PI - textAngle);\n\n          const label = `${link.label}`;\n\n          // estimate fontSize to fit in link length\n          ctx.font = \'1px Sans-Serif\';\n          const fontSize = Math.min(MAX_FONT_SIZE, maxTextLength / ctx.measureText(label).width);\n          ctx.font = `${fontSize}px Sans-Serif`;\n          const textWidth = ctx.measureText(label).width;\n          const bckgDimensions = [textWidth, fontSize].map(n => n + fontSize * 0.2); // some padding\n\n          // draw text label (with background rect)\n          ctx.save();\n          ctx.translate(textPos.x, textPos.y);\n          ctx.rotate(textAngle);\n\n          ctx.fillStyle = \'rgba(255, 255, 255)\';\n          ctx.fillRect(- bckgDimensions[0] / 2, - bckgDimensions[1] / 2, ...bckgDimensions);\n\n          ctx.textAlign = \'center\';\n          ctx.textBaseline = \'middle\';\n          ctx.fillStyle = \'darkgrey\';\n          ctx.fillText(label, 0, 0);\n          ctx.restore();\n        });\n  </script>\n</body>')
+            f.write('''
+      const Graph = ForceGraph()
+      (document.getElementById('graph'))
+        .graphData(j)
+        .nodeId('id')
+        .nodeLabel('id')
+        .nodeAutoColorBy('group')''')
+
+            if direction == 'arrow':
+                f.write('''
+	        .linkDirectionalArrowLength(6)
+	        .linkDirectionalArrowRelPos(1)''')
+            elif direction == 'particle':
+                f.write('''      .linkDirectionalParticles(2)
+	      ''')
+
+            f.write('''        .linkColor((link) => link.color_s)
+                        .linkCanvasObjectMode(() => 'after')
+        .linkCanvasObject((link, ctx) => {
+          const MAX_FONT_SIZE = 4;
+          const LABEL_NODE_MARGIN = Graph.nodeRelSize() * 1.5;
+
+          const start = link.source;
+          const end = link.target;
+
+          // ignore unbound links
+          if (typeof start !== 'object' || typeof end !== 'object') return;
+
+          // calculate label positioning
+          const textPos = Object.assign(...['x', 'y'].map(c => ({
+            [c]: start[c] + (end[c] - start[c]) / 2 // calc middle point
+          })));
+
+          const relLink = { x: end.x - start.x, y: end.y - start.y };
+
+          const maxTextLength = Math.sqrt(Math.pow(relLink.x, 2) + Math.pow(relLink.y, 2)) - LABEL_NODE_MARGIN * 2;
+
+          let textAngle = Math.atan2(relLink.y, relLink.x);
+          // maintain label vertical orientation for legibility
+          if (textAngle > Math.PI / 2) textAngle = -(Math.PI - textAngle);
+          if (textAngle < -Math.PI / 2) textAngle = -(-Math.PI - textAngle);
+
+          const label = `${link.label}`;
+
+          // estimate fontSize to fit in link length
+          
+
+          const color = `rgba(${link.color}, 0.8)`;
+
+          ctx.font = '1px Sans-Serif';
+          const fontSize = Math.min(MAX_FONT_SIZE, maxTextLength / ctx.measureText(label).width);
+          ctx.font = `${fontSize}px Sans-Serif`;
+          const textWidth = ctx.measureText(label).width;
+          const bckgDimensions = [textWidth, fontSize].map(n => n + fontSize * 0.2); // some padding
+
+          // draw text label (with background rect)
+          ctx.save();
+          ctx.translate(textPos.x, textPos.y);
+          ctx.rotate(textAngle);
+
+          ctx.fillStyle = 'rgba(255, 255, 255)';
+          ctx.fillRect(- bckgDimensions[0] / 2, - bckgDimensions[1] / 2, ...bckgDimensions);
+
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = 'darkgrey';
+          ctx.fillText(label, 0, 0);
+          ctx.restore();
+        });
+  </script>
+</body>''')
         else:
-            f.write('<head>\n  <style> body { margin: 0; } </style>\n\n  <script src="https://unpkg.com/force-graph"></script>\n  <!--<script src="../../dist/force-graph.js"></script>-->\n</head>\n\n<body>\n  <div id="graph"></div>\n\n  <script>\n     const j = ')
+            f.write('''<head>
+  <style> body { margin: 0; } </style>
+
+  <script src="https://cdn.jsdelivr.net/npm/d3-color@3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3-interpolate@3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3-scale-chromatic@3"></script>
+  <script src="https://unpkg.com/force-graph"></script>
+  <!--<script src="../../dist/force-graph.js"></script>-->
+</head>
+
+<body>
+  <div id="graph"></div>
+
+  <script>
+     const j = ''')
             f.write(json.dumps(d, indent = 4))
-            f.write('\n      const Graph = ForceGraph()\n      (document.getElementById(\'graph\'))\n        .graphData(j)\n        .nodeId(\'id\')\n        .nodeLabel(\'id\')\n        .nodeAutoColorBy(\'group\')\n        .linkColor((link) => link.color_s)\n                        .linkCanvasObjectMode(() => \'after\')\n        .linkCanvasObject((link, ctx) => {\n          const MAX_FONT_SIZE = 4;\n          const LABEL_NODE_MARGIN = Graph.nodeRelSize() * 1.5;\n\n          const start = link.source;\n          const end = link.target;\n\n          // ignore unbound links\n          if (typeof start !== \'object\' || typeof end !== \'object\') return;\n\n          // calculate label positioning\n          const textPos = Object.assign(...[\'x\', \'y\'].map(c => ({\n            [c]: start[c] + (end[c] - start[c]) / 2 // calc middle point\n          })));\n\n          const relLink = { x: end.x - start.x, y: end.y - start.y };\n\n          const maxTextLength = Math.sqrt(Math.pow(relLink.x, 2) + Math.pow(relLink.y, 2)) - LABEL_NODE_MARGIN * 2;\n\n          let textAngle = Math.atan2(relLink.y, relLink.x);\n          // maintain label vertical orientation for legibility\n          if (textAngle > Math.PI / 2) textAngle = -(Math.PI - textAngle);\n          if (textAngle < -Math.PI / 2) textAngle = -(-Math.PI - textAngle);\n\n          const label = `${link.label}`;\n\n          // estimate fontSize to fit in link length\n          \n\n          const color = `rgba(${link.color}, 0.8)`;\n\n          ctx.font = \'1px Sans-Serif\';\n          const fontSize = Math.min(MAX_FONT_SIZE, maxTextLength / ctx.measureText(label).width);\n          ctx.font = `${fontSize}px Sans-Serif`;\n          const textWidth = ctx.measureText(label).width;\n          const bckgDimensions = [textWidth, fontSize].map(n => n + fontSize * 0.2); // some padding\n\n          // draw text label (with background rect)\n          ctx.save();\n          ctx.translate(textPos.x, textPos.y);\n          ctx.rotate(textAngle);\n\n          ctx.fillStyle = \'rgba(255, 255, 255)\';\n          ctx.fillRect(- bckgDimensions[0] / 2, - bckgDimensions[1] / 2, ...bckgDimensions);\n\n          ctx.textAlign = \'center\';\n          ctx.textBaseline = \'middle\';\n          ctx.fillStyle = \'darkgrey\';\n          ctx.fillText(label, 0, 0);\n          ctx.restore();\n        });\n  </script>\n</body>')
+            f.write('''
+      const Graph = ForceGraph()
+      (document.getElementById('graph'))
+        .graphData(j)
+        .nodeId('id')
+        .nodeLabel('id')
+        .nodeAutoColorBy('group')''')
+
+            if direction == 'arrow':
+                f.write('''
+	        .linkDirectionalArrowLength(6)
+	        .linkDirectionalArrowRelPos(1)''')
+            elif direction == 'particle':
+                f.write('''      .linkDirectionalParticles(2)
+	      ''')
+
+
+            f.write('''        .linkColor((link) => d3.interpolateYlGn(link.color))
+                        .linkCanvasObjectMode(() => 'after')
+        .linkCanvasObject((link, ctx) => {
+          const MAX_FONT_SIZE = 4;
+          const LABEL_NODE_MARGIN = Graph.nodeRelSize() * 1.5;
+
+          const start = link.source;
+          const end = link.target;
+
+          // ignore unbound links
+          if (typeof start !== 'object' || typeof end !== 'object') return;
+
+          // calculate label positioning
+          const textPos = Object.assign(...['x', 'y'].map(c => ({
+            [c]: start[c] + (end[c] - start[c]) / 2 // calc middle point
+          })));
+
+          const relLink = { x: end.x - start.x, y: end.y - start.y };
+
+          const maxTextLength = Math.sqrt(Math.pow(relLink.x, 2) + Math.pow(relLink.y, 2)) - LABEL_NODE_MARGIN * 2;
+
+          let textAngle = Math.atan2(relLink.y, relLink.x);
+          // maintain label vertical orientation for legibility
+          if (textAngle > Math.PI / 2) textAngle = -(Math.PI - textAngle);
+          if (textAngle < -Math.PI / 2) textAngle = -(-Math.PI - textAngle);
+
+          const label = `${link.label}`;
+
+          // estimate fontSize to fit in link length
+          
+
+          const color = `rgba(${link.color}, 0.8)`;
+
+          ctx.font = '1px Sans-Serif';
+          const fontSize = Math.min(MAX_FONT_SIZE, maxTextLength / ctx.measureText(label).width);
+          ctx.font = `${fontSize}px Sans-Serif`;
+          const textWidth = ctx.measureText(label).width;
+          const bckgDimensions = [textWidth, fontSize].map(n => n + fontSize * 0.2); // some padding
+
+          // draw text label (with background rect)
+          ctx.save();
+          ctx.translate(textPos.x, textPos.y);
+          ctx.rotate(textAngle);
+
+          ctx.fillStyle = 'rgba(255, 255, 255)';
+          ctx.fillRect(- bckgDimensions[0] / 2, - bckgDimensions[1] / 2, ...bckgDimensions);
+
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = 'darkgrey';
+          ctx.fillText(label, 0, 0);
+          ctx.restore();
+        });
+  </script>
+</body>''')
             
 
         kr.close()
