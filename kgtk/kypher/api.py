@@ -6,10 +6,12 @@ import time
 import re
 import io
 import csv
+import shlex
 
 import kgtk.kypher.query as kyquery
 import kgtk.cli.query as cliquery
 import kgtk.kypher.sqlstore as sqlstore
+from   kgtk.cli_argparse import KGTKArgumentParser
 from   kgtk.exceptions import KGTKException
 
 # avoid KGTK dependency on pandas and only import them if needed:
@@ -43,6 +45,64 @@ DEFAULT_CONFIG = {
     'MAX_CACHE_SIZE'     : DEFAULT_MAX_CACHE_SIZE,
     'LOG_LEVEL'          : DEFAULT_LOG_LEVEL,
 }
+
+
+# Command syntax parsing support
+
+def define_query_command_parser(parser=None):
+    """Define an argument parser that can parse KGTK query command-style definitions.
+    """
+    parser = parser or KGTKArgumentParser()
+    # duplicate some of the logic in cli_entry which doesn't have a command parser factory:
+    parser.add_argument('--debug', dest='_debug', action='store_true', help='enable debug mode')
+    parser.add_argument('--expert', dest='_expert', action='store_true', help='enable expert mode')
+    # add standard query argument definitions:
+    cliquery.add_arguments_extended(parser, None)
+    # define some additional API-only command options:
+    parser.add_argument('--name', default=None, action='store', dest='name',
+                        help="name to use for this query")
+    parser.add_argument('--documentation', '--doc', default=None, action='store', dest='docstring',
+                        help="documentation string for this query")
+    parser.add_argument('--max-cache', '--maxcache', default=None, action='store', type=int, dest='maxcache',
+                        help="maximal number of results to cache, 0 disables caching")
+    parser.add_argument('--log-level', '--loglevel', default=None, action='store', type=int, dest='loglevel',
+                        help="log level to use for this query")
+    return parser
+
+COMMAND_ARGUMENT_PARSER = define_query_command_parser()
+
+def parse_query_command(command):
+    """Parse a query 'command' into a normalized options dictionary.
+    'command' may be a single string or an iterable of parsed arguments
+    and may optionally contain 'kgtk' and 'query' particles if one
+    wants to mirror top-level KGTK query commands exactly.
+    """
+    args = None
+    if isinstance(command, str):
+        args = shlex.split(command)
+    elif command is not None:
+        args = [str(arg) for arg in command]
+    if not args:
+        return {}
+    
+    parsed_args, rest_args = COMMAND_ARGUMENT_PARSER.parse_known_args(args)
+    for rarg in rest_args:
+        if rarg not in ('kgtk', 'query'):
+            raise KGTKException(f'illegal query API option: {rarg}')
+    # convert to dict:
+    parsed_args = vars(parsed_args)
+    if parsed_args.get('output') not in (None, '-'):
+        raise KGTKException('output specification not supported in query API')
+    loglevel = parsed_args.get('loglevel')
+    options = cliquery.preprocess_query_options(**parsed_args)
+    # if loglevel was set explicitly, override with it:
+    if loglevel is not None:
+        options['loglevel'] = loglevel
+    elif options.get('loglevel') == 0:
+        # undo the default in favor of API default:
+        options['loglevel'] = None
+    # remove all None values so we can use 'get' with defaults:
+    return {k: v for k, v in options.items() if v is not None}
 
 
 class KypherQuery(object):
@@ -80,6 +140,7 @@ class KypherQuery(object):
                 parameters={},
                 force=False,
                 index=None, loglevel=None,
+                cmd=None,
                 **kwargs):
         """Internal constructor which generates a cached query translation and a
         LRU-cachable results structure (if requested).  See 'KypherApi.get_query'
@@ -88,8 +149,14 @@ class KypherQuery(object):
         
         if self.kgtk_query is not None:
             raise KGTKException('query has already been defined')
+        
+        # any options specified in 'cmd' dominate others or get merged with them:
+        cmd = parse_query_command(cmd)
+        if name is not None and cmd.get('name', name) != name:
+            raise KGTKException('multiply defined mismatched query names')
+        name = cmd.get('name', name)
 
-        inputs = kyquery.listify(inputs) or self.api.get_all_inputs()
+        inputs = cmd.get('input_files') or kyquery.listify(inputs) or self.api.get_all_inputs()
         norm_inputs = []
         for inp in inputs:
             if self.api.get_input_info(inp) is None:
@@ -97,9 +164,9 @@ class KypherQuery(object):
             norm_inputs.append(self.api.get_input(inp))
         inputs = norm_inputs
 
-        self.docstring = doc
+        self.docstring = cmd.get('docstring') or doc
         
-        optionals = []
+        optionals = [(self._subst_graph_handles(opt, inputs), where) for opt, where in cmd.get('optionals', [])]
         opt and optionals.append((self._subst_graph_handles(opt, inputs), owhere))
         opt2 and optionals.append((self._subst_graph_handles(opt2, inputs), owhere2))
         # kwargs is an ordered dict, so the actual suffixes do not matter:
@@ -112,29 +179,29 @@ class KypherQuery(object):
                 raise KGTKException('Unexpected keyword argument: %s' % key)
 
         store = self.api.get_sql_store()
-        if loglevel is None:
-            loglevel = self.api.loglevel
-        if index is None:
-            index = self.api.index_mode
+        loglevel = cmd.get('loglevel', loglevel if loglevel is not None else self.api.loglevel)
+        index = cmd.get('index_mode', index or self.api.index_mode)
         # since we are loading results into memory, we are not using unlimited as the default:
-        if limit is None:
-            limit = self.api.max_results
+        limit = cmd.get('limit', limit if limit is not None else self.api.max_results)
         # -1 forces unlimited results:
-        elif limit == -1:
+        if limit in (-1, '-1'):
             limit = None
-        if maxcache is None:
-            maxcache = self.api.max_cache_size
+        maxcache = cmd.get('maxcache', maxcache if maxcache is not None else self.api.max_cache_size)
+        
         self.kgtk_query = kyquery.KgtkQuery (
             inputs, store,
             loglevel=loglevel, index=index,
-            query=query,
-            match=self._subst_graph_handles(match, inputs), where=where,
+            query=cmd.get('query', query),
+            match=self._subst_graph_handles(cmd.get('match', match), inputs),
+            where=cmd.get('where', where),
             optionals=optionals,
-            with_=(with_, wwhere),
-            ret=ret, order=order,
-            skip=skip, limit=limit,
-            parameters=parameters,
-            force=force)
+            with_=cmd.get('with', (with_, wwhere)),
+            ret=cmd.get('return', ret),
+            order=cmd.get('order', order),
+            skip=cmd.get('skip', skip),
+            limit=limit,
+            parameters=cmd.get('parameters', parameters),
+            force=cmd.get('force', force))
         
         self.kgtk_query.defer_params = True
         state = self.kgtk_query.translate_to_sql()
@@ -562,6 +629,7 @@ class KypherApi(object):
                   force=False,
                   index=None,
                   loglevel=None,
+                  cmd=None,
                   **kwargs):
         
         """Construct or reuse a cached query.  Many of the options here directly correspond
@@ -640,6 +708,10 @@ class KypherApi(object):
 
         'loglevel' controls the verbosity of logging output and defaults to the number defined during
         creation of the API object (similar to the --debug and --expert options of the 'query' command).
+
+        'cmd' can be used to specify a query in KGTK query command syntax by giving either a complete string or
+        a list of parsed options.  The accepted syntax is exactly the same as for the query shell command.
+        Options specified here dominate other 'get_query' options or get merged with them where possible.
         """
         
         kypher_query = self._get_query(name, error=False)
@@ -649,7 +721,7 @@ class KypherApi(object):
             self, inputs=inputs, doc=doc, name=name, maxcache=maxcache,
             query=query, match=match, where=where, opt=opt, owhere=owhere, opt2=opt2, owhere2=owhere2,
             with_=with_, wwhere=wwhere, ret=ret, order=order, skip=skip, limit=limit, parameters=parameters,
-            force=force, index=index, loglevel=loglevel,
+            force=force, index=index, loglevel=loglevel, cmd=cmd,
             **kwargs)
         return kypher_query
 
@@ -867,6 +939,27 @@ company employee       name                     start
 [599 rows x 4 columns]
 >>> api.execute_query(query, NODE='Q52353442')
 [('Q52353442-P1006-235de5-5b24a9cf-0', 'Q52353442', 'P1006', '"321658140"'), ('Q52353442-P1015-cd5f62-c7e646d4-0', 'Q52353442', 'P1015', '"2100657"'), ('Q52353442-P106-Q82594-28c48a6c-0', 'Q52353442', 'P106', 'Q82594'), ('Q52353442-P108-Q37548-61855425-0', 'Q52353442', 'P108', 'Q37548'), ('Q52353442-P108-Q4614-dbb39b28-0', 'Q52353442', 'P108', 'Q4614'), ('Q52353442-P1153-bef441-003e2488-0', 'Q52353442', 'P1153', '"7004618158"'), ('Q52353442-P1416-Q6030821-708a6b3e-0', 'Q52353442', 'P1416', 'Q6030821'), ('Q52353442-P166-Q18748039-fc276466-0', 'Q52353442', 'P166', 'Q18748039'), ('Q52353442-P166-Q18748042-3c446357-0', 'Q52353442', 'P166', 'Q18748042'), ('Q52353442-P184-Q6123694-2032855e-0', 'Q52353442', 'P184', 'Q6123694'), ('Q52353442-P185-Q102343472-373f0ed5-0', 'Q52353442', 'P185', 'Q102343472'), ('Q52353442-P19-Q2807-92d8e80c-0', 'Q52353442', 'P19', 'Q2807'), ('Q52353442-P1960-601bc1-1d1f5261-0', 'Q52353442', 'P1960', '"NDmGsCgAAAAJ"'), ('Q52353442-P21-Q6581072-f653b32c-0', 'Q52353442', 'P21', 'Q6581072'), ('Q52353442-P213-49066c-8fc0d32c-0', 'Q52353442', 'P213', '"0000 0000 3762 2146"'), ('Q52353442-P214-1c576a-648c3580-0', 'Q52353442', 'P214', '"18334143"'), ('Q52353442-P244-5d352f-f85a8c96-0', 'Q52353442', 'P244', '"nb2005019080"'), ('Q52353442-P2456-b325a5-5b751548-0', 'Q52353442', 'P2456', '"88/2686"'), ('Q52353442-P2671-2e7fe8-0a9466a9-0', 'Q52353442', 'P2671', '"/g/11grpt57xn"'), ('Q52353442-P27-Q29-1c7b6b5c-0', 'Q52353442', 'P27', 'Q29'), ('Q52353442-P31-Q5-b46dfbd7-0', 'Q52353442', 'P31', 'Q5'), ('Q52353442-P496-8da475-0e4b3f94-0', 'Q52353442', 'P496', '"0000-0001-8465-8341"'), ('Q52353442-P549-828a1d-27c6ad2a-0', 'Q52353442', 'P549', '"50269"'), ('Q52353442-P569-5069f4-2d4c6716-0', 'Q52353442', 'P569', '^1960-01-01T00:00:00Z/7'), ('Q52353442-P69-Q190080-0c0aa4a5-0', 'Q52353442', 'P69', 'Q190080'), ('Q52353442-P69-Q25864-c80df10a-0', 'Q52353442', 'P69', 'Q25864'), ('Q52353442-P735-Q21045740-8683ff36-0', 'Q52353442', 'P735', 'Q21045740'), ('Q52353442-P7859-05a463-a41340d1-0', 'Q52353442', 'P7859', '"lccn-nb2005019080"'), ('Q52353442-P864-a1d270-2d5566dc-0', 'Q52353442', 'P864', '"81100348498"'), ('Q52353442-P949-cf102a-4130dc7e-0', 'Q52353442', 'P949', '"002253159"')]
+
+# specifying a query in top-level command syntax (the name is not really needed, just for illustration):
+>>> query = api.get_query(cmd='''--name get_node_edges_via_cmd -i claims --max-cache 100
+                                 --match '(n)-[r]->(n2)'
+                                 --where 'n=$NODE'
+                                 --return 'r as id, n as node1, r.label as label, n2 as node2'
+                              ''')
+... ... ... ... 
+[2021-12-03 16:18:40 query]: SQL Translation:
+---------------------------------------------
+  SELECT graph_1_c1."id" "_aLias.id", graph_1_c1."node1" "_aLias.node1", graph_1_c1."label" "_aLias.label", graph_1_c1."node2" "_aLias.node2"
+     FROM graph_1 AS graph_1_c1
+     WHERE (graph_1_c1."node1" = ?)
+     LIMIT ?
+  PARAS: [('NODE',), 100000]
+---------------------------------------------
+
+# parameterized queries can then be issued as before:
+>>> api.execute_query(query, NODE='Q102278051')
+(('Q102278051-P184-Q102109890-f8d13f77-0', 'Q102278051', 'P184', 'Q102109890'), ('Q102278051-P185-Q102408991-76042e04-0', 'Q102278051', 'P185', 'Q102408991'), ('Q102278051-P31-Q5-8e8f10f9-0', 'Q102278051', 'P31', 'Q5'), ('Q102278051-P549-f21c68-c57207a7-0', 'Q102278051', 'P549', '"91301"'), ('Q102278051-P69-Q681025-22a4731f-0', 'Q102278051', 'P69', 'Q681025'), ('Q102278051-P735-Q632842-3ffb9f39-0', 'Q102278051', 'P735', 'Q632842'))
+
 >>> api.close()
 >>> 
 """
