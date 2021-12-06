@@ -38,7 +38,7 @@ Next, execute the following steps to install the latest stable release
 of KGTK:
 
 ```bash
-conda create -n kgtk-env python=3.8
+conda create -n kgtk-env python=3.9
 conda activate kgtk-env
 conda install -c conda-forge graph-tool
 conda install -c conda-forge jupyterlab
