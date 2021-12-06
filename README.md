@@ -51,6 +51,10 @@ you encounter problems with your installation, or are interested in a detailed
 explanation of these commands, [read more about the installation procedure
 here](docs/KGTK-Installation-Procedure-Details.md).
 
+### Installing KGTK with Docker
+
+Please refer to [this document](docs/install-with-docker.md) for installing KGTK with Docker
+
 ## Getting started
 
 ### Online Documentation
