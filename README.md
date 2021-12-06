@@ -49,7 +49,7 @@ python -m spacy download en_core_web_sm
 Please see our [installation document](/docs/install.md) for more details.  If
 you encounter problems with your installation, or are interested in a detailed
 explanation of these commands, [read more about the installation procedure
-here](KGTK-Installation-Procedure-Details.md).
+here](docs/KGTK-Installation-Procedure-Details.md).
 
 ## Getting started
 
