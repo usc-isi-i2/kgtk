@@ -607,7 +607,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             if not isinstance(input_filter_set, set):
                 raise ValueError("Input filter key %d does not reference a set." % input_filter_key)
             if len(input_filter_set) == 0:
-                raise ValueError("Input filter key %d references an empay set." % input_filter_key)
+                raise ValueError("Input filter key %d references an empty set." % input_filter_key)
             input_filter_value: str
             for input_filter_value in sorted(list(input_filter_set)):
                 if not isinstance(input_filter_value, str):
