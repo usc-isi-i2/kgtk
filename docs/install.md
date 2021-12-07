@@ -16,7 +16,7 @@ Next, execute the following steps to install the latest stable release
 of KGTK:
 
 ```bash
-conda create -n kgtk-env python=3.8
+conda create -n kgtk-env python=3.9
 conda activate kgtk-env
 conda install -c conda-forge graph-tool
 conda install -c conda-forge jupyterlab
@@ -26,11 +26,11 @@ python -m spacy download en_core_web_sm
 
 > You may sometimes need to install a specific release of KGTK, such as
     a prerelease that incorporates the latest changes.  For example,
-    if you need to install KGTK release `0.8.6b0`, use the following
+    if you need to install KGTK release `1.1.0`, use the following
     `pip` command instead of the `pip` command shown above:
 
 ```bash
-pip --no-cache install kgtk==0.8.6b0
+pip --no-cache install kgtk==1.1.0
 ```
 
 If you encounter problems with your installation, or are interested in a
