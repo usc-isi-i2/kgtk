@@ -285,7 +285,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--fast", dest="be_fast",
-                              help="When --fast=True, use a fater implementation which might not be general. " +
+                              help="When --fast=True, use a faster implementation which might not be general. " +
                               "(default=%(default)s).",
                               metavar="True|False",
                               type=optional_bool, nargs='?', const=True, default=False)
@@ -581,7 +581,8 @@ def run(input_file: KGTKFiles,
             if len(sources) != len(into_column_idxs):
                 raise KGTKException("Abs needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
 
-            def abs_op()->True:
+            def abs_op()->bool:
+                # TODO: support quantities.
                 src_idx: int
                 for src_idx in range(len(sources)):
                     output_row[into_column_idxs[src_idx]] = str(abs(float(row[sources[src_idx]])))
@@ -618,6 +619,7 @@ def run(input_file: KGTKFiles,
                 raise KGTKException("Average needs 1 destination column, got %d" % len(into_column_idxs))
 
             def average_op()->bool:
+                # TODO: support quantities.
                 atotal: float = 0
                 acount: int = 0
                 src_idx: int
@@ -662,7 +664,7 @@ def run(input_file: KGTKFiles,
             if len(sources) != len(into_column_idxs):
                 raise KGTKException("Capitalize needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
 
-            def capitalize_op()->True:
+            def capitalize_op()->bool:
                 src_idx: int
                 for src_idx in range(len(sources)):
                     output_row[into_column_idxs[src_idx]] = row[sources[src_idx]].capitalize()
@@ -853,6 +855,7 @@ def run(input_file: KGTKFiles,
                 raise KGTKException("Divide needs 1 destination columns, got %d" % len(into_column_idxs))
 
             def div_op()->bool:
+                # TODO: support quantities.
                 if len(sources) == 2:
                     output_row[into_column_idx] = str(float(row[sources[0]]) / float(row[sources[1]]))
                 else:
@@ -1240,12 +1243,41 @@ def run(input_file: KGTKFiles,
 
 
         if operation == LIST_SUM_OP:
+            # This code supports summaries of numbers or quantities.
+            #
+            # Numbers can be added to numbers but not quanties.  Quantities
+            # cam be added, but only whn the qualifiers (SI units or Qnodes)
+            # match.
+            #
+            # Sums are computed on float values.
+            #
+            # TODO: Sum integers without conversion to float?
             if len(sources) == 0:
                 raise KGTKException("List sum needs at least one source, got %d" % len(sources))
             if len(sources) != len(into_column_idxs):
                 raise KGTKException("List sum needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
 
-            def list_sum_op()->True:
+            def list_sum_fast_op()->bool:
+                # This fast path assumes that when column values contain
+                # lists, the list item values are all numbers.  If this assumption
+                # is violated, a Python exception might be thrown.
+                #
+                # Lists are detected and split assuming that the values are numbers
+                # and do not include embedded, quoted '|' characters.
+                #
+                # TODO: Catch the Python excption and optionally proceed.
+                src_idx: int
+                for src_idx in range(len(sources)):
+                    listval: str = row[sources[src_idx]]
+                    if '|' not in listval:
+                        # We've seen an empty value or a value without a list.  Copy it:
+                        output_row[into_column_idxs[src_idx]] = listval
+                    else:
+                        # The value is a list, presumably of numbers.  Sum it:
+                        output_row[into_column_idxs[src_idx]] = str(sum([float(x) for x in listval.split('|')]))
+                return True
+
+            def list_sum_op()->bool:
                 src_idx: int
                 for src_idx in range(len(sources)):
                     listval: str = row[sources[src_idx]]
@@ -1334,7 +1366,7 @@ def run(input_file: KGTKFiles,
                                 else:
                                     output_row[into_column_idxs[src_idx]] = str(total) + qualifier                                
                 return True
-            opfunc = list_sum_op
+            opfunc = list_sum_fast_op if be_fast else list_sum_op
 
         elif operation == LT_OP:
             if not ((len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1)):
@@ -1383,6 +1415,7 @@ def run(input_file: KGTKFiles,
                 raise KGTKException("Max needs 1 destination columns, got %d" % len(into_column_idxs))
 
             def max_op()->bool:
+                # TODO: support quantities.
                 max_result: typing.Optional[float] = None
                 src_idx: int
                 for src_idx in sources:
@@ -1431,6 +1464,7 @@ def run(input_file: KGTKFiles,
                 raise KGTKException("Min needs 1 destination columns, got %d" % len(into_column_idxs))
 
             def min_op()->bool:
+                # TODO: support quantites.
                 min_result: typing.Optional[float] = None
                 src_idx: int
                 for src_idx in sources:
@@ -1479,6 +1513,7 @@ def run(input_file: KGTKFiles,
                 raise KGTKException("Minus needs 1 destination columns, got %d" % len(into_column_idxs))
 
             def minus_op()->bool:
+                # TODO: support quanties.
                 if len(sources) == 2:
                     output_row[into_column_idx] = str(float(row[sources[0]]) - float(row[sources[1]]))
                 else:
@@ -1493,6 +1528,7 @@ def run(input_file: KGTKFiles,
                 raise KGTKException("Mod needs 1 destination columns, got %d" % len(into_column_idxs))
 
             def mod_op()->bool:
+                # TODO: support quanties.
                 if len(sources) == 2:
                     output_row[into_column_idx] = str(float(row[sources[0]]) % float(row[sources[1]]))
                 else:
@@ -1555,7 +1591,8 @@ def run(input_file: KGTKFiles,
                 if len(sources) != len(into_column_idxs):
                     raise KGTKException("Negate needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
 
-            def negate_op()->True:
+            def negate_op()->bool:
+                # TODO: support quantities.
                 src_idx: int
                 for src_idx in range(len(sources)):
                     output_row[into_column_idxs[src_idx]] = str(- float(row[sources[src_idx]]))
@@ -1607,7 +1644,11 @@ def run(input_file: KGTKFiles,
             opfunc = not_op
 
         elif operation == NUMBER_OP:
+            # Extract a number from a number or quantiy.
+            #
             # TODO:  Need number parsing options.
+            #
+            # TODO:  Need an operator to extract the qualifiers from a quantity.
             if len(sources) == 0:
                 raise KGTKException("number needs at least one source, got %d" % len(sources))
             if len(sources) != len(into_column_idxs):
@@ -1669,6 +1710,7 @@ def run(input_file: KGTKFiles,
                 raise KGTKException("Percent needs 2 input columns, got %d" % len(sources))
 
             def percentage_op()->bool:
+                # TODO: Support quantities?
                 output_row[into_column_idx] = fs % (float(row[sources[0]]) * 100 / float(row[sources[1]]))
                 return True
             opfunc = percentage_op
@@ -1698,6 +1740,7 @@ def run(input_file: KGTKFiles,
                 raise KGTKException("Reverse divide needs 1 destination columns, got %d" % len(into_column_idxs))
 
             def reverse_div_op()->bool:
+                # TODO: Support quantities.
                 if len(sources) == 2:
                     output_row[into_column_idx] = str(float(row[sources[1]]) / float(row[sources[0]]))
                 else:
@@ -1712,6 +1755,7 @@ def run(input_file: KGTKFiles,
                 raise KGTKException("Reverse minus needs 1 destination columns, got %d" % len(into_column_idxs))
 
             def reverse_minus_op()->bool:
+                # TODO: Support quanties.
                 if len(sources) == 2:
                     output_row[into_column_idx] = str(float(row[sources[1]]) - float(row[sources[0]]))
                 else:
@@ -1726,6 +1770,7 @@ def run(input_file: KGTKFiles,
                 raise KGTKException("Reverse mod needs 1 destination columns, got %d" % len(into_column_idxs))
 
             def reverse_mod_op()->bool:
+                # TODO: support quantities.
                 if len(sources) == 2:
                     output_row[into_column_idx] = str(float(row[sources[1]]) % float(row[sources[0]]))
                 else:
@@ -1970,6 +2015,7 @@ def run(input_file: KGTKFiles,
             opfunc = substitute_op
 
         elif operation == SUM_OP:
+            # TODO: Support quantities.
             if len(sources) == 0:
                 raise KGTKException("Sum needs at least one source, got %d" % len(sources))
             if len(into_column_idxs) != 1:
