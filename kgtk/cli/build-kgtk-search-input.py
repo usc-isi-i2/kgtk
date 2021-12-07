@@ -51,10 +51,14 @@ def add_arguments(parser):
 
     parser.add_argument('--property-datatype-file', action='store', dest='property_datatype_file', default=None,
                         help='A file in KGTK edge file format with data types for properties')
+    parser.add_argument('--languages', action='store', type=str, dest='languages',
+                        default="en",
+                        help='a comma separated list of languages for labels, aliases and descriptions')
 
 
 def run(**kwargs):
     from kgtk.utils.elasticsearch_manager import ElasticsearchManager
+    languages = set(kwargs['languages'].split(","))
     try:
 
         ElasticsearchManager.build_kgtk_search_input(kwargs['input_file_path'], kwargs['label_properties'],
@@ -64,7 +68,8 @@ def run(**kwargs):
                                                      pagerank_fields=kwargs['pagerank_properties'],
                                                      description_properties=kwargs['description_properties'],
                                                      add_text=kwargs['add_text'],
-                                                     property_datatype_file=kwargs['property_datatype_file']
+                                                     property_datatype_file=kwargs['property_datatype_file'],
+                                                     languages=languages
                                                      )
     except:
         message = 'Command: build-kgtk-search-input\n'

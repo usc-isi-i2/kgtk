@@ -41,12 +41,15 @@ cleared if an error occurs processing the input date-and-time value.
 
 ```
 usage: kgtk calc [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
-                 [-c [COLUMN_NAME [COLUMN_NAME ...]]] --into COLUMN_NAME
-                 [COLUMN_NAME ...] --do
-                 {and,average,capitalize,casefold,copy,eq,fromisoformat,ge,gt,is,is_in,is_not,join,lower,le,len,lt,max,min,nand,ne,nor,not,or,percentage,replace,set,substring,substitute,sum,swapcase,title,upper,xor}
+                 [-c [COLUMN_NAME [COLUMN_NAME ...]]]
+                 [--into COLUMN_NAME [COLUMN_NAME ...]] --do
+                 {abs,and,average,capitalize,casefold,copy,div,eq,fromisoformat,ge,gt,is,is_in,is_not,join,lower,le,len,lt,max,min,minus,nand,ne,negate,nor,not,or,percentage,replace,reverse_div,reverse_minus,set,string_lang,string_lang_suffix,string_suffix,string_text,substring,substitute,sum,swapcase,title,upper,xor}
                  [--values [VALUES [VALUES ...]]]
                  [--with-values [WITH_VALUES [WITH_VALUES ...]]]
                  [--limit LIMIT] [--format FORMAT_STRING]
+                 [--overwrite [True|False]] [--to-string [True|False]]
+                 [--group-by [COLUMN_NAME [COLUMN_NAME ...]]]
+                 [--presorted [True|False]] [--filter [True|False]]
                  [-v [optional True|False]]
 
 This command performs calculations on one or more columns in a KGTK file. 
@@ -70,7 +73,7 @@ optional arguments:
   --into COLUMN_NAME [COLUMN_NAME ...]
                         The name of the column to receive the result of the
                         calculation.
-  --do {and,average,capitalize,casefold,copy,eq,fromisoformat,ge,gt,is,is_in,is_not,join,lower,le,len,lt,max,min,nand,ne,nor,not,or,percentage,replace,set,substring,substitute,sum,swapcase,title,upper,xor}
+  --do {abs,and,average,capitalize,casefold,copy,div,eq,fromisoformat,ge,gt,is,is_in,is_not,join,lower,le,len,lt,max,min,minus,nand,ne,negate,nor,not,or,percentage,replace,reverse_div,reverse_minus,set,string_lang,string_lang_suffix,string_suffix,string_text,substring,substitute,sum,swapcase,title,upper,xor}
                         The name of the operation.
   --values [VALUES [VALUES ...]]
                         An optional list of values
@@ -79,6 +82,33 @@ optional arguments:
   --limit LIMIT         A limit count.
   --format FORMAT_STRING
                         The format string for the calculation.
+  --overwrite [True|False]
+                        If true, overwrite non-empty values in the result
+                        column(s). If false, do not overwrite non-empty values
+                        in the result column(s). --overwrite=False may be used
+                        with the following operations: ['copy', 'set',
+                        'substring'] (default=True).
+  --to-string [True|False]
+                        If true, ensure that the result is a string. If false,
+                        the result might be a symbol or some other type. --to-
+                        string=True may be used with the following operations:
+                        ['string_lang', 'string_lang_suffix', 'string_suffix',
+                        'substring'] (default=False).
+  --group-by [COLUMN_NAME [COLUMN_NAME ...]]
+                        The list of group-by column names, optionally
+                        containing '..' for column ranges and '...' for column
+                        names not explicitly mentioned. --group-by may be used
+                        with the following operations: ['average', 'min',
+                        'max', 'sum']. At the present time, --group-by
+                        requires --presorted.
+  --presorted [True|False]
+                        If true, the input file is presorted for --group-by.
+                        (default=False).
+  --filter [True|False]
+                        When --filter=True, and a boolean operation is
+                        specified, records for which the result is False will
+                        not be written to the output stream. Also, --into is
+                        optional when --filter is provided. (default=False).
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).

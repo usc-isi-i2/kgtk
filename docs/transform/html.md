@@ -19,18 +19,20 @@ to particular columns.
 ## Usage
 
 ```
-usage: kgtk html [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
-               [-v [optional True|False]]
+usage: kgtk html [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [--pp [True/False]]
+                 [-v [optional True|False]]
 
 Convert a KGTK input file to an HTML table on output. 
 
 Use this command to filter the output of any KGTK command: 
 
-kgtk xxx / html
+kgtk xxx / html 
 
-Use it to convert a KGTK file to an HTML table in a file: 
+Use it to convert a KGTK file to a HTML table in a file: 
 
 kgtk html -i file.tsv -o file.html
+
+This command defaults to --mode=NONE so it will work with TSV files that do not follow KGTK column naming conventions.
 
 Additional options are shown in expert help.
 kgtk --expert html --help
@@ -38,13 +40,14 @@ kgtk --expert html --help
 optional arguments:
   -h, --help            show this help message and exit
   -i INPUT_FILE, --input-file INPUT_FILE
-                        The KGTK file to convert to a GitHub markdown table.
-                        (May be omitted or '-' for stdin.)
+                        The KGTK file to convert to an HTML table. (May be
+                        omitted or '-' for stdin.)
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
-                        The html file to write. (May be omitted or
+                        The GitHub markdown file to write. (May be omitted or
                         '-' for stdout.)
   --pp [True/False], --readable [True/False]
-                        If true, use a human-readable output format. (default=False).
+                        If true, use a human-readable output format.
+                        (default=False).
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).

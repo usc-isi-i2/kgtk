@@ -15,17 +15,23 @@ However, it is a lot shorter and easier to type.
 
 ```
 usage: kgtk table [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
-               [-v [optional True|False]]
+                  [-v [optional True|False]]
 
-Convert a KGTK input file to an text table on output. 
+Convert a KGTK input file to an text table with fixed-width columns on output. 
+
+The initial implementation of this command buffers all output rows im memory, and is not suitable for very large files. 
+
+The output from this command is suitable for use as an MD file. 
 
 Use this command to filter the output of any KGTK command: 
 
-kgtk xxx / table
+kgtk xxx / table 
 
-Use it to convert a KGTK file to an text table in a file: 
+Use it to convert a KGTK file to a text table in a file: 
 
 kgtk table -i file.tsv -o file.table
+
+This command defaults to --mode=NONE so it will work with TSV files that do not follow KGTK column naming conventions.
 
 Additional options are shown in expert help.
 kgtk --expert table --help
@@ -33,10 +39,10 @@ kgtk --expert table --help
 optional arguments:
   -h, --help            show this help message and exit
   -i INPUT_FILE, --input-file INPUT_FILE
-                        The KGTK file to convert to a GitHub markdown table.
-                        (May be omitted or '-' for stdin.)
+                        The KGTK file to convert to an HTML table. (May be
+                        omitted or '-' for stdin.)
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
-                        The text table file to write. (May be omitted or
+                        The GitHub markdown file to write. (May be omitted or
                         '-' for stdout.)
 
   -v [optional True|False], --verbose [optional True|False]

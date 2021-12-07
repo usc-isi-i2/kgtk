@@ -2,17 +2,20 @@ This command concatenates any mixture of plain or gzip/bzip2/xz-compressed files
 
 ## Usage
 ```
-usage: kgtk zconcat [-h] [-o OUTPUT] [--gz] [--bz2] [--xz] [-i INPUT_FILE [INPUT_FILE ...]]
+usage: kgtk zconcat [-h] [-o OUTPUT] [--gz] [--bz2] [--xz]
+                    [-i INPUT_FILE [INPUT_FILE ...]]
 
 optional arguments:
   -h, --help            show this help message and exit
   -o OUTPUT, --out OUTPUT
-                        output file to write to, otherwise output goes to stdout
+                        output file to write to, otherwise output goes to
+                        stdout
   --gz, --gzip          compress result with gzip
   --bz2, --bzip2        compress result with bzip2
   --xz                  compress result with xz
   -i INPUT_FILE [INPUT_FILE ...], --input-file INPUT_FILE [INPUT_FILE ...]
-                        The KGTK input file. (May be omitted or '-' for stdin.)
+                        The KGTK input file. (May be omitted or '-' for
+                        stdin.)
 ```
 
 Inputs are zero or more input files. The files can be plain or compressed in a

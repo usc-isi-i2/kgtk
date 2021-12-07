@@ -313,20 +313,20 @@ kgtk cat -i examples/docs/implode-file2.tsv --mode=NONE
 | john | boolean | True | boolean | True | 0 |  |  |  |  |  |  |  |  |  |  |  |  | True |  |
 | john | symbol | quadrature | symbol | True | 0 |  |  |  |  |  |  |  |  |  |  |  |  |  | quadrature |
 | john | symbol-string | quadrature | symbol | True | 0 |  |  |  |  |  |  |  |  |  |  |  |  |  | "quadrature" |
-| john | symbol-with-raw-pipe | quadr\\|ature | symbol | True | 0 |  |  |  |  |  |  |  |  |  |  |  |  |  | quadr\|ature |
-| john | symbol-with-escaped-pipe | quadr\\|ature | symbol | True | 0 |  |  |  |  |  |  |  |  |  |  |  |  |  | quadr\\|ature |
+| john | symbol-with-raw-pipe | quadr\\\|ature | symbol | True | 0 |  |  |  |  |  |  |  |  |  |  |  |  |  | quadr\|ature |
+| john | symbol-with-escaped-pipe | quadr\\\|ature | symbol | True | 0 |  |  |  |  |  |  |  |  |  |  |  |  |  | quadr\\\|ature |
 | john | list | home\|work | list | True | 2 |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-| john | string-with-tab | "Jo\thn" | string | True | 0 |  |  |  |  |  | "Jo\thn" |  |  |  |  |  |  |  |  |
-| john | string-with-raw-pipe | "Jo\\|hn" | string | True | 0 |  |  |  |  |  | "Jo\|hn" |  |  |  |  |  |  |  |  |
-| john | string-with-escaped-pipe | "Jo\\|hn" | string | True | 0 |  |  |  |  |  | "Jo\\|hn" |  |  |  |  |  |  |  |  |
-| john | string-with-escaped-quote | "Jo\"hn" | string | True | 0 |  |  |  |  |  | "Jo\"hn" |  |  |  |  |  |  |  |  |
-| john | string-with-escaped-prime | "Jo\'hn" | string | True | 0 |  |  |  |  |  | "Jo\'hn" |  |  |  |  |  |  |  |  |
-| john | lqstring-with-tab | 'Joh\tn'@en | language_qualified_string | True | 0 |  |  |  |  |  | "Joh\tn" | en |  |  |  |  |  |  |  |
-| john | lqstring-with-raw-pipe | 'Joh\\|n'@en | language_qualified_string | True | 0 |  |  |  |  |  | "Joh\|n" | en |  |  |  |  |  |  |  |
-| john | lqstring-with-escaped-pipe | 'Joh\\|n'@en | language_qualified_string | True | 0 |  |  |  |  |  | "Joh\\|n" | en |  |  |  |  |  |  |  |
-| john | lqstring-with-escaped-quote | 'Joh\"n'@en | language_qualified_string | True | 0 |  |  |  |  |  | "Joh\"n" | en |  |  |  |  |  |  |  |
-| john | lqstring-with-escaped-prime | 'Joh\'n'@en | language_qualified_string | True | 0 |  |  |  |  |  | "Joh\'n" | en |  |  |  |  |  |  |  |
-| john | lqstring-with-escaped-prime-and-quote | 'Joh\'\"n'@en | language_qualified_string | True | 0 |  |  |  |  |  | "Joh\'\"n" | en |  |  |  |  |  |  |  |
+| john | string-with-tab | "Jo\\thn" | string | True | 0 |  |  |  |  |  | "Jo\\thn" |  |  |  |  |  |  |  |  |
+| john | string-with-raw-pipe | "Jo\\\|hn" | string | True | 0 |  |  |  |  |  | "Jo\|hn" |  |  |  |  |  |  |  |  |
+| john | string-with-escaped-pipe | "Jo\\\|hn" | string | True | 0 |  |  |  |  |  | "Jo\\\|hn" |  |  |  |  |  |  |  |  |
+| john | string-with-escaped-quote | "Jo\\"hn" | string | True | 0 |  |  |  |  |  | "Jo\\"hn" |  |  |  |  |  |  |  |  |
+| john | string-with-escaped-prime | "Jo\\'hn" | string | True | 0 |  |  |  |  |  | "Jo\\'hn" |  |  |  |  |  |  |  |  |
+| john | lqstring-with-tab | 'Joh\\tn'@en | language_qualified_string | True | 0 |  |  |  |  |  | "Joh\\tn" | en |  |  |  |  |  |  |  |
+| john | lqstring-with-raw-pipe | 'Joh\\\|n'@en | language_qualified_string | True | 0 |  |  |  |  |  | "Joh\|n" | en |  |  |  |  |  |  |  |
+| john | lqstring-with-escaped-pipe | 'Joh\\\|n'@en | language_qualified_string | True | 0 |  |  |  |  |  | "Joh\\\|n" | en |  |  |  |  |  |  |  |
+| john | lqstring-with-escaped-quote | 'Joh\\"n'@en | language_qualified_string | True | 0 |  |  |  |  |  | "Joh\\"n" | en |  |  |  |  |  |  |  |
+| john | lqstring-with-escaped-prime | 'Joh\\'n'@en | language_qualified_string | True | 0 |  |  |  |  |  | "Joh\\'n" | en |  |  |  |  |  |  |  |
+| john | lqstring-with-escaped-prime-and-quote | 'Joh\\'\\"n'@en | language_qualified_string | True | 0 |  |  |  |  |  | "Joh\\'\\"n" | en |  |  |  |  |  |  |  |
 | john | lqstring-with-triple-double-quotes | 'John'@en | language_qualified_string | True | 0 |  |  |  |  |  | """John""" | en |  |  |  |  |  |  |  |
 
 !!! note
@@ -357,20 +357,20 @@ The output will be the following table in KGTK format:
 | john | boolean | True | boolean | True | 0 |  |  |  |  |  |  |  |  |  |  |  |  | True |  | True |
 | john | symbol | quadrature | symbol | True | 0 |  |  |  |  |  |  |  |  |  |  |  |  |  | quadrature | quadrature |
 | john | symbol-string | quadrature | symbol | True | 0 |  |  |  |  |  |  |  |  |  |  |  |  |  | "quadrature" | quadrature |
-| john | symbol-with-raw-pipe | quadr\\|ature | symbol | True | 0 |  |  |  |  |  |  |  |  |  |  |  |  |  | quadr\|ature | quadr\|ature |
-| john | symbol-with-escaped-pipe | quadr\\|ature | symbol | True | 0 |  |  |  |  |  |  |  |  |  |  |  |  |  | quadr\\|ature | quadr\\|ature |
+| john | symbol-with-raw-pipe | quadr\\\|ature | symbol | True | 0 |  |  |  |  |  |  |  |  |  |  |  |  |  | quadr\|ature | quadr\|ature |
+| john | symbol-with-escaped-pipe | quadr\\\|ature | symbol | True | 0 |  |  |  |  |  |  |  |  |  |  |  |  |  | quadr\\\|ature | quadr\\\|ature |
 | john | list | home\|work | list | True | 2 |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-| john | string-with-tab | "Jo\thn" | string | True | 0 |  |  |  |  |  | "Jo\thn" |  |  |  |  |  |  |  |  | "Jo\thn" |
-| john | string-with-raw-pipe | "Jo\\|hn" | string | True | 0 |  |  |  |  |  | "Jo\|hn" |  |  |  |  |  |  |  |  | "Jo\\|hn" |
-| john | string-with-escaped-pipe | "Jo\\|hn" | string | True | 0 |  |  |  |  |  | "Jo\\|hn" |  |  |  |  |  |  |  |  | "Jo\\|hn" |
-| john | string-with-escaped-quote | "Jo\"hn" | string | True | 0 |  |  |  |  |  | "Jo\"hn" |  |  |  |  |  |  |  |  | "Jo\"hn" |
-| john | string-with-escaped-prime | "Jo\'hn" | string | True | 0 |  |  |  |  |  | "Jo\'hn" |  |  |  |  |  |  |  |  | "Jo\'hn" |
-| john | lqstring-with-tab | 'Joh\tn'@en | language_qualified_string | True | 0 |  |  |  |  |  | "Joh\tn" | en |  |  |  |  |  |  |  | 'Joh\tn'@en |
-| john | lqstring-with-raw-pipe | 'Joh\\|n'@en | language_qualified_string | True | 0 |  |  |  |  |  | "Joh\|n" | en |  |  |  |  |  |  |  | 'Joh\\|n'@en |
-| john | lqstring-with-escaped-pipe | 'Joh\\|n'@en | language_qualified_string | True | 0 |  |  |  |  |  | "Joh\\|n" | en |  |  |  |  |  |  |  | 'Joh\\|n'@en |
-| john | lqstring-with-escaped-quote | 'Joh\"n'@en | language_qualified_string | True | 0 |  |  |  |  |  | "Joh\"n" | en |  |  |  |  |  |  |  | 'Joh\"n'@en |
-| john | lqstring-with-escaped-prime | 'Joh\'n'@en | language_qualified_string | True | 0 |  |  |  |  |  | "Joh\'n" | en |  |  |  |  |  |  |  | 'Joh\'n'@en |
-| john | lqstring-with-escaped-prime-and-quote | 'Joh\'\"n'@en | language_qualified_string | True | 0 |  |  |  |  |  | "Joh\'\"n" | en |  |  |  |  |  |  |  | 'Joh\'\"n'@en |
+| john | string-with-tab | "Jo\\thn" | string | True | 0 |  |  |  |  |  | "Jo\\thn" |  |  |  |  |  |  |  |  | "Jo\\thn" |
+| john | string-with-raw-pipe | "Jo\\\|hn" | string | True | 0 |  |  |  |  |  | "Jo\|hn" |  |  |  |  |  |  |  |  | "Jo\\\|hn" |
+| john | string-with-escaped-pipe | "Jo\\\|hn" | string | True | 0 |  |  |  |  |  | "Jo\\\|hn" |  |  |  |  |  |  |  |  | "Jo\\\|hn" |
+| john | string-with-escaped-quote | "Jo\\"hn" | string | True | 0 |  |  |  |  |  | "Jo\\"hn" |  |  |  |  |  |  |  |  | "Jo\\"hn" |
+| john | string-with-escaped-prime | "Jo\\'hn" | string | True | 0 |  |  |  |  |  | "Jo\\'hn" |  |  |  |  |  |  |  |  | "Jo\\'hn" |
+| john | lqstring-with-tab | 'Joh\\tn'@en | language_qualified_string | True | 0 |  |  |  |  |  | "Joh\\tn" | en |  |  |  |  |  |  |  | 'Joh\\tn'@en |
+| john | lqstring-with-raw-pipe | 'Joh\\\|n'@en | language_qualified_string | True | 0 |  |  |  |  |  | "Joh\|n" | en |  |  |  |  |  |  |  | 'Joh\\\|n'@en |
+| john | lqstring-with-escaped-pipe | 'Joh\\\|n'@en | language_qualified_string | True | 0 |  |  |  |  |  | "Joh\\\|n" | en |  |  |  |  |  |  |  | 'Joh\\\|n'@en |
+| john | lqstring-with-escaped-quote | 'Joh\\"n'@en | language_qualified_string | True | 0 |  |  |  |  |  | "Joh\\"n" | en |  |  |  |  |  |  |  | 'Joh\\"n'@en |
+| john | lqstring-with-escaped-prime | 'Joh\\'n'@en | language_qualified_string | True | 0 |  |  |  |  |  | "Joh\\'n" | en |  |  |  |  |  |  |  | 'Joh\\'n'@en |
+| john | lqstring-with-escaped-prime-and-quote | 'Joh\\'\\"n'@en | language_qualified_string | True | 0 |  |  |  |  |  | "Joh\\'\\"n" | en |  |  |  |  |  |  |  | 'Joh\\'\\"n'@en |
 | john | lqstring-with-triple-double-quotes | 'John'@en | language_qualified_string | True | 0 |  |  |  |  |  | """John""" | en |  |  |  |  |  |  |  | 'John'@en |
 
 One line was not imploded, as indicated by the following error message:
