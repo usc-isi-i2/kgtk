@@ -69,6 +69,7 @@ DATE_YEAR_OP: str = "date_year"
 ABS_OP: str = "abs" # (column, ...)
 AVERAGE_OP: str = "average"
 DIV_OP: str = "div" # (column / column) or (column / value)
+LIST_SUM_OP: str = "list_sum" # column
 MAX_OP: str = "max"
 MIN_OP: str = "min"
 MINUS_OP: str = "minus" # (column1 - column2) or (column - value)
@@ -141,6 +142,7 @@ OPERATIONS: typing.List[str] = [
     LOWER_OP,
     LE_OP,
     LEN_OP,
+    LIST_SUM_OP,
     LT_OP,
     MAX_OP,
     MIN_OP,
@@ -1236,6 +1238,103 @@ def run(input_file: KGTKFiles,
                 return True
             opfunc = len_op
 
+
+        if operation == LIST_SUM_OP:
+            if len(sources) == 0:
+                raise KGTKException("List sum needs at least one source, got %d" % len(sources))
+            if len(sources) != len(into_column_idxs):
+                raise KGTKException("List sum needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
+
+            def list_sum_op()->True:
+                src_idx: int
+                for src_idx in range(len(sources)):
+                    listval: str = row[sources[src_idx]]
+                    if len(listval) == 0:
+                        # This is the optimized path for empty values.
+                        output_row[into_column_idxs[src_idx]] = ""
+                    else:
+
+                        # TODO: use math.fsum(...) for improved accuracy.
+                        kv: KgtkValue = KgtkValue(listval)
+                        if not kv.is_list():
+                            # This is the optimized path for not-list values.  Just copy the value.
+                            output_row[into_column_idxs[src_idx]] = listval
+                        else:
+                            fail: bool = False
+                            total: typing.Optional[float] = None
+                            is_number: typing.Optinal[bool] = None
+                            qualifier: str = ""
+                            kvitem: KgtkValue
+                            for kvitem in kv.get_list_items():
+                                if is_number is None:
+                                    if kvitem.is_number():
+                                        is_number = True
+                                        total = float(kvitem.value) # TODO: Use the parsed fields?
+                                        continue
+
+                                    if not kvitem.is_quantity(validate=True, parse_fields=True):
+                                        fail = True
+                                        break
+
+                                    is_number = False
+                                    if kvitem.fields is None:
+                                        fail = True
+                                        break
+                                    if kvitem.fields.number is None:
+                                        fail = True
+                                        break
+                                    total = float(kvitem.fields.number)
+                                    if kvitem.fields.low_tolerancestr is not None or kvitem.fields.high_tolerancestr:
+                                        # TODO: handle these properly.
+                                        fail = True
+                                        break
+                                    if kvitem.fields.si_units is not None:
+                                        qualifier = kvitem.fields.si_units
+                                    else:
+                                        qualifier = kvitem.fields.units_node
+                                    continue
+
+                                if is_number:
+                                    if kvitem.is_number():
+                                        total += float(kvitem.value)
+                                        continue
+                                    else:
+                                        fail = True
+                                        break
+
+                                if not kvitem.is_quantity(validate=True, parse_fields=True):
+                                    fail = True
+                                    break
+
+                                if kvitem.fields is None:
+                                    fail = True
+                                    break
+                                if kvitem.fields.number is None:
+                                    fail = True
+                                    break
+                                total += float(kvitem.fields.number)
+                                if kvitem.fields.low_tolerancestr is not None or kvitem.fields.high_tolerancestr:
+                                    # TODO: handle these properly.
+                                    fail = True
+                                    break
+                                if kvitem.fields.si_units is not None:
+                                    if qualifier is None or qualifier != kvitem.fields.si_units:
+                                        fail = True
+                                        break
+                                else:
+                                    if qualifier is None or qualifier != kvitem.fields.units_node:
+                                        fail = True
+                                        break                                        
+
+                            if fail:
+                                output_row[into_column_idxs[src_idx]] = listval
+                            else:
+                                if is_number is not None and is_number:
+                                    output_row[into_column_idxs[src_idx]] = str(total)
+                                else:
+                                    output_row[into_column_idxs[src_idx]] = str(total) + qualifier                                
+                return True
+            opfunc = list_sum_op
 
         elif operation == LT_OP:
             if not ((len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1)):
