@@ -1,6 +1,8 @@
 """
 Convert a KGTK file to a GitHub markdown table.
 
+--mode=NONE is default.
+
 TODO: Need KgtkWriterOptions
 """
 
@@ -13,9 +15,10 @@ def parser():
         'help': 'Convert a KGTK file to a GitHub Markdown Table.',
         'description': 'Convert a KGTK input file to a GitHub markdown table on output. ' +
         '\n\nUse this command to filter the output of any KGTK command: ' +
-        '\n\nkgtk md ' +
+        '\n\nkgtk xxx / md ' +
         '\n\nUse it to convert a KGTK file to a GitHub Markdown table in a file: ' +
-        '\n\nkgtk md file.tsv ' +
+        '\n\nkgtk md -i file.tsv -o file.md' +
+        '\n\nThis command defaults to --mode=NONE so it will work with TSV files that do not follow KGTK column naming conventions.' +
         '\n\nAdditional options are shown in expert help.\nkgtk --expert md --help'
     }
 
@@ -26,7 +29,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
-    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     _expert: bool = parsed_shared_args._expert
@@ -46,7 +49,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "--output-format", dest="output_format", help=h("The file format (default=%(default)s)"), type=str, default="md")
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser,
+                                    mode_options=True,
+                                    default_mode=KgtkReaderMode.NONE,
+                                    expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 def run(input_file: KGTKFiles,
@@ -67,7 +73,7 @@ def run(input_file: KGTKFiles,
     import typing
     
     from kgtk.exceptions import KGTKException
-    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
     from kgtk.io.kgtkwriter import KgtkWriter
     from kgtk.join.kgtkcat import KgtkCat
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
@@ -81,7 +87,7 @@ def run(input_file: KGTKFiles,
     # TODO: check that at most one input file is stdin?
 
     # Build the option structures.
-    reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
+    reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs, mode=KgtkReaderMode.NONE)
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
 
     # Show the final option structures for debugging and documentation.

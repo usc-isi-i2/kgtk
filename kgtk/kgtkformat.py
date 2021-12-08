@@ -100,16 +100,16 @@ class KgtkFormat:
         TODO: Should we octal encode <NUL>, <DEL> and any remaining ASCII control characters?
         """
         if len(language) == 0:
-            return '"' + s.translate(KgtkFormat.stringify_translate) + '"'
+            return cls.STRING_SIGIL + s.translate(KgtkFormat.stringify_translate) + cls.STRING_SIGIL
         else:
-            return "'" + s.translate(KgtkFormat.stringify_translate) + "'@" + language + language_suffix
+            return cls.LANGUAGE_QUALIFIED_STRING_SIGIL + s.translate(KgtkFormat.stringify_translate) + "'@" + language + language_suffix
 
     @classmethod
     def unstringify(cls, s: str, unescape_pipe: bool = True)->str:
         """Convert a KGTK formatted string into an internal string.  The language
         code and suffix are not returned.
         """
-        if s.startswith("'"):
+        if s.startswith(cls.LANGUAGE_QUALIFIED_STRING_SIGIL):
             language: str
             s, language = s.rsplit("@", 1)
         if unescape_pipe:
@@ -127,7 +127,7 @@ class KgtkFormat:
         """
         language: str = ""
         language_suffix: str = ""
-        if s.startswith("'"):
+        if s.startswith(cls.LANGUAGE_QUALIFIED_STRING_SIGIL):
             s, language = s.rsplit("@", 1)
             if "-" in language:
                 language, language_suffix = language.split("-", 1)
@@ -135,3 +135,66 @@ class KgtkFormat:
         s = s.replace('\\|', '|')
         return (ast.literal_eval(s), language, language_suffix)
     
+    @classmethod
+    def year(cls, year: typing.Union[int, str])->str:
+        """Convert a year (passed as an integer or string) to a KGTK value for the year as a period.
+        """
+        yearstr: str
+        if isinstance(year, int):
+            yearstr = str(year)
+        else:
+            yearstr = year
+        return cls.DATE_AND_TIMES_SIGIL + yearstr + "-01-01T00:00:00/9"
+
+    @classmethod
+    def year_month(cls,
+                   year: typing.Union[int, str],
+                   month: typing.Union[int, str])->str:
+        """Convert a year and month (passed as integers or strings) to a KGTK value for the period.
+        """
+        yearstr: str
+        if isinstance(year, int):
+            yearstr = str(year)
+        else:
+            yearstr = year
+
+        monthstr: str
+        if isinstance(month, int):
+            monthstr = str(month)
+        else:
+            monthstr = month
+        if len(monthstr) == 1:
+            monthstr = "0" + monthstr
+        return cls.DATE_AND_TIMES_SIGIL + yearstr + "-" + monthstr + "-01T00:00:00/10"
+
+    @classmethod
+    def year_month_day(cls,
+                       year: typing.Union[int, str],
+                       month: typing.Union[int, str],
+                       day: typing.Union[int, str],
+                       )->str:
+        """Convert a year, month, and day (passed as integers or strings) to a KGTK value for the period.
+        """
+        yearstr: str
+        if isinstance(year, int):
+            yearstr = str(year)
+        else:
+            yearstr = year
+
+        monthstr: str
+        if isinstance(month, int):
+            monthstr = str(month)
+        else:
+            monthstr = month
+        if len(monthstr) == 1:
+            monthstr = "0" + monthstr
+
+        daystr: str
+        if isinstance(day, int):
+            daystr = str(day)
+        else:
+            daystr = day
+        if len(daystr) == 1:
+            daystr = "0" + daystr
+
+        return cls.DATE_AND_TIMES_SIGIL + yearstr + "-" + monthstr + "-" + daystr + "T00:00:00/11"

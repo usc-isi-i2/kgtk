@@ -1,6 +1,33 @@
 """Import ntriples into KGTK format.
+
+The W3C document on RDF 1.1 N-Triples is https://www.w3.org/TR/n-triples/.
+
+The W3C document defines optional
+comments that may appear after the full stop (".") at the end of a triple. COmments
+begin with "#" (after optional white space) and continue ot the end of line or end of file.
+
+At present, `kgtk import-ntriples` strips any comments found, with a summary count at the end
+of processing. A more complex option would be to convert N-Triples comments into KGTK comments.
+
+
+Issue #390: KGTK Needs More General Language Tags
+
+According to the Wikipedia article on N-Triples, N-triples use RFC 3066
+language tags. According to the Wikipedia article on IETF language tags,
+RFC 3066 has been replaced by RFC 4646 and RFC 5646, with increasingly
+more general structure.
+
+According to the W3C document on RDF 1.1 N-triples, language tags are
+defined by BCP 47, which references RFC 5646. The Wikipedia article appears
+to be obsolete.
+
+To support importing/exporting N-Triples properly, the KGTK specification and
+implementation may need some extensions.
+
+
 """
 from argparse import ArgumentParser, Namespace
+import ast
 import attr
 import csv
 from pathlib import Path
@@ -28,6 +55,7 @@ class KgtkNtriples(KgtkFormat):
     DEFAULT_NAMESPACE_ID_ZFILL: int = 0
     DEFAULT_NAMESPACE_ID_USE_UUID: bool = False
     DEFAULT_OUTPUT_ONLY_USED_NAMESPACES: bool = True
+    DEFAULT_BUILD_NEW_NAMESPACES: bool = True
     DEFAULT_NEWNODE_PREFIX: str = "kgtk:node"
     DEFAULT_NEWNODE_COUNTER: int = 1
     DEFAULT_NEWNODE_ZFILL: int = 0
@@ -36,8 +64,16 @@ class KgtkNtriples(KgtkFormat):
     DEFAULT_LOCAL_NAMESPACE_USE_UUID: bool = True
     DEFAULT_ALLOW_LAX_URI: bool = True
     DEFAULT_BUILD_ID: bool = False
-    DEFAULT_ESCAPE_PIPES: bool = True
     DEFAULT_VALIDATE: bool = False
+    DEFAULT_ALLOW_UNKNOWN_DATATYPE_IRIS: bool = True
+    DEFAULT_ALLOW_TURTLE_QUOTES: bool = False
+    DEFAULT_ALLOW_LANG_STRING_DATATYPE: bool = False
+    DEFAULT_SUMMARY: bool = False
+    LANG_STRING_TAG_NONE: str = "-"
+    DEFAULT_LANG_STRING_TAG: str = LANG_STRING_TAG_NONE
+    DEFAULT_BUILD_DATATYPE_COLUMN: bool = False
+    DEFAULT_DATATYPE_COLUMN_NAME: str = "datatype"
+    DEFAULT_WRITE_NAMESPACES: bool = True
 
     COLUMN_NAMES: typing.List[str] = [KgtkFormat.NODE1, KgtkFormat.LABEL, KgtkFormat.NODE2]
     
@@ -108,15 +144,25 @@ class KgtkNtriples(KgtkFormat):
     BLANK_NODE_PAT: str = r'(?:_:[0-9a-zA-Z_]+)'
 
     # Double quoted strings with backslash escapes.
-    STRING_PAT: str = r'"(?:[^\\]|(?:\\.))*"'
+    STRING_PAT: str = r'(?:"(?:[^\\]|(?:\\.))*")'
 
-    STRUCTURED_VALUE_PAT: str = r'(?:{string}(?:\^\^{uri})?)'.format(string=STRING_PAT, uri=URI_PAT)
+    # Single quoted strings with backslash escapes are allowed in RDF Turtle format.
+    TURTLE_STRING_PAT: str = r"(?:'(?:[^\\]|(?:\\.))*')"
+
+    # Language tags are sequences of alphanumerics separated by dashes.
+    LANGUAGE_TAG_PAT: str = r'(?:[0-9a-zA-Z]+(?:-[0-9a-zA-Z]+)*)'
+
+    STRUCTURED_VALUE_PAT: str = r'(?:(?:{string}|{turtle_string})(?:(?:@{tag})|(?:\^\^{uri}))?)'.format(string=STRING_PAT,
+                                                                                                        turtle_string=TURTLE_STRING_PAT,
+                                                                                                        tag=LANGUAGE_TAG_PAT,
+                                                                                                        uri=URI_PAT)
     FIELD_PAT: str = r'(?:{uri}|{blank_node}|{structured_value}|{numeric})'.format(uri=URI_PAT,
                                                                                    blank_node=BLANK_NODE_PAT,
                                                                                    structured_value=STRUCTURED_VALUE_PAT,
                                                                                    numeric=numeric_pat,
     )
-    ROW_PAT: str = r'(?P<node1>{field})\s(?P<label>{field})\s(?P<node2>{field})\s\.'.format(field=FIELD_PAT)
+    COMMENT_PAT: str = r'(?:#.*)?'
+    ROW_PAT: str = r'\s*(?P<node1>{field})\s+(?P<label>{field})\s+(?P<node2>{field})\s+\.\s*(?P<comment>{comment})'.format(field=FIELD_PAT, comment=COMMENT_PAT)
     ROW_RE: typing.Pattern = re.compile(r'^' + ROW_PAT + r'$')
 
     SLASH_HASH_PAT: str = r'/|#'
@@ -139,6 +185,13 @@ class KgtkNtriples(KgtkFormat):
 
     allow_lax_uri: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_ALLOW_LAX_URI)
 
+    allow_unknown_datatype_iris: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_ALLOW_UNKNOWN_DATATYPE_IRIS)
+
+    allow_turtle_quotes: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_ALLOW_TURTLE_QUOTES)
+
+    allow_lang_string_datatype: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_ALLOW_LANG_STRING_DATATYPE)
+    lang_string_tag: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_LANG_STRING_TAG)
+
     local_namespace_prefix: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_LOCAL_NAMESPACE_PREFIX)
     local_namespace_use_uuid: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_LOCAL_NAMESPACE_USE_UUID)
 
@@ -146,7 +199,8 @@ class KgtkNtriples(KgtkFormat):
     namespace_id_counter: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_NAMESPACE_ID_COUNTER)
     namespace_id_zfill: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_NAMESPACE_ID_ZFILL)
     namespace_id_use_uuid: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_NAMESPACE_ID_USE_UUID)
-    output_only_used_namespaces: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_LOCAL_NAMESPACE_USE_UUID)
+    output_only_used_namespaces: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_OUTPUT_ONLY_USED_NAMESPACES)
+    build_new_namespaces: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_BUILD_NEW_NAMESPACES)
 
     prefix_expansion_label: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_PREFIX_EXPANSION)
 
@@ -163,9 +217,15 @@ class KgtkNtriples(KgtkFormat):
     idbuilder: typing.Optional[KgtkIdBuilder] = attr.ib(default=None)
 
     validate: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_VALIDATE)
+    summary: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_SUMMARY)
     value_options: KgtkValueOptions = attr.ib(validator=attr.validators.instance_of(KgtkValueOptions), default=DEFAULT_KGTK_VALUE_OPTIONS)
 
     override_uuid: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+
+    write_namespaces: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_WRITE_NAMESPACES)
+
+    build_datatype_column: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_BUILD_DATATYPE_COLUMN)
+    datatype_column_name: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_DATATYPE_COLUMN_NAME)
 
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -177,12 +237,22 @@ class KgtkNtriples(KgtkFormat):
     namespace_ids: typing.MutableMapping[str, str] = attr.ib(factory=dict)
     used_namespaces: typing.Set[str] = attr.ib(factory=set)
 
-    escape_pipes: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_ESCAPE_PIPES)
+    # These get set as needed:
+    converted_string_datatype_uri: str = attr.ib(default="")
+    converted_lang_string_datatype_uri: str = attr.ib(default="")
+    converted_number_datatype_uri: str = attr.ib(default="")
 
     output_line_count: int = attr.ib(default=0)
+    unknown_datatype_iri_count: int = attr.ib(default=0)
+    rejected_lang_string_count: int = attr.ib(default=0)
 
-    def write_row(self, ew: KgtkWriter, node1: str, label: str, node2: str):
-        output_row: typing.List[str] = [ node1, label, node2]
+    def write_row(self, ew: KgtkWriter, node1: str, label: str, node2: str, datatype: str):
+        output_row: typing.List[str]
+        if self.build_datatype_column:
+            output_row = [ node1, label, node2, datatype]
+        else:
+            output_row = [ node1, label, node2]
+
         if self.idbuilder is None:
             ew.write(output_row)
         else:
@@ -247,6 +317,10 @@ class KgtkNtriples(KgtkFormat):
                 # Return the namespace-prefixed URI:
                 return namespace_id + ":" + suffix, True
 
+        if not self.build_new_namespaces:
+            # Do not attempt to build a new namespace.
+            return body, True
+
         # Take the longest possible section, which is now first in the list:
         if len(matches) > 0:
             match_end = matches[0]
@@ -275,20 +349,35 @@ class KgtkNtriples(KgtkFormat):
                 # Return the namespace-prefixed URI:
                 return namespace_id + ":" + suffix, True
 
-    def escape_pipe(self, item: str)->str:
-        # ensure that vertical bars (pipes) are escaped.
-        if self.escape_pipes:
-            return item.replace('|', '\\|')
-        else:
-            return item
-
     def convert_string(self, item: str, line_number: int)->typing.Tuple[str, bool]:
         # Convert this to a KGTK string.
+
+        s: str = ast.literal_eval(item)
+        return KgtkFormat.stringify(s), True
+ 
+    def convert_lq_string(self, item: str, line_number: int)->typing.Tuple[str, bool]:
+        # Convert this to a KGTK language qualified string.
+
+        # Split the language qualifier (and optional suffix).
+        # This code was copied from KgtkFormat.
         #
-        # Our parser guarantees that double quoted strings use proper
-        # escapes... except for vertical bars (pipes).  We have extra work to do to
-        # ensure that vertical bars (pipes) are escaped.
-        return self.escape_pipe(item), True
+        # TODO: There should be only a single copy of this code.
+        quoted_string: str
+        language: str
+        quoted_string, language = item.rsplit("@", 1)
+        language_suffix: str = ""
+        if "-" in language:
+            language, language_suffix = language.split("-", 1)
+            language_suffix = "-" + language_suffix
+
+        # Parse the string, processing quoted characters:
+        #
+        # TODO: check for an error here!
+        s: str = ast.literal_eval(quoted_string)
+
+        # Assemble the final language-qualified string:
+        return KgtkFormat.stringify(s, language, language_suffix), True
+
  
     def generate_new_node_symbol(self)->str:
         new_node_symbol: str = self.newnode_prefix
@@ -309,7 +398,69 @@ class KgtkNtriples(KgtkFormat):
             return item, False
         
 
-    def convert_structured_literal(self, item: str, line_number: int, ew: KgtkWriter)->typing.Tuple[str, bool]:
+    # https://www.w3.org/2011/rdf-wg/wiki/XSD_Datatypes
+    # https://www.w3.org/TR/xmlschema-2/
+
+    NUMERIC_XSD_DATATYPES: typing.Set[str] = {
+        '<http://www.w3.org/2001/XMLSchema#decimal>',
+        '<http://www.w3.org/2001/XMLSchema#integer>',
+        '<http://www.w3.org/2001/XMLSchema#int>',
+        '<http://www.w3.org/2001/XMLSchema#short>',
+        '<http://www.w3.org/2001/XMLSchema#byte>',
+        '<http://www.w3.org/2001/XMLSchema#nonNegativeInteger>',
+        '<http://www.w3.org/2001/XMLSchema#positiveInteger>',
+        '<http://www.w3.org/2001/XMLSchema#unsignedLong>',
+        '<http://www.w3.org/2001/XMLSchema#unsignedInt>',
+        '<http://www.w3.org/2001/XMLSchema#unsignedShort>',
+        '<http://www.w3.org/2001/XMLSchema#unsignedByte>',
+        '<http://www.w3.org/2001/XMLSchema#nonPositiveInteger>',
+        '<http://www.w3.org/2001/XMLSchema#negativeInteger>',
+        '<http://www.w3.org/2001/XMLSchema#double>',
+        '<http://www.w3.org/2001/XMLSchema#float>',
+    }
+
+    STRING_XSD_DATATYPES: typing.Set[str] = {
+        '<http://www.w3.org/2001/XMLSchema#string>',
+        '<http://www.w3.org/2001/XMLSchema#normalizedString>',
+        '<http://www.w3.org/2001/XMLSchema#token>',
+        '<http://www.w3.org/2001/XMLSchema#language>',
+        '<http://www.w3.org/2001/XMLSchema#Name>',
+        '<http://www.w3.org/2001/XMLSchema#NCName>',
+        '<http://www.w3.org/2001/XMLSchema#ENTITY>',
+        '<http://www.w3.org/2001/XMLSchema#ID>',
+        '<http://www.w3.org/2001/XMLSchema#IDREF>',
+        '<http://www.w3.org/2001/XMLSchema#NMTOKEN>',
+    }
+
+    LANG_STRING_DATATYPE_IRI: str = "<http://www.w3.org/1999/02/22-rdf-syntax-ns#langString>"
+    STRING_DATATYPE_IRI: str = '<http://www.w3.org/2001/XMLSchema#string>'
+    NUMBER_DATATYPE_IRI: str = '<http://www.w3.org/2001/XMLSchema#number>'
+                                                 
+    def get_converted_string_datatype_uri(self)->str:
+        if len(self.converted_string_datatype_uri) == 0 and self.build_datatype_column:
+            # Convert the string datatype IRI and cache it:
+            converted_string_datatype_uri_is_valid: bool
+            self.converted_string_datatype_uri, converted_string_datatype_uri_is_valid = self.convert_uri(self.STRING_DATATYPE_IRI, 0)
+            # TODO: fail if converted_string_datatype_uri_is_valid is False
+        return self.converted_string_datatype_uri
+
+    def get_converted_lang_string_datatype_uri(self)->str:
+        if len(self.converted_lang_string_datatype_uri) == 0 and self.build_datatype_column:
+            # Convert the langString datatype IRI and cache it:
+            converted_lang_string_datatype_uri_is_valid: bool
+            self.converted_lang_string_datatype_uri, converted_lang_string_datatype_uri_is_valid = self.convert_uri(self.LANG_STRING_DATATYPE_IRI, 0)
+            # TODO: fail if converted_lang_string_datatype_uri_is_valid is False
+        return self.converted_lang_string_datatype_uri
+
+    def get_converted_number_datatype_uri(self)->str:
+        if len(self.converted_number_datatype_uri) == 0 and self.build_datatype_column:
+            # Convert the number datatype IRI and cache it:
+            converted_number_datatype_uri_is_valid: bool
+            self.converted_number_datatype_uri, converted_number_datatype_uri_is_valid = self.convert_uri(self.NUMBER_DATATYPE_IRI, 0)
+            # TODO: fail if converted_number_datatype_uri_is_valid is False
+        return self.converted_number_datatype_uri
+
+    def convert_structured_literal(self, item: str, line_number: int, ew: KgtkWriter)->typing.Tuple[str, bool, str]:
         # This is the subset of strictured literals that fits the
         # pattern "STRING"^^<URI>.
 
@@ -320,81 +471,125 @@ class KgtkNtriples(KgtkFormat):
             # This shouldn't happen!
             if self.verbose:
                 print("Line %d: no uparrows in '%s'." % (line_number, item), file=self.error_file, flush=True)
-            return item, False
+            return item, False, ""
 
         string: str = item[:uparrows]
         uri: str = item[uparrows+2:]
 
-        if uri == '<http://www.w3.org/2001/XMLSchema#string>':
+        converted_uri: str = ""
+        valid_uri: bool = True
+
+        if uri in self.STRING_XSD_DATATYPES:
             # Convert this to a KGTK string.
-            return self.escape_pipe(string), True
-        elif uri == '<http://www.w3.org/2001/XMLSchema#int>':
+            if self.build_datatype_column:
+                converted_uri, valid_uri = self.convert_uri(uri, line_number)
+                if not valid_uri:
+                    return item, False, ""
+            return self.convert_string(string, line_number) + (converted_uri,)
+
+        elif uri in self.NUMERIC_XSD_DATATYPES:
             # Convert this to a KGTK number:
-            return string[1:-1], True
-        elif uri == '<http://www.w3.org/2001/XMLSchema#double>':
-            # Convert this to a KGTK number:
-            return string[1:-1], True
-        elif uri == '<http://www.w3.org/2001/XMLSchema#float>':
-            # Convert this to a KGTK number:
-            return string[1:-1], True
-        elif uri == '<http://www.w3.org/2001/XMLSchema#decimal>':
-            # Convert this to a KGTK number:
-            return string[1:-1], True
+            if self.build_datatype_column:
+                converted_uri, valid_uri = self.convert_uri(uri, line_number)
+                if not valid_uri:
+                    return item, False, ""
+            return string[1:-1], True, converted_uri
+
         elif uri == '<http://www.w3.org/2001/XMLSchema#boolean>':
             # Convert this to a KGTK boolean:
-            return self.convert_boolean(item, string[1:-1], line_number)
+            if self.build_datatype_column:
+                converted_uri, valid_uri = self.convert_uri(uri, line_number)
+                if not valid_uri:
+                    return item, False, ""
+            return self.convert_boolean(item, string[1:-1], line_number) + (converted_uri,)
 
         elif uri == '<http://www.w3.org/2001/XMLSchema#dateTime>':
             # Convert this to a KGTK date-and-time:
             #
             # Note: the W3C XML Schema standard allows the now obsolete
             # end-of-day time "24:00:00".
-            return '^' + string[1:-1], True
+            if self.build_datatype_column:
+                converted_uri, valid_uri = self.convert_uri(uri, line_number)
+                if not valid_uri:
+                    return item, False, ""
+            return '^' + string[1:-1], True, converted_uri
 
         # TODO: the "date" schema
         # Problem:  it allows timezone offsets after dates without times!
 
-        converted_uri: str
-        valid: bool
-        converted_uri, valid = self.convert_uri(uri, line_number)
-        if not valid:
-            return item, False
+        # Exposed langString datatypes are forbidden by the RDF 1.1 N-Triples
+        # specification (and by the RDF 1.1 Turtle specification), but they
+        # may occur in the wild anyway.  If we are so inclined, transform the
+        # literal to an ordinary KGTK string.
+        if uri == self.LANG_STRING_DATATYPE_IRI:
+            if self.allow_lang_string_datatype:
+                if len(self.lang_string_tag) == 0 or self.lang_string_tag == self.LANG_STRING_TAG_NONE:
+                    # Convert this to a KGTK string.
+                    return self.convert_string(string, line_number) + (self.get_converted_string_datatype_uri(),)
+                else:
+                    # Convert this to a KGTK language-qualified string.
+                    return self.convert_lq_string(string + "@" + self.lang_string_tag, line_number) + (self.get_converted_lang_string_datatype_uri(),)
+            else:
+                self.rejected_lang_string_count += 1
+                return item, False, ""
 
-        new_node_symbol: str = self.generate_new_node_symbol()
-        self.write_row(ew, new_node_symbol, self.structured_value_label, string)
-        self.write_row(ew, new_node_symbol, self.structured_uri_label, converted_uri)
+        if self.allow_unknown_datatype_iris:
+            self.unknown_datatype_iri_count += 1
 
-        return new_node_symbol, True
+            converted_uri, valid_uri = self.convert_uri(uri, line_number)
+            if not valid_uri:
+                return item, False, ""
+
+            if self.build_datatype_column:
+                return string, True, converted_uri
+            else:
+                new_node_symbol: str = self.generate_new_node_symbol()
+                self.write_row(ew, new_node_symbol, self.structured_value_label, string, "")
+                self.write_row(ew, new_node_symbol, self.structured_uri_label, converted_uri, "")
+                return new_node_symbol, True, ""
+        
+        # Give up on this unrecognized structured literal.
+        return item, False, ""
 
     def convert_numeric(self, item: str, line_number: int, ew: KgtkWriter)->typing.Tuple[str, bool]:
         return item, True
 
-    def convert(self, item: str, line_number: int, ew: KgtkWriter)->typing.Tuple[str, bool]:
+    def convert(self, item: str, line_number: int, ew: KgtkWriter)->typing.Tuple[str, bool, str]:
         """
         Convert an ntriples item to KGTK format.
 
         TODO: update output_line_count for row written here.
         """
         if item.startswith("_:"):
-            return self.convert_blank_node(item)
+            return self.convert_blank_node(item) + ("",)
         elif item.startswith("<") and item.endswith(">"):
-            return self.convert_uri(item, line_number)
+            return self.convert_uri(item, line_number) + ("",)
         elif item.startswith('"') and item.endswith('"'):
-            return self.convert_string(item, line_number)
+            return self.convert_string(item, line_number) + (self.get_converted_string_datatype_uri(),)
         elif item.startswith('"') and item.endswith(">"):
             return self.convert_structured_literal(item, line_number, ew)
+        elif item.startswith('"'):
+            return self.convert_lq_string(item, line_number) + (self.get_converted_lang_string_datatype_uri(),)
+        elif self.allow_turtle_quotes:
+            if item.startswith("'") and item.endswith("'"):
+                return self.convert_string(item, line_number) + (self.get_converted_string_datatype_uri(),)
+            elif item.startswith("'") and item.endswith(">"):
+                return self.convert_structured_literal(item, line_number, ew)
+            elif item.startswith("'"):
+                return self.convert_lq_string(item, line_number) + (self.get_converted_lang_string_datatype_uri(),)
         elif item[0] in "+-0123456789.":
-            return self.convert_numeric(item, line_number, ew)
+            return self.convert_numeric(item, line_number, ew) + (self.get_converted_number_datatype_uri(),)
 
         if self.verbose:
             print("Line %d: unrecognized item '%s'" %(line_number, item), file=self.error_file, flush=True)
 
-        return item, False
+        return item, False, ""
     
-    def convert_and_validate(self, item: str, line_number: int, ew: KgtkWriter)->typing.Tuple[str, bool]:
+    def convert_and_validate(self, item: str, line_number: int, ew: KgtkWriter)->typing.Tuple[str, bool, str]:
         result: str
         is_ok: bool
-        result, is_ok = self.convert(item, line_number, ew)
+        datatype: str
+        result, is_ok, datatype = self.convert(item, line_number, ew)
 
         # Just a little bit of paranoia here regarding tabs and ends-of-lines:
         #
@@ -412,8 +607,8 @@ class KgtkNtriples(KgtkFormat):
                 if self.verbose:
                     print("Input line %d: imported value '%s' (from '%s') is invalid." % (line_number, result, item),
                           file=self.error_file, flush=True)
-                return result, False
-        return result, True
+                return result, False, ""
+        return result, is_ok, datatype
             
 
     def get_default_namespaces(self)->int:
@@ -430,7 +625,7 @@ class KgtkNtriples(KgtkFormat):
             return self.get_default_namespaces()
 
         if self.verbose:
-            print("Processing namespace file file %s" % str(self.reject_file_path), file=self.error_file, flush=True)
+            print("Processing namespace file %s" % repr(str(self.namespace_file_path)), file=self.error_file, flush=True)
 
         kr: KgtkReader =  KgtkReader.open(self.namespace_file_path,
                                           mode=KgtkReaderMode.EDGE,
@@ -474,15 +669,16 @@ class KgtkNtriples(KgtkFormat):
         return namespace_line_count
         
     def write_namespaces_to_output(self, ew: KgtkWriter, count_records: bool = True):
-        # Append the namespaces to the output file.
-        namespace_id: str
-        for namespace_id in sorted(self.namespace_ids.keys()):
-            if self.output_only_used_namespaces:
-                if namespace_id in self.used_namespaces:
-                    self.write_row(ew, namespace_id, self.prefix_expansion_label, '"' + self.namespace_ids[namespace_id] + '"')
-            else:
-                self.write_row(ew, namespace_id, self.prefix_expansion_label, '"' + self.namespace_ids[namespace_id] + '"')
-
+        if self.write_namespaces:
+            # Append the namespaces to the output file.
+            namespace_id: str
+            for namespace_id in sorted(self.namespace_ids.keys()):
+                if self.output_only_used_namespaces:
+                    if namespace_id in self.used_namespaces:
+                        self.write_row(ew, namespace_id, self.prefix_expansion_label, '"' + self.namespace_ids[namespace_id] + '"', "")
+                else:
+                    self.write_row(ew, namespace_id, self.prefix_expansion_label, '"' + self.namespace_ids[namespace_id] + '"', "")
+ 
     def write_updated_namespace_file(self):
         # Is there an updated namespaces file?
         if self.updated_namespace_file_path is None:
@@ -510,22 +706,22 @@ class KgtkNtriples(KgtkFormat):
         self.write_namespaces_to_output(ew)
         self.write_updated_namespace_file()
 
-    def parse(self, line: str, line_number: int)->typing.Tuple[typing.List[str], bool]:
+    def parse(self, line: str, line_number: int)->typing.Tuple[typing.List[str], bool, bool]:
         m: typing.Optional[typing.Match] = self.ROW_RE.match(line)
         if m is None:
             if self.verbose:
                 print("Line %d: not parsed.\n%s" % (line_number, line), file=self.error_file, flush=True)
-            return [ ], False
-        return [m.group("node1"), m.group("label"), m.group("node2")], True
+            return [ ], False, False
+        return [m.group("node1"), m.group("label"), m.group("node2")], True, len(m.group("comment")) > 0
 
 
     def process(self):
-        output_column_names: typing.List[str]
+        output_column_names: typing.List[str] = self.COLUMN_NAMES.copy()
+        if self.build_datatype_column:
+            output_column_names.append(self.datatype_column_name)
         if self.build_id and self.idbuilder_options is not None:
-            self.idbuilder = KgtkIdBuilder.from_column_names(self.COLUMN_NAMES, self.idbuilder_options)
+            self.idbuilder = KgtkIdBuilder.from_column_names(output_column_names, self.idbuilder_options)
             output_column_names = self.idbuilder.column_names
-        else:
-            output_column_names = self.COLUMN_NAMES
 
         if self.verbose:
             print("Opening output file %s" % str(self.output_file_path), file=self.error_file, flush=True)
@@ -543,7 +739,7 @@ class KgtkNtriples(KgtkFormat):
         rw: typing.Optional[typing.TextIO] = None
         if self.reject_file_path is not None:
             if self.verbose:
-                print("Opening reject file %s" % str(self.reject_file_path), file=self.error_file, flush=True)
+                print("Opening reject file %s" % repr(str(self.reject_file_path)), file=self.error_file, flush=True)
             # Open the reject file. Since the input data is not in KGTK format,
             # we use an ordinary file here.
             if str(self.reject_file_path) == "-":
@@ -554,9 +750,10 @@ class KgtkNtriples(KgtkFormat):
 
         total_input_line_count: int = 0
         reject_line_count: int = 0
+        comment_count: int = 0
         
         namespace_line_count: int = self.get_initial_namespaces()
-            
+
         input_file_path: str
         for input_file_path in self.input_file_paths:
             input_line_count: int = 0
@@ -584,7 +781,8 @@ class KgtkNtriples(KgtkFormat):
 
                 row: typing.List[str]
                 valid: bool
-                row, valid = self.parse(line, input_line_count)
+                has_comment: bool
+                row, valid, has_comment = self.parse(line, input_line_count)
                 if not valid:
                     if rw is not None:
                         rw.write(line)
@@ -593,35 +791,42 @@ class KgtkNtriples(KgtkFormat):
 
                 node1: str
                 ok_1: bool
-                node1, ok_1 = self.convert_and_validate(row[0], input_line_count, ew)
+                node1, ok_1, _ = self.convert_and_validate(row[0], input_line_count, ew)
 
                 label: str
                 ok_2: bool
-                label, ok_2 = self.convert_and_validate(row[1], input_line_count, ew)
+                label, ok_2, _ = self.convert_and_validate(row[1], input_line_count, ew)
 
                 node2: str
                 ok_3: bool
-                node2, ok_3 = self.convert_and_validate(row[2], input_line_count, ew)
+                datatype: str
+                node2, ok_3, datatype = self.convert_and_validate(row[2], input_line_count, ew)
 
                 if ok_1 and ok_2 and ok_3:
-                    self.write_row(ew, node1, label, node2)
+                    self.write_row(ew, node1, label, node2, datatype)
                 else:
                     if rw is not None:
                         rw.write(line)
                     reject_line_count += 1
 
+                if has_comment:
+                    comment_count += 1
+
             if input_file_path != "-":
                 infile.close()
 
 
-                self.save_namespaces(ew)
+        self.save_namespaces(ew)
 
-        if self.verbose:
+        if self.verbose or self.summary:
             print("Processed %d known namespaces." % (namespace_line_count), file=self.error_file, flush=True)
             print("Processed %d records." % (total_input_line_count), file=self.error_file, flush=True)
             print("Rejected %d records." % (reject_line_count), file=self.error_file, flush=True)
             print("Wrote %d records." % (self.output_line_count), file=self.error_file, flush=True)
-        
+            print("Ignored %d comments." % (comment_count), file=self.error_file, flush=True)
+            print("Rejected %d records with langString IRIs." % (self.rejected_lang_string_count), file=self.error_file, flush=True)
+            print("Imported %d records with unknown datatype IRIs." % (self.unknown_datatype_iri_count), file=self.error_file, flush=True)
+
         if ew is not None:
             ew.close()
             
@@ -652,10 +857,30 @@ class KgtkNtriples(KgtkFormat):
                                   help="Write only used namespaces to the output file. (default=%(default)s).",
                                   type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_OUTPUT_ONLY_USED_NAMESPACES)
 
+        parser.add_argument(      "--build-new-namespaces", dest="build_new_namespaces",
+                                  help="When True, create new namespaces.  When False, use only existing namespaces. (default=%(default)s).",
+                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_BUILD_NEW_NAMESPACES)
+
         parser.add_argument(      "--allow-lax-uri", dest="allow_lax_uri",
                                   help="Allow URIs that don't begin with a http:// or https://. (default=%(default)s).",
                                   type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_ALLOW_LAX_URI)
 
+        parser.add_argument(      "--allow-unknown-datatype-iris", dest="allow_unknown_datatype_iris",
+                                  help="Allow unknown datatype IRIs, creating  a qualified record. (default=%(default)s).",
+                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_ALLOW_UNKNOWN_DATATYPE_IRIS)
+
+        parser.add_argument(      "--allow-turtle-quotes", dest="allow_turtle_quotes",
+                                  help="Allow literals to use single quotes (to support Turtle format). (default=%(default)s).",
+                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_ALLOW_TURTLE_QUOTES)
+
+        parser.add_argument(      "--allow-lang-string-datatype", dest="allow_lang_string_datatype",
+                                  help="Allow literals to include exposed langString datatype IRIs (which is forbidden by the spec, but occurs anyway). (default=%(default)s).",
+                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_ALLOW_LANG_STRING_DATATYPE)
+
+        parser.add_argument(      "--lang-string-tag", dest="lang_string_tag",
+                                  help="The tag to use with exposed langString instances. `` or `-` mean to use a string, otherwise use a lanuage-qualified string. (default=%(default)s).",
+                                  default=cls.DEFAULT_LANG_STRING_TAG)
+    
         parser.add_argument(      "--local-namespace-prefix", dest="local_namespace_prefix",
                                   help="The namespace prefix for blank nodes. (default=%(default)s).",
                                   default=cls.DEFAULT_LOCAL_NAMESPACE_PREFIX)
@@ -698,17 +923,29 @@ class KgtkNtriples(KgtkFormat):
                                   help="Build id values in an id column. (default=%(default)s).",
                                   type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_BUILD_ID)
 
-        parser.add_argument(      "--escape-pipes", dest="escape_pipes",
-                                  help="When true, input pipe characters (|) need to be escaped (\\|) per KGTK file format. (default=%(default)s).",
-                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_ESCAPE_PIPES)
+        parser.add_argument(      "--build-datatype-column", dest="build_datatype_column",
+                                  help="When True, and --datatype-column-name DATATYPE_COLUMN_NAME is not empty, build a column with RDF datatypes. (default=%(default)s).",
+                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_BUILD_DATATYPE_COLUMN)
 
+        parser.add_argument(      "--datatype-column-name", dest="datatype_column_name",
+                                  help="The name of the column with RDF datatypes. (default=%(default)s).",
+                                  default=cls.DEFAULT_DATATYPE_COLUMN_NAME)
+    
         parser.add_argument(      "--validate", dest="validate",
                                   help="When true, validate that the result fields are good KGTK file format. (default=%(default)s).",
                                   type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_VALIDATE)
 
+        parser.add_argument(      "--summary", dest="summary",
+                                  help="When true, print summary statistics when done processing (also implied by --verbose). (default=%(default)s).",
+                                  type=optional_bool, nargs='?', const=True, default=cls.DEFAULT_SUMMARY)
+
         parser.add_argument(      "--override-uuid", dest="override_uuid",
                                   help="When specified, override UUID generation for debugging. (default=%(default)s).",
                                   default=None)
+
+        parser.add_argument(      "--write-namespaces", dest="write_namespaces",
+                                  help="When true, append namespaces to the output file. (default=%(default)s).",
+                                  default=cls.DEFAULT_WRITE_NAMESPACES)
 
 def main():
     """
@@ -749,35 +986,43 @@ def main():
 
    # Show the final option structures for debugging and documentation.                                                                                             
     if args.show_options:
-        print("--input-files %s" % " ".join([str(path) for  path in input_file_paths]), file=error_file, flush=True)
-        print("--output-file=%s" % str(args.output_file_path), file=error_file, flush=True)
+        print("--input-files %s" % " ".join([repr(str(path)) for path in input_file_paths]), file=error_file, flush=True)
+        print("--output-file=%s" % repr(str(args.output_file_path)), file=error_file, flush=True)
         # TODO: show ifempty-specific options.
         if args.reject_file_path is not None:
-            print("--reject-file=%s" % str(args.reject_file_path), file=error_file, flush=True)
+            print("--reject-file=%s" % repr(str(args.reject_file_path)), file=error_file, flush=True)
         if args.namespace_file_path is not None:
-            print("--namespace-file=%s" % str(args.namespace_file_path), file=error_file, flush=True)
+            print("--namespace-file=%s" % repr(str(args.namespace_file_path)), file=error_file, flush=True)
         if args.updated_namespace_file_path is not None:
-            print("--updated-namespace-file=%s" % str(args.updated_namespace_file_path), file=error_file, flush=True)
-        print("--namespace-id-prefix %s" % args.namespace_id_prefix, file=error_file, flush=True)
-        print("--namespace-id-use-uuid %s" % str(args.namespace_id_use_uuid), file=error_file, flush=True)
-        print("--namespace-id-counter %s" % str(args.namespace_id_counter), file=error_file, flush=True)
-        print("--namespace-id-zfill %s" % str(args.namespace_id_zfill), file=error_file, flush=True)
-        print("--output-only-used-namespaces %s" % str(args.output_only_used_namespaces), file=error_file, flush=True)
-        print("--allow-lax-uri %s" % str(args.allow_lax_uri), file=error_file, flush=True)
-        print("--local-namespace-prefix %s" % args.local_namespace_prefix, file=error_file, flush=True)
-        print("--local-namespace-use-uuid %s" % str(args.local_namespace_use_uuid), file=error_file, flush=True)
-        print("--prefix-expansion-label %s" % args.prefix_expansion_label, file=error_file, flush=True)
-        print("--structured-value-label %s" % args.structured_value_label, file=error_file, flush=True)
-        print("--structured-uri-label %s" % args.structured_uri_label, file=error_file, flush=True)
-        print("--newnode-prefix %s" % args.newnode_prefix, file=error_file, flush=True)
-        print("--newnode-use-uuid %s" % str(args.newnode_use_uuid), file=error_file, flush=True)
-        print("--newnode-counter %s" % str(args.newnode_counter), file=error_file, flush=True)
-        print("--newnode-zfill %s" % str(args.newnode_zfill), file=error_file, flush=True)
-        print("--build-id=%s" % str(args.build_id), file=error_file, flush=True)
-        print("--escape-pipes=%s" % str(args.escape_pipes), file=error_file, flush=True)
-        print("--validate=%s" % str(args.validate), file=error_file, flush=True)
+            print("--updated-namespace-file=%s" % repr(str(args.updated_namespace_file_path)), file=error_file, flush=True)
+        print("--namespace-id-prefix %s" % repr(args.namespace_id_prefix), file=error_file, flush=True)
+        print("--namespace-id-use-uuid %s" % repr(args.namespace_id_use_uuid), file=error_file, flush=True)
+        print("--namespace-id-counter %s" % repr(args.namespace_id_counter), file=error_file, flush=True)
+        print("--namespace-id-zfill %s" % repr(args.namespace_id_zfill), file=error_file, flush=True)
+        print("--output-only-used-namespaces %s" % repr(args.output_only_used_namespaces), file=error_file, flush=True)
+        print("--build-new-namespaces %s" % repr(args.build_new_namespaces), file=error_file, flush=True)
+        print("--allow-lax-uri %s" % repr(args.allow_lax_uri), file=error_file, flush=True)
+        print("--allow-unknown-datatype-iris %s" % repr(args.allow_unknown_datatype_iris), file=error_file, flush=True)
+        print("--allow-turtle-quotes %s" % repr(args.allow_turtle_quotes), file=error_file, flush=True)
+        print("--allow-lang-string-datatype %s" % repr(args.allow_lang_string_datatype), file=error_file, flush=True)
+        print("--lang-string-tag %s" % repr(args.lang_string_tag), file=error_file, flush=True)
+        print("--local-namespace-prefix %s" % repr(args.local_namespace_prefix), file=error_file, flush=True)
+        print("--local-namespace-use-uuid %s" % repr(args.local_namespace_use_uuid), file=error_file, flush=True)
+        print("--prefix-expansion-label %s" % repr(args.prefix_expansion_label), file=error_file, flush=True)
+        print("--structured-value-label %s" % repr(args.structured_value_label), file=error_file, flush=True)
+        print("--structured-uri-label %s" % repr(args.structured_uri_label), file=error_file, flush=True)
+        print("--newnode-prefix %s" % repr(args.newnode_prefix), file=error_file, flush=True)
+        print("--newnode-use-uuid %s" % repr(args.newnode_use_uuid), file=error_file, flush=True)
+        print("--newnode-counter %s" % repr(args.newnode_counter), file=error_file, flush=True)
+        print("--newnode-zfill %s" % repr(args.newnode_zfill), file=error_file, flush=True)
+        print("--build-id=%s" % repr(args.build_id), file=error_file, flush=True)
+        print("--build-datatype-column %s" % repr(args.build_datatype_column), file=error_file, flush=True)
+        print("--datatype-column-name %s" % repr(args.datatype_column_name), file=error_file, flush=True)
+        print("--validate=%s" % repr(args.validate), file=error_file, flush=True)
+        print("--summary=%s" % repr(args.summary), file=error_file, flush=True)
         if args.override_uuid is not None:
-            print("--override_uuid=%s" % str(args.override_uuid), file=error_file, flush=True)            
+            print("--override_uuid=%s" % repr(args.override_uuid), file=error_file, flush=True)            
+        print("--write-namespaces=%s" % repr(args.write_namespaces), file=error_file, flush=True)
 
         idbuilder_options.show(out=error_file)
         reader_options.show(out=error_file)
@@ -794,21 +1039,29 @@ def main():
         namespace_id_counter=args.namespace_id_counter,
         namespace_id_zfill=args.namespace_id_zfill,
         output_only_used_namespaces=args.output_only_used_namespaces,
+        build_new_namespaces=args.build_new_namespaces,
         newnode_prefix=args.newnode_prefix,
         newnode_use_uuid=args.newnode_use_uuid,
         newnode_counter=args.newnode_counter,
         newnode_zfill=args.newnode_zfill,
         allow_lax_uri=args.allow_lax_uri,
+        allow_unknown_datatype_iris=args.allow_unknown_datatype_iris,
+        allow_turtle_quotes=args.allow_turtle_quotes,
+        allow_lang_string_datatype=args.allow_lang_string_datatype,
+        lang_string_tag=args.lang_string_tag,
         local_namespace_prefix=args.local_namespace_prefix,
         local_namespace_use_uuid=args.local_namespace_use_uuid,
         prefix_expansion_label=args.prefix_expansion_label,
         structured_value_label=args.structured_value_label,
         structured_uri_label=args.structured_uri_label,
         build_id=args.build_id,
-        escape_pipes=args.escape_pipes,
         idbuilder_options=idbuilder_options,
+        build_datatype_column=args.build_datatype_column,
+        datatype_column_name=args.datatype_column_name,
         validate=args.validate,
+        summary=args.summary,
         override_uuid=args.override_uuid,
+        write_namespaces=args.write_namespaces,
         reader_options=reader_options,
         value_options=value_options,
         error_file=error_file,

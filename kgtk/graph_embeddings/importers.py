@@ -11,6 +11,7 @@ import logging
 from abc import ABC, abstractmethod
 from contextlib import ExitStack
 from pathlib import Path
+import gzip
 from typing import Any, Counter, Dict, Iterable, List, Optional, Tuple
 
 import torch
@@ -42,18 +43,40 @@ class TSVEdgelistReader(EdgelistReader):
         self.lhs_col, self.rhs_col, self.rel_col = lhs_col, rhs_col, rel_col
 
     def read(self, path: Path):
-        with path.open("rt") as tf:
-            for line_num, line in enumerate(tf, start=1):
-                words = line.split()
-                try:
-                    lhs_word = words[self.lhs_col]
-                    rhs_word = words[self.rhs_col]
-                    rel_word = words[self.rel_col] if self.rel_col is not None else None
-                    yield lhs_word, rhs_word, rel_word
-                except IndexError:
-                    raise RuntimeError(
-                        f"Line {line_num} of {path} has only {len(words)} words"
-                    ) from None
+        if str(path).endswith('tsv'):
+            with path.open("rt") as tf:
+                for line_num, line in enumerate(tf, start=1):
+                    words = line.split()
+                    # here is used for eliminating header line
+                    if 'id' in words or 'node1' in words or 'node2' in words:
+                        continue
+                    try:
+                        lhs_word = words[self.lhs_col]
+                        rhs_word = words[self.rhs_col]
+                        rel_word = words[self.rel_col] if self.rel_col is not None else None
+                        yield lhs_word, rhs_word, rel_word
+                    except IndexError:
+                        raise RuntimeError(
+                            f"Line {line_num} of {path} has only {len(words)} words"
+                        ) from None
+        elif str(path).endswith('gz'): # tsv.gz
+            with gzip.open(str(path),'rt') as tf:
+                for line_num, line in enumerate(tf, start=1):
+                    words = line.split()
+                    # here is used for eliminating header line
+                    if 'id' in words or 'node1' in words or 'node2' in words:
+                        continue
+                    try:
+                        lhs_word = words[self.lhs_col]
+                        rhs_word = words[self.rhs_col]
+                        rel_word = words[self.rel_col] if self.rel_col is not None else None
+                        yield lhs_word, rhs_word, rel_word
+                    except IndexError:
+                        raise RuntimeError(
+                            f"Line {line_num} of {path} has only {len(words)} words"
+                        ) from None
+        else:
+            raise Exception("Invalid file!")
 
 
 class ParquetEdgelistReader(EdgelistReader):

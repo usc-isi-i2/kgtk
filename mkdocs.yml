@@ -1,8 +1,12 @@
 site_name: KGTK documentation
 nav:
   - Home: index.md
-  - Getting started: install.md
+  - 'Getting Started':
+      - 'Basic KGTK Installation': install.md
+      - 'Installation Procedure Details': KGTK-Installation-Procedure-Details.md
+  - KGTK data model: data_model.md
   - KGTK file specification: specification.md
+  - KGTK environment variables: envars.md
   - 'Import commands':
       - 'import-atomic': 'import/import_atomic.md'
       - 'import-conceptnet': 'import/import_conceptnet.md'
@@ -17,52 +21,80 @@ nav:
       - 'generate_wikidata_triples': 'export/generate_wikidata_triples.md'
   - 'Transformation commands':
       - 'add-id': 'transform/add_id.md'
+      - 'add-labels': 'transform/add_labels.md'
       - 'calc': 'transform/calc.md'
       - 'cat': 'transform/cat.md'
       - 'compact': 'transform/compact.md'
       - 'expand': 'transform/expand.md'
       - 'explode': 'transform/explode.md'
       - 'filter': 'transform/filter.md'
+      - 'head': 'transform/head.md'
+      - 'html': 'transform/html.md'
       - 'ifempty': 'transform/ifempty.md'
       - 'ifexists': 'transform/ifexists.md'
       - 'ifnotempty': 'transform/ifnotempty.md'
       - 'ifnotexists': 'transform/ifnotexists.md'
       - 'implode': 'transform/implode.md'
       - 'join': 'transform/join.md'
+      - 'lexicalize': 'transform/lexicalize.md'
       - 'lift': 'transform/lift.md'
+      - 'lower': 'transform/normalize.md'
       - 'md': 'transform/md.md'
+      - 'normalize': 'transform/normalize.md'
+      - 'normalize-edges': 'transform/normalize.md'
+      - 'normalize-nodes': 'transform/normalize_nodes.md'
+      - 'query': 'transform/query.md'
       - 'remove-columns': 'transform/remove_columns.md'
       - 'rename-columns': 'transform/rename_columns.md'
       - 'reorder-columns': 'transform/reorder_columns.md'
+      - 'replace-nodes': 'transform/replace_nodes.md'
+      - 'select-columns': 'transform/select_columns.md'
       - 'sort': 'transform/sort.md'
+      - 'table': 'transform/table.md'
+      - 'tail': 'transform/tail.md'
+      - 'tee': 'transform/tee.md'
       - 'unique': 'transform/unique.md'
       - 'unreify-rdf-statements': 'transform/unreify_rdf_statements.md'
       - 'unreify-values': 'transform/unreify_values.md'
-      - 'zconcat': 'transform/zconcat.md'
+      # - 'zconcat': 'transform/zconcat.md' # Disabled 21-Jan-2021
   - 'Curation commands':
       - 'clean-data': 'curate/clean_data.md'
       - 'validate': 'curate/validate.md'
+      - 'validate-properties': 'curate/validate_properties.md'
   - 'Analysis commands':
       - 'connected-components': 'analysis/connected_components.md'
-      - 'graph-embeddings': 'analysis/graph_embeddings.md'         
+      - 'graph-embeddings': 'analysis/graph_embeddings.md'
       - 'graph-statistics': 'analysis/graph_statistics.md'
       - 'paths': 'analysis/paths.md'
       - 'reachable-nodes': 'analysis/reachable_nodes.md'
       - 'text-embeddings': 'analysis/text_embedding.md'
+  - Using pipes: pipes.md
 
 theme:
   name: material
   logo: images/kgtk_logo_200x200.png
+  features:
+    - search.highlight
+    - search.share
+    - search.suggest
+
 extra_css:
   - stylesheets/extra.css
+
 repo_url: https://github.com/usc-isi-i2/kgtk
 
 plugins:
   - mknotebooks
+  - search:
+      prebuild_index: true
 
 markdown_extensions:
   - admonition
   - codehilite:
       guess_lang: false
+  - pymdownx.mark:
+      smart_mark: true
+  - pymdownx.highlight
+  - pymdownx.superfences
   - toc:
       permalink: true

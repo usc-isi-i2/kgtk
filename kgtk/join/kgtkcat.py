@@ -40,6 +40,8 @@ class KgtkCat():
                                                                                  iterable_validator=attr.validators.instance_of(list))),
                 default=None)
 
+    no_output_header: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
     # TODO: find working validators:
     reader_options: typing.Optional[KgtkReaderOptions] = attr.ib(default=None)
     # value_options: typing.Optional[KgtkValueOptions] = attr.ib(attr.validators.optional(attr.validators.instance_of(KgtkValueOptions)), default=None)
@@ -130,7 +132,7 @@ class KgtkCat():
         if self.verbose or self.very_verbose:
             print("There are %d merged columns." % len(kmc.column_names), file=self.error_file, flush=True)
         if self.very_verbose:
-            print(" ".join(self.column_names), file=self.error_file, flush=True)
+            print(" ".join(kmc.column_names), file=self.error_file, flush=True)
             
         if self.output_column_names is not None:
             if self.verbose:
@@ -169,6 +171,8 @@ class KgtkCat():
                                          output_column_names=self.output_column_names,
                                          old_column_names=self.old_column_names,
                                          new_column_names=self.new_column_names,
+                                         no_header=self.no_output_header,
+                                         error_file=self.error_file,
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)
 
@@ -191,17 +195,8 @@ class KgtkCat():
             if self.verbose:
                 print("Copying data from file %d: %s" % (idx + 1, input_file_path), file=self.error_file, flush=True)
 
-            shuffle_list: typing.List[int] = ew.build_shuffle_list(kmc.new_column_name_lists[idx])
-
-            input_data_lines: int = 0
-            row: typing.List[str]
-            for row in kr:
-                input_data_lines += 1
-                output_data_lines += 1
-                ew.write(row, shuffle_list=shuffle_list)
-
-            # Flush the output file so far:
-            ew.flush()
+            input_data_lines: int = ew.copyfile(kr, new_column_names=kmc.new_column_name_lists[idx])
+            output_data_lines += input_data_lines
 
             if self.verbose:
                 print("Read %d data lines from file %d: %s" % (input_data_lines, idx + 1, input_file_path), file=self.error_file, flush=True)

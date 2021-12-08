@@ -29,6 +29,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     """
 
     _expert: bool = parsed_shared_args._expert
+    _mode: str = parsed_shared_args._mode
 
     parser.add_input_file(positional=True)
     parser.add_output_file()
@@ -43,7 +44,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         help="The name of the ID column. (default=id or alias)")
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, default_mode=KgtkReaderMode.NODE, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser,
+                                    mode_options=True,
+                                    default_mode=KgtkReaderMode.NONE if _mode == "NONE" else KgtkReaderMode.NODE,
+                                    expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 def run(input_file: KGTKFiles,

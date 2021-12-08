@@ -1,0 +1,1847 @@
+node1	label	node2
+P10	P1628	"""http://schema.org/video"""
+P10	P1628	"""http://www.w3.org/2006/vcard/ns#Video"""
+P10	P1629	Q34508
+P10	P1659	P1651
+P10	P1659	P18
+P10	P1659	P4238
+P10	P1659	P51
+P10	P1855	Q15075950
+P10	P1855	Q4504
+P10	P1855	Q69063653
+P10	P1855	Q7378
+P10	P2302	Q21502404
+P10	P2302	Q21510851
+P10	P2302	Q21510852
+P10	P31	Q18610173
+P10	aliases	'animation'@en
+P10	aliases	'gif'@en
+P10	aliases	'media'@en
+P10	aliases	'trailer (Commons)'@en
+P10	descriptions	"'relevant video. For images, use the property P18. For film trailers, qualify with 'object has role' (P3831)='trailer' (Q622550)'@en"
+P10	document_id	wikidata-20200203
+P10	label	'video'@en
+P10	type	property
+P1000	descriptions	"'notable record achieved by a person or entity, include qualifiers for dates held'@en"
+P1000	document_id	wikidata-20200203
+P1000	label	'record held'@en
+P1000	type	property
+P1001	aliases	'applied to jurisdiction'@en
+P1001	aliases	'applies to territorial jurisdiction'@en
+P1001	aliases	'belongs to jurisdiction'@en
+P1001	aliases	'country of jurisdiction'@en
+P1001	aliases	'jurisdiction'@en
+P1001	aliases	'linked to jurisdiction'@en
+P1001	aliases	'of jurisdiction'@en
+P1001	aliases	'valid in jurisdiction'@en
+P1001	descriptions	"'the item (an institution, law, public office ...) or statement belongs to or has power over or applies to the value (a territorial jurisdiction: a country, state, municipality, ...)'@en"
+P1001	document_id	wikidata-20200203
+P1001	label	'applies to jurisdiction'@en
+P1001	type	property
+P1002	aliases	'configuration of engine cylinders'@en
+P1002	descriptions	'configuration of an engine's cylinders'@en
+P1002	document_id	wikidata-20200203
+P1002	label	'engine configuration'@en
+P1002	type	property
+P1003	P1535	Q11640331
+P1003	P1629	Q622012
+P1003	P1630	"""http://alephnew.bibnat.ro:8991/F?func=find-b&request=$1&find_code=SYS&adjacent=Y&local_base=NLR10"""
+P1003	P1659	P7029
+P1003	P17	Q218
+P1003	P1793	"""\d{9}"""
+P1003	P1855	Q77177
+P1003	P1855	Q810735
+P1003	P1855	Q905
+P1003	P2302	Q19474404
+P1003	P2302	Q21502404
+P1003	P2302	Q21502410
+P1003	P2378	Q622012
+P1003	P2875	Q61034943
+P1003	P31	Q19595382
+P1003	P31	Q19833377
+P1003	P31	Q19847637
+P1003	P31	Q21745557
+P1003	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/15#P1003"""
+P1003	aliases	'NLR ID'@en
+P1003	aliases	'National Library of Romania ID'@en
+P1003	descriptions	'identifier for authority control used at the National Library of Romania'@en
+P1003	document_id	wikidata-20200203
+P1003	label	'NLR ID (Romania)'@en
+P1003	type	property
+P1004	P1629	Q14005
+P1004	P1630	"""https://musicbrainz.org/place/$1"""
+P1004	P1659	P5432
+P1004	P1659	P982
+P1004	P1793	"""[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"""
+P1004	P1855	Q209651
+P1004	P1896	"""http://musicbrainz.org"""
+P1004	P1921	"""http://musicbrainz.org/place/$1"""
+P1004	P2302	Q19474404
+P1004	P2302	Q21502404
+P1004	P2302	Q21502410
+P1004	P2302	Q21502838
+P1004	P2302	Q21502838
+P1004	P2302	Q21502838
+P1004	P2302	Q21502838
+P1004	P2302	Q21502838
+P1004	P2302	Q21502838
+P1004	P2302	Q21502838
+P1004	P2302	Q21502838
+P1004	P2302	Q21503250
+P1004	P2378	Q14005
+P1004	P2875	Q53994341
+P1004	P31	Q19829908
+P1004	P31	Q24075706
+P1004	P31	Q27525351
+P1004	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/15#P1004"""
+P1004	P4876	37427
+P1004	P7470	"""urn:uuid:$1"""
+P1004	aliases	'MB place id'@en
+P1004	aliases	'MBID place'@en
+P1004	aliases	'MBP'@en
+P1004	aliases	'place ID'@en
+P1004	aliases	'place MBID'@en
+P1004	descriptions	'Identifier for a place in the MusicBrainz open music encyclopedia'@en
+P1004	document_id	wikidata-20200203
+P1004	label	'MusicBrainz place ID'@en
+P1004	type	property
+P1005	P1552	Q26921380
+P1005	P1629	Q245966
+P1005	P1630	"""http://urn.bn.pt/bibliografia/unimarc/txt?id=$1"""
+P1005	P1659	P5691
+P1005	P1659	P6373
+P1005	P17	Q45
+P1005	P1793	"""[1-9][0-9]*"""
+P1005	P1813	"""PTBNP""@en"
+P1005	P1855	Q10326158
+P1005	P1855	Q134461
+P1005	P1896	"""http://urn.bn.pt/"""
+P1005	P2302	Q21502404
+P1005	P2302	Q21502410
+P1005	P2378	Q245966
+P1005	P2875	Q61034944
+P1005	P31	Q55586529
+P1005	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/15#P1005"""
+P1005	P3303	"""http://viaf.org/processed/PTBNP|$1"""
+P1005	aliases	'National Library of Portugal ID'@en
+P1005	aliases	'PTBNP ID'@en
+P1005	aliases	'PTBNP identifier'@en
+P1005	descriptions	'identifier for the Portuguese National Library'@en
+P1005	document_id	wikidata-20200203
+P1005	label	'Portuguese National Library ID'@en
+P1005	type	property
+P1006	aliases	'Dutch National Thesaurus for Author Names ID'@en
+P1006	aliases	'Dutch Thesaurus for Author Names ID'@en
+P1006	aliases	'NTA identifier'@en
+P1006	aliases	'National Thesaurus for Author Names (NL) ID'@en
+P1006	aliases	'National Thesaurus for Author Names (Netherlands) ID'@en
+P1006	aliases	'National Thesaurus for Author Names ID'@en
+P1006	aliases	'National Thesaurus for Author Names identifier'@en
+P1006	aliases	'Nationale Thesaurus voor Auteurs'@en
+P1006	aliases	'Nederlandse Thesaurus van Auteursnamen'@en
+P1006	descriptions	'identifier for persons (not:works) from the Dutch National Thesaurus for Author names (which also contains non-authors)'@en
+P1006	document_id	wikidata-20200203
+P1006	label	'NTA ID'@en
+P1006	type	property
+P1007	P1629	Q6497078
+P1007	P1630	"""http://lattes.cnpq.br/$1"""
+P1007	P17	Q155
+P1007	P1793	"""\d{16}"""
+P1007	P1855	Q10325405
+P1007	P1855	Q10396164
+P1007	P2302	Q19474404
+P1007	P2302	Q21502404
+P1007	P2302	Q21502410
+P1007	P2302	Q21503250
+P1007	P2378	Q2994429
+P1007	P2875	Q53745830
+P1007	P31	Q19595382
+P1007	P31	Q21745557
+P1007	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/15#P1007"""
+P1007	descriptions	'number for the Lattes Platform entry on the person or group. Relationship between entry and subject must be supported by a source'@en
+P1007	document_id	wikidata-20200203
+P1007	label	'Lattes Platform number'@en
+P1007	type	property
+P101	P1282	"""Key:craft"""
+P101	P1629	Q627436
+P101	P1659	P106
+P101	P1659	P2650
+P101	P1659	P3095
+P101	P1659	P39
+P101	P1659	P425
+P101	P1813	"""FOW""@en"
+P101	P1855	Q1777741
+P101	P1855	Q7186
+P101	P1855	Q89460
+P101	P2302	Q21503250
+P101	P2875	Q23908981
+P101	P2888	"""http://schema.org/Specialty"""
+P101	P31	Q56457408
+P101	P31	Q57955292
+P101	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/1#P101"""
+P101	P3734	Q42533436
+P101	aliases	'FOW'@en
+P101	aliases	'academic area'@en
+P101	aliases	'academic discipline'@en
+P101	aliases	'academic subject'@en
+P101	aliases	'activity'@en
+P101	aliases	'area'@en
+P101	aliases	'be researcher in'@en
+P101	aliases	'conduct research about'@en
+P101	aliases	'discipline'@en
+P101	aliases	'domain'@en
+P101	aliases	'field of study'@en
+P101	aliases	'fields'@en
+P101	aliases	'research on'@en
+P101	aliases	'responsible for'@en
+P101	aliases	'scientific area'@en
+P101	aliases	'scientific discipline'@en
+P101	aliases	'specialism'@en
+P101	aliases	'speciality'@en
+P101	aliases	'studies'@en
+P101	aliases	'subject'@en
+P101	descriptions	'specialization of a person or organization; see P106 for the occupation'@en
+P101	document_id	wikidata-20200203
+P101	label	'field of work'@en
+P101	type	property
+P1010	descriptions	'identifier for places in Iran'@en
+P1010	document_id	wikidata-20200203
+P1010	label	'Iran statistics ID'@en
+P1010	type	property
+P1011	aliases	'does not apply to part'@en
+P1011	aliases	'except'@en
+P1011	aliases	'with the exception of'@en
+P1011	descriptions	'usually used as a qualifier'@en
+P1011	document_id	wikidata-20200203
+P1011	label	'excluding'@en
+P1011	type	property
+P1012	descriptions	'usually used as a qualifier'@en
+P1012	document_id	wikidata-20200203
+P1012	label	'including'@en
+P1012	type	property
+P1013	aliases	'according to'@en
+P1013	aliases	'based on'@en
+P1013	aliases	'basis'@en
+P1013	aliases	'by'@en
+P1013	aliases	'criteria used'@en
+P1013	aliases	'on the basis of'@en
+P1013	aliases	'respectively to'@en
+P1013	aliases	'with reference to'@en
+P1013	aliases	'with respect to'@en
+P1013	descriptions	'property by which a distinction or classification is made'@en
+P1013	document_id	wikidata-20200203
+P1013	label	'criterion used'@en
+P1013	type	property
+P1014	aliases	'AAT ID'@en
+P1014	aliases	'AAT identifier'@en
+P1014	aliases	'Art & Architecture Thesaurus ID'@en
+P1014	aliases	'Getty Art & Architecture Thesaurus ID'@en
+P1014	descriptions	'identifier in the Art & Architecture Thesaurus by the Getty Research Institute'@en
+P1014	document_id	wikidata-20200203
+P1014	label	'Getty AAT ID'@en
+P1014	type	property
+P1015	P1424	Q6717525
+P1015	P1476	"""Felles autoritetsregister""@nb"
+P1015	P1476	"""Norwegian Authority File""@en"
+P1015	P1552	Q26921380
+P1015	P1629	Q16889143
+P1015	P1630	"""https://authority.bibsys.no/authority/rest/authorities/html/$1"""
+P1015	P1659	P6211
+P1015	P17	Q20
+P1015	P1793	"""[1-9]\d*"""
+P1015	P1813	"""BIBSYS""@en"
+P1015	P1813	"""NORAF""@en"
+P1015	P1855	Q43203
+P1015	P1855	Q54129
+P1015	P1855	Q76483
+P1015	P1921	"""https://livedata.bibsys.no/authority/$1"""
+P1015	P2264	"""1617"""
+P1015	P2264	"""564"""
+P1015	P2302	Q19474404
+P1015	P2302	Q21502404
+P1015	P2302	Q21502410
+P1015	P2302	Q21503247
+P1015	P2302	Q21503250
+P1015	P2378	Q55097783
+P1015	P2378	Q924551
+P1015	P2875	Q8709054
+P1015	P31	Q19595382
+P1015	P31	Q19833377
+P1015	P31	Q19847637
+P1015	P31	Q55586529
+P1015	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/15#P1015"""
+P1015	P3303	"""https://tools.wmflabs.org/bsaut/show/$1"""
+P1015	P3303	"""https://viaf.org/processed/BIBSYS|$1"""
+P1015	P3303	"""https://viaf.org/processed/W2Z|$1"""
+P1015	aliases	'BARE identifier'@en
+P1015	aliases	'BIBSYS identifier'@en
+P1015	descriptions	"'identifier in the Norwegian Authority File, formerly Bibsys Authority File'@en"
+P1015	document_id	wikidata-20200203
+P1015	label	'NORAF ID'@en
+P1015	type	property
+P1016	descriptions	'type of asteroid classification'@en
+P1016	document_id	wikidata-20200203
+P1016	label	'asteroid taxonomy'@en
+P1016	type	property
+P1017	P1552	Q26921380
+P1017	P1629	Q213678
+P1017	P1630	"""https://viaf.org/viaf/sourceID/BAV|$1"""
+P1017	P17	Q237
+P1017	P1793	"""ADV[1-9]\d{7}"""
+P1017	P1813	"""BAV""@en"
+P1017	P1855	Q551550
+P1017	P1896	"""https://viaf.org/"""
+P1017	P2302	Q19474404
+P1017	P2302	Q21502404
+P1017	P2302	Q21502410
+P1017	P2302	Q21503247
+P1017	P2302	Q21503250
+P1017	P2378	Q213678
+P1017	P31	Q19595382
+P1017	P31	Q55586529
+P1017	P31	Q64263681
+P1017	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/16#P1017"""
+P1017	aliases	'BAV (Vatican Library) identifier'@en
+P1017	aliases	'BAV identifier'@en
+P1017	aliases	'BAV'@en
+P1017	aliases	'Vatican Library identifier'@en
+P1017	descriptions	'identifier for authority control used at the Vatican Library'@en
+P1017	document_id	wikidata-20200203
+P1017	label	'BAV ID'@en
+P1017	type	property
+P1018	P1629	Q2093358
+P1018	P1855	Q150
+P1018	P2302	Q21503247
+P1018	P2302	Q21503250
+P1018	P2302	Q21510865
+P1018	P2302	Q53869507
+P1018	P2429	Q21874050
+P1018	P2875	Q28039637
+P1018	P31	Q20824104
+P1018	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/16#P1018"""
+P1018	P3734	Q42533267
+P1018	aliases	'regulatory body'@en
+P1018	descriptions	'regulatory body of a language'@en
+P1018	document_id	wikidata-20200203
+P1018	label	'language regulatory body'@en
+P1018	type	property
+P1019	P1629	Q842397
+P1019	P1647	P2699
+P1019	P1855	Q23548
+P1019	P1855	Q8819
+P1019	P2302	Q21502404
+P1019	P31	Q59910380
+P1019	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/16#P1019"""
+P1019	aliases	'Atom'@en
+P1019	aliases	'RSS feed'@en
+P1019	aliases	'RSS'@en
+P1019	aliases	'atom feed'@en
+P1019	aliases	'feed url'@en
+P1019	descriptions	"'news feed (RSS, Atom, etc.) of this person/organisation/project'@en"
+P1019	document_id	wikidata-20200203
+P1019	label	'web feed URL'@en
+P1019	type	property
+P102	P1629	Q7278
+P102	P1647	P463
+P102	P1659	P1268
+P102	P1659	P4100
+P102	P1659	P768
+P102	P1855	Q16977
+P102	P1855	Q24045706
+P102	P1855	Q765165
+P102	P1855	Q83396
+P102	P2302	Q21503250
+P102	P2302	Q21510851
+P102	P2302	Q21510865
+P102	P2302	Q25796498
+P102	P2875	Q23908982
+P102	P31	Q18608871
+P102	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/1#P102"""
+P102	P3734	Q42533333
+P102	P7087	Q65971553
+P102	aliases	'member of party'@en
+P102	aliases	'member of'@en
+P102	aliases	'party membership'@en
+P102	aliases	'party'@en
+P102	aliases	'political party'@en
+P102	descriptions	'the political party of which this politician is or has been a member'@en
+P102	document_id	wikidata-20200203
+P102	label	'member of political party'@en
+P102	type	property
+P1021	P1629	Q1744612
+P1021	P1629	Q1744630
+P1021	P17	Q183
+P1021	P1793	"""\d+"""
+P1021	P1855	Q508846
+P1021	P1896	"""http://statistik.arbeitsagentur.de/Statischer-Content/Grundlagen/Klassifikation-der-Berufe/KldB2010/Umsteigeschluessel/Generische-Publikationen/Umsteigeschluessel-KldB2010-ISCO-08.xls"""
+P1021	P2264	"""88"""
+P1021	P2302	Q19474404
+P1021	P2302	Q21502404
+P1021	P2302	Q21502410
+P1021	P2302	Q21503250
+P1021	P2302	Q21503250
+P1021	P31	Q24043375
+P1021	P31	Q27048688
+P1021	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/16#P1021"""
+P1021	descriptions	'German classification of occupations 2010'@en
+P1021	document_id	wikidata-20200203
+P1021	label	'KldB-2010 occupation code'@en
+P1021	type	property
+P1022	P1659	P106
+P1022	P1659	P952
+P1022	P17	Q29
+P1022	P1793	"""\d{4}"""
+P1022	P1855	Q182436
+P1022	P1896	"""http://www.ine.es/daco/daco42/clasificaciones/corr_cno11_ciuo08.xls"""
+P1022	P2302	Q19474404
+P1022	P2302	Q21502404
+P1022	P2302	Q21502410
+P1022	P2302	Q21503247
+P1022	P2302	Q21503250
+P1022	P2302	Q21503250
+P1022	P31	Q19847637
+P1022	P31	Q24043375
+P1022	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/16#P1022"""
+P1022	P4876	541
+P1022	descriptions	'Spanish classification of occupations CNO-11 maintained by the Spanish INE (Instituto Nacional de Estadística)'@en
+P1022	document_id	wikidata-20200203
+P1022	label	'CNO-11 occupation code'@en
+P1022	type	property
+P1023	descriptions	"'Dutch classification of occupations SBC maintained by the Dutch CBS (Centraal Bureau voor de Statistiek), 2010 version'@en"
+P1023	document_id	wikidata-20200203
+P1023	label	'SBC-2010 occupation code'@en
+P1023	type	property
+P1024	descriptions	'Swiss classification of occupations SBFI/SEFRI maintained by the Swiss SBFI/SEFRI'@en
+P1024	document_id	wikidata-20200203
+P1024	label	'SBFI occupation code'@en
+P1024	type	property
+P1025	P1629	Q2597810
+P1025	P1630	"""http://www.sudoc.fr/$1"""
+P1025	P1659	P269
+P1025	P17	Q142
+P1025	P1793	"""\d{8}[\dX]"""
+P1025	P1855	Q13479099
+P1025	P1921	"""http://www.sudoc.fr/$1/id"""
+P1025	P2302	Q19474404
+P1025	P2302	Q21502404
+P1025	P2302	Q21502410
+P1025	P2559	"""For authority control (authors, works etc.) please use the property [https://www.wikidata.org/wiki/Property:P269 SUDOC authorities (P269)]""@en"
+P1025	P31	Q29547399
+P1025	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/16#P1025"""
+P1025	P4876	13000000
+P1025	descriptions	'identifier in the French union catalog (see also P269)'@en
+P1025	document_id	wikidata-20200203
+P1025	label	'SUDOC editions'@en
+P1025	type	property
+P1026	aliases	'PhD thesis'@en
+P1026	aliases	'dissertation'@en
+P1026	aliases	'doctoral dissertation'@en
+P1026	aliases	'thesis'@en
+P1026	descriptions	'thesis that someone wrote to obtain a PhD degree'@en
+P1026	document_id	wikidata-20200203
+P1026	label	'doctoral thesis'@en
+P1026	type	property
+P1027	aliases	'awarded by'@en
+P1027	aliases	'bestowed by'@en
+P1027	aliases	'given by'@en
+P1027	aliases	'granted by'@en
+P1027	aliases	'presented by'@en
+P1027	descriptions	'person or organization who awards a prize to or bestows an honor upon a recipient'@en
+P1027	document_id	wikidata-20200203
+P1027	label	'conferred by'@en
+P1027	type	property
+P1028	P1629	Q1124860
+P1028	P1659	P1027
+P1028	P1659	P112
+P1028	P1855	Q18691633
+P1028	P2302	Q19474404
+P1028	P2302	Q21503250
+P1028	P2302	Q21510856
+P1028	P2302	Q21510864
+P1028	P2302	Q21510865
+P1028	P31	Q18618644
+P1028	P31	Q27918607
+P1028	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/17#P1028"""
+P1028	P7087	Q83405216
+P1028	aliases	'bestowed by'@en
+P1028	aliases	'donation from'@en
+P1028	aliases	'donor'@en
+P1028	aliases	'gift from'@en
+P1028	aliases	'gift of'@en
+P1028	aliases	'given by'@en
+P1028	descriptions	'person or organization who donated the object'@en
+P1028	document_id	wikidata-20200203
+P1028	label	'donated by'@en
+P1028	type	property
+P1029	aliases	'member of crew of'@en
+P1029	descriptions	'person that participated operating or serving aboard this vehicle'@en
+P1029	document_id	wikidata-20200203
+P1029	label	'crew member'@en
+P1029	type	property
+P103	P1628	"""http://www.w3.org/2006/vcard/ns#language"""
+P103	P1629	Q36870
+P103	P1647	P1412
+P103	P1659	P1412
+P103	P1855	Q5682
+P103	P1855	Q7243
+P103	P1855	Q76
+P103	P1855	Q937
+P103	P2302	Q21503247
+P103	P2302	Q21503250
+P103	P2302	Q21510865
+P103	P2875	Q20116989
+P103	P31	Q18608871
+P103	P31	Q18616084
+P103	P31	Q26935994
+P103	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/1#P103"""
+P103	aliases	'L1 speaker of'@en
+P103	aliases	'first language'@en
+P103	aliases	'language native'@en
+P103	aliases	'mother tongue'@en
+P103	descriptions	'language or languages a person has learned from early childhood'@en
+P103	document_id	wikidata-20200203
+P103	label	'native language'@en
+P103	type	property
+P1030	P1629	Q1738955
+P1030	P1659	P2923
+P1030	P1659	P2929
+P1030	P1659	P3994
+P1030	P1855	Q304471
+P1030	P1855	Q3737012
+P1030	P2302	Q21502404
+P1030	P2302	Q21503250
+P1030	P2354	Q66764441
+P1030	P2875	Q26210051
+P1030	P31	Q28739677
+P1030	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/16#P1030"""
+P1030	descriptions	'description of a navigational light sequence or colour displayed on a nautical chart. Explicitly state white light (W)'@en
+P1030	document_id	wikidata-20200203
+P1030	label	'light characteristic of lighthouse'@en
+P1030	type	property
+P1031	aliases	'case citation'@en
+P1031	aliases	'citation'@en
+P1031	aliases	'neutral citation'@en
+P1031	aliases	'parallel citation'@en
+P1031	aliases	'regulation citation'@en
+P1031	aliases	'statute citation'@en
+P1031	descriptions	'legal citation of legislation or a court decision'@en
+P1031	document_id	wikidata-20200203
+P1031	label	'legal citation of this text'@en
+P1031	type	property
+P1032	P1629	Q192532
+P1032	P1855	Q48854
+P1032	P2302	Q53869507
+P1032	P31	Q21126229
+P1032	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/17#P1032"""
+P1032	descriptions	'technologies  to control the use of digital content and devices after sale'@en
+P1032	document_id	wikidata-20200203
+P1032	label	'Digital Rights Management system'@en
+P1032	type	property
+P1033	P1629	Q15350855
+P1033	P1659	P4952
+P1033	P1659	P5040
+P1033	P1659	P5041
+P1033	P1659	P5042
+P1033	P1855	Q419401
+P1033	P1896	"""http://echa.europa.eu/web/guest/information-on-chemicals/cl-inventory-database"""
+P1033	P2302	Q19474404
+P1033	P2302	Q21510859
+P1033	P2302	Q53869507
+P1033	P2559	"""use with items ""warning"" (Q15350847) and ""danger"" (Q15221217)""@en"
+P1033	P2559	"""użyj elementów „uwaga” (Q15350847) lub „niebezpieczeństwo” (Q15221217)""@pl"
+P1033	P31	Q15720608
+P1033	P31	Q21294996
+P1033	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/17#P1033"""
+P1033	descriptions	'please use with items 'warning' (Q15350847) and 'danger' (Q15221217)'@en
+P1033	document_id	wikidata-20200203
+P1033	label	'GHS signal word'@en
+P1033	type	property
+P1034	P1855	Q33602
+P1034	P1855	Q36101
+P1034	P2302	Q21503247
+P1034	P2302	Q21503247
+P1034	P2302	Q21503247
+P1034	P2302	Q21503250
+P1034	P2302	Q53869507
+P1034	P31	Q23038310
+P1034	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/17#P1034"""
+P1034	aliases	'diet'@en
+P1034	aliases	'eats'@en
+P1034	aliases	'food plant'@en
+P1034	aliases	'food source'@en
+P1034	aliases	'ration'@en
+P1034	descriptions	"'species, genus or family that an organism depends on for nutrition'@en"
+P1034	document_id	wikidata-20200203
+P1034	label	'main food source'@en
+P1034	type	property
+P1035	P1629	Q1326966
+P1035	P1659	P511
+P1035	P1855	Q7177265
+P1035	P1855	Q9458
+P1035	P2302	Q21503247
+P1035	P2302	Q21503247
+P1035	P2302	Q21503247
+P1035	P2302	Q21503250
+P1035	P2302	Q21510864
+P1035	P2302	Q21510865
+P1035	P2875	Q26998041
+P1035	P31	Q18608871
+P1035	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/17#P1035"""
+P1035	aliases	'honourific suffix'@en
+P1035	aliases	'post-nominal'@en
+P1035	aliases	'postnominal'@en
+P1035	aliases	'style suffix'@en
+P1035	descriptions	"'word or expression with connotations conveying esteem or respect when used, after a name, in addressing or referring to a person'@en"
+P1035	document_id	wikidata-20200203
+P1035	label	'honorific suffix'@en
+P1035	type	property
+P1036	P127	Q190593
+P1036	P1628	"""http://purl.org/dc/terms/DDC"""
+P1036	P1628	"""http://www.bl.uk/schemas/bibliographic/blterms#TopicDDC"""
+P1036	P1629	Q48460
+P1036	P1630	"""http://dewey.info/class/$1/"""
+P1036	P1659	P1149
+P1036	P1659	P1190
+P1036	P1659	P5748
+P1036	P1793	"""\d{3}|\d{3}\.\d+|[12456]--\d+|3[ABC]?--\d+"""
+P1036	P1855	Q33
+P1036	P1855	Q735
+P1036	P1855	Q872
+P1036	P1896	"""https://www.oclc.org/de/dewey/resources.html"""
+P1036	P1896	"""https://www.oclc.org/en/dewey/resources.html"""
+P1036	P1896	"""https://www.oclc.org/es/dewey/resources.html"""
+P1036	P1896	"""https://www.oclc.org/fr/dewey/resources.html"""
+P1036	P1896	"""https://www.oclc.org/nl/dewey/resources.html"""
+P1036	P1896	"""https://www.oclc.org/zh-Hans/dewey/resources.html"""
+P1036	P1921	"""http://dewey.info/class/$1/"""
+P1036	P2302	Q21502404
+P1036	P2302	Q21510851
+P1036	P2875	Q27478251
+P1036	P2888	"""http://id.loc.gov/ontologies/bibframe/ClassificationDdc"""
+P1036	P31	Q18614948
+P1036	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/17#P1036"""
+P1036	aliases	'DDC'@en
+P1036	aliases	'Q48460'@en
+P1036	descriptions	'use with qualifier 'edition (p747)' with item value 'DDC 23' or create new item to represent the corresponding DDC edition'@en
+P1036	document_id	wikidata-20200203
+P1036	label	'Dewey Decimal Classification'@en
+P1036	type	property
+P1037	aliases	'director general'@en
+P1037	aliases	'director'@en
+P1037	aliases	'general manager'@en
+P1037	aliases	'manager'@en
+P1037	aliases	'manager/director'@en
+P1037	descriptions	'person who manages any kind of group'@en
+P1037	document_id	wikidata-20200203
+P1037	label	'director/manager'@en
+P1037	type	property
+P1038	P1628	"""http://vocab.getty.edu/ontology#ulan1500_related_to"""
+P1038	P1628	"""http://www.w3.org/2006/vcard/ns#Kin"""
+P1038	P1629	Q171318
+P1038	P1647	P3342
+P1038	P1659	P22
+P1038	P1659	P25
+P1038	P1659	P26
+P1038	P1659	P3373
+P1038	P1659	P3448
+P1038	P1659	P40
+P1038	P1696	P1038
+P1038	P1855	Q3050987
+P1038	P1855	Q517
+P1038	P2302	Q21503247
+P1038	P2302	Q21503250
+P1038	P2302	Q21510851
+P1038	P2302	Q21510856
+P1038	P2302	Q21510865
+P1038	P2302	Q53869507
+P1038	P2875	Q23909074
+P1038	P31	Q22964231
+P1038	P31	Q26935994
+P1038	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/17#P1038"""
+P1038	aliases	'ancestor'@en
+P1038	aliases	'aunt'@en
+P1038	aliases	'brother-in-law'@en
+P1038	aliases	'co-husband'@en
+P1038	aliases	'co-wife'@en
+P1038	aliases	'collateral descendant'@en
+P1038	aliases	'cousin'@en
+P1038	aliases	'daughter-in-law'@en
+P1038	aliases	'descendant'@en
+P1038	aliases	'family member'@en
+P1038	aliases	'family'@en
+P1038	aliases	'father-in-law'@en
+P1038	aliases	'grandchild'@en
+P1038	aliases	'grandchildren'@en
+P1038	aliases	'granddauther'@en
+P1038	aliases	'grandfather'@en
+P1038	aliases	'grandmother'@en
+P1038	aliases	'grandparent'@en
+P1038	aliases	'grandson'@en
+P1038	aliases	'kinsman'@en
+P1038	aliases	'lineal descendant'@en
+P1038	aliases	'mother-in-law'@en
+P1038	aliases	'nephew'@en
+P1038	aliases	'niece'@en
+P1038	aliases	'relation'@en
+P1038	aliases	'sister-in-law'@en
+P1038	aliases	'son-in-law'@en
+P1038	aliases	'uncle'@en
+P1038	descriptions	"'family member (qualify with 'type of kinship', P1039; for direct family member please use specific property)'@en"
+P1038	document_id	wikidata-20200203
+P1038	label	'relative'@en
+P1038	type	property
+P1039	P1629	Q171318
+P1039	P1647	P3831
+P1039	P1659	P1038
+P1039	P1659	P26
+P1039	P1855	Q1149
+P1039	P1855	Q9191
+P1039	P2302	Q21510865
+P1039	P2302	Q52558054
+P1039	P2302	Q52558054
+P1039	P2302	Q53869507
+P1039	P31	Q15720608
+P1039	P31	Q64830420
+P1039	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/17#P1039"""
+P1039	aliases	'kinship'@en
+P1039	aliases	'relationship (kinship)'@en
+P1039	aliases	'type of relationship'@en
+P1039	descriptions	"'qualifier of 'relative (P1038)' to indicate unusual family relationships (ancestor, son-in-law, adoptions, etc). Avoid using for relationships that can be derived from the family tree or have an explicit property (spouse, child, etc)'@en"
+P1039	document_id	wikidata-20200203
+P1039	label	'type of kinship'@en
+P1039	type	property
+P1040	P1629	Q7042855
+P1040	P1647	P3092
+P1040	P1855	Q483941
+P1040	P2302	Q21502838
+P1040	P2302	Q21503250
+P1040	P2302	Q21510864
+P1040	P2302	Q21510864
+P1040	P2302	Q21510865
+P1040	P2302	Q53869507
+P1040	P2875	Q27478259
+P1040	P31	Q18618644
+P1040	P31	Q22965162
+P1040	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/17#P1040"""
+P1040	P3734	Q42533364
+P1040	P7087	Q67942267
+P1040	aliases	'edited by'@en
+P1040	aliases	'editor'@en
+P1040	descriptions	"'Person who works with the raw footage, selecting shots and combining them into sequences to create a finished motion picture'@en"
+P1040	document_id	wikidata-20200203
+P1040	label	'film editor'@en
+P1040	type	property
+P1041	P1629	Q727009
+P1041	P1647	P2935
+P1041	P1659	P2935
+P1041	P1855	Q15219262
+P1041	P1855	Q66481199
+P1041	P2302	Q21503250
+P1041	P2302	Q21510865
+P1041	P2302	Q53869507
+P1041	P31	Q22969262
+P1041	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/17#P1041"""
+P1041	aliases	'cpu slot'@en
+P1041	aliases	'cpu socket'@en
+P1041	descriptions	'socket for which the electronic part was made'@en
+P1041	document_id	wikidata-20200203
+P1041	label	'socket supported'@en
+P1041	type	property
+P1042	P1629	Q186844
+P1042	P1630	"""http://dispatch.opac.d-nb.de/DB=1.1/CMD?ACT=SRCHA&IKT=8506&TRM=$1"""
+P1042	P1630	"""http://ld.zdb-services.de/resource/$1"""
+P1042	P17	Q183
+P1042	P1793	"""\d{1,7}-[Xx\d]"""
+P1042	P1855	Q881475
+P1042	P1896	"""http://dispatch.opac.ddb.de/DB=1.1/LNG=DU/SID=51eac5c2-8/SRT=YOP/LNG=EN/"""
+P1042	P1921	"""http://ld.zdb-services.de/resource/$1"""
+P1042	P2302	Q19474404
+P1042	P2302	Q21502404
+P1042	P2302	Q21502410
+P1042	P2302	Q21503250
+P1042	P2667	Q12912227
+P1042	P31	Q57589544
+P1042	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/17#P1042"""
+P1042	aliases	'ZDB identifier'@en
+P1042	descriptions	'identifier for serials German National Serials Database'@en
+P1042	document_id	wikidata-20200203
+P1042	label	'ZDB ID'@en
+P1042	type	property
+P1043	P1630	"""http://metier.emploiformationpaca.org/Popup/Onisep.aspx?ID=$1"""
+P1043	P1630	"""http://www.onisep.fr/http/redirection/metier/identifiant/$1"""
+P1043	P1630	"""http://www.onisep.fr/onisep-portail/portal/media-type/html/group/gp/page/interieur.espace.guide.metiers.detail/js_peid/InitGuideResultatDetail/js_peid/GuideResultatMetiersDetail?typeRecherche=metierParNom&ficheIdeo=$1"""
+P1043	P17	Q142
+P1043	P1793	"""\d{5,6}"""
+P1043	P1855	Q1735282
+P1043	P1855	Q520895
+P1043	P1896	"""http://opendata.onisep.fr/data/57daa4c40a4e7/2-metiers-onisep.htm"""
+P1043	P1896	"""http://www.onisep.fr/content/search?searchForm=meti&metierRecherche=1&oni_submit-recherche=Lancer+la+recherche&SearchText=&tri_metiers=1&filters%5Battr_secteurs_activite_t%5D%5B%5D=&oni_submit-recherche=Lancer+la+recherche"""
+P1043	P2264	"""248"""
+P1043	P2302	Q19474404
+P1043	P2302	Q21502404
+P1043	P2302	Q21502410
+P1043	P2302	Q21503250
+P1043	P2302	Q21503250
+P1043	P2875	Q23909061
+P1043	P31	Q24043375
+P1043	P31	Q27048688
+P1043	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/17#P1043"""
+P1043	descriptions	'identifier for an occupation on IDEO'@en
+P1043	document_id	wikidata-20200203
+P1043	label	'IDEO Job ID'@en
+P1043	type	property
+P1044	P1629	Q1684093
+P1044	P1630	"""http://swb.bsz-bw.de/DB=2.1/PPNSET?PPN=$1&INDEXSET=1"""
+P1044	P17	Q183
+P1044	P1793	"""\d{8}[0-9X]"""
+P1044	P1813	"""SWB""@de"
+P1044	P1855	Q5805827
+P1044	P1896	"""http://swb.bsz-bw.de/DB=2.1/"""
+P1044	P2302	Q19474404
+P1044	P2302	Q21502404
+P1044	P2302	Q21502410
+P1044	P31	Q29547399
+P1044	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/17#P1044"""
+P1044	P4876	54300000
+P1044	descriptions	'union catalog of the South-West German Library Network (SWB)'@en
+P1044	document_id	wikidata-20200203
+P1044	label	'SWB editions'@en
+P1044	type	property
+P1045	P1629	Q15271528
+P1045	P1630	"""http://www.assemblee-nationale.fr/sycomore/fiche.asp?num_dept=$1"""
+P1045	P1659	P1808
+P1045	P1659	P4123
+P1045	P1659	P7040
+P1045	P17	Q142
+P1045	P1793	"""[1-9]\d{0,4}"""
+P1045	P1855	Q2825279
+P1045	P1855	Q3168709
+P1045	P1896	"""http://www2.assemblee-nationale.fr/sycomore/recherche"""
+P1045	P2264	"""46"""
+P1045	P2302	Q19474404
+P1045	P2302	Q21502404
+P1045	P2302	Q21502410
+P1045	P2302	Q21503247
+P1045	P2302	Q21503247
+P1045	P2302	Q21503247
+P1045	P2302	Q21503247
+P1045	P2302	Q21503247
+P1045	P2302	Q21503247
+P1045	P2302	Q21503247
+P1045	P2302	Q21503247
+P1045	P2875	Q47005084
+P1045	P31	Q19595382
+P1045	P31	Q22984475
+P1045	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/16#P1045"""
+P1045	descriptions	"'identifer in the Sycomore database of French MPs, National Assembly (France)'@en"
+P1045	document_id	wikidata-20200203
+P1045	label	'Sycomore ID'@en
+P1045	type	property
+P1046	aliases	'detection method'@en
+P1046	descriptions	'way an exoplanet was discovered'@en
+P1046	document_id	wikidata-20200203
+P1046	label	'discovery method'@en
+P1046	type	property
+P1047	aliases	'Catholic Hierarchy bishop identifier'@en
+P1047	descriptions	'identifier for the person on catholic-hierarchy.org'@en
+P1047	document_id	wikidata-20200203
+P1047	label	'Catholic Hierarchy person ID'@en
+P1047	type	property
+P1048	aliases	'NCL identifier'@en
+P1048	descriptions	'identifier for authority control issued by the National Central Library in Taiwan'@en
+P1048	document_id	wikidata-20200203
+P1048	label	'NCL ID'@en
+P1048	type	property
+P1049	aliases	'deity of'@en
+P1049	descriptions	'religion or group/civilization that worships a given deity'@en
+P1049	document_id	wikidata-20200203
+P1049	label	'worshipped by'@en
+P1049	type	property
+P105	P1628	"""http://bioschemas.org/taxonRank"""
+P105	P1628	"""http://purl.uniprot.org/core/rank"""
+P105	P1628	"""https://dwc.tdwg.org/terms/#taxonRank"""
+P105	P1629	Q427626
+P105	P1647	P31
+P105	P1855	Q10876
+P105	P1855	Q34718
+P105	P1855	Q39275
+P105	P1855	Q58697
+P105	P2302	Q19474404
+P105	P2302	Q21503247
+P105	P2302	Q21503247
+P105	P2302	Q21503250
+P105	P2302	Q21510865
+P105	P2875	Q27969118
+P105	P31	Q18609040
+P105	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/1#P105"""
+P105	aliases	'rank'@en
+P105	aliases	'taxonomic rank'@en
+P105	aliases	'type of taxon'@en
+P105	descriptions	'level in a taxonomic hierarchy'@en
+P105	document_id	wikidata-20200203
+P105	label	'taxon rank'@en
+P105	type	property
+P1050	aliases	'ailment'@en
+P1050	aliases	'disability'@en
+P1050	aliases	'disease'@en
+P1050	aliases	'disorder'@en
+P1050	aliases	'health condition'@en
+P1050	aliases	'health issue'@en
+P1050	aliases	'health problem'@en
+P1050	aliases	'illness'@en
+P1050	aliases	'paralympic disability'@en
+P1050	aliases	'suffers from'@en
+P1050	descriptions	"'any state relevant to the health of an organism, including diseases and positive conditions'@en"
+P1050	document_id	wikidata-20200203
+P1050	label	'medical condition'@en
+P1050	type	property
+P1051	aliases	'Czech Technical Library ID'@en
+P1051	aliases	'PSH identifier'@en
+P1051	aliases	'PSH'@en
+P1051	descriptions	'identifier in the authority database of the Czech Technical Library'@en
+P1051	document_id	wikidata-20200203
+P1051	label	'PSH ID'@en
+P1051	type	property
+P1052	document_id	wikidata-20200203
+P1052	label	'Portuguese Job Code CPP-2010'@en
+P1052	type	property
+P1053	aliases	'RID'@en
+P1053	aliases	'Researcher ID'@en
+P1053	aliases	'WOS ID'@en
+P1053	aliases	'Web of Science ID'@en
+P1053	aliases	'Web of Science ResearcherID'@en
+P1053	descriptions	"'identifier for a researcher in a system for scientific authors, primarily used in Web of Science'@en"
+P1053	document_id	wikidata-20200203
+P1053	label	'ResearcherID'@en
+P1053	type	property
+P1054	P1629	Q477675
+P1054	P1630	"""http://id.ndl.go.jp/bib/$1/eng"""
+P1054	P1659	P2687
+P1054	P1659	P349
+P1054	P17	Q17
+P1054	P1793	"""\d{9,12}"""
+P1054	P1855	Q15231929
+P1054	P1896	"""http://ndl.go.jp/"""
+P1054	P2302	Q19474404
+P1054	P2302	Q21502404
+P1054	P2302	Q21502410
+P1054	P2302	Q21503247
+P1054	P2378	Q477675
+P1054	P31	Q29547399
+P1054	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/17#P1054"""
+P1054	aliases	'NDL catalog ID'@en
+P1054	descriptions	'identifier in the National Diet Library'@en
+P1054	document_id	wikidata-20200203
+P1054	label	'NDL bib ID'@en
+P1054	type	property
+P1055	P1629	Q986957
+P1055	P1630	"""https://locatorplus.gov/cgi-bin/Pwebrecon.cgi?v1=1&Search_Arg=$1&Search_Code=0359&CNT=25"""
+P1055	P1793	"""\d{6,8}(A|R|\d)"""
+P1055	P1855	Q1470970
+P1055	P1855	Q2126419
+P1055	P2264	"""2049"""
+P1055	P2302	Q19474404
+P1055	P2302	Q21502404
+P1055	P2302	Q21502410
+P1055	P2302	Q21503247
+P1055	P2378	Q611833
+P1055	P2875	Q55923208
+P1055	P31	Q19887775
+P1055	P31	Q57589544
+P1055	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/17#P1055"""
+P1055	aliases	'NLM ID'@en
+P1055	aliases	'NLMUID'@en
+P1055	descriptions	'identifier in the catalog of the National Library of Medicine'@en
+P1055	document_id	wikidata-20200203
+P1055	label	'NLM Unique ID'@en
+P1055	type	property
+P1056	aliases	'commodity'@en
+P1056	aliases	'creates'@en
+P1056	aliases	'has product'@en
+P1056	aliases	'maker of'@en
+P1056	aliases	'makes'@en
+P1056	aliases	'manufacturer of'@en
+P1056	aliases	'manufactures'@en
+P1056	aliases	'material produced'@en
+P1056	aliases	'output'@en
+P1056	aliases	'producer of'@en
+P1056	aliases	'produces'@en
+P1056	aliases	'product'@en
+P1056	aliases	'products'@en
+P1056	aliases	'results in'@en
+P1056	aliases	'work produced'@en
+P1056	descriptions	"'material or product produced by a government agency, business, industry, facility, or process'@en"
+P1056	document_id	wikidata-20200203
+P1056	label	'product or material produced'@en
+P1056	type	property
+P1057	P1629	Q37748
+P1057	P1855	Q14331135
+P1057	P1855	Q15304616
+P1057	P1855	Q414043
+P1057	P2302	Q21503250
+P1057	P2302	Q21510865
+P1057	P2875	Q29168735
+P1057	P31	Q19887775
+P1057	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/17#P1057"""
+P1057	aliases	'on chromosome'@en
+P1057	descriptions	'chromosome on which an entity is localized'@en
+P1057	document_id	wikidata-20200203
+P1057	label	'chromosome'@en
+P1057	type	property
+P1058	P1629	Q5419428
+P1058	P1630	"""http://lamp.infosys.deakin.edu.au/era/?page=jnamedet12f&eraid=$1"""
+P1058	P1659	P1250
+P1058	P1659	P7110
+P1058	P17	Q408
+P1058	P1793	"""[1-9]\d{0,11}"""
+P1058	P1855	Q180445
+P1058	P1896	"""http://www.arc.gov.au/era/era_2012/archive/era_journal_list.htm"""
+P1058	P2264	"""921"""
+P1058	P2264	"""922"""
+P1058	P2302	Q19474404
+P1058	P2302	Q21502404
+P1058	P2302	Q21502410
+P1058	P2302	Q21503247
+P1058	P2302	Q21503247
+P1058	P2302	Q21503250
+P1058	P2875	Q55917909
+P1058	P31	Q57589544
+P1058	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/18#P1058"""
+P1058	P856	"""http://archive.arc.gov.au/file-search/ERA?level_1=ERA&level_2=2012&level_3=National%20Report&sort=asc&order=Document%20Name"""
+P1058	descriptions	'identifier for academic journals'@en
+P1058	document_id	wikidata-20200203
+P1058	label	'ERA Journal ID'@en
+P1058	type	property
+P1059	P1629	Q795419
+P1059	P1630	"""http://datacvr.virk.dk/data/visenhed?enhedstype=virksomhed&id=$1"""
+P1059	P1630	"""https://datacvr.virk.dk/data/visenhed?language=en-gb&enhedstype=virksomhed&id=$1"""
+P1059	P1659	P1320
+P1059	P1659	P2814
+P1059	P17	Q35
+P1059	P1793	"""\d{8}"""
+P1059	P1855	Q12308319
+P1059	P1855	Q18559647
+P1059	P1896	"""https://datacvr.virk.dk/data/"""
+P1059	P2302	Q19474404
+P1059	P2302	Q21502404
+P1059	P2302	Q21502410
+P1059	P2302	Q21503247
+P1059	P2302	Q21503247
+P1059	P2302	Q21503250
+P1059	P2378	Q12310258
+P1059	P2429	Q21873886
+P1059	P2875	Q50415153
+P1059	P31	Q26235166
+P1059	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/18#P1059"""
+P1059	P4354	"""https://datacvr.virk.dk/data/visninger?soeg=$1&type=Alle"""
+P1059	aliases	'Central Business Register number'@en
+P1059	descriptions	"'unique identifier for a business in Denmark's Central Business Register (CVR), the official database of Danish businesses.'@en"
+P1059	document_id	wikidata-20200203
+P1059	label	'CVR number'@en
+P1059	type	property
+P106	P1628	"""http://d-nb.info/standards/elementset/gnd#fieldOfActivity"""
+P106	P1628	"""http://schema.org/hasOccupation"""
+P106	P1628	"""http://www.loc.gov/mads/rdf/v1#occupation"""
+P106	P1629	Q12737077
+P106	P1629	Q28640
+P106	P1659	P101
+P106	P1659	P3618
+P106	P1659	P39
+P106	P1659	P3989
+P106	P1855	Q42037
+P106	P1855	Q42402
+P106	P1855	Q7327
+P106	P1855	Q83338
+P106	P2302	Q21502838
+P106	P2302	Q21502838
+P106	P2302	Q21503247
+P106	P2302	Q21503250
+P106	P2302	Q21510864
+P106	P2302	Q21510865
+P106	P2302	Q25796498
+P106	P2302	Q52558054
+P106	P2875	Q20116994
+P106	P31	Q18608871
+P106	P31	Q66309381
+P106	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/1#P106"""
+P106	P3713	Q24047802
+P106	P3713	Q28858515
+P106	P3713	Q28858517
+P106	P6609	P279
+P106	P7087	Q66507814
+P106	aliases	'career'@en
+P106	aliases	'craft'@en
+P106	aliases	'employment'@en
+P106	aliases	'job'@en
+P106	aliases	'profession'@en
+P106	aliases	'work'@en
+P106	descriptions	"'occupation of a person; see also 'field of work' (Property:P101), 'position held' (Property:P39)'@en"
+P106	document_id	wikidata-20200203
+P106	label	'occupation'@en
+P106	type	property
+P1060	P1629	Q525512
+P1060	P1855	Q2840
+P1060	P1855	Q44727
+P1060	P2302	Q21503250
+P1060	P2302	Q21510865
+P1060	P2875	Q47461895
+P1060	P31	Q19887775
+P1060	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/18#P1060"""
+P1060	aliases	'transmission process'@en
+P1060	aliases	'transmitted by'@en
+P1060	descriptions	"'process by which a pathogen is transmitted, equivalent to 'transmitted by' in the relation ontology http://purl.obolibrary.org/obo/RO_0002451'@en"
+P1060	document_id	wikidata-20200203
+P1060	label	'pathogen transmission process'@en
+P1060	type	property
+P1064	P1282	"""Key:gauge"""
+P1064	P1629	Q214519
+P1064	P1855	Q3239078
+P1064	P1855	Q792406
+P1064	P2302	Q21502838
+P1064	P2302	Q21510865
+P1064	P2559	"""Please never assign this property to any maglev-related items (neither maglev trains, nor maglev railways), use width (P2049) for maglevs when necessary.""@en"
+P1064	P2559	"""請永遠不要將該屬性分配給磁懸浮相關的項目（既不可用於磁懸浮列車，也不可用於磁懸浮鐵路），如有需要請使用寬度（P2049）""@zh-hant"
+P1064	P2559	"""请永远不要将该属性分配给磁悬浮相关的数据项（既不可用于磁悬浮列车，也不可用于磁悬浮铁路），如有需要请使用宽度（P2049）""@zh-hans"
+P1064	P2875	Q26250096
+P1064	P31	Q23310071
+P1064	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/18#P1064"""
+P1064	P3734	Q42533374
+P1064	aliases	'gauge'@en
+P1064	descriptions	'spacing of the rails on a railway track'@en
+P1064	document_id	wikidata-20200203
+P1064	label	'track gauge'@en
+P1064	type	property
+P1065	P1647	P2699
+P1065	P1659	P953
+P1065	P1793	"""https?:\/\/(web\.archive\.org\/web\/[0-9]{14}|archive\.org\/(details|download)|archive\.(today|is|fo|li|ph|vn)\/[0-9]{4}[\-\.]?[0-9]{2}[\-\.]?[0-9]{2}[\-\.]?[0-9]{2}[\-\.]?[0-9]{2}[\-\.]?[0-9]{2}|webrecorder\.io|(www\.)?webcitation\.org|perma\.cc|perma\-archives\.org|([^\/]+\.)?megalodon\.jp|archive\.wikiwix\.com|(webarchive|yourarchives)\.nationalarchives\.gov\.uk|(pandora|trove|webarchive|content\.webarchive)\.nla\.gov\.au|webarchive\.loc\.gov|media\.digitalarkivet\.no|arquivo\.pt|(swap|sul-swap-prod)\.stanford\.edu)\/.+|https?:\/\/archive\.(today|is|fo|li|ph|vn)\/[a-zA-Z0-9]{4,}"""
+P1065	P1855	Q67086087
+P1065	P2302	Q21502404
+P1065	P2302	Q53869507
+P1065	P31	Q15720608
+P1065	P31	Q18608359
+P1065	P31	Q59910380
+P1065	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/16#P1065"""
+P1065	P527	Q42253
+P1065	aliases	'URL archived'@en
+P1065	aliases	'URL in archive'@en
+P1065	aliases	'wayback machine'@en
+P1065	aliases	'web archive'@en
+P1065	descriptions	'URL to the archived web page specified with URL property'@en
+P1065	document_id	wikidata-20200203
+P1065	label	'archive URL'@en
+P1065	type	property
+P1066	P1628	"""http://vocab.getty.edu/ontology#ulan1102_student_of"""
+P1066	P1629	Q37226
+P1066	P1647	P3342
+P1066	P1659	P184
+P1066	P1659	P69
+P1066	P1696	P802
+P1066	P1855	Q8409
+P1066	P1855	Q937
+P1066	P2302	Q21503247
+P1066	P2302	Q21503250
+P1066	P2302	Q21510851
+P1066	P2302	Q21510864
+P1066	P2302	Q21510865
+P1066	P2302	Q25796498
+P1066	P2521	"""alumna de""@es"
+P1066	P2521	"""alumna de""@gl"
+P1066	P2521	"""učitelka""@cs"
+P1066	P2875	Q20990050
+P1066	P31	Q18608871
+P1066	P31	Q22984450
+P1066	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/19#P1066"""
+P1066	P3734	Q42533401
+P1066	aliases	'academic supervisor'@en
+P1066	aliases	'advisor'@en
+P1066	aliases	'disciple of'@en
+P1066	aliases	'master'@en
+P1066	aliases	'mentor'@en
+P1066	aliases	'professor'@en
+P1066	aliases	'pupil of'@en
+P1066	aliases	'studied under'@en
+P1066	aliases	'supervisor'@en
+P1066	aliases	'teacher'@en
+P1066	aliases	'tutor'@en
+P1066	descriptions	'person who has taught this person'@en
+P1066	document_id	wikidata-20200203
+P1066	label	'student of'@en
+P1066	type	property
+P1067	P1629	Q15477767
+P1067	P17	Q869
+P1067	P1793	"""(\d{2}){1,4}"""
+P1067	P1855	Q15185578
+P1067	P1896	"""http://stat.bora.dopa.go.th/dload/fccaa.htm"""
+P1067	P2302	Q19474404
+P1067	P2302	Q21502404
+P1067	P2302	Q21502410
+P1067	P2302	Q21503247
+P1067	P2302	Q21503247
+P1067	P2302	Q21503250
+P1067	P2302	Q52060874
+P1067	P31	Q55977691
+P1067	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/18#P1067"""
+P1067	aliases	'TIS 1099'@en
+P1067	descriptions	'identifier for each of the Thai central administrative units'@en
+P1067	document_id	wikidata-20200203
+P1067	label	'Thailand central administrative unit code'@en
+P1067	type	property
+P1068	P1855	Q294894
+P1068	P2302	Q21503250
+P1068	P2302	Q21510865
+P1068	P31	Q22969262
+P1068	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/18#P1068"""
+P1068	aliases	'Architecture'@en
+P1068	aliases	'ISA'@en
+P1068	descriptions	'instruction set on which the processor architecture is based'@en
+P1068	document_id	wikidata-20200203
+P1068	label	'instruction set'@en
+P1068	type	property
+P1069	P144	Q1233766
+P1069	P17	Q35
+P1069	P1793	"""\d{6}"""
+P1069	P1855	Q105186
+P1069	P1896	"""http://www.dst.dk/pukora/epub/upload/16711/disco.pdf"""
+P1069	P2302	Q19474404
+P1069	P2302	Q21502404
+P1069	P2302	Q21502410
+P1069	P2302	Q21503250
+P1069	P2302	Q21503250
+P1069	P31	Q24043375
+P1069	P31	Q27048688
+P1069	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/18#P1069"""
+P1069	descriptions	"'Statistics Denmarks classification of occupation, derived from ISCO'@en"
+P1069	document_id	wikidata-20200203
+P1069	label	'Statistics Denmarks classification of occupation (DISCO-08)'@en
+P1069	type	property
+P1070	P1629	Q625817
+P1070	P1630	"""http://www.theplantlist.org/tpl1.1/record/$1"""
+P1070	P1793	"""(gcc|ifn|ild|kew|rjp|tro)-\d+"""
+P1070	P1855	Q431224
+P1070	P1896	"""http://www.theplantlist.org"""
+P1070	P2264	"""1005"""
+P1070	P2302	Q19474404
+P1070	P2302	Q21502404
+P1070	P2302	Q21502410
+P1070	P2302	Q21503247
+P1070	P2302	Q21503247
+P1070	P2302	Q21503247
+P1070	P2667	Q22583520
+P1070	P2667	Q22746363
+P1070	P2875	Q27478085
+P1070	P31	Q42396390
+P1070	P31	Q56682212
+P1070	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/18#P1070"""
+P1070	descriptions	'identifier in 'The Plant List' database'@en
+P1070	document_id	wikidata-20200203
+P1070	label	'PlantList-ID'@en
+P1070	type	property
+P1071	P1628	"""http://schema.org/locationCreated"""
+P1071	P1647	P7153
+P1071	P1659	P176
+P1071	P1659	P2079
+P1071	P1659	P276
+P1071	P1659	P495
+P1071	P1855	Q12418
+P1071	P1855	Q33209
+P1071	P1855	Q51787
+P1071	P1855	Q9202
+P1071	P2302	Q21502838
+P1071	P2302	Q21503250
+P1071	P2302	Q21510864
+P1071	P2302	Q21510865
+P1071	P2302	Q25796498
+P1071	P2875	Q20990049
+P1071	P31	Q18618644
+P1071	P31	Q18635217
+P1071	P31	Q51122921
+P1071	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/18#P1071"""
+P1071	P6609	P131
+P1071	aliases	'assembly location'@en
+P1071	aliases	'created at'@en
+P1071	aliases	'creation location'@en
+P1071	aliases	'location created'@en
+P1071	aliases	'location of creation'@en
+P1071	aliases	'location of final assembly'@en
+P1071	aliases	'location of origin'@en
+P1071	aliases	'made in'@en
+P1071	aliases	'manufactured in'@en
+P1071	aliases	'manufacturing location'@en
+P1071	aliases	'mint'@en
+P1071	aliases	'minted at'@en
+P1071	aliases	'place built'@en
+P1071	aliases	'place made'@en
+P1071	aliases	'place of manufacture'@en
+P1071	aliases	'place of origin'@en
+P1071	aliases	'place of production'@en
+P1071	aliases	'production place'@en
+P1071	aliases	'written at'@en
+P1071	descriptions	"'place where the item was made; where applicable, location of final assembly'@en"
+P1071	document_id	wikidata-20200203
+P1071	label	'location of creation'@en
+P1071	type	property
+P1072	P1629	Q42573997
+P1072	P1647	P121
+P1072	P1659	P1073
+P1072	P1855	Q129793
+P1072	P2302	Q21503250
+P1072	P2302	Q21510865
+P1072	P2875	Q65706153
+P1072	P31	Q21126229
+P1072	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/18#P1072"""
+P1072	aliases	'can read'@en
+P1072	aliases	'file format readable'@en
+P1072	aliases	'reads file format'@en
+P1072	descriptions	'file format a program can open and read'@en
+P1072	document_id	wikidata-20200203
+P1072	label	'readable file format'@en
+P1072	type	property
+P1073	P1629	Q42574058
+P1073	P1659	P1072
+P1073	P1855	Q129793
+P1073	P1855	Q8038
+P1073	P2302	Q21503250
+P1073	P2302	Q21510865
+P1073	P2302	Q53869507
+P1073	P2875	Q65706179
+P1073	P31	Q21126229
+P1073	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/18#P1073"""
+P1073	aliases	'can write'@en
+P1073	aliases	'file format written'@en
+P1073	aliases	'writes file format'@en
+P1073	descriptions	'file format a program can create and/or write to'@en
+P1073	document_id	wikidata-20200203
+P1073	label	'writable file format'@en
+P1073	type	property
+P1074	P1659	P144
+P1074	P1659	P180
+P1074	P1659	P941
+P1074	P1855	Q14637321
+P1074	P1855	Q15707583
+P1074	P2302	Q19474404
+P1074	P2302	Q21502410
+P1074	P2302	Q21503250
+P1074	P2559	"""Use for fictional entities that do not actually exist, not for simply artificial entities.""@en"
+P1074	P31	Q22984512
+P1074	P31	Q28100549
+P1074	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/17#P1074"""
+P1074	P6104	Q73601054
+P1074	aliases	'fictional version of'@en
+P1074	descriptions	'used to link an entity or class of entities appearing in a creative work with the analogous entity or class of entities in the real world'@en
+P1074	document_id	wikidata-20200203
+P1074	label	'fictional analog of'@en
+P1074	type	property
+P1075	P1629	Q212071
+P1075	P1647	P1037
+P1075	P1855	Q392904
+P1075	P2302	Q21502838
+P1075	P2302	Q21503250
+P1075	P2302	Q21510851
+P1075	P2302	Q21510864
+P1075	P2302	Q21510864
+P1075	P2302	Q21510865
+P1075	P2302	Q25796498
+P1075	P2302	Q53869507
+P1075	P2521	"""Rektorin""@de"
+P1075	P2521	"""rectrice""@fr"
+P1075	P2521	"""reitora""@gl"
+P1075	P2521	"""reitora""@pt-br"
+P1075	P2521	"""ректорка""@uk"
+P1075	P2875	Q47537405
+P1075	P31	Q22984450
+P1075	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/18#P1075"""
+P1075	descriptions	'rector of a university'@en
+P1075	document_id	wikidata-20200203
+P1075	label	'rector'@en
+P1075	type	property
+P1076	P1629	Q580606
+P1076	P1630	"""http://ictvdb.bio-mirror.cn/ICTVdB/$1htm"""
+P1076	P1793	"""\d\d\.(|\d\d\d\.(|\d\.(|\d\d\.(|\d\d\d\.(|\d\d\.(|\d\d\d\.(|\d\d\d\.)))))))"""
+P1076	P1855	Q193447
+P1076	P1896	"""http://ictvdb.bio-mirror.cn/Ictv/vc_code.htm"""
+P1076	P2302	Q19474404
+P1076	P2302	Q21502404
+P1076	P2302	Q21502410
+P1076	P2302	Q21503247
+P1076	P2875	Q29168724
+P1076	P31	Q42396390
+P1076	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/18#P1076"""
+P1076	descriptions	'identifier in the 'International Committee on Taxonomy of Viruses'-database'@en
+P1076	document_id	wikidata-20200203
+P1076	label	'ICTV virus ID'@en
+P1076	type	property
+P1077	P1282	"""Key:koatuu"""
+P1077	P1629	Q36000441
+P1077	P1630	"""http://dovidnyk.in.ua/directories/koatuu/search=$1"""
+P1077	P17	Q212
+P1077	P1793	"""\d{10}"""
+P1077	P1855	Q1743602
+P1077	P1896	"""http://www.ukrstat.gov.ua/work/klass200n.htm"""
+P1077	P1896	"""https://data.gov.ua/dataset/dc081fb0-f504-4696-916c-a5b24312ab6e"""
+P1077	P2302	Q19474404
+P1077	P2302	Q21502404
+P1077	P2302	Q21502410
+P1077	P2302	Q21502838
+P1077	P2302	Q21503247
+P1077	P2302	Q21503247
+P1077	P2302	Q53869507
+P1077	P2875	Q32085080
+P1077	P31	Q55977691
+P1077	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/18#P1077"""
+P1077	P3709	Q32085084
+P1077	P3713	Q32085088
+P1077	P3734	Q32085091
+P1077	descriptions	'identifier for each of the Ukrainian administrative units'@en
+P1077	document_id	wikidata-20200203
+P1077	label	'KOATUU identifier'@en
+P1077	type	property
+P1078	P1629	Q1127794
+P1078	P1855	Q902691
+P1078	P2302	Q21503250
+P1078	P2302	Q21510865
+P1078	P2302	Q53869507
+P1078	P31	Q22963600
+P1078	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/19#P1078"""
+P1078	descriptions	'configuration of the valvetrain utilized by this engine'@en
+P1078	document_id	wikidata-20200203
+P1078	label	'valvetrain configuration'@en
+P1078	type	property
+P1079	P1629	Q11753232
+P1079	P1855	Q767805
+P1079	P2302	Q19474404
+P1079	P2302	Q21503250
+P1079	P2302	Q21510865
+P1079	P2302	Q53869507
+P1079	P31	Q22984363
+P1079	P31	Q28104992
+P1079	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/18#P1079"""
+P1079	aliases	'launch service provider'@en
+P1079	descriptions	'organization contracted to launch the rocket'@en
+P1079	document_id	wikidata-20200203
+P1079	label	'launch contractor'@en
+P1079	type	property
+P108	P1628	"""http://schema.org/worksFor"""
+P108	P1628	"""http://vocab.getty.edu/ontology#ulan1217_employee_of"""
+P108	P1629	Q3053337
+P108	P1647	P1416
+P108	P1659	P6424
+P108	P1855	Q1615
+P108	P1855	Q1965433
+P108	P2302	Q21503250
+P108	P2302	Q21510851
+P108	P2302	Q21510865
+P108	P2302	Q25796498
+P108	P2521	"""empleadora""@es"
+P108	P2521	"""employeuse""@fr"
+P108	P2521	"""empregadora""@gl"
+P108	P2521	"""empregadora""@pt"
+P108	P2521	"""pracodawczyni""@pl"
+P108	P2875	Q23908983
+P108	P31	Q18608871
+P108	P31	Q26935994
+P108	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/1#P108"""
+P108	P3734	Q42533327
+P108	P7087	Q65964542
+P108	aliases	'employed by'@en
+P108	aliases	'worked at'@en
+P108	aliases	'worked for'@en
+P108	aliases	'working for'@en
+P108	aliases	'working place'@en
+P108	aliases	'workplace'@en
+P108	aliases	'works at'@en
+P108	aliases	'works for'@en
+P108	descriptions	'person or organization for which the subject works or worked'@en
+P108	document_id	wikidata-20200203
+P108	label	'employer'@en
+P108	type	property
+P1080	P1629	Q559618
+P1080	P1647	P361
+P1080	P1659	P1434
+P1080	P1659	P1441
+P1080	P1659	P1445
+P1080	P1855	Q177329
+P1080	P1855	Q1799459
+P1080	P1855	Q34201
+P1080	P1855	Q712548
+P1080	P2302	Q19474404
+P1080	P2302	Q21503250
+P1080	P2302	Q21510865
+P1080	P2875	Q28055139
+P1080	P31	Q22984512
+P1080	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/19#P1080"""
+P1080	P6104	Q73601054
+P1080	P7087	Q70496465
+P1080	aliases	'appears in universe'@en
+P1080	aliases	'continuity'@en
+P1080	aliases	'cycle'@en
+P1080	aliases	'featured in universe'@en
+P1080	aliases	'fictional universe where entity is from'@en
+P1080	aliases	'from mythology'@en
+P1080	aliases	'from narrative'@en
+P1080	aliases	'from universe'@en
+P1080	aliases	'in continuity'@en
+P1080	aliases	'in cycle'@en
+P1080	aliases	'in world of'@en
+P1080	aliases	'mythology'@en
+P1080	aliases	'story cycle'@en
+P1080	aliases	'universe'@en
+P1080	descriptions	'subject's fictional entity is in the object narrative. See also P1441 (present in work) and P1445 (fictional universe described in)'@en
+P1080	document_id	wikidata-20200203
+P1080	label	'from fictional universe'@en
+P1080	type	property
+P1081	P1629	Q38994
+P1081	P1855	Q739
+P1081	P1896	"""https://data.undp.org/dataset/Table-1-Human-Development-Index-and-its-components/wxub-qc5k"""
+P1081	P2302	Q19474404
+P1081	P2302	Q21503247
+P1081	P2302	Q21503250
+P1081	P2302	Q21510851
+P1081	P2302	Q21510856
+P1081	P2302	Q21510860
+P1081	P2302	Q21514353
+P1081	P2875	Q26998045
+P1081	P31	Q21451178
+P1081	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/18#P1081"""
+P1081	aliases	'HDI'@en
+P1081	descriptions	'HDI value of a country'@en
+P1081	document_id	wikidata-20200203
+P1081	label	'Human Development Index'@en
+P1081	type	property
+P1082	P1282	"""Key:population"""
+P1082	P1628	"""http://dbpedia.org/ontology/populationTotal"""
+P1082	P1628	"""http://schema.org/population"""
+P1082	P1629	Q1613416
+P1082	P1659	P1538
+P1082	P1659	P1539
+P1082	P1659	P1540
+P1082	P1659	P4179
+P1082	P1659	P6343
+P1082	P1659	P6344
+P1082	P1855	Q40168
+P1082	P1855	Q62
+P1082	P1896	"""http://data.worldbank.org/indicator/SP.POP.TOTL"""
+P1082	P2302	Q19474404
+P1082	P2302	Q21502838
+P1082	P2302	Q21502838
+P1082	P2302	Q21503250
+P1082	P2302	Q21510851
+P1082	P2302	Q21510856
+P1082	P2302	Q21510856
+P1082	P2302	Q21510860
+P1082	P2302	Q21514353
+P1082	P2302	Q52060874
+P1082	P2302	Q52848401
+P1082	P2668	Q23611587
+P1082	P2875	Q20990019
+P1082	P31	Q22984494
+P1082	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/18#P1082"""
+P1082	P3709	Q57337476
+P1082	P3713	Q32765317
+P1082	P7452	Q71533355
+P1082	P7452	Q71538760
+P1082	aliases	'human population'@en
+P1082	aliases	'inhabitants'@en
+P1082	descriptions	'number of people inhabiting the place; number of people of subject'@en
+P1082	document_id	wikidata-20200203
+P1082	label	'population'@en
+P1082	type	property
+P1083	P1552	Q10578722
+P1083	P1628	"""http://dbpedia.org/ontology/seatingCapacity"""
+P1083	P1629	Q16685058
+P1083	P1855	Q643328
+P1083	P2302	Q19474404
+P1083	P2302	Q21503247
+P1083	P2302	Q21503250
+P1083	P2302	Q21510860
+P1083	P2302	Q21514353
+P1083	P2302	Q51723761
+P1083	P2302	Q52848401
+P1083	P2875	Q27826989
+P1083	P31	Q19829914
+P1083	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/18#P1083"""
+P1083	aliases	'capacity'@en
+P1083	aliases	'complement'@en
+P1083	aliases	'crew'@en
+P1083	aliases	'number of seats'@en
+P1083	aliases	'seating capacity'@en
+P1083	aliases	'seats'@en
+P1083	descriptions	'number of people allowed for a venue or vehicle'@en
+P1083	document_id	wikidata-20200203
+P1083	label	'maximum capacity'@en
+P1083	type	property
+P1084	aliases	'EUL ID'@en
+P1084	descriptions	'identifier for a book (edition) in the Egyptian union catalog'@en
+P1084	document_id	wikidata-20200203
+P1084	label	'EUL editions'@en
+P1084	type	property
+P1085	P1629	Q742640
+P1085	P1630	"""http://www.librarything.com/work/$1"""
+P1085	P1659	P7400
+P1085	P1793	"""\d{1,8}"""
+P1085	P1855	Q15991228
+P1085	P1855	Q786908
+P1085	P1896	"""http://www.librarything.com/services/librarything.ck.getwork.php"""
+P1085	P2264	"""1050"""
+P1085	P2302	Q19474404
+P1085	P2302	Q21502404
+P1085	P2302	Q21502410
+P1085	P2302	Q21503247
+P1085	P2302	Q21503250
+P1085	P2378	Q742640
+P1085	P2875	Q55173187
+P1085	P31	Q29547399
+P1085	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/18#P1085"""
+P1085	aliases	'LT work ID'@en
+P1085	aliases	'LT work identifier'@en
+P1085	aliases	'LibraryThing work identifier'@en
+P1085	descriptions	'LibraryThing (LT) control number'@en
+P1085	document_id	wikidata-20200203
+P1085	label	'LibraryThing work ID'@en
+P1085	type	property
+P1086	P1269	Q11344
+P1086	P1629	Q23809
+P1086	P1659	P1148
+P1086	P1855	Q1112
+P1086	P1855	Q1307
+P1086	P1855	Q556
+P1086	P1896	"""http://www.rsc.org/periodic-table"""
+P1086	P2302	Q19474404
+P1086	P2302	Q21503250
+P1086	P2302	Q21510860
+P1086	P2302	Q21514353
+P1086	P2302	Q51723761
+P1086	P2302	Q52848401
+P1086	P31	Q21294996
+P1086	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/18#P1086"""
+P1086	aliases	'Z'@en
+P1086	aliases	'atom number'@en
+P1086	aliases	'number of protons'@en
+P1086	aliases	'proton number'@en
+P1086	descriptions	'number of protons found in the nucleus of the atom'@en
+P1086	document_id	wikidata-20200203
+P1086	label	'atomic number'@en
+P1086	type	property
+P1087	P138	Q326557
+P1087	P1629	Q105955
+P1087	P1855	Q106807
+P1087	P2302	Q19474404
+P1087	P2302	Q21503247
+P1087	P2302	Q21503247
+P1087	P2302	Q21503250
+P1087	P2302	Q21510856
+P1087	P2302	Q21510860
+P1087	P2302	Q21514353
+P1087	P2302	Q51723761
+P1087	P2302	Q52848401
+P1087	P2875	Q23909052
+P1087	P31	Q27698571
+P1087	P31	Q28106456
+P1087	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/18#P1087"""
+P1087	descriptions	"'quantitative measure of one's game-playing ability, particularly in classical chess'@en"
+P1087	document_id	wikidata-20200203
+P1087	label	'Elo rating'@en
+P1087	type	property
+P1088	P1629	Q41472
+P1088	P1659	P5483
+P1088	P1793	"""[1-9]|10"""
+P1088	P1855	Q134583
+P1088	P1855	Q43010
+P1088	P1855	Q5283
+P1088	P1896	"""http://www.mindat.org"""
+P1088	P1896	"""http://www.reade.com/resources/referenceeducational/86-reade-reference-chart-chemical-elements-data/225-mohs-hardnesses-of-the-elements"""
+P1088	P2302	Q19474404
+P1088	P2302	Q21503250
+P1088	P2302	Q21510860
+P1088	P2302	Q21514353
+P1088	P2302	Q53869507
+P1088	P2875	Q55594526
+P1088	P31	Q24041781
+P1088	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/18#P1088"""
+P1088	aliases	'Mohs hardness'@en
+P1088	aliases	'hardness of mineral'@en
+P1088	aliases	'hardness'@en
+P1088	aliases	'mineral hardness'@en
+P1088	descriptions	'qualitative ordinal scale characterizing scratch resistance of various minerals'@en
+P1088	document_id	wikidata-20200203
+P1088	label	'Mohs' hardness'@en
+P1088	type	property
+P109	P1629	Q188675
+P109	P1659	P1543
+P109	P1659	P7457
+P109	P1793	""".+\.(svg|png|jpg|jpeg|gif|tif|tiff)"""
+P109	P1855	Q567
+P109	P1855	Q935
+P109	P2302	Q19474404
+P109	P2302	Q21502404
+P109	P2302	Q21502404
+P109	P2302	Q21502410
+P109	P2302	Q21503250
+P109	P2302	Q21510852
+P109	P2875	Q20116998
+P109	P31	Q18608871
+P109	P31	Q18610173
+P109	P31	Q26940804
+P109	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/1#P109"""
+P109	P3709	Q55283221
+P109	P3713	Q51586497
+P109	P3734	Q55283214
+P109	aliases	'autograph'@en
+P109	descriptions	'image of a person's signature'@en
+P109	document_id	wikidata-20200203
+P109	label	'signature'@en
+P109	type	property
+P1090	P1629	Q76250
+P1090	P1855	Q14026
+P1090	P1855	Q487211
+P1090	P1855	Q497745
+P1090	P2302	Q21503250
+P1090	P2302	Q21510860
+P1090	P2302	Q21514353
+P1090	P2302	Q52060874
+P1090	P2302	Q53869507
+P1090	P2875	Q28919905
+P1090	P31	Q21451142
+P1090	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/18#P1090"""
+P1090	aliases	'Z'@en
+P1090	aliases	'z'@en
+P1090	descriptions	'the redshift measure of an astronomical object'@en
+P1090	document_id	wikidata-20200203
+P1090	label	'redshift'@en
+P1090	type	property
+P1092	P1629	Q35140285
+P1092	P1659	P2197
+P1092	P1855	Q42257
+P1092	P1855	Q6491
+P1092	P2302	Q19474404
+P1092	P2302	Q21503250
+P1092	P2302	Q21510860
+P1092	P2302	Q21514353
+P1092	P2875	Q23909055
+P1092	P31	Q21451178
+P1092	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/18#P1092"""
+P1092	aliases	'circulation'@en
+P1092	aliases	'number built'@en
+P1092	aliases	'number made'@en
+P1092	aliases	'number produced'@en
+P1092	aliases	'qty built'@en
+P1092	aliases	'qty made'@en
+P1092	aliases	'qty produced'@en
+P1092	aliases	'total built'@en
+P1092	aliases	'total made'@en
+P1092	descriptions	'quantity of item produced'@en
+P1092	document_id	wikidata-20200203
+P1092	label	'total produced'@en
+P1092	type	property
+P1093	P1629	Q2719498
+P1093	P1659	P2790
+P1093	P1855	Q477173
+P1093	P2302	Q21503250
+P1093	P2302	Q21510860
+P1093	P2302	Q21514353
+P1093	P2302	Q53869507
+P1093	P31	Q23779665
+P1093	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/18#P1093"""
+P1093	aliases	'GRT'@en
+P1093	aliases	'GT'@en
+P1093	aliases	'ship gross tonnage'@en
+P1093	aliases	'tonnage gross'@en
+P1093	descriptions	'unitless index related to a ship's overall internal volume'@en
+P1093	document_id	wikidata-20200203
+P1093	label	'gross tonnage'@en
+P1093	type	property
+P1096	P1629	Q208474
+P1096	P1855	Q339
+P1096	P2302	Q21503250
+P1096	P2302	Q21510860
+P1096	P2302	Q21514353
+P1096	P2302	Q53869507
+P1096	P2875	Q27230935
+P1096	P31	Q21451142
+P1096	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/18#P1096"""
+P1096	aliases	'eccentricity'@en
+P1096	descriptions	'amount of the deviation of an orbit from a perfect circle'@en
+P1096	document_id	wikidata-20200203
+P1096	label	'orbital eccentricity'@en
+P1096	type	property
+P1097	P1629	Q1191684
+P1097	P2302	Q21510860
+P1097	P2302	Q21514353
+P1097	P2302	Q53869507
+P1097	P31	Q22981316
+P1097	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/18#P1097"""
+P1097	descriptions	'characteristic property of any elementary particle (Landé factor)'@en
+P1097	document_id	wikidata-20200203
+P1097	label	'g-factor'@en
+P1097	type	property
+P1098	P1629	Q23892516
+P1098	P1855	Q3270727
+P1098	P1855	Q9309
+P1098	P2302	Q21503250
+P1098	P2302	Q21510856
+P1098	P2302	Q21510860
+P1098	P2302	Q21514353
+P1098	P2302	Q52848401
+P1098	P2875	Q26250007
+P1098	P31	Q20824104
+P1098	P31	Q22984494
+P1098	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/18#P1098"""
+P1098	aliases	'speakers of language'@en
+P1098	descriptions	'number of people who speak a language'@en
+P1098	document_id	wikidata-20200203
+P1098	label	'number of speakers'@en
+P1098	type	property
+P1099	P1629	Q331744
+P1099	P1855	Q2088421
+P1099	P1855	Q944436
+P1099	P2302	Q21503250
+P1099	P2302	Q21510860
+P1099	P2302	Q21514353
+P1099	P2302	Q51723761
+P1099	P2302	Q52848401
+P1099	P2302	Q53869507
+P1099	P31	Q23779665
+P1099	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/18#P1099"""
+P1099	descriptions	'number of masts a ship has'@en
+P1099	document_id	wikidata-20200203
+P1099	label	'number of masts'@en
+P1099	type	property
+P110	P1628	"""http://schema.org/illustrator"""
+P110	P1629	Q644687
+P110	P1647	P170
+P110	P1855	Q11221
+P110	P1855	Q25338
+P110	P1855	Q50948
+P110	P1855	Q74287
+P110	P2235	"""http://d-nb.info/standards/elementset/gnd#illustratorOrIlluminator"""
+P110	P2302	Q21503250
+P110	P2302	Q21510864
+P110	P2302	Q21510864
+P110	P2302	Q21510865
+P110	P2521	"""ilustradora""@gl"
+P110	P2875	Q23909083
+P110	P31	Q29546443
+P110	P31	Q29546563
+P110	P31	Q64830420
+P110	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/1#P110"""
+P110	P3734	Q42533305
+P110	P7087	Q66004899
+P110	aliases	'illustrated by'@en
+P110	aliases	'illustration by'@en
+P110	descriptions	'person drawing the pictures in a book'@en
+P110	document_id	wikidata-20200203
+P110	label	'illustrator'@en
+P110	type	property
+P1100	P1629	Q245656
+P1100	P1855	Q902691
+P1100	P2302	Q21503250
+P1100	P2302	Q21510860
+P1100	P2302	Q21514353
+P1100	P2302	Q51723761
+P1100	P2302	Q52848401
+P1100	P2875	Q42942763
+P1100	P31	Q22963600
+P1100	P3254	"""https://www.wikidata.org/wiki/Wikidata:Property_proposal/Archive/18#P1100"""
+P1100	descriptions	'number of cylinders in a piston engine or compressor'@en
+P1100	document_id	wikidata-20200203
+P1100	label	'number of cylinders'@en
+P1100	type	property

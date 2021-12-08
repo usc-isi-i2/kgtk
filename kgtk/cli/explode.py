@@ -27,7 +27,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         parser (argparse.ArgumentParser)
     """
     from kgtk.kgtkformat import KgtkFormat
-    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
     from kgtk.io.kgtkwriter import KgtkWriter
     from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.value.kgtkvalue import KgtkValueFields
@@ -74,11 +74,22 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help="Print the list of data types and exit. (default=%(default)s).",
                               type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument(      "--show-field-names", dest="show_field_names", metavar="True|False",
+                              help="Print the list of field names and exit. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument(      "--show-field-formats", dest="show_field_formats", metavar="True|False",
+                              help="Print the list of field names and formats, then exit. (default=%(default)s).",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     parser.add_argument(      "--output-format", dest="output_format", help="The file format (default=kgtk)", type=str,
                               choices=KgtkWriter.OUTPUT_FORMAT_CHOICES)
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser,
+                                    mode_options=True,
+                                    default_mode=KgtkReaderMode[parsed_shared_args._mode],
+                                    expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 def run(input_file: KGTKFiles,
@@ -90,6 +101,8 @@ def run(input_file: KGTKFiles,
         overwrite_columns: bool,
         expand_list: bool,
         show_data_types: bool,
+        show_field_names: bool,
+        show_field_formats: bool,
         output_format: typing.Optional[str],
         
         errors_to_stdout: bool = False,
@@ -109,6 +122,7 @@ def run(input_file: KGTKFiles,
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
     from kgtk.io.kgtkwriter import KgtkWriter
     from kgtk.reshape.kgtkexplode import KgtkExplode
+    from kgtk.value.kgtkvalue import KgtkValueFields
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
@@ -134,15 +148,30 @@ def run(input_file: KGTKFiles,
         if field_names is not None:
             print("--fields %s" % " ".join(field_names), file=error_file, flush=True)
         print("--show-data-types %s" % str(show_data_types), file=error_file, flush=True)
+        print("--show-field-names %s" % str(show_field_names), file=error_file, flush=True)
+        print("--show-field-formats %s" % str(show_field_formats), file=error_file, flush=True)
         if output_format is not None:
             print("--output-format=%s" % output_format, file=error_file, flush=True)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
+
     if show_data_types:
         data_type: str
         for data_type in KgtkFormat.DataType.choices():
             print("%s" % data_type, file=error_file, flush=True)
+        return 0
+
+    field_name: str
+    if show_field_names:
+        for field_name in sorted(KgtkValueFields.FIELD_NAMES):
+            print("%s" % field_name, file=error_file, flush=True)
+        return 0
+
+    if show_field_formats:
+        for field_name in sorted(KgtkValueFields.FIELD_NAME_FORMATS.keys()):
+            field_format: str = KgtkValueFields.FIELD_NAME_FORMATS[field_name]
+            print("| %20s | %-5s |" % (field_name, field_format), file=error_file, flush=True)
         return 0
 
     try:

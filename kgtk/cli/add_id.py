@@ -11,11 +11,11 @@ from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 def parser():
     return {
         'help': 'Copy a KGTK file, adding ID values.',
-        'description': 'Copy a KGTK file, adding ID values.' +
-        '\n\nThe --overwrite-id option can be used to replace existing ID values in the ID column. ' +
-        'It does not update instances of the same ID in other columns, such as node1, elsewhere in the file.' +
-        '\n\nSeveral ID styles are supported. ' +
-        '\n\nAdditional options are shown in expert help.\nkgtk --expert add-id --help'
+        'description': 'Copy a KGTK file, adding ID values.\n\n' +
+        'The `--overwrite-id` option can be used to replace existing ID values in the ID column.\n' +
+        'It does not update instances of the same ID in other columns, such as node1, elsewhere in the file.\n\n' +
+        'Several ID styles are supported.\n\n' +
+        'Additional options are shown in expert help.\nkgtk --expert add-id --help'
     }
 
 
@@ -26,7 +26,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         parser (argparse.ArgumentParser)
     """
     # import modules locally
-    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
     from kgtk.reshape.kgtkidbuilder import KgtkIdBuilder, KgtkIdBuilderOptions
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
@@ -46,7 +46,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     KgtkIdBuilderOptions.add_arguments(parser, expert=True) # Show all the options.
     KgtkReader.add_debug_arguments(parser, expert=_expert)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser,
+                                    mode_options=True,
+                                    default_mode=KgtkReaderMode[parsed_shared_args._mode],
+                                    expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 def run(input_file: KGTKFiles,

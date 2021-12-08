@@ -13,8 +13,8 @@ kgtk ${KGTK_FLAGS} \
      --input-file ${TEMPDIR}/sitelinks.qualifiers.${UNSORTED_KGTK} \
      --input-file ${TEMPDIR}/metadata.types.${UNSORTED_KGTK} \
      --input-file ${TEMPDIR}/metadata.property.datatypes.${UNSORTED_KGTK} \
-/ sort2 ${VERBOSE} \
+   / sort2 ${VERBOSE} \
      --gzip-command ${GZIP_CMD} \
      --extra "${SORT_EXTRAS}" \
-     --output-file ${DATADIR}/all.${SORTED_KGTK}
-
+     --output-file ${DATADIR}/all.${SORTED_KGTK} \
+| tee ${LOGDIR}/build-all-edges.log

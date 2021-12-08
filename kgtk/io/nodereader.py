@@ -21,7 +21,7 @@ class NodeReader(KgtkReader):
 
     @classmethod
     def open_node_file(cls,
-                       file_path: typing.Optional[Path],
+                       file_path: typing.Optional[typing.Union[Path, str]],
                        who: str = "node input",
                        error_file: typing.TextIO = sys.stderr,
                        reject_file: typing.Optional[typing.TextIO] = None,
@@ -50,6 +50,10 @@ class NodeReader(KgtkReader):
         #    # TODO: throw a better exception
         #    raise ValueError("open_node_file expected to produce a NodeReader")
         return typing.cast(NodeReader, result)
+
+    def _ignore_prohibited_lists(self, row: typing.List[str], line: str)->bool:
+        # TODO: Should we apply this to the `id` column of a node file for simplicity?
+        return False
 
     def _ignore_if_blank_required_fields(self, values: typing.List[str], line: str)->bool:
         # Ignore line_action with blank id fields.  This code comes after

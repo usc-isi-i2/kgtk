@@ -8,7 +8,9 @@ source common.sh
 # ==============================================================================
 # Setup working directories:
 mkdir --verbose ${DATADIR}
+mkdir --verbose ${TEMPDIR}
 mkdir --verbose ${LOGDIR}
+mkdir --verbose ${COUNTDIR}
 
 
 # ==============================================================================

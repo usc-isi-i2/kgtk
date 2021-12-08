@@ -1,8 +1,11 @@
 tox
 coverage
 coveralls
-mkdocs
-mkdocs-material
+mkdocs>=1.2.2
+mkdocs-material>=7.2.0
 mknotebooks
 ipykernel
-
+types-requests
+data-science-types
+types-redis
+types-simplejson

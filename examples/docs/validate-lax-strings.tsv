@@ -1,0 +1,6 @@
+node1	label	node2
+line1	invalid	"xxx
+line2	valid	"xxx\"yyy"
+line3	valid	"xxx"yyy"
+line4	valid	"xxx\\yyy"
+line5	valid	"xxx\tyyy"

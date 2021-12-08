@@ -11,6 +11,7 @@ from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
 def parser():
     return {
+        'aliases': [ 'filter-properties' ],
         'help': 'Validate property patterns in a KGTK file. ',
         'description': 'Validate property patterns in a KGTK file. ' +
         '\n\nAdditional options are shown in expert help.\nkgtk --expert clean-data --help'
@@ -65,7 +66,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               type=optional_bool, nargs='?', const=True, default=True, metavar="True|False")
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, validate_by_default=True, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser,
+                                    mode_options=True,
+                                    default_mode=KgtkReaderMode[parsed_shared_args._mode],
+                                    expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 

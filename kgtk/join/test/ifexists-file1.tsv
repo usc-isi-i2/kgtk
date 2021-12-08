@@ -1,7 +1,0 @@
-node1	label	node2	location	years
-john	zipcode	12345	home	10
-john	zipcode	12346		
-peter	zipcode	12040	home	
-peter	zipcode	12040	work	6
-steve	zipcode	45601		3
-steve	zipcode	45601	work	

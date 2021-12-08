@@ -1,0 +1,7 @@
+node1	label	node2
+john	woke	^2020-05-02T00:00
+john	woke	^2020-05-00T00:00
+john	slept	^2020-05-02T24:00
+lionheart	born	^1157-09-08T00:00
+year0001	starts	^0001-01-01T00:00
+year9999	ends	^9999-12-31T11:59:59

@@ -1,0 +1,5 @@
+node1	label	node2
+apple	name	"apple"
+apple	label	'apple'@en
+apple	good_count	1245
+apple	bad_count	99

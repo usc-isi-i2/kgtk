@@ -422,12 +422,15 @@ class NodePattern(QueryElement):
             self.labels = [lab.name for lab in self.labels]
         return self
 
+    def is_anonymous(self):
+        return self.variable is None or self.variable.name is None
+
     def normalize_term(self, implied_clauses):
         # TO DO: handle implied clauses from properties
         query = self._query
         labels = self.labels
         assert labels is None or len(labels) == 1, 'Multiple node labels are not allowed'
-        if self.variable is None or self.variable.name is None:
+        if self.is_anonymous():
             self.variable = query.create_anonymous_variable()
         return self
 
@@ -472,12 +475,17 @@ class RelationshipPattern(QueryElement):
         delattr(self, 'detail')
         return self
 
+    def is_anonymous(self):
+        return self.variable is None or self.variable.name is None
+    
     def normalize_term(self, implied_clauses):
         # TO DO: handle implied clauses from properties
         query = self._query
         labels = self.labels
+        arrow = self.arrow
         assert labels is None or len(labels) == 1, 'Multiple relationship labels are not (yet) allowed'
-        if self.variable is None or self.variable.name is None:
+        assert arrow != '--', 'Undirected relationships are not (yet) allowed'
+        if self.is_anonymous():
             self.variable = query.create_anonymous_variable()
         return self
 
@@ -617,7 +625,7 @@ class PathPattern(QueryElement):
                 # we create a connecting variable node, but we do not copy any of the other attributes if any,
                 # since those might result in additional clauses which we only want to create once:
                 conn_nodepat = pattern[2]
-                if conn_nodepat.variable is None:
+                if conn_nodepat.is_anonymous():
                     conn_nodepat.variable = query.create_anonymous_variable()
                 nodepat = NodePattern(query, None, None, None)
                 nodepat.variable = conn_nodepat.variable
@@ -648,13 +656,42 @@ class PathPattern(QueryElement):
 
 # Query top level clauses:
 
-class Match(QueryElement):
-    ast_name = 'Match'
+class StrictMatch(QueryElement):
+    ast_name = 'StrictMatch'
 
     def __init__(self, query, pattern, where):
         self._query = query
         self.pattern = intern_ast_list(query, pattern)
         self.where = intern_ast(query, where)
+        self.default_graph = None
+        self.pattern_clauses = None
+
+    def normalize(self):
+        """Compute a list of [<NodePattern ...> <RelationshipPattern --> ...> <NodePattern ...>] clauses
+        where each pattern element has a named or anonymous variable and optional single label.  All
+        property elements have been translated into additional normalized match clauses.  Also propagates
+        graph information which defaults to 'self.default_graph'.
+        """
+        if self.pattern_clauses is None:
+            self.pattern_clauses = []
+            current_graph = self.default_graph
+            for pathpat in self.pattern:
+                for normpath in pathpat.normalize():
+                    normpath = normpath.pattern
+                    current_graph = normpath[0].graph or current_graph
+                    normpath[0].graph = current_graph
+                    self.pattern_clauses.append(normpath)
+        return self
+
+    def get_pattern_clauses(self, default_graph=None):
+        self.default_graph=default_graph
+        return self.normalize().pattern_clauses
+
+    def get_where_clause(self):
+        return self.normalize().where
+
+class OptionalMatch(StrictMatch):
+    ast_name = 'OptionalMatch'
 
 class Where(QueryElement):
     ast_name = 'Where'
@@ -663,6 +700,13 @@ class Where(QueryElement):
         self._query = query
         self.expression = intern_ast(query, expression)
 
+class Match(QueryElement):
+    ast_name = 'Match'
+
+    def __init__(self, query, strict, *optionals):
+        self._query = query
+        self.strict = intern_ast(query, strict)
+        self.optionals = [intern_ast(query, opt) for opt in optionals]
 
 class Skip(QueryElement):
     ast_name = 'Skip'
@@ -745,14 +789,23 @@ class Return(QueryElement):
         delattr(self, 'body')
         return self
 
+class With(Return):
+    ast_name = 'With'
+
+    def __init__(self, query, distinct, body, where):
+        self._query = query
+        self.distinct = distinct is not None
+        self.body = intern_ast(query, body)
+        self.where = intern_ast(query, where)
+        
 
 class SingleQuery(QueryElement):
     ast_name = 'SingleQuery'
 
     def __init__(self, query, match, with_, return_):
-        """TO DO: COMPLETE"""
         self._query = query
         self.match = intern_ast(query, match)
+        self.with_ = intern_ast(query, with_)
         self.return_ = intern_ast(query, return_)
 
 
@@ -798,7 +851,6 @@ class KypherQuery(object):
         self.query = None
         self.variables = {}
         self.simplified = False
-        self.match_clauses = None
         self.parse = Parser(query_string)
         self.query = intern_ast(self, self.parse.Kypher())
 
@@ -814,32 +866,26 @@ class KypherQuery(object):
             self.simplified = True
         return self
 
-    def get_match_pattern(self):
-        assert isinstance(self.query, SingleQuery), 'Only single-match queries are supported, no unions'
-        return self.query.match.pattern
-
-    def get_match_clauses(self):
-        """Returns a list of [<NodePattern ...> <RelationshipPattern --> ...> <NodePattern ...>] clauses
-        where each pattern element has a named or anonymous variable and optional single label.  All
-        property elements have been translated into additional normalized match clauses (not yet).
+    def get_match_clause(self):
+        """Return the strict match clause of this query (currently we require exactly one).
         """
-        if self.match_clauses is None:
-            self.simplify()
-            self.match_clauses = []
-            current_graph = None
-            for pathpat in self.get_match_pattern():
-                for normpath in pathpat.normalize():
-                    normpath = normpath.pattern
-                    current_graph = normpath[0].graph or current_graph
-                    normpath[0].graph = current_graph
-                    self.match_clauses.append(normpath)
-        return self.match_clauses
+        assert isinstance(self.query, SingleQuery), 'Only single-match queries are supported, no unions'
+        match_clause = self.simplify().query.match.strict
+        assert isinstance(match_clause, StrictMatch), 'Missing strict match clause'
+        return match_clause
 
-    def get_where_clause(self):
+    def get_optional_match_clauses(self):
+        """Return the optional match clauses of this query (zero or more).
+        """
+        assert isinstance(self.query, SingleQuery), 'Only single-match queries are supported, no unions'
+        optional_clauses = self.simplify().query.match.optionals
+        return optional_clauses
+
+    def get_with_clause(self):
         assert isinstance(self.query, SingleQuery), 'Only single-match queries are supported, no unions'
         self.simplify()
-        where = self.query.match.where
-        return where
+        with_ = self.query.with_
+        return with_
 
     def get_return_clause(self):
         assert isinstance(self.query, SingleQuery), 'Only single-match queries are supported, no unions'

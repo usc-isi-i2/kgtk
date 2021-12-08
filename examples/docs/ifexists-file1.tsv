@@ -1,0 +1,13 @@
+id	node1	label	node2	location	years
+p1	peter	title	manager		
+p2	peter	zipcode	12040	home	
+p3	peter	zipcode	12040	work	6
+s1	steve	title	supervisor		
+s2	steve	zipcode	45601		3
+s3	steve	zipcode	45601	work	
+j1	john	title	programmer		
+j2	john	zipcode	12345	home	10
+j2	john	zipcode	12346		
+k1	kathy	title	owner		
+k2	kathy	zipcode	12040	home	
+k3	kathy	zipcode	12040	work	6
