@@ -1575,14 +1575,108 @@ def run(input_file: KGTKFiles,
             if len(into_column_idxs) != 1:
                 raise KGTKException("Minus needs 1 destination columns, got %d" % len(into_column_idxs))
 
-            def minus_op()->bool:
-                # TODO: support quanties.
-                if len(sources) == 2:
-                    output_row[into_column_idx] = str(float(row[sources[0]]) - float(row[sources[1]]))
-                else:
-                    output_row[into_column_idx] = str(float(row[sources[0]]) - float(values[0]))
+            def minus_2_float_op()->bool:
+                output_row[into_column_idx] = str(float(row[sources[0]]) - float(row[sources[1]]))
                 return True
-            opfunc = minus_op
+
+            def minus_1_float_op()->bool:
+                output_row[into_column_idx] = str(float(row[sources[0]]) - float(values[0]))
+                return True
+
+            def minus_2_int_op()->bool:
+                output_row[into_column_idx] = str(int(row[sources[0]]) - int(row[sources[1]]))
+                return True
+
+            def minus_1_int_op()->bool:
+                output_row[into_column_idx] = str(int(row[sources[0]]) - int(values[0]))
+                return True
+
+            def minus_op()->bool:
+                leftstr: str = row[sources[0]]
+                if len(leftstr) == 0:
+                    leftstr = "0" # Simplify matters.
+
+                rightstr: str = row[sources[1]] if len(sources) == 2 else values[0]
+                if len(rightstr) == 0:
+                    rightstr = "0" # Simplify matters.
+
+                left_kv: Kgtkvalue = KgtkValue(leftstr)
+                if not left_kv.is_number_or_quantity(validate=True, parse_fields=True):
+                    # Not a number or quantity, fail.
+                    #
+                    # TODO: a failure indicator might be nice.
+                    output_row[into_column_idx] = ""
+                    return True
+
+                left_fields: KgtkValueFields = left_kv.fields
+
+                if left_fields is None or left_fields.number is None:
+                    # This shouldn't happen.  Fail.
+                    #
+                    # TODO: a failure indicator might be nice.
+                    output_row[into_column_idx] = ""
+                    return True
+                
+                if left_fields.low_tolerancestr is not None or left_fields.high_tolerancestr is not None:
+                    # TODO: Handle these properly.
+                    output_row[into_column_idx] = ""
+                    return True
+
+                left_qualifier: str
+                if left_fields.si_units is not None:
+                    left_qualifier = left_fields.si_units
+                elif left_fields.units_node is not None:
+                    left_qualifier = left_fields.units_node
+                else:
+                    left_qualifier = ""
+                
+                right_kv: Kgtkvalue = KgtkValue(rightstr)
+                if not right_kv.is_number_or_quantity(validate=True, parse_fields=True):
+                    # Not a number or quantity, fail.
+                    #
+                    # TODO: a failure indicator might be nice.
+                    output_row[into_column_idx] = ""
+                    return True
+
+                right_fields: KgtkValueFields = right_kv.fields
+
+                if right_fields is None or right_fields.number is None:
+                    # This shouldn't happen.  Fail.
+                    #
+                    # TODO: a failure indicator might be nice.
+                    output_row[into_column_idx] = ""
+                    return True
+                
+                if right_fields.low_tolerancestr is not None or right_fields.high_tolerancestr is not None:
+                    # TODO: Handle these properly.
+                    output_row[into_column_idx] = ""
+                    return True
+
+                right_qualifier: str
+                if right_fields.si_units is not None:
+                    right_qualifier = right_fields.si_units
+                elif right_fields.units_node is not None:
+                    right_qualifier = right_fields.units_node
+                else:
+                    right_qualifier = ""
+
+                if len(left_qualifier) > 0 and len(right_qualifier) > 0 and left_qualifier != right_qualifier:
+                    # Conflicting qualifiers.  Fail.
+                    #
+                    # TODO: a failure indicator might be nice.
+                    output_row[into_column_idx] = ""
+                    return True
+
+                output_row[into_column_idx] = str(left_fields.number - right_fields.number) + (right_qualifier if len(right_qualifier) > 0 else left_qualifier)
+                return True
+
+            if be_fast:
+                if as_int:
+                    opfunc = minus_2_int_op if len(sources) == 2 else minus_1_int_op
+                else:
+                    opfunc = minus_2_float_op if len(sources) == 2 else minus_1_float_op
+            else:
+                opfunc = minus_op
 
         elif operation == MOD_OP:
             if not ((len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1)):
