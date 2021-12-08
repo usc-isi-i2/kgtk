@@ -290,6 +290,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               metavar="True|False",
                               type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument(      "--as-int", dest="as_int",
+                              help="When True, compute numbers as integers.  When False, compute numbers as floats. " +
+                              "(default=%(default)s).",
+                              metavar="True|False",
+                              type=optional_bool, nargs='?', const=True, default=False)
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser,
                                     mode_options=True,
@@ -330,6 +336,7 @@ def run(input_file: KGTKFiles,
         group_by_output_names_list: typing.List[typing.List[str]],
         filter: bool,
         be_fast: bool,
+        as_int: bool,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -400,6 +407,7 @@ def run(input_file: KGTKFiles,
             print("--group-by-label=%s" % group_by_label, file=error_file, flush=True)
         print("--filter=%s" % repr(filter), file=error_file, flush=True)
         print("--fast=%s" % repr(be_fast), file=error_file, flush=True)
+        print("--as-int=%s" % repr(as_int), file=error_file, flush=True)
 
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
@@ -581,13 +589,67 @@ def run(input_file: KGTKFiles,
             if len(sources) != len(into_column_idxs):
                 raise KGTKException("Abs needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
 
-            def abs_op()->bool:
-                # TODO: support quantities.
+            def abs_fast_float_op()->bool:
+                # This fast path assumes that the column values are empty or contain numbers,
+                # not quantities.
                 src_idx: int
                 for src_idx in range(len(sources)):
-                    output_row[into_column_idxs[src_idx]] = str(abs(float(row[sources[src_idx]])))
+                    strval: str = row[sources[src_idx]]
+                    output_row[into_column_idxs[src_idx]] = str(abs(float(strval))) if len(strval) > 0 else ""
                 return True
-            opfunc = abs_op
+
+            def abs_fast_int_op()->bool:
+                # This fast path assumes that the column values are empty or contain integer numbers,
+                # not quantities or float numbers.
+                src_idx: int
+                for src_idx in range(len(sources)):
+                    strval: str = row[sources[src_idx]]
+                    output_row[into_column_idxs[src_idx]] = str(abs(int(strval))) if len(strval) > 0 else ""
+                return True
+
+            def abs_op()->bool:
+                src_idx: int
+                for src_idx in range(len(sources)):
+                    strval: str = row[sources[src_idx]]
+                    if len(strval) == 0:
+                        # This is the optimized path for empty values.
+                        output_row[into_column_idxs[src_idx]] = ""
+                        continue
+
+                    kv: KgtkValue = KgtkValue(strval)
+                    if not kv.is_number_or_quantity(validate=True, parse_fields=True):
+                        # Not a number or a quantity, just copy the value:
+                        #
+                        # TODO: a failure indicator might be nice.
+                        output_row[into_column_idxs[src_idx]] = strval
+                        continue
+
+                    if kv.fields is None or kv.fields.number is None:
+                        # This shouldn't happen.  Copy the value and leave.
+                        #
+                        # TODO: a failure indicator might be nice.
+                        output_row[into_column_idxs[src_idx]] = strval
+                        continue
+                    numberstr: str = str(abs(kv.fields.number))
+                       
+                    if kv.fields.low_tolerancestr is not None or kv.fields.high_tolerancestr is not None:
+                        # TODO: Handle these properly.
+                        output_row[into_column_idxs[src_idx]] = strval
+                        continue
+
+                    if kv.fields.si_units is not None:
+                        output_row[into_column_idxs[src_idx]] = numberstr + kv.fields.si_units
+                    elif kv.fields.units_node is not None:
+                        output_row[into_column_idxs[src_idx]] = numberstr + kv.fields.units_node
+                    else:
+                        output_row[into_column_idxs[src_idx]] = numberstr
+
+                return True
+
+            if be_fast:
+                opfunc = abs_fast_int_op if as_int else abs_fast_float_op
+            else:
+                opfunc = abs_op
 
         elif operation == AND_OP:
             if len(sources) == 0:
@@ -1278,93 +1340,94 @@ def run(input_file: KGTKFiles,
                 return True
 
             def list_sum_op()->bool:
+                # TODO: use math.fsum(...) for improved accuracy.
                 src_idx: int
                 for src_idx in range(len(sources)):
                     listval: str = row[sources[src_idx]]
                     if len(listval) == 0:
                         # This is the optimized path for empty values.
                         output_row[into_column_idxs[src_idx]] = ""
-                    else:
+                        continue
 
-                        # TODO: use math.fsum(...) for improved accuracy.
-                        kv: KgtkValue = KgtkValue(listval)
-                        if not kv.is_list():
-                            # This is the optimized path for not-list values.  Just copy the value.
-                            output_row[into_column_idxs[src_idx]] = listval
-                        else:
-                            fail: bool = False
-                            total: typing.Optional[float] = None
-                            is_number: typing.Optinal[bool] = None
-                            qualifier: str = ""
-                            kvitem: KgtkValue
-                            for kvitem in kv.get_list_items():
-                                if is_number is None:
-                                    if kvitem.is_number():
-                                        is_number = True
-                                        total = float(kvitem.value) # TODO: Use the parsed fields?
-                                        continue
+                    kv: KgtkValue = KgtkValue(listval)
+                    if not kv.is_list():
+                        # This is the optimized path for non-list values.  Just copy the value.
+                        output_row[into_column_idxs[src_idx]] = listval
+                        continue
 
-                                    if not kvitem.is_quantity(validate=True, parse_fields=True):
-                                        fail = True
-                                        break
+                    fail: bool = False
+                    total: typing.Optional[float] = None
+                    is_number: typing.Optinal[bool] = None
+                    qualifier: str = ""
+                    kvitem: KgtkValue
+                    for kvitem in kv.get_list_items():
+                        if is_number is None:
+                            if kvitem.is_number():
+                                is_number = True
+                                total = float(kvitem.value) # TODO: Use the parsed fields?
+                                continue
 
-                                    is_number = False
-                                    if kvitem.fields is None:
-                                        fail = True
-                                        break
-                                    if kvitem.fields.number is None:
-                                        fail = True
-                                        break
-                                    total = float(kvitem.fields.number)
-                                    if kvitem.fields.low_tolerancestr is not None or kvitem.fields.high_tolerancestr:
-                                        # TODO: handle these properly.
-                                        fail = True
-                                        break
-                                    if kvitem.fields.si_units is not None:
-                                        qualifier = kvitem.fields.si_units
-                                    else:
-                                        qualifier = kvitem.fields.units_node
-                                    continue
+                            if not kvitem.is_quantity(validate=True, parse_fields=True):
+                                fail = True
+                                break
 
-                                if is_number:
-                                    if kvitem.is_number():
-                                        total += float(kvitem.value)
-                                        continue
-                                    else:
-                                        fail = True
-                                        break
-
-                                if not kvitem.is_quantity(validate=True, parse_fields=True):
-                                    fail = True
-                                    break
-
-                                if kvitem.fields is None:
-                                    fail = True
-                                    break
-                                if kvitem.fields.number is None:
-                                    fail = True
-                                    break
-                                total += float(kvitem.fields.number)
-                                if kvitem.fields.low_tolerancestr is not None or kvitem.fields.high_tolerancestr:
-                                    # TODO: handle these properly.
-                                    fail = True
-                                    break
-                                if kvitem.fields.si_units is not None:
-                                    if qualifier is None or qualifier != kvitem.fields.si_units:
-                                        fail = True
-                                        break
-                                else:
-                                    if qualifier is None or qualifier != kvitem.fields.units_node:
-                                        fail = True
-                                        break                                        
-
-                            if fail:
-                                output_row[into_column_idxs[src_idx]] = listval
+                            is_number = False
+                            if kvitem.fields is None:
+                                fail = True
+                                break
+                            if kvitem.fields.number is None:
+                                fail = True
+                                break
+                            total = float(kvitem.fields.number)
+                            if kvitem.fields.low_tolerancestr is not None or kvitem.fields.high_tolerancestr is not None:
+                                # TODO: handle these properly.
+                                fail = True
+                                break
+                            if kvitem.fields.si_units is not None:
+                                qualifier = kvitem.fields.si_units
                             else:
-                                if is_number is not None and is_number:
-                                    output_row[into_column_idxs[src_idx]] = str(total)
-                                else:
-                                    output_row[into_column_idxs[src_idx]] = str(total) + qualifier                                
+                                qualifier = kvitem.fields.units_node
+                            continue
+
+                        if is_number:
+                            if kvitem.is_number():
+                                total += float(kvitem.value)
+                                continue
+                            else:
+                                fail = True
+                                break
+
+                        if not kvitem.is_quantity(validate=True, parse_fields=True):
+                            fail = True
+                            break
+
+                        if kvitem.fields is None:
+                            fail = True
+                            break
+                        if kvitem.fields.number is None:
+                            fail = True
+                            break
+                        total += float(kvitem.fields.number)
+                        if kvitem.fields.low_tolerancestr is not None or kvitem.fields.high_tolerancestr is not None:
+                            # TODO: handle these properly.
+                            fail = True
+                            break
+                        if kvitem.fields.si_units is not None:
+                            if qualifier is None or qualifier != kvitem.fields.si_units:
+                                fail = True
+                                break
+                        else:
+                            if qualifier is None or qualifier != kvitem.fields.units_node:
+                                fail = True
+                                break                                        
+
+                    if fail:
+                        output_row[into_column_idxs[src_idx]] = listval
+                    else:
+                        if is_number is not None and is_number:
+                            output_row[into_column_idxs[src_idx]] = str(total)
+                        else:
+                            output_row[into_column_idxs[src_idx]] = str(total) + qualifier                                
                 return True
             opfunc = list_sum_fast_op if be_fast else list_sum_op
 
