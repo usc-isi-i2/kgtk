@@ -1340,6 +1340,10 @@ def run(input_file: KGTKFiles,
                 return True
 
             def list_sum_op()->bool:
+                # NOTE: numbers and quantities cannot be summed.
+                #
+                # TODO: allow numbers and quantities to be summed if --combine-numbers-and-quantities
+                #
                 # TODO: use math.fsum(...) for improved accuracy.
                 src_idx: int
                 for src_idx in range(len(sources)):
@@ -1592,6 +1596,9 @@ def run(input_file: KGTKFiles,
                 return True
 
             def minus_op()->bool:
+                # NOTE: quantities and numbers can be combined.
+                #
+                # TODO: allow numbers and quantities to be summed only if --combine-numbers-and-quantities
                 leftstr: str = row[sources[0]]
                 if len(leftstr) == 0:
                     leftstr = "0" # Simplify matters.
