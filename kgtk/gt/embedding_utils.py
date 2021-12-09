@@ -60,7 +60,7 @@ class EmbeddingVector:
         self.token_pattern = re.compile(r"(?u)\b\w\w+\b")
         self.selected_gpu_device_index = 0
         self.total_gpu_count = torch.cuda.device_count()
-    
+
     def retry_next_gpu(self, error):
         self.selected_gpu_device_index += 1
         if self.selected_gpu_device_index >= self.total_gpu_count:
@@ -97,7 +97,6 @@ class EmbeddingVector:
                     break # If there is no error, this will break the loop and return the results
                 except RuntimeError as e:
                     self.retry_next_gpu(e)
-
         return sentence_embeddings
 
     def send_sparql_query(self, query_body: str):
@@ -688,38 +687,47 @@ class EmbeddingVector:
                     for i in each:
                         _ = f.write(str(i) + "\t")
                     _ = f.write("\n")
+    def print_vector_line(self, vector_line, output_file):
+        if output_file == "":
+            print(vector_line,end='')
+        else:
+            output_file.write(vector_line)
 
     def print_vector(self, vectors, output_properties: str = "text_embedding",
-                     output_format="kgtk_format", save_embedding_sentence=False):
+                     output_format="kgtk_format", save_embedding_sentence=False, output_file=""):
         self._logger.debug("START printing the vectors")
+        if output_file != "":
+            output_file = open(output_file, "w")
         if output_format == "kgtk_format":
             # TODO: This should be comverted to use KgtkWriter
-            print("node\tproperty\tvalue\n", end="")
+            self.print_vector_line("node\tproperty\tvalue\n", output_file)
             all_nodes = list(self.vectors_map.keys())
             ten_percent_len = math.ceil(len(vectors) / 10)
             for i, each_vector in enumerate(vectors):
                 if i % ten_percent_len == 0:
                     percent = i / ten_percent_len * 10
                     self._logger.debug("Finished {}%".format(percent))
-                print("{}\t{}\t".format(all_nodes[i], output_properties), end="")
+                self.print_vector_line("{}\t{}\t".format(all_nodes[i], output_properties), output_file)
                 for each_dimension in each_vector[:-1]:
-                    print(str(each_dimension) + ",", end="")
-                print(str(each_vector[-1]))
+                    self.print_vector_line(str(each_dimension) + ",", output_file)
+                self.print_vector_line(str(each_vector[-1]) + '\n', output_file)
                 if save_embedding_sentence:
-                    print("{}\t{}\t{}".format(all_nodes[i], "embedding_sentence",
-                                              self.candidates[all_nodes[i]]["sentence"]))
+                    self.print_vector_line("{}\t{}\t{}\n".format(all_nodes[i], "embedding_sentence",
+                                              self.candidates[all_nodes[i]]["sentence"]), output_file)
 
         elif output_format == "tsv_format":
             for each_vector in vectors:
                 for each_dimension in each_vector[:-1]:
-                    print(str(each_dimension) + "\t", end="")
-                print(str(each_vector[-1]))
+                    self.print_vector_line(str(each_dimension) + "\t", output_file)
+                self.print_vector_line(str(each_vector[-1]) + '\n', output_file)
+        if output_file != "":
+            output_file.close()
         self._logger.debug("END printing the vectors")
 
     def plot_result(self, output_properties: dict, input_format="kgtk_format",
                     output_uri: str = "", output_format="kgtk_format",
                     dimensional_reduction="none", dimension_val=2,
-                    save_embedding_sentence=False
+                    save_embedding_sentence=False, output_file=""
                     ):
         """
             transfer the vectors to lower dimension so that we can plot
@@ -794,12 +802,12 @@ class EmbeddingVector:
             self.print_vector(self.vectors_2D,
                               output_props,
                               output_format,
-                              save_embedding_sentence)
+                              save_embedding_sentence, output_file)
         else:
             self.print_vector(vectors,
                               output_props,
                               output_format,
-                              save_embedding_sentence)
+                              save_embedding_sentence, output_file)
 
     def evaluate_result(self):
         """
