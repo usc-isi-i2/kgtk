@@ -34,7 +34,10 @@ class EmbeddingVector:
         else:
             self.model_name = model_name
         self._logger.info("Using model {}".format(self.model_name))
-        self.model = SentenceTransformer(self.model_name)
+        if torch.cuda.is_available():
+            self.model = SentenceTransformer(self.model_name, device=('cuda:0'))
+        else:
+            self.model = SentenceTransformer(self.model_name)
         # setup redis cache server
         if query_server is None or query_server == "":
             self.wikidata_server = "https://query.wikidata.org/sparql"
