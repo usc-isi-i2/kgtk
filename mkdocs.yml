@@ -1,7 +1,9 @@
 site_name: KGTK documentation
 nav:
   - Home: index.md
-  - Getting started: install.md
+  - 'Getting Started':
+      - 'Basic KGTK Installation': install.md
+      - 'Installation Procedure Details': KGTK-Installation-Procedure-Details.md
   - KGTK data model: data_model.md
   - KGTK file specification: specification.md
   - KGTK environment variables: envars.md
@@ -46,6 +48,7 @@ nav:
       - 'rename-columns': 'transform/rename_columns.md'
       - 'reorder-columns': 'transform/reorder_columns.md'
       - 'replace-nodes': 'transform/replace_nodes.md'
+      - 'select-columns': 'transform/select_columns.md'
       - 'sort': 'transform/sort.md'
       - 'table': 'transform/table.md'
       - 'tail': 'transform/tail.md'

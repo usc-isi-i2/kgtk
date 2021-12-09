@@ -143,6 +143,13 @@ no option to override this constraint.
 
 Note: `--inverted` and `--inverted-props` may not be used together.
 
+Note: If you want only certain props to be considered, and you want them inverted, then you need
+to specify *both* `--props` (and/or `--props-file`) and `--inverted-props` (and/or `--inverted-props-file`).  
+
+- `--props P249 --inverted-props P249` # Consider only P249, an inverted prop.
+- `--props P249 P731 --inverted-props P249` # Consider both P249 and P731, with P249 inverted.
+- `--inverted-props P249` # Since `--props` was not specified, *all* properties are used, with P249 inverted.
+
 `--inverted-props-file INVERTED_PROPS_FILE` can be used to read a file containing a list of
 properties to invert.   It should be a valid KGTK file.
 

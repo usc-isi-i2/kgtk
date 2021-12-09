@@ -16,7 +16,7 @@ kgtk ${KGTK_FLAGS} \
      --label-file ${DATADIR}/labels.en.${SORTED_KGTK} \
      --label-file-is-presorted \
      --output-file ${COUNTDIR}/claims.node1.property.counts.${SORTED_KGTK} \
-     |& tee ${LOGDIR}/claims.node1.property.counts.log
+     | tee ${LOGDIR}/claims.node1.property.counts.log
 
 echo -e "\nCount the properties in the label column in ${DATADIR}/claims.${SORTED_KGTK} and lift English labels."
 kgtk ${KGTK_FLAGS} \
@@ -32,7 +32,7 @@ kgtk ${KGTK_FLAGS} \
      --label-file ${DATADIR}/labels.en.${SORTED_KGTK} \
      --label-file-is-presorted \
      --output-file ${COUNTDIR}/claims.label.property.counts.${SORTED_KGTK} \
-     |& tee ${LOGDIR}/claims.label.property.counts.log
+     | tee ${LOGDIR}/claims.label.property.counts.log
 
 echo -e "\nCount the properties in the node2 column in ${DATADIR}/claims.${SORTED_KGTK} and lift English labels."
 kgtk ${KGTK_FLAGS} \
@@ -48,5 +48,5 @@ kgtk ${KGTK_FLAGS} \
      --label-file ${DATADIR}/labels.en.${SORTED_KGTK} \
      --label-file-is-presorted \
      --output-file ${COUNTDIR}/claims.node2.property.counts.${SORTED_KGTK} \
-     |& tee ${LOGDIR}/claims.node2.property.counts.log
+     | tee ${LOGDIR}/claims.node2.property.counts.log
 

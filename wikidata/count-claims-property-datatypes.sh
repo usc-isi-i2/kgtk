@@ -13,4 +13,4 @@ kgtk ${KGTK_FLAGS} \
      --input-file ${DATADIR}/claims.properties.${SORTED_KGTK} \
      --column "node2;wikidatatype" \
      --output-file ${COUNTDIR}/claims.properties.datatypes.counts.${SORTED_KGTK} \
-    |& tee ${LOGDIR}/claims.properties.datatypes.counts.log
+    | tee ${LOGDIR}/claims.properties.datatypes.counts.log

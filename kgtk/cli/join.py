@@ -64,7 +64,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
-    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
     from kgtk.join.kgtkjoiner import KgtkJoiner
     from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
@@ -129,7 +129,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     # Build the command arguments. File arguments can be set for individual
     # files, or for all files.
     KgtkReader.add_debug_arguments(parser, expert=_expert)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser,
+                                    mode_options=True,
+                                    default_mode=KgtkReaderMode[parsed_shared_args._mode],
+                                    expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="left", expert=_expert, defaults=False)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="right", expert=_expert, defaults=False)
     KgtkValueOptions.add_arguments(parser, expert=_expert)

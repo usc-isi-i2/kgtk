@@ -57,7 +57,7 @@ def parser():
     }
 
 def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Namespace):
-    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
     from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
@@ -140,7 +140,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         help=h("The xz command or its substitute. (default=%(default)s)"))
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser,
+                                    mode_options=True,
+                                    default_mode=KgtkReaderMode[parsed_shared_args._mode],
+                                    expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 def custom_progress()->bool:

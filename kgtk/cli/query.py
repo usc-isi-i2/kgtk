@@ -43,6 +43,11 @@ class InputOptionAction(argparse.Action):
         if self.type == bool:
             values = True
         # we use self.dest as the key for this particular option:
+        cur_options = input_options.get(input_file, {})
+        cur_values = cur_options.get(self.dest)
+        if isinstance(cur_values, list):
+            # handle multiple specs of multi-valued options via append:
+            values = cur_values + values
         input_options.setdefault(input_file, {})[self.dest] = values
         setattr(namespace, 'input_file_options', input_options)
 
@@ -97,7 +102,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args):
                         help="WITH clause of a Kypher query (only 'WITH * ...' is currently supported)")
     parser.add_argument('--where:', metavar='CLAUSE', default=None, action='store', dest='with_where',
                         help="final global WHERE clause, shorthand for 'WITH * WHERE ...'")
-    parser.add_argument('--return', metavar='CLAUSE', default='*', action='store', dest='return_',
+    parser.add_argument('--return', metavar='CLAUSE', default='*', action='store', dest='return',
                         help="RETURN clause of a Kypher query (defaults to *)")
     parser.add_argument('--order-by', metavar='CLAUSE', default=None, action='store', dest='order',
                         help="ORDER BY clause of a Kypher query")
@@ -115,21 +120,28 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args):
                         help="do not generate a header row with column names")
     parser.add_argument('--force', action='store_true', dest='force',
                         help="force problematic queries to run against advice")
-    parser.add_argument('--index', metavar='MODE', nargs='?', action='store', dest='index',
-                        choices=INDEX_MODES, const=INDEX_MODES[0], default=INDEX_MODES[0], 
-                        help="control column index creation according to MODE"
-                        + " (%(choices)s, default: %(const)s)")
+    parser.add_argument('--index', '--index-mode', metavar='MODE', nargs='+', action='store',
+                        dest='index_mode', default=[INDEX_MODES[0]], 
+                        help="default index creation MODE for all inputs"
+                        + f" (default: {INDEX_MODES[0]});"
+                        + " can be overridden with --idx for specific inputs")
+    parser.add_argument('--idx', '--input-index', metavar='SPEC', nargs='+', default=None,
+                        action=InputOptionAction, dest='index_specs',
+                        help="create index(es) according to SPEC for the preceding input only")
     parser.add_argument('--explain', metavar='MODE', nargs='?', action='store', dest='explain',
                         choices=EXPLAIN_MODES, const=EXPLAIN_MODES[0], 
                         help="explain the query execution and indexing plan according to MODE"
                         + " (%(choices)s, default: %(const)s)."
                         + " This will not actually run or create anything.")
-    parser.add_argument('--graph-cache', action='store', dest='graph_cache_file',
+    parser.add_argument('--graph-cache', '--gc', action='store', dest='graph_cache_file',
                         help="database cache where graphs will be imported before they are queried"
                         + " (defaults to per-user temporary file)")
-    parser.add_argument('--show-cache', action='store_true', dest='show_cache',
+    parser.add_argument('--show-cache', '--sc', action='store_true', dest='show_cache',
                         help="describe the current content of the graph cache and exit"
                         + " (does not actually run a query or import data)")
+    parser.add_argument('--read-only', '--ro', action='store_true', dest='readonly',
+                        help="do not create or update the graph cache in any way"
+                        + ", only run queries against already imported and indexed data")
     parser.add_argument('--import', metavar='MODULE_LIST', default=None, action='store', dest='import',
                         help="Python modules needed to define user extensions to built-in functions")
     parser.add_argument('-o', '--out', default='-', action='store', dest='output',
@@ -168,52 +180,83 @@ def parse_query_parameters(regular=[], string=[], lqstring=[]):
             parameters[name] = value
     return parameters
 
-def run(input_files: KGTKFiles,
-        **options):
+def preprocess_query_options(input_files: KGTKFiles, **options):
+    """Preprocess and normalize query options before they are passed on.
+    """
+    import_modules()
+    debug = options.get('_debug', False)
+    expert = options.get('_expert', False)
+    loglevel = debug and 1 or 0
+        
+    if debug and expert:
+        loglevel = 2
+        print('OPTIONS:', options)
+    options['loglevel'] = loglevel
+
+    # normalize input path objects to strings:
+    inputs = input_files
+    # do not accept the stdin default for empty inputs, but allow empty inputs for --show-cache:
+    if len(inputs) > 0:
+        inputs = [str(f) for f in KGTKArgumentParser.get_input_file_list(input_files)]
+    options['input_files'] = inputs
+
+    # normalize output to an open writeable stream:
+    output = options.get('output')
+    if output == '-':
+        output = sys.stdout
+    if isinstance(output, str):
+        output = sqlstore.open_to_write(output, mode='wt')
+    options['output'] = output
+
+    optionals = [(pat, where) for (opt, pat, where) in options.get('match_options', [])
+                 if opt in ('--opt', '--optional')]
+    if optionals:
+        options['optionals'] = optionals
+
+    with_ = (options.get('with'), options.get('with_where'))
+    if with_.count(None) < len(with_):
+        options['with'] = with_
+    
+    parameters = parse_query_parameters(regular=options.get('regular_paras') or [],
+                                        string=options.get('string_paras') or [],
+                                        lqstring=options.get('lqstring_paras') or [])
+    options['parameters'] = parameters
+
+    imports = options.get('import')
+
+    graph_cache = options.get('graph_cache_file')
+    if graph_cache is None or len(graph_cache) == 0:
+        graph_cache = os.getenv('KGTK_GRAPH_CACHE')
+    if graph_cache is None or len(graph_cache) == 0:
+        graph_cache = DEFAULT_GRAPH_CACHE_FILE
+    options['graph_cache_file'] = graph_cache
+
+    return options
+
+
+def run(input_files: KGTKFiles, **options):
     """Run Kypher query according to the provided command-line arguments.
     """
     try:
-        import_modules()
-        debug = options.get('_debug', False)
-        expert = options.get('_expert', False)
-        loglevel = debug and 1 or 0
-        
-        if debug and expert:
-            loglevel = 2
-            print('OPTIONS:', options)
-
-        # normalize path objects to strings:
-        inputs = [str(f) for f in KGTKArgumentParser.get_input_file_list(input_files)]
-        if len(inputs) == 0:
+        options = preprocess_query_options(input_files=input_files, **options)
+        show_cache = options.get('show_cache')
+        inputs = options.get('input_files')
+        if len(inputs) == 0 and not show_cache:
             raise KGTKException('At least one input needs to be supplied')
-        options['input_files'] = inputs
-
-        output = options.get('output')
-        if output == '-':
-            output = sys.stdout
-        if isinstance(output, str):
-            output = sqlstore.open_to_write(output, mode='wt')
-
-        parameters = parse_query_parameters(regular=options.get('regular_paras') or [],
-                                            string=options.get('string_paras') or [],
-                                            lqstring=options.get('lqstring_paras') or [])
-
-        imports = options.get('import')
+        output = options['output']
+        loglevel = options.get('loglevel')
 
         store = None
         try:
             graph_cache = options.get('graph_cache_file')
-            
-            if graph_cache is None or len(graph_cache) == 0:
-                graph_cache = os.getenv('KGTK_GRAPH_CACHE')
-                if graph_cache is None or len(graph_cache) == 0:
-                    graph_cache = DEFAULT_GRAPH_CACHE_FILE
-            store = sqlstore.SqliteStore(graph_cache, create=not os.path.exists(graph_cache), loglevel=loglevel)
+            store = sqlstore.SqliteStore(graph_cache, create=not os.path.exists(graph_cache),
+                                         loglevel=loglevel, readonly=options.get('readonly'))
 
-            if options.get('show_cache', False):
+            if show_cache:
                 store.describe_meta_tables(out=sys.stdout)
                 return
 
+            imports = options.get('import')
             imports and exec('import ' + imports, sqlstore.__dict__)
         
             query = kyquery.KgtkQuery(inputs, store, loglevel=loglevel,
@@ -221,15 +264,14 @@ def run(input_files: KGTKFiles,
                                       query=options.get('query'),
                                       match=options.get('match'),
                                       where=options.get('where'),
-                                      optionals=[(pat, where) for (opt, pat, where) in options.get('match_options', [])
-                                                 if opt in ('--opt', '--optional')],
-                                      with_=(options.get('with'), options.get('with_where')),
-                                      ret=options.get('return_'),
+                                      optionals=options.get('optionals'),
+                                      with_=options.get('with'),
+                                      ret=options.get('return'),
                                       order=options.get('order'),
                                       skip=options.get('skip'),
                                       limit=options.get('limit'),
-                                      parameters=parameters,
-                                      index=options.get('index'),
+                                      parameters=options.get('parameters'),
+                                      index=options.get('index_mode'),
                                       force=options.get('force'))
             
             explain = options.get('explain')

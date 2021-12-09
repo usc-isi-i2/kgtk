@@ -138,7 +138,7 @@ class KgtkWriter(KgtkBase):
     @classmethod
     def open(cls,
              column_names: typing.List[str],
-             file_path: typing.Optional[Path],
+             file_path: typing.Optional[typing.Union[Path, str]],
              who: str = "output",
              require_all_columns: bool = True,
              prohibit_extra_columns: bool = True,
@@ -158,6 +158,9 @@ class KgtkWriter(KgtkBase):
              no_header: bool = False,
              verbose: bool = False,
              very_verbose: bool = False)->"KgtkWriter":
+
+        if file_path is not None and isinstance(file_path, str):
+            file_path = Path(file_path)
 
         if file_path is None or str(file_path) == "-":
             if verbose:
@@ -390,14 +393,14 @@ class KgtkWriter(KgtkBase):
         if output_format == cls.OUTPUT_FORMAT_CSV:
             column_separator = "," # What a cheat!
                 
-        if output_column_names is None:
+        if output_column_names is None or len(output_column_names) == 0:
             output_column_names = column_names
         else:
             # Rename all output columns.
             if len(output_column_names) != len(column_names):
                 raise ValueError("%s: %d column names but %d output column names" % (who, len(column_names), len(output_column_names)))
 
-        if old_column_names is not None or new_column_names is not None:
+        if (old_column_names is not None and len(old_column_names) > 0) or (new_column_names is not None and len(new_column_names) > 0):
             # Rename selected output columns:
             if old_column_names is None or new_column_names is None:
                 raise ValueError("%s: old/new column name mismatch" % who)
@@ -1067,21 +1070,33 @@ class KgtkWriter(KgtkBase):
             self.finish_table()
 
         elif self.output_format == self.OUTPUT_FORMAT_HTML:
+            if self.verbose:
+                print("Writing the HTML trailer.", file=self.error_file, flush=True)
             self.write_html_trailer()
 
         elif self.output_format == self.OUTPUT_FORMAT_HTML_COMPACT:
+            if self.verbose:
+                print("Writing the compact HTML trailer.", file=self.error_file, flush=True)
             self.write_html_trailer(compact=True)
 
         if self.gzip_thread is not None:
+            if self.verbose:
+                print("Closing the GZIP thread.", file=self.error_file, flush=True)
             self.gzip_thread.close()
         else:
-            try:
-                self.file_out.close()
-            except IOError as e:
-                if e.errno == errno.EPIPE:
-                    pass # Ignore.
-                else:
-                    raise
+            if self.file_path is None:
+                if self.verbose:
+                    print("KgtkWriter: not closing standard output", file=self.error_file, flush=True)
+            else:
+                if self.verbose:
+                    print("KgtkWriter: closing the output file", file=self.error_file, flush=True)
+                try:
+                    self.file_out.close()
+                except IOError as e:
+                    if e.errno == errno.EPIPE:
+                        pass # Ignore.
+                    else:
+                        raise
 
     def mapvalues(self, value_map: typing.Mapping[str, str])->typing.List[str]:
         # Optionally check for unexpected column names:

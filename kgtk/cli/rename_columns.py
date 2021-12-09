@@ -29,7 +29,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
-    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     _expert: bool = parsed_shared_args._expert
@@ -55,14 +55,17 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      "--old-columns", dest="old_column_names",
                               metavar="OLD_COLUMN_NAME",
                               help="The list of old column names for selective renaming.",
-                              type=str, nargs='+')
+                              type=str, nargs='+', action="append", default=list())
     parser.add_argument(      "--new-columns", dest="new_column_names",
                               metavar="NEW_COLUMN_NAME",
                               help="The list of new column names for selective renaming.",
-                              type=str, nargs='+')
+                              type=str, nargs='+', action="append", default=list())
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser,
+                                    mode_options=True,
+                                    default_mode=KgtkReaderMode.NONE,
+                                    expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 def run(input_file: KGTKFiles,
@@ -70,8 +73,8 @@ def run(input_file: KGTKFiles,
         output_format: typing.Optional[str],
 
         output_column_names: typing.Optional[typing.List[str]],
-        old_column_names: typing.Optional[typing.List[str]],
-        new_column_names: typing.Optional[typing.List[str]],
+        old_column_names: typing.Optional[typing.List[typing.List[str]]],
+        new_column_names: typing.Optional[typing.List[typing.List[str]]],
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -101,6 +104,21 @@ def run(input_file: KGTKFiles,
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
 
+    # Condense the old and new columns names lists.
+    old_column_names_compact: typing.List[str] = list()
+    column_name_list: typing.List[str]
+    column_name: str
+    if old_column_names is not None:
+        for column_name_list in old_column_names:
+            for column_name in column_name_list:
+                old_column_names_compact.append(column_name)
+
+    new_column_names_compact: typing.List[str] = list()
+    if new_column_names is not None:
+        for column_name_list in new_column_names:
+            for column_name in column_name_list:
+                new_column_names_compact.append(column_name)
+
     # Show the final option structures for debugging and documentation.
     if show_options:
         print("--input-file=%s" % str(input_file_path), file=error_file, flush=True)
@@ -109,10 +127,10 @@ def run(input_file: KGTKFiles,
             print("--output-format=%s" % output_format, file=error_file, flush=True)
         if output_column_names is not None:
             print("--output-columns %s" % " ".join(output_column_names), file=error_file, flush=True)
-        if old_column_names is not None:
-            print("--old-columns %s" % " ".join(old_column_names), file=error_file, flush=True)
-        if new_column_names is not None:
-            print("--new-columns %s" % " ".join(new_column_names), file=error_file, flush=True)
+        if len(old_column_names_compact) > 0:
+            print("--old-columns %s" % " ".join(old_column_names_compact), file=error_file, flush=True)
+        if len(new_column_names_compact) > 0:
+            print("--new-columns %s" % " ".join(new_column_names_compact), file=error_file, flush=True)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
@@ -138,8 +156,8 @@ def run(input_file: KGTKFiles,
                               output_path=output_file_path,
                               output_format=output_format,
                               output_column_names=output_column_names,
-                              old_column_names=old_column_names,
-                              new_column_names=new_column_names,
+                              old_column_names=old_column_names_compact,
+                              new_column_names=new_column_names_compact,
                               reader_options=reader_options,
                               value_options=value_options,
                               error_file=error_file,

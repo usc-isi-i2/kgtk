@@ -110,6 +110,8 @@ class DocUpdater():
         current_idx: int = start_idx
         begin_idx: int = -1
         line: str
+        if self.very_verbose:
+            print("find_block beginning search at index %s" % current_idx, file=self.error_file, flush=True)
         while current_idx < len(lines):
             line = lines[current_idx]
             if stop_at_next_section and line.startswith("#"):
@@ -156,6 +158,8 @@ class DocUpdater():
         current_idx: int = start_idx
         begin_idx: int = -1
         line: str
+        if self.very_verbose:
+            print("find_table beginning search at index %s" % current_idx, file=self.error_file, flush=True)
         while current_idx < len(lines):
             line = lines[current_idx]
             if stop_at_next_section and line.startswith("#"):
@@ -169,6 +173,8 @@ class DocUpdater():
             if line.startswith("|"):
                 begin_idx = current_idx
                 break
+
+            # TODO: Review this suspicious-looking code:
             if len(line.strip()) < 0 and not skip_text:
                 if self.very_verbose:
                     print("find_table begin search found unexpected text at index %d" % current_idx, file=self.error_file, flush=True)
@@ -271,6 +277,8 @@ class DocUpdater():
         current_idx: int = start_idx
         begin_idx: int = -1
         line: str
+        if self.very_verbose:
+            print("find_code beginning search at index %s" % current_idx, file=self.error_file, flush=True)
         while current_idx < len(lines):
             line = lines[current_idx]
             if stop_at_next_section and line.startswith("#"):
@@ -444,8 +452,7 @@ class DocUpdater():
                 stdout_block_begin, stdout_block_end = self.find_stdout_block(lines, current_idx)
 
             if table_begin >= 0:
-                if command.startswith(self.kgtk_command + ' '):
-                    command += " / " + self.format_command
+                command += " / " + self.format_command
                 if self.verbose:
                     print("\nGetting new table lines for:\n%s" % command, file=self.error_file, flush=True)
             else:

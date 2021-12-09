@@ -21,7 +21,7 @@ class EdgeReader(KgtkReader):
 
     @classmethod
     def open_edge_file(cls,
-                       file_path: typing.Optional[Path],
+                       file_path: typing.Optional[typing.Union[Path, str]],
                        who: str = "edge input",
                        error_file: typing.TextIO = sys.stderr,
                        reject_file: typing.Optional[typing.TextIO] = None,
