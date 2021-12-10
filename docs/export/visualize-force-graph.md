@@ -60,8 +60,11 @@ optional arguments:
 ## Examples
 
 Edge File contains:
+
     node1, label, node2, node1;label, label;label; node2;label, color(string, float from 0-1, or hex color)
+    
 Optional:
+
     thickness
  
 Node File contains:
