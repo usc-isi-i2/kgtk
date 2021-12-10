@@ -1,11 +1,7 @@
-"""Copy records from the first KGTK file to the output file,
-adding ID values.
-TODO: Need KgtkWriterOptions
+"""Convert edge file to html visualization
 """
 import pandas as pd
 import json
-from graph_tool.all import *
-import graph_tool as gt
 from argparse import Namespace, SUPPRESS
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
@@ -13,9 +9,8 @@ from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
 def parser():
     return {
-        'help': 'Creating community detection from graph-tool using KGTK file',
-        'description': 'Creating community detection from graph-tool ' +
-        'using KGTK file, available options are blockmodel, nested and mcmc'
+        'help': 'Convert edge file to html visualization',
+        'description': 'Convert edge file (optional node file) to html graph visualization file' 
     }
 
 
@@ -53,6 +48,12 @@ def add_arguments_extended(parser: KGTKArgumentParser,
                         default="None",
                         help="Specify direction (arrow, particle and None), default none")
 
+    parser.add_argument('--show-edge-label', dest='edge_label', type=bool,
+                        default=False,
+                        help="Specify direction (arrow, particle and None), default none")
+
+
+
     KgtkIdBuilderOptions.add_arguments(parser,
                                        expert=True)  # Show all the options.
     KgtkReader.add_debug_arguments(parser, expert=_expert)
@@ -69,6 +70,7 @@ def run(input_file: KGTKFiles,
         very_verbose: bool = False,
         node_file: str = "None",
         direction: str = "None",
+        edge_label: bool = False,
 
         **kwargs  # Whatever KgtkFileOptions and KgtkValueOptions want.
         ) -> int:
@@ -121,26 +123,44 @@ def run(input_file: KGTKFiles,
         l2 = kr.column_name_map['label;label']
         l3 = kr.column_name_map['node2;label']
 
+        color_d = {}
+        color_count = 0
+        flag = 0
         for row in kr:
+            if 'thickness' in kr.column_name_map:
+                width = float(row[kr.column_name_map['node2;label'][thickness]])
+            else:
+                width = 1
             if 'color' in kr.column_name_map and '@' in row[l1]:
                 nodes.add(row[l1][1:row[l1].find('@')-1])
                 nodes.add(row[l3][1:row[l3].find('@')-1])
                 if '#' in row[kr.column_name_map['color']]:
                     h = row[kr.column_name_map['color']].lstrip('#')
                     s = str(tuple(int(h[i:i+2], 16) for i in (0, 2, 4)))
-                    s1 = 'rgba(' + s[1:-1]  + ', 0.8)'
-                    edges.append({'source': row[l1][1:row[l1].find('@')-1], 'target': row[l3][1:row[l3].find('@')-1], 'label': row[l2][1:row[l2].find('@')-1], 'color': tuple(int(h[i:i+2], 16) for i in (0, 2, 4)), 'color_s' : s1})
+                    s1 = 'rgba(' + s[1:-1]  + ', '+ str(thickness) +')'
+                    edges.append({'source': row[l1][1:row[l1].find('@')-1], 'target': row[l3][1:row[l3].find('@')-1], 'label': row[l2][1:row[l2].find('@')-1], 'color': tuple(int(h[i:i+2], 16) for i in (0, 2, 4)), 'color_s' : s1, 'width': width})
                 elif row[kr.column_name_map['color']].replace('.', '').isdigit():
+                    flag = 1
                     number = True
-                    edges.append({'source': row[l1][1:row[l1].find('@')-1], 'target': row[l3][1:row[l3].find('@')-1], 'label': row[l2][1:row[l2].find('@')-1], 'color': row[kr.column_name_map['color']]})
+                    edges.append({'source': row[l1][1:row[l1].find('@')-1], 'target': row[l3][1:row[l3].find('@')-1], 'label': row[l2][1:row[l2].find('@')-1], 'color': row[kr.column_name_map['color']], 'width': width})
+                else:
+                    flag = 2
+                    number = True
+                    if row[kr.column_name_map['color']] not in color_set:
+                         color_set[row[kr.column_name_map['color']]] = count
+                         count += 1
+                    edges.append({'source': row[l1][1:row[l1].find('@')-1], 'target': row[l3][1:row[l3].find('@')-1], 'label': row[l2][1:row[l2].find('@')-1], 'color': min(color_set[row[kr.column_name_map['color']]], 9), 'width': width})
             else:
                 nodes.add(row[l1])
                 nodes.add(row[l3])
-                edges.append({'source': row[l1], 'target': row[l3], 'label': row[l2]})
+                edges.append({'source': row[l1], 'target': row[l3], 'label': row[l2], 'width': width})
      
 
         d['nodes'] = []
         d['links'] = edges
+
+        print(node_file)
+
 
 
         if 'None' in node_file:
@@ -149,11 +169,27 @@ def run(input_file: KGTKFiles,
         elif '.tsv' in node_file:
             df = pd.read_csv(node_file, sep = '\t')
             for i in range(0, len(df)):
-                h = df['fill-color'][i].lstrip('#')
-                s = 'rgba' + str(tuple(int(h[i:i+2], 16) for i in (0, 2, 4)))
-                d['nodes'].append({'id': df['id'][i], 'color': s})
-
+                if 'x' in df.columns:
+                    h = df['color'][i].lstrip('#')
+                    s = 'rgba' + str(tuple(int(h[i:i+2], 16) for i in (0, 2, 4)))
+                    d['nodes'].append({'id': df['node;label'][i][1:df['node;label'][i].find('@')-1], 'color': s, 'fx': float(df['x'][i]) *50, 'fy': float(df['y'][i]) *50})
+                else:
+                    h = df['color'][i].lstrip('#')
+                    s = 'rgba' + str(tuple(int(h[i:i+2], 16) for i in (0, 2, 4)))
+                    d['nodes'].append({'id': df['node;label'][i], 'color': s})
+        else:
+            df = pd.read_csv(node_file)
+            for i in range(0, len(df)):
+                if 'x' in df.columns:
+                    h = df['color'][i].lstrip('#')
+                    s = 'rgba' + str(tuple(int(h[i:i+2], 16) for i in (0, 2, 4)))
+                    d['nodes'].append({'id': df['node;label'][i][1:df['node;label'][i].find('@')-1], 'color': s, 'fx': float(df['x'][i]) *50, 'fy': float(df['y'][i]) *50})
+                else:
+                    h = df['color'][i].lstrip('#')
+                    s = 'rgba' + str(tuple(int(h[i:i+2], 16) for i in (0, 2, 4)))
+                    d['nodes'].append({'id': df['node;label'][i], 'color': s})
         
+
         f = open(output_kgtk_file, 'w')
         if not number:
             f.write('''<head>
@@ -175,7 +211,8 @@ def run(input_file: KGTKFiles,
         .graphData(j)
         .nodeId('id')
         .nodeLabel('id')
-        .nodeAutoColorBy('group')''')
+        .nodeAutoColorBy('group')
+        .linkWidth((link) => link.width)''')
 
             if direction == 'arrow':
                 f.write('''
@@ -185,7 +222,8 @@ def run(input_file: KGTKFiles,
                 f.write('''      .linkDirectionalParticles(2)
 	      ''')
 
-            f.write('''        .linkColor((link) => link.color_s)
+            if edge_label:
+                f.write('''        .linkColor((link) => link.color_s)
                         .linkCanvasObjectMode(() => 'after')
         .linkCanvasObject((link, ctx) => {
           const MAX_FONT_SIZE = 4;
@@ -240,6 +278,9 @@ def run(input_file: KGTKFiles,
         });
   </script>
 </body>''')
+            else:
+                f.write('''  </script>
+</body>''')
         else:
             f.write('''<head>
   <style> body { margin: 0; } </style>
@@ -263,7 +304,8 @@ def run(input_file: KGTKFiles,
         .graphData(j)
         .nodeId('id')
         .nodeLabel('id')
-        .nodeAutoColorBy('group')''')
+        .nodeAutoColorBy('group')
+        .linkWidth((link) => link.width)''')
 
             if direction == 'arrow':
                 f.write('''
@@ -273,9 +315,14 @@ def run(input_file: KGTKFiles,
                 f.write('''      .linkDirectionalParticles(2)
 	      ''')
 
+            if flag == 1:
+                f.write('''        .linkColor((link) => d3.interpolateYlGn(link.color))''')
+            else:
+                f.write('''        .linkColor((link) =>  d3.schemeCategory10[link.color])''')
 
-            f.write('''        .linkColor((link) => d3.interpolateYlGn(link.color))
-                        .linkCanvasObjectMode(() => 'after')
+
+            if edge_label:
+                f.write('''                        .linkCanvasObjectMode(() => 'after')
         .linkCanvasObject((link, ctx) => {
           const MAX_FONT_SIZE = 4;
           const LABEL_NODE_MARGIN = Graph.nodeRelSize() * 1.5;
@@ -330,7 +377,9 @@ def run(input_file: KGTKFiles,
   </script>
 </body>''')
             
-
+            else:
+                f.write('''  </script>
+</body>''')
         kr.close()
         return 0
 
