@@ -159,10 +159,6 @@ def run(input_file: KGTKFiles,
         d['nodes'] = []
         d['links'] = edges
 
-        print(node_file)
-
-
-
         if 'None' in node_file:
             for ele in nodes:
                 d['nodes'].append({'id': ele})
@@ -172,7 +168,7 @@ def run(input_file: KGTKFiles,
                 if 'x' in df.columns:
                     h = df['color'][i].lstrip('#')
                     s = 'rgba' + str(tuple(int(h[i:i+2], 16) for i in (0, 2, 4)))
-                    d['nodes'].append({'id': df['node;label'][i][1:df['node;label'][i].find('@')-1], 'color': s, 'fx': float(df['x'][i]) *50, 'fy': float(df['y'][i]) *50})
+                    d['nodes'].append({'id': df['node;label'][i][1:df['node;label'][i].find('@')-1], 'color': s, 'fx': float(df['x'][i]), 'fy': float(df['y'][i])})
                 else:
                     h = df['color'][i].lstrip('#')
                     s = 'rgba' + str(tuple(int(h[i:i+2], 16) for i in (0, 2, 4)))
@@ -183,7 +179,7 @@ def run(input_file: KGTKFiles,
                 if 'x' in df.columns:
                     h = df['color'][i].lstrip('#')
                     s = 'rgba' + str(tuple(int(h[i:i+2], 16) for i in (0, 2, 4)))
-                    d['nodes'].append({'id': df['node;label'][i][1:df['node;label'][i].find('@')-1], 'color': s, 'fx': float(df['x'][i]) *50, 'fy': float(df['y'][i]) *50})
+                    d['nodes'].append({'id': df['node;label'][i][1:df['node;label'][i].find('@')-1], 'color': s, 'fx': float(df['x'][i]), 'fy': float(df['y'][i])})
                 else:
                     h = df['color'][i].lstrip('#')
                     s = 'rgba' + str(tuple(int(h[i:i+2], 16) for i in (0, 2, 4)))
