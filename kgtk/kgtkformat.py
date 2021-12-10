@@ -67,6 +67,14 @@ class KgtkFormat:
     TRUE_SYMBOL: str = "True"
     FALSE_SYMBOL: str = "False"
 
+    @classmethod
+    def to_boolean(cls, b: bool)->str:
+        return cls.TRUE_SYMBOL if b else cls.FALSE_SYMBOL
+
+    @classmethod
+    def from_boolean(cls, item: str)->bool:
+        return item == cls.TRUE_SYMBOL
+
     stringify_translate = str.maketrans({
         "\a": "\\a", # alarm (bell) - ASCII <BEL>
         "\b": "\\b", # backspace - ASCII <BS>

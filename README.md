@@ -38,7 +38,7 @@ Next, execute the following steps to install the latest stable release
 of KGTK:
 
 ```bash
-conda create -n kgtk-env python=3.8
+conda create -n kgtk-env python=3.9
 conda activate kgtk-env
 conda install -c conda-forge graph-tool
 conda install -c conda-forge jupyterlab
@@ -49,7 +49,11 @@ python -m spacy download en_core_web_sm
 Please see our [installation document](/docs/install.md) for more details.  If
 you encounter problems with your installation, or are interested in a detailed
 explanation of these commands, [read more about the installation procedure
-here](KGTK-Installation-Procedure-Details.md).
+here](docs/KGTK-Installation-Procedure-Details.md).
+
+### Installing KGTK with Docker
+
+Please refer to [this document](docs/install-with-docker.md) for installing KGTK with Docker
 
 ## Getting started
 
