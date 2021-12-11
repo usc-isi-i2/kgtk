@@ -864,7 +864,7 @@ class KgtkWriter(KgtkBase):
     # TODO: Support lists.
     def writef(self,
                raw_values: typing.List[typing.Any],
-               format: typing.Optiona[str] = None,
+               format: typing.Optional[str] = None,
                shuffle_list: typing.Optional[typing.List[int]] = None):
 
         values: typing.List[str] = list()
