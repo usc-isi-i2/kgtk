@@ -873,7 +873,7 @@ class KgtkWriter(KgtkBase):
 
         if format is None:
             for idx, raw_value in enumerate(raw_values):
-                if isinstance(raw_value, string):
+                if isinstance(raw_value, str):
                     values.append(KgtkFormat.stringify(raw_value))
                 elif isinstance(raw_value, (int, float)):
                     values.append(str(raw_value))
@@ -897,7 +897,7 @@ class KgtkWriter(KgtkBase):
                     values.append("")
 
                 elif f == ".":
-                    if isinstance(raw_value, string):
+                    if isinstance(raw_value, str):
                         values.append(KgtkFormat.stringify(raw_value))
                     elif isinstance(raw_value, (int, float)):
                         values.append(str(raw_value))
