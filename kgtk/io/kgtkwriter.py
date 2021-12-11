@@ -863,25 +863,16 @@ class KgtkWriter(KgtkBase):
     #
     # TODO: Support lists.
     def writef(self,
-               format: str,
                raw_values: typing.List[typing.Any],
-               shuffle_list: typing.Optional[typing.List[int]]= None):
+               format: typing.Optiona[str] = None,
+               shuffle_list: typing.Optional[typing.List[int]] = None):
 
         values: typing.List[str] = list()
-        fidx: int
         idx: int
         raw_value: typing.Any
-        f: str
-        for fidx, f in enumerate(format):
-            if idx > len(raw_values):
-                raise ValueError("KgtkWriter: not enough values for format %d: %s %s" % (fidx, repr(format), repr(raw_values)))
-            raw_value = raw_values[idx]
-            idx += 1
-            
-            if raw_value is None:
-                values.append("")
 
-            elif f == ".":
+        if format is None:
+            for idx, raw_value in enumerate(raw_values):
                 if isinstance(raw_value, string):
                     values.append(KgtkFormat.stringify(raw_value))
                 elif isinstance(raw_value, (int, float)):
@@ -892,50 +883,76 @@ class KgtkWriter(KgtkBase):
                     values.append(KgtkFormat.from_datetime(raw_value))
                 else:
                     raise ValueError("KgtkWriter: unsupported datatype in item %d: %s" % (idx, repr(raw_values)))
-
-            elif f == 'b':
-                if isinstance(raw_value, bool):
-                    values.append(KgtkFormat.to_boolean(raw_value))
-                else:
-                    raise ValueError("KgtkWriter:  item %d was boolean, format was %s: %s" % (idx, f, repr(raw_values)))
-
-            elif f == 'c':
-                if idx > len(raw_values):
-                    raise ValueError("KgtkWriter: not enough values for second value in format %s: %s" % (repr(format), repr(raw_values)))
-                raw_value_2 = raw_values[idx]
-                idx += 1
-                values.append(KgtkFormat.lat_lon(lat, lon))
-
-            elif f == 'd':
-                values.append(KgtkFormat.from_datetime(raw_value))
-
-            elif f == 'D':
-                if idx > len(raw_values):
-                    raise ValueError("KgtkWriter: not enough values for second value in format %s: %s" % (repr(format), repr(raw_values)))
-                raw_value_2 = raw_values[idx]
-                idx += 1
-                values.append(KgtkFormat.from_datetime(raw_value, precision=raw_value_2))
-
-            elif f == '#':
-                values.append(str(raw_value))
-
-            elif f == ':':
-                values.append(raw_value)
-
-            elif f == 's':
-                values.append(KgtkFormat.stringify(raw_value))
-
-            elif f == 'S':
-                if idx > len(raw_values):
-                    raise ValueError("KgtkWriter: not enough values for second value in format %s: %s" % (repr(format), repr(raw_values)))
-                raw_value_2 = raw_values[idx]
-                idx += 1
                 
-                values.append(KgtkFormat.stringify(raw_value, language=raw_value_2))
+        else:
+            fidx: int
+            f: str
+            for fidx, f in enumerate(format):
+                if idx > len(raw_values):
+                    raise ValueError("KgtkWriter: not enough values for format %d: %s %s" % (fidx, repr(format), repr(raw_values)))
+                raw_value = raw_values[idx]
+                idx += 1
 
-            else:
-                raise ValueError("KgtkWriter: unknown format %s" % (f))
-                    
+                if raw_value is None:
+                    values.append("")
+
+                elif f == ".":
+                    if isinstance(raw_value, string):
+                        values.append(KgtkFormat.stringify(raw_value))
+                    elif isinstance(raw_value, (int, float)):
+                        values.append(str(raw_value))
+                    elif isinstance(raw_value, bool):
+                        values.append(KgtkFormat.to_boolean(raw_value))
+                    elif isinstance(raw_value, datetime):
+                        values.append(KgtkFormat.from_datetime(raw_value))
+                    else:
+                        raise ValueError("KgtkWriter: unsupported datatype in item %d: %s" % (idx, repr(raw_values)))
+
+                elif f == 'b':
+                    if isinstance(raw_value, bool):
+                        values.append(KgtkFormat.to_boolean(raw_value))
+                    else:
+                        raise ValueError("KgtkWriter:  item %d was boolean, format was %s: %s" % (idx, f, repr(raw_values)))
+
+                elif f == 'c':
+                    if idx > len(raw_values):
+                        raise ValueError("KgtkWriter: not enough values for second value in format %s: %s" % (repr(format), repr(raw_values)))
+                    raw_value_2 = raw_values[idx]
+                    idx += 1
+                    values.append(KgtkFormat.lat_lon(lat, lon))
+
+                elif f == 'd':
+                    values.append(KgtkFormat.from_datetime(raw_value))
+
+                elif f == 'D':
+                    if idx > len(raw_values):
+                        raise ValueError("KgtkWriter: not enough values for second value in format %s: %s" % (repr(format), repr(raw_values)))
+                    raw_value_2 = raw_values[idx]
+                    idx += 1
+                    values.append(KgtkFormat.from_datetime(raw_value, precision=raw_value_2))
+
+                elif f == '#':
+                    values.append(str(raw_value))
+
+                elif f == ':':
+                    values.append(raw_value)
+
+                elif f == 's':
+                    values.append(KgtkFormat.stringify(raw_value))
+
+                elif f == 'S':
+                    if idx > len(raw_values):
+                        raise ValueError("KgtkWriter: not enough values for second value in format %s: %s" % (repr(format), repr(raw_values)))
+                    raw_value_2 = raw_values[idx]
+                    idx += 1
+
+                    values.append(KgtkFormat.stringify(raw_value, language=raw_value_2))
+
+                else:
+                    raise ValueError("KgtkWriter: unknown format %s" % (f))
+
+            if idx < len(raw_values):
+                raise ValueError("KgtkWriter: too many values for format %s: %s" % (repr(format), repr(raw_values)))
         
         if shuffle_list is not None:
             values = self.shuffle(values, shuffle_list)
