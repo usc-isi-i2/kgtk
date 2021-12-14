@@ -19,5 +19,5 @@ do
 	 --filter-keys id \
 	 --presorted \
 	 --use-mgzip ${USE_MGZIP} \
-	|& tee ${LOGDIR}/qualifiers.${TARGET}.log
+	| tee ${LOGDIR}/qualifiers.${TARGET}.log
 done

@@ -42,6 +42,8 @@ Use it to limit the records in a file:
 
 kgtk tail -i file.tsv -o file.html
 
+This command defaults to --mode=NONE so it will work with TSV files that do not follow KGTK column naming conventions.
+
 Additional options are shown in expert help.
 kgtk --expert html --help
 

@@ -138,7 +138,7 @@ class KgtkWriter(KgtkBase):
     @classmethod
     def open(cls,
              column_names: typing.List[str],
-             file_path: typing.Optional[Path],
+             file_path: typing.Optional[typing.Union[Path, str]],
              who: str = "output",
              require_all_columns: bool = True,
              prohibit_extra_columns: bool = True,
@@ -158,6 +158,9 @@ class KgtkWriter(KgtkBase):
              no_header: bool = False,
              verbose: bool = False,
              very_verbose: bool = False)->"KgtkWriter":
+
+        if file_path is not None and isinstance(file_path, str):
+            file_path = Path(file_path)
 
         if file_path is None or str(file_path) == "-":
             if verbose:
@@ -390,14 +393,14 @@ class KgtkWriter(KgtkBase):
         if output_format == cls.OUTPUT_FORMAT_CSV:
             column_separator = "," # What a cheat!
                 
-        if output_column_names is None:
+        if output_column_names is None or len(output_column_names) == 0:
             output_column_names = column_names
         else:
             # Rename all output columns.
             if len(output_column_names) != len(column_names):
                 raise ValueError("%s: %d column names but %d output column names" % (who, len(column_names), len(output_column_names)))
 
-        if old_column_names is not None or new_column_names is not None:
+        if (old_column_names is not None and len(old_column_names) > 0) or (new_column_names is not None and len(new_column_names) > 0):
             # Rename selected output columns:
             if old_column_names is None or new_column_names is None:
                 raise ValueError("%s: old/new column name mismatch" % who)
@@ -791,7 +794,6 @@ class KgtkWriter(KgtkBase):
         return shuffled_values
 
     # Write the next list of edge values as a list of strings.
-    # TODO: Convert integers, coordinates, etc. from Python types
     def write(self, values: typing.List[str],
               shuffle_list: typing.Optional[typing.List[int]]= None):
 
@@ -826,6 +828,164 @@ class KgtkWriter(KgtkBase):
                                                                                                                                 len(values),
                                                                                                                                 len(values) - self.column_count,
                                                                                                                                 repr(line)))
+        format_writer: typing.Optional[typing.Callable[[typing.List[str]], None]] = self.format_writers.get(self.output_format)
+        if format_writer is None:
+            raise ValueError("KgtkWriter: File %s: Unrecognized output format %s." % (repr(self.file_path), repr(self.output_format)))
+        format_writer(values)
+
+        self.line_count += 1
+        if self.very_verbose:
+            sys.stdout.write(".")
+            sys.stdout.flush()
+
+    # Write the next list of edge values as a list of strings,
+    # converting Python types into KGTK types.  Currently,
+    # only strings, booleans, ints, floats, datetime, and None are supported.
+    #
+    # Sometimes we want to convert Python strings into KGTK strings, and
+    # sometimes into KGTK symbols.  The format string is used to distinguish
+    # between these cases:
+    #
+    # '.': Use the Python datatype:
+    #      string   -> string
+    #      bool     -> boolean
+    #      int      -> number
+    #      float    -> number
+    #      datetime -> date_and_times
+    # 'b': bool -> boolean
+    # 'c': int/float, int/float -> location_coordinates
+    # 'd': datetime -> date_and_times
+    # 'D': datetime, string/int -> date_and_times with precision
+    # '#': int or float -> number
+    # ':': string -> symbol
+    # 'S': string, string -> language_qualified_string
+    # 's': string -> string
+    #
+    # TODO: Support lists.
+    def writef(self,
+               raw_values: typing.List[typing.Any],
+               format: typing.Optional[str] = None,
+               shuffle_list: typing.Optional[typing.List[int]] = None):
+
+        values: typing.List[str] = list()
+        idx: int
+        raw_value: typing.Any
+
+        if format is None:
+            for idx, raw_value in enumerate(raw_values):
+                if isinstance(raw_value, str):
+                    values.append(KgtkFormat.stringify(raw_value))
+                elif isinstance(raw_value, (int, float)):
+                    values.append(str(raw_value))
+                elif isinstance(raw_value, bool):
+                    values.append(KgtkFormat.to_boolean(raw_value))
+                elif isinstance(raw_value, datetime):
+                    values.append(KgtkFormat.from_datetime(raw_value))
+                else:
+                    raise ValueError("KgtkWriter: unsupported datatype in item %d: %s" % (idx, repr(raw_values)))
+                
+        else:
+            fidx: int
+            f: str
+            for fidx, f in enumerate(format):
+                if idx > len(raw_values):
+                    raise ValueError("KgtkWriter: not enough values for format %d: %s %s" % (fidx, repr(format), repr(raw_values)))
+                raw_value = raw_values[idx]
+                idx += 1
+
+                if raw_value is None:
+                    values.append("")
+
+                elif f == ".":
+                    if isinstance(raw_value, str):
+                        values.append(KgtkFormat.stringify(raw_value))
+                    elif isinstance(raw_value, (int, float)):
+                        values.append(str(raw_value))
+                    elif isinstance(raw_value, bool):
+                        values.append(KgtkFormat.to_boolean(raw_value))
+                    elif isinstance(raw_value, datetime):
+                        values.append(KgtkFormat.from_datetime(raw_value))
+                    else:
+                        raise ValueError("KgtkWriter: unsupported datatype in item %d: %s" % (idx, repr(raw_values)))
+
+                elif f == 'b':
+                    if isinstance(raw_value, bool):
+                        values.append(KgtkFormat.to_boolean(raw_value))
+                    else:
+                        raise ValueError("KgtkWriter:  item %d was boolean, format was %s: %s" % (idx, f, repr(raw_values)))
+
+                elif f == 'c':
+                    if idx > len(raw_values):
+                        raise ValueError("KgtkWriter: not enough values for second value in format %s: %s" % (repr(format), repr(raw_values)))
+                    raw_value_2 = raw_values[idx]
+                    idx += 1
+                    values.append(KgtkFormat.lat_lon(lat, lon))
+
+                elif f == 'd':
+                    values.append(KgtkFormat.from_datetime(raw_value))
+
+                elif f == 'D':
+                    if idx > len(raw_values):
+                        raise ValueError("KgtkWriter: not enough values for second value in format %s: %s" % (repr(format), repr(raw_values)))
+                    raw_value_2 = raw_values[idx]
+                    idx += 1
+                    values.append(KgtkFormat.from_datetime(raw_value, precision=raw_value_2))
+
+                elif f == '#':
+                    values.append(str(raw_value))
+
+                elif f == ':':
+                    values.append(raw_value)
+
+                elif f == 's':
+                    values.append(KgtkFormat.stringify(raw_value))
+
+                elif f == 'S':
+                    if idx > len(raw_values):
+                        raise ValueError("KgtkWriter: not enough values for second value in format %s: %s" % (repr(format), repr(raw_values)))
+                    raw_value_2 = raw_values[idx]
+                    idx += 1
+
+                    values.append(KgtkFormat.stringify(raw_value, language=raw_value_2))
+
+                else:
+                    raise ValueError("KgtkWriter: unknown format %s" % (f))
+
+            if idx < len(raw_values):
+                raise ValueError("KgtkWriter: too many values for format %s: %s" % (repr(format), repr(raw_values)))
+        
+        if shuffle_list is not None:
+            values = self.shuffle(values, shuffle_list)
+
+        if len(values) != self.column_count:
+            # Optionally fill missing trailing columns with empty values:
+            if self.fill_missing_columns and len(values) < self.column_count:
+                while len(values) < self.column_count:
+                    values.append("")
+
+            if len(values) != self.column_count:
+                # Optionally validate that the line contained the right number of columns:
+                #
+                # When we report line numbers in error messages, line 1 is the first line after the header line.
+                line: str
+                if self.require_all_columns and len(values) < self.column_count:
+                    line = self.column_separator.join(values)
+                    raise ValueError("KgtkWriter: File %s: Required %d columns (%s) in output line %d, saw %d: %s" % (repr(self.file_path),
+                                                                                                                      self.column_count,
+                                                                                                                      repr(self.column_separator.join(self.column_names)),
+                                                                                                                      self.line_count,
+                                                                                                                      len(values),
+                                                                                                                      repr(line)))
+                if self.prohibit_extra_columns and len(values) > self.column_count:
+                    line = self.column_separator.join(values)
+                    raise ValueError("KgtkWriter: File %s: Required %d columns (%s)in output line %d, saw %d (%d extra): %s" % (repr(self.file_path),
+                                                                                                                                self.column_count,
+                                                                                                                                repr(self.column_separator.join(self.column_names)),
+                                                                                                                                self.line_count,
+                                                                                                                                len(values),
+                                                                                                                                len(values) - self.column_count,
+                                                                                                                                repr(line)))
+
         format_writer: typing.Optional[typing.Callable[[typing.List[str]], None]] = self.format_writers.get(self.output_format)
         if format_writer is None:
             raise ValueError("KgtkWriter: File %s: Unrecognized output format %s." % (repr(self.file_path), repr(self.output_format)))
@@ -1067,21 +1227,33 @@ class KgtkWriter(KgtkBase):
             self.finish_table()
 
         elif self.output_format == self.OUTPUT_FORMAT_HTML:
+            if self.verbose:
+                print("Writing the HTML trailer.", file=self.error_file, flush=True)
             self.write_html_trailer()
 
         elif self.output_format == self.OUTPUT_FORMAT_HTML_COMPACT:
+            if self.verbose:
+                print("Writing the compact HTML trailer.", file=self.error_file, flush=True)
             self.write_html_trailer(compact=True)
 
         if self.gzip_thread is not None:
+            if self.verbose:
+                print("Closing the GZIP thread.", file=self.error_file, flush=True)
             self.gzip_thread.close()
         else:
-            try:
-                self.file_out.close()
-            except IOError as e:
-                if e.errno == errno.EPIPE:
-                    pass # Ignore.
-                else:
-                    raise
+            if self.file_path is None:
+                if self.verbose:
+                    print("KgtkWriter: not closing standard output", file=self.error_file, flush=True)
+            else:
+                if self.verbose:
+                    print("KgtkWriter: closing the output file", file=self.error_file, flush=True)
+                try:
+                    self.file_out.close()
+                except IOError as e:
+                    if e.errno == errno.EPIPE:
+                        pass # Ignore.
+                    else:
+                        raise
 
     def mapvalues(self, value_map: typing.Mapping[str, str])->typing.List[str]:
         # Optionally check for unexpected column names:

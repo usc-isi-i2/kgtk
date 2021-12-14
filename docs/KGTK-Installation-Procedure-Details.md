@@ -10,7 +10,7 @@ Here is the standard set of steps to install KGTK and the
 KGTK Jupyter Notebooks:
 
 ```
-conda create -n kgtk-env python=3.8
+conda create -n kgtk-env python=3.9
 conda activate kgtk-env
 conda install -c conda-forge graph-tool
 conda install -c conda-forge jupyterlab
@@ -25,12 +25,12 @@ cd kgtk-notebooks
 The following sections discuss the details behind the installation
 steps.
 
-### We Recommend Python 3.8
+### We Recommend Python 3.9
 
-Some of KGTK's features require Python 3.8 or later. As of 12-Oct-2021, Python
+Some of KGTK's features require Python 3.9 or later. As of 12-Oct-2021, Python
 version 3.8, 3.9, and 3.10 are available. We currently develop and test using
-Python 3.8, and are not routinely checking for compatibility with later versions
-of Python.  At the present time, we recommend running KGTK on Python 3.8.
+Python 3.9, and are not routinely checking for compatibility with later versions
+of Python.  At the present time, we recommend running KGTK on Python 3.9.
 
 This is not to say that KGTK will fail to run on a later version of
 Python.  However, the removal of deprecated features, or unxpected
@@ -42,7 +42,7 @@ the KGTK team.
 ### We Recommand a Virtual Environment
 
 Some of KGTK's advanced commands depend upon Graph-tool. Installing Graph-tool
-is problematic using Python 3.8 outside of a virtual environment. Thus: **the
+is problematic using Python 3.9 outside of a virtual environment. Thus: **the
 advised installation path is by using a virtual environment**,
 such as [Mamba](https://github.com/mamba-org/mamba#readme)
 or [Conda](https://docs.conda.io/en/latest/).
@@ -69,7 +69,7 @@ different name, substituting it where `kgtk-env` appears in
 these and following commands:
 
 ```bash
-conda create -n kgtk-env python=3.8
+conda create -n kgtk-env python=3.9
 ```
 
 ## Activate Your Conda Environment
@@ -133,11 +133,11 @@ pip --no-cache install -U kgtk
 
 > You may sometimes need to install a specific release of KGTK, such as
    a prerelease that incorporates the latest changes.  For example,
-   if you need to install KGTK release `0.8.6b0`, use the following
+   if you need to install KGTK release `1.1.0`, use the following
    `pip` command instead of the `pip` command shown above:
 
 ```bash
-pip --no-cache install kgtk==0.8.6b0
+pip --no-cache install kgtk==1.1.0
 ```
      
 ## Download the English Model of SpaCY

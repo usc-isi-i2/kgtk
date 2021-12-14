@@ -41,7 +41,9 @@ usage: kgtk lift [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                  [--clear-before-lift [CLEAR_BEFORE_LIFT]]
                  [--overwrite [OVERWRITE]]
                  [--output-only-modified-rows [OUTPUT_ONLY_MODIFIED_ROWS]]
-                 [--use-label-envar [True/False]] [-v [optional True|False]]
+                 [--languages [LANGUAGE [LANGUAGE ...]]]
+                 [--prioritize [True/False]] [--use-label-envar [True/False]]
+                 [-v [optional True|False]]
 
 Lift labels for a KGTK file. If called as "kgtk lift", for each of the items in the (node1, label, node2) columns, look for matching label records. If called as "kgtk add-labels", look for matching label records for all input columns. If found, lift the label values into additional columns in the current record. Label records are removed from the output unless --remove-label-records=False. 
 
@@ -105,6 +107,14 @@ optional arguments:
   --output-only-modified-rows [OUTPUT_ONLY_MODIFIED_ROWS]
                         If true, output only modified edges to the primary
                         output stream. (default=False).
+  --languages [LANGUAGE [LANGUAGE ...]]
+                        Lift only labels with a matching language qualifier.
+                        ANY means any language qualifier. NONE means no
+                        language qualifier. (default=ANY NONE)
+  --prioritize [True/False]
+                        If true and filtering labels by language, pick only
+                        the label matching the language that appears before
+                        other matches in the language list. (default=True).
   --use-label-envar [True/False]
                         If true, use the KGTK_LABEL_FILE envar for the label
                         file if no --label-file. (default=True).
@@ -285,6 +295,193 @@ The output will be the following table in KGTK format:
 | P1 | Q5 | Q101 | "instance of" | "human" | "red" |
 | P2 | Q6 | Q102 | "friend" | "Fred" | "blue" |
 | P1 | Q5 | Q103 | "instance of" | "human" | "green" |
+
+### Adding Labels in a Specific Language
+
+Suppose`add-labels-labels2.tsv` contains the following table in KGTK format:
+
+```bash
+kgtk cat --input-file examples/docs/add-labels-labels2.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| Q1 | label | 'Elmo'@en |
+| Q2 | label | 'Alice'@en |
+| Q5 | label | "human" |
+| Q6 | label | 'Frances'@fr |
+| P1 | label | "instance of" |
+| P2 | label | "friend" |
+
+Lift only labels that are qualified as English,
+ignoring labels without language qualifiers:
+
+```bash
+kgtk add-labels --input-file examples/docs/add-labels-file1.tsv \
+                --label-file examples/docs/add-labels-labels2.tsv \
+                --language en
+```
+| node1 | label | node2 | node1;label |
+| -- | -- | -- | -- |
+| Q1 | P1 | Q5 | 'Elmo'@en |
+| Q1 | P2 | Q6 | 'Elmo'@en |
+| Q6 | P1 | Q5 |  |
+
+### Adding Labels in Multiple Languages
+
+Lift only labels that are qualified as English or French,
+ignoring labels without language qualifiers:
+
+```bash
+kgtk add-labels --input-file examples/docs/add-labels-file1.tsv \
+                --label-file examples/docs/add-labels-labels2.tsv \
+                --languages en fr
+```
+| node1 | label | node2 | node1;label | node2;label |
+| -- | -- | -- | -- | -- |
+| Q1 | P1 | Q5 | 'Elmo'@en |  |
+| Q1 | P2 | Q6 | 'Elmo'@en | 'Frances'@fr |
+| Q6 | P1 | Q5 | 'Frances'@fr |  |
+
+
+### Adding Labels Qualified with Any Language
+
+Lift only labels that are qualified as English,
+ignoring labels without language qualifiers:
+
+```bash
+kgtk add-labels --input-file examples/docs/add-labels-file1.tsv \
+                --label-file examples/docs/add-labels-labels2.tsv \
+                --language ANY
+```
+| node1 | label | node2 | node1;label | node2;label |
+| -- | -- | -- | -- | -- |
+| Q1 | P1 | Q5 | 'Elmo'@en |  |
+| Q1 | P2 | Q6 | 'Elmo'@en | 'Frances'@fr |
+| Q6 | P1 | Q5 | 'Frances'@fr |  |
+
+### Adding Labels that Are Not Language Qualified
+
+Lift only labels that are qualified as English,
+ignoring labels without language qualifiers:
+
+```bash
+kgtk add-labels --input-file examples/docs/add-labels-file1.tsv \
+                --label-file examples/docs/add-labels-labels2.tsv \
+                --language NONE
+```
+| node1 | label | node2 | label;label | node2;label |
+| -- | -- | -- | -- | -- |
+| Q1 | P1 | Q5 | "instance of" | "human" |
+| Q1 | P2 | Q6 | "friend" |  |
+| Q6 | P1 | Q5 | "instance of" | "human" |
+
+### Adding Labels in a Specific Language or Without Language Qualification
+
+Lift only labels that are qualified as English,
+ignoring labels without language qualifiers:
+
+```bash
+kgtk add-labels --input-file examples/docs/add-labels-file1.tsv \
+                --label-file examples/docs/add-labels-labels2.tsv \
+	        --language en NONE
+```
+| node1 | label | node2 | node1;label | label;label | node2;label |
+| -- | -- | -- | -- | -- | -- |
+| Q1 | P1 | Q5 | 'Elmo'@en | "instance of" | "human" |
+| Q1 | P2 | Q6 | 'Elmo'@en | "friend" |  |
+| Q6 | P1 | Q5 |  | "instance of" | "human" |
+
+### Adding Labels with Prioritized Languages
+
+Suppose`add-labels-labels2.tsv` contains the following table in KGTK format:
+
+```bash
+kgtk cat --input-file examples/docs/add-labels-labels3.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| Q1 | label | 'Elmo'@en |
+| Q1 | label | 'Sr Elmo'@es |
+| Q2 | label | 'Alice'@en |
+| Q2 | label | 'Alicia'@es |
+| Q5 | label | "human" |
+| Q6 | label | 'Frank'@en |
+| Q6 | label | 'Frances'@fr |
+| Q6 | label | 'Francisco'@es |
+| P1 | label | "instance of" |
+| P2 | label | "friend" |
+
+Add only labels that are qualified as English,
+ignoring labels without language qualifiers:
+
+```bash
+kgtk add-labels --input-file examples/docs/add-labels-file1.tsv \
+                --label-file examples/docs/add-labels-labels3.tsv \
+                --language en
+```
+| node1 | label | node2 | node1;label | node2;label |
+| -- | -- | -- | -- | -- |
+| Q1 | P1 | Q5 | 'Elmo'@en |  |
+| Q1 | P2 | Q6 | 'Elmo'@en | 'Frank'@en |
+| Q6 | P1 | Q5 | 'Frank'@en |  |
+
+Add only labels that are qualified as Spanish,
+ignoring labels without language qualifiers:
+
+```bash
+kgtk add-labels --input-file examples/docs/add-labels-file1.tsv \
+                --label-file examples/docs/add-labels-labels3.tsv \
+                --language es
+```
+| node1 | label | node2 | node1;label | node2;label |
+| -- | -- | -- | -- | -- |
+| Q1 | P1 | Q5 | 'Sr Elmo'@es |  |
+| Q1 | P2 | Q6 | 'Sr Elmo'@es | 'Francisco'@es |
+| Q6 | P1 | Q5 | 'Francisco'@es |  |
+
+Add only labels that are qualified as English or Spanish, preferring English labels,
+ignoring labels without language qualifiers:
+
+```bash
+kgtk add-labels --input-file examples/docs/add-labels-file1.tsv \
+                --label-file examples/docs/add-labels-labels3.tsv \
+                --languages en es
+```
+| node1 | label | node2 | node1;label | node2;label |
+| -- | -- | -- | -- | -- |
+| Q1 | P1 | Q5 | 'Elmo'@en |  |
+| Q1 | P2 | Q6 | 'Elmo'@en | 'Frank'@en |
+| Q6 | P1 | Q5 | 'Frank'@en |  |
+
+Add only labels that are qualified as English or Spanish, preferring Spanish labels,
+ignoring labels without language qualifiers:
+
+```bash
+kgtk add-labels --input-file examples/docs/add-labels-file1.tsv \
+                --label-file examples/docs/add-labels-labels3.tsv \
+                --languages es en
+```
+| node1 | label | node2 | node1;label | node2;label |
+| -- | -- | -- | -- | -- |
+| Q1 | P1 | Q5 | 'Sr Elmo'@es |  |
+| Q1 | P2 | Q6 | 'Sr Elmo'@es | 'Francisco'@es |
+| Q6 | P1 | Q5 | 'Francisco'@es |  |
+
+Add only labels that are qualified as French, English, or Spanish, preferring the labels in that order,
+ignoring labels without language qualifiers:
+
+```bash
+kgtk add-labels --input-file examples/docs/add-labels-file1.tsv \
+                --label-file examples/docs/add-labels-labels3.tsv \
+                --languages fr en es
+```
+| node1 | label | node2 | node1;label | node2;label |
+| -- | -- | -- | -- | -- |
+| Q1 | P1 | Q5 | 'Elmo'@en |  |
+| Q1 | P2 | Q6 | 'Elmo'@en | 'Frances'@fr |
+| Q6 | P1 | Q5 | 'Frances'@fr |  |
 
 ### Expert Example: Rejecting Input Files that Are Not Valid KGTK FIles
 

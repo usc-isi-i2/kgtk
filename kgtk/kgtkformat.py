@@ -4,6 +4,7 @@ Constants and helpers for the KGTK file format.
 """
 
 import ast
+import datetime as dt
 from enum import Enum, unique
 import sys
 import typing
@@ -67,6 +68,14 @@ class KgtkFormat:
     TRUE_SYMBOL: str = "True"
     FALSE_SYMBOL: str = "False"
 
+    @classmethod
+    def to_boolean(cls, b: bool)->str:
+        return cls.TRUE_SYMBOL if b else cls.FALSE_SYMBOL
+
+    @classmethod
+    def from_boolean(cls, item: str)->bool:
+        return item == cls.TRUE_SYMBOL
+
     stringify_translate = str.maketrans({
         "\a": "\\a", # alarm (bell) - ASCII <BEL>
         "\b": "\\b", # backspace - ASCII <BS>
@@ -100,16 +109,16 @@ class KgtkFormat:
         TODO: Should we octal encode <NUL>, <DEL> and any remaining ASCII control characters?
         """
         if len(language) == 0:
-            return '"' + s.translate(KgtkFormat.stringify_translate) + '"'
+            return cls.STRING_SIGIL + s.translate(KgtkFormat.stringify_translate) + cls.STRING_SIGIL
         else:
-            return "'" + s.translate(KgtkFormat.stringify_translate) + "'@" + language + language_suffix
+            return cls.LANGUAGE_QUALIFIED_STRING_SIGIL + s.translate(KgtkFormat.stringify_translate) + "'@" + language + language_suffix
 
     @classmethod
     def unstringify(cls, s: str, unescape_pipe: bool = True)->str:
         """Convert a KGTK formatted string into an internal string.  The language
         code and suffix are not returned.
         """
-        if s.startswith("'"):
+        if s.startswith(cls.LANGUAGE_QUALIFIED_STRING_SIGIL):
             language: str
             s, language = s.rsplit("@", 1)
         if unescape_pipe:
@@ -127,7 +136,7 @@ class KgtkFormat:
         """
         language: str = ""
         language_suffix: str = ""
-        if s.startswith("'"):
+        if s.startswith(cls.LANGUAGE_QUALIFIED_STRING_SIGIL):
             s, language = s.rsplit("@", 1)
             if "-" in language:
                 language, language_suffix = language.split("-", 1)
@@ -198,3 +207,15 @@ class KgtkFormat:
             daystr = "0" + daystr
 
         return cls.DATE_AND_TIMES_SIGIL + yearstr + "-" + monthstr + "-" + daystr + "T00:00:00/11"
+
+    @classmethod
+    def from_datetime(cls, d: dt.datetime, precision: typing.Optional[typing.Union[int, str]]=None)->str:
+        if precision is None:
+            return cls.DATE_AND_TIMES_SIGIL + dt.isoformat()
+        else:
+            return cls.DATE_AND_TIMES_SIGIL + dt.isoformat() + "/" + str(precision)
+            
+
+    @classmethod
+    def lat_lon(cls, lat: typing.Union[int, float], lon: typing.Union[int, float])->str:
+        return cls.LOCATION_COORDINATES_SIGIL + str(lat) + '/' + str(lon)

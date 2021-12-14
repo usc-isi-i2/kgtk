@@ -26,7 +26,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
-    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderMode, KgtkReaderOptions
     from kgtk.io.kgtkwriter import KgtkWriter
     from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
@@ -70,7 +70,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               type=optional_bool, nargs='?', const=True, default=False)
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser,
+                                    mode_options=True,
+                                    default_mode=KgtkReaderMode[parsed_shared_args._mode],
+                                    expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 def run(input_files: KGTKFiles,
@@ -120,7 +123,7 @@ def run(input_files: KGTKFiles,
         if output_format is not None:
             print("--output-format=%s" % output_format, file=error_file, flush=True)
         if output_column_names is not None:
-            print("--output-coloumns %s" % " ".join(output_column_names), file=error_file, flush=True)
+            print("--output-columns %s" % " ".join(output_column_names), file=error_file, flush=True)
         if old_column_names is not None:
             print("--old-columns %s" % " ".join(old_column_names), file=error_file, flush=True)
         if new_column_names is not None:
@@ -130,7 +133,7 @@ def run(input_files: KGTKFiles,
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
 
-    # Check for comsistent options.  argparse doesn't support this yet.
+    # Check for consistent options.  argparse doesn't support this yet.
     if output_column_names is not None and len(output_column_names) > 0:
         if (old_column_names is not None and len(old_column_names) > 0) or \
            (new_column_names is not None and len(new_column_names) > 0):
@@ -165,6 +168,8 @@ def run(input_files: KGTKFiles,
 
     except SystemExit as e:
         raise KGTKException("Exit requested")
+    except KGTKException as e:
+        raise
     except Exception as e:
         raise KGTKException(str(e))
 

@@ -3,6 +3,7 @@ SQLStore to support Kypher queries over KGTK graphs.
 """
 
 import sys
+import os
 import os.path
 import sqlite3
 # sqlite3 already loads math, so no extra cost:
@@ -215,7 +216,7 @@ class SqliteStore(SqlStore):
         'without_rowid': False,
     ]
 
-    def __init__(self, dbfile=None, create=False, loglevel=0, conn=None):
+    def __init__(self, dbfile=None, create=False, loglevel=0, conn=None, readonly=False):
         """Open or create an SQLStore on the provided database file 'dbfile'
         or SQLite connection object 'conn'.  If 'dbfile' is provided and does
         not yet exist, it will only be created if 'create' is True.  Passing
@@ -226,12 +227,13 @@ class SqliteStore(SqlStore):
         self.loglevel = loglevel
         self.dbfile = dbfile
         self.conn = conn
+        self.readonly = readonly
         if not isinstance(self.conn, sqlite3.Connection):
             if self.conn is not None:
                 raise KGTKException('invalid sqlite connection object: %s' % self.conn)
             if self.dbfile is None:
                 raise KGTKException('no sqlite DB file or connection object provided')
-            if not os.path.exists(self.dbfile) and not create:
+            if not os.path.exists(self.dbfile) and (not create or readonly):
                 raise KGTKException('sqlite DB file does not exist: %s' % self.dbfile)
         else:
             self.dbfile = self.pragma('database_list')[0][2]
@@ -278,12 +280,25 @@ class SqliteStore(SqlStore):
         #self.pragma('main.page_size = 65536') # for zfs only
         self.pragma('main.cache_size = %d' % int(self.CACHE_SIZE / self.pragma('page_size')))
 
+    def configure_temp_dir(self):
+        """Configure the SQLite temp directory to be in the same location as the database file,
+        unless that is explicitly overridden by a different settings from SQLITE_TMPDIR.
+        This tries to avoid disk-full errors when large files are imported and indexed, since
+        standard temp directories are usually located in smaller OS disk partitions.
+        """
+        if not self.pragma('temp_store_directory') and not os.getenv('SQLITE_TMPDIR') and self.dbfile:
+            tmpdir = os.path.dirname(os.path.realpath(self.dbfile))
+            self.pragma(f'temp_store_directory={sql_quote_ident(tmpdir)}')
+
 
     ### DB control:
 
     def get_conn(self):
         if self.conn is None:
-            self.conn = sqlite3.connect(self.dbfile)
+            if self.readonly:
+                self.conn = sqlite3.connect(f'file:{self.dbfile}?mode=ro', uri=True)
+            else:
+                self.conn = sqlite3.connect(self.dbfile)
         return self.conn
 
     def get_sqlite_cmd(self):
@@ -298,11 +313,26 @@ class SqliteStore(SqlStore):
             self.conn = None
             self.user_functions = set()
 
+    READONLY_REGEX = re.compile(r'^\s*(select|pragma)\s', re.IGNORECASE)
+    
+    def is_readonly_statement(self, statement):
+        """Return True if the SQL 'statement' does not update the database.
+        """
+        return self.READONLY_REGEX.search(statement) is not None
+
     def execute(self, *args, **kwargs):
-        return self.get_conn().execute(*args, **kwargs)
+        if self.readonly and not self.is_readonly_statement(args[0]):
+            # do nothing and return empty cursor:
+            return sqlite3.Cursor(self.get_conn())
+        else:
+            return self.get_conn().execute(*args, **kwargs)
 
     def executemany(self, *args, **kwargs):
-        return self.get_conn().executemany(*args, **kwargs)
+        if self.readonly and not self.is_readonly_statement(args[0]):
+            # do nothing and return empty cursor:
+            return sqlite3.Cursor(self.get_conn())
+        else:
+            return self.get_conn().executemany(*args, **kwargs)
 
     def commit(self):
         self.get_conn().commit()
@@ -462,7 +492,8 @@ class SqliteStore(SqlStore):
     # If an alias was provided that name will be stored as the key instead.
 
     def normalize_file_path(self, file):
-        if os.path.basename(file) in ('-', 'stdin'):
+        # for stdin we key in on full filenames for now to also support 'stdin' as an alias:
+        if file in ('-', '/dev/stdin'):
             return '/dev/stdin'
         else:
             return os.path.realpath(file)
@@ -656,6 +687,9 @@ class SqliteStore(SqlStore):
         has 'node1' as its only column.
         """
         if not self.has_graph_index(table_name, index):
+            if self.readonly:
+                return
+            self.configure_temp_dir()
             loglevel = explain and 0 or 1
             indexes = self.get_graph_indexes(table_name)
             # delete anything that is redefined by this 'index':
@@ -676,6 +710,7 @@ class SqliteStore(SqlStore):
                 indexes = TableIndex.encode(indexes + [index])
                 self.update_graph_info(table_name, indexes=indexes)
                 self.update_graph_info(table_name, size=ginfo.size)
+                self.commit()
 
     def ensure_graph_index_for_columns(self, table_name, columns, unique=False, explain=False):
         """Ensure an index for 'table_name' on 'columns' already exists or gets created.
@@ -773,13 +808,20 @@ class SqliteStore(SqlStore):
         graph_action = self.determine_graph_action(file, alias=alias)
         if graph_action == 'reuse':
             if alias is not None:
-                # this allows us to do multiple renamings:
+                # this allows us to do multiple renamings (no-op if we are readonly):
                 self.set_file_alias(file, alias)
             return
         file_info = self.get_file_info(file, alias=alias)
         if graph_action == 'replace':
-            # we already have an earlier version of the file in store, delete its graph data:
-            self.drop_graph(file_info.graph)
+            # we already have an earlier version of the file in store:
+            if self.readonly:
+                # reuse it:
+                return
+            else:
+                # delete its graph data before importing new version:
+                self.drop_graph(file_info.graph)
+        if self.readonly:
+            raise KGTKException(f"cannot import {file} in read-only mode")
         file = self.normalize_file_path(file)
         table = self.new_graph_table()
         oldsize = self.get_db_size()
@@ -803,6 +845,8 @@ class SqliteStore(SqlStore):
     def drop_graph(self, table_name):
         """Delete the graph 'table_name' and all its associated info records.
         """
+        if self.readonly:
+            return
         # delete all supporting file infos:
         for file in self.get_graph_files(table_name):
             self.log(1, 'DROP graph data table %s from %s' % (table_name, file))
@@ -816,10 +860,13 @@ class SqliteStore(SqlStore):
     def drop_graph_index(self, table_name, index):
         """Delete 'index' for graph 'table_name' and its associated info records.
         """
+        if self.readonly:
+            return
         ginfo = self.get_graph_info(table_name)
         indexes = self.get_graph_indexes(table_name)
         if index not in indexes:
             raise KGTKException(f'No such index for {table_name}: {index}]')
+        self.configure_temp_dir()
         oldsize = self.get_db_size()
         for index_stmt in index.get_drop_script():
             self.log(1, index_stmt)
@@ -846,7 +893,10 @@ class SqliteStore(SqlStore):
         """Import 'file' into 'table' using Python's csv.reader.  This is safe and properly
         handles conversion of different kinds of line endings, but 2x slower than direct import.
         """
+        if self.readonly:
+            return
         self.log(1, 'IMPORT graph via csv.reader into table %s from %s ...' % (table, file))
+        self.configure_temp_dir()
         if self.is_standard_input(file):
             file = sys.stdin
         with open_to_read(file) as inp:
@@ -863,6 +913,8 @@ class SqliteStore(SqlStore):
         This will be about 2+ times faster and can exploit parallelism for decompression.
         This is only supported for Un*x for now and requires a named 'file'.
         """
+        if self.readonly:
+            return
         if os.name != 'posix':
             raise KGTKException("not yet implemented for this OS: '%s'" % os.name)
         # generalizing this to work for stdin would be possible, but it would significantly complicate
@@ -902,6 +954,7 @@ class SqliteStore(SqlStore):
                 self.dbfile, '.import /dev/stdin %s' % table]
 
         self.log(1, 'IMPORT graph directly into table %s from %s ...' % (table, file))
+        self.configure_temp_dir()
         try:
             if isplain:
                 tailproc = tail('-n', '+2', file, _piped=True)
@@ -924,6 +977,8 @@ class SqliteStore(SqlStore):
         and return stdout and stderr as result strings.  These sqlite shell commands
         are not invokable from a connection object, they have to be entered via 'sh'.
         """
+        # we can't easily guard this for readonly use, so for now we have
+        # to rely on the fact that it is only used safely within this module:
         sqlite3 = sh.Command(self.get_sqlite_cmd())
         args = []
         for cmd in commands[0:-1]:

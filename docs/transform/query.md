@@ -25,7 +25,8 @@ usage: kgtk query [-h] [-i INPUT_FILE [INPUT_FILE ...]] [--as NAME]
                   [--spara NAME=VAL] [--lqpara NAME=VAL] [--no-header]
                   [--force] [--index MODE [MODE ...]] [--idx SPEC [SPEC ...]]
                   [--explain [MODE]] [--graph-cache GRAPH_CACHE_FILE]
-                  [--show-cache] [--import MODULE_LIST] [-o OUTPUT]
+                  [--show-cache] [--read-only] [--import MODULE_LIST]
+                  [-o OUTPUT]
 
 Query one or more KGTK files with Kypher.
 IMPORTANT: input can come from stdin but chaining queries is not yet supported.
@@ -74,11 +75,14 @@ optional arguments:
   --explain [MODE]      explain the query execution and indexing plan
                         according to MODE (plan, full, expert, default: plan).
                         This will not actually run or create anything.
-  --graph-cache GRAPH_CACHE_FILE
+  --graph-cache GRAPH_CACHE_FILE, --gc GRAPH_CACHE_FILE
                         database cache where graphs will be imported before
                         they are queried (defaults to per-user temporary file)
-  --show-cache          describe the current content of the graph cache and
+  --show-cache, --sc    describe the current content of the graph cache and
                         exit (does not actually run a query or import data)
+  --read-only, --ro     do not create or update the graph cache in any way,
+                        only run queries against already imported and indexed
+                        data
   --import MODULE_LIST  Python modules needed to define user extensions to
                         built-in functions
   -o OUTPUT, --out OUTPUT
@@ -1533,12 +1537,12 @@ kgtk query -i data/graph-a.tsv -i data/graph-b.tsv \
      --match 'graph1: (x)-[r]->(y), graph2: (y)-[]->(z)' ...
 ```
 
-Example with an input coming from standard input.  This currently requires naming
-the input via an alias, future versions will implicitly define a filename using `stdin`
-as its basename:
+Example with an input coming from standard input which is implicitly
+given a filename using `stdin` as its basename (mapped to the graph
+handle `s` here):
 
 ```
-kgtk cat -i file1.tsv -i file2.tsv / query -i - --as stdin -i data/works.tsv \
+kgtk cat -i file1.tsv -i file2.tsv / query -i - -i data/works.tsv \
      --match 's: (x)-[r]->(y), w: (y)-[]->(z)' ...
 ```
 
@@ -1695,6 +1699,38 @@ from the cache:
   to names that do not correspond to files on disk
 * the data file does not exist in the cache or on disk: this raises an error
 
+
+### Read-only processing
+
+Sometimes it is useful to protect the graph cache from any unintended
+updates such as data imports or index creation.  For example, one
+might want to debug certain queries without risking any unintended
+index creation based on incorrect queries.  For this purpose, the
+graph cache can be opened in read-only mode by supplying the
+`--read-only` or `--ro` option.  In read-only mode it is assumed that
+the graph cache exists, and that all data necessary to run the query
+has been previously imported and indexed.
+
+Note that even if the query systems determines that a certain index is
+necessary to run the query efficiently, this index will not actually
+be built when executing read-only, which in turn could lead to very
+long execution times.  For that reason it is useful to run queries
+with small result limits first.  Moreover, if the query requires
+import of data that is not yet available in the cache, an error will
+be raised.  In general, read-only processing can lead to query errors
+if data or indexes required to run a query is not available or cannot
+be built (for example, full-text indexes).  However, such errors are
+harmless, since they cannot lead to any corruption of the graph cache.
+
+Read-only processing can also be used to safely run multiple queries
+in parallel over the same graph cache.  Note, however, that disk
+access contention from parallel queries might lead to performance
+degredation that could completely eliminate any gains from parallel
+processing.
+
+
+### Managing very large datasets
+
 Graph cache files can become quite large when large or a large number
 of different data files are being queried over time.  Cache size is
 generally around 1-2.5 times the uncompressed size of all imported
@@ -1716,6 +1752,36 @@ example:
 ```
 sqlite3 /tmp/my-graph-cache.sqlite3.db vacuum
 ```
+
+When the database imports and indexes files, it creates temporary
+files in a temp directory, so changes can be rolled back in case
+something goes wrong.  The default location of that temporary
+directory (see [SQLite manual](https://sqlite.org/tempfiles.html)) is
+usually one of the standard temp file locations such as `/var/tmp`,
+`/usr/tmp` or `/tmp`) which is often in a separate root partition and
+might not have the same amount of disk space available as the location
+selected for the graph cache.  For that reason, the query command sets
+the temp file location to be the same directory as the graph cache
+under the assumption that that's where most space will be available.
+That behavior can be overridden if necessary by explicitly setting the
+environment variable `SQLITE_TMPDIR` to a different storage area where
+there is room (e.g., if the graph cache location is getting close to
+capacity).  For example:
+
+```
+export SQLITE_TMPDIR=/data/tmp
+```
+
+Note that temporary files created by the database are not (easily)
+visible so it might seem strange to see a `"database or disk is full"`
+error even though there is room available before and after a query
+operation that, for example, tried to create new indexes.  If that
+happens `SQLITE_TMPDIR` can be used to point to a different location
+to allow such an indexing operation to succeed even if there is not
+enough room on the disk the graph cache is on.
+
+
+### Distributing the graph cache
 
 The graph cache file is an SQLite database file which has a very
 stable format across database versions and can be compressed and

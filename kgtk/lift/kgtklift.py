@@ -82,6 +82,12 @@ class KgtkLift(KgtkFormat):
     matched_label_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)), default=None)
     unmatched_label_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)), default=None)
 
+    languages: typing.Optional[typing.List[str]] = \
+        attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
+                                                                                 iterable_validator=attr.validators.instance_of(list))),
+                default=None)
+    prioritize: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+
     lift_all_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     force_input_mode_none: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     
@@ -259,14 +265,104 @@ class KgtkLift(KgtkFormat):
             print("label_value_column_idx=%d (%s)." % (label_value_column_idx, kr.column_names[label_value_column_idx]), file=self.error_file, flush=True)
             print("label_select_column_value='%s'." % self.label_select_column_value, file=self.error_file, flush=True)
 
+        # Setup for language filtering:
+        language_filtering: bool = self.languages is not None and len(self.languages) > 0
+        allow_all_strings: bool = False
+        allow_all_lqstrings: bool = False
+        language_filter: typing.List[str] = list()
+        language_filter_tuple: typing.Tuple[str, ...] = ()
+        label_priorities: typing.MutableMapping[str, int] = dict()
+        if language_filtering:
+            for lf in self.languages:
+                if lf == 'NONE':
+                    if self.prioritize:
+                        language_filter.append(lf)
+                    else:
+                        allow_all_strings = True
+                elif lf == 'ANY':
+                    if self.prioritize:
+                        language_filter.append(lf)
+                    else:
+                        allow_all_lqstrings = True
+                else:
+                    language_filter.append("'@" + lf)
+            language_filter_tuple = tuple(language_filter)
+
         key: str
         row: typing.List[str]
         for row in kr:
             if label_select_column_idx < 0 or row[label_select_column_idx] == self.label_select_column_value:
                 # This is a label definition row.
                 label_key: str = row[label_match_column_idx]
+                if labels_needed is not None and label_key not in labels_needed:
+                    # We don't need this label.
+                    if save_input and not self.remove_label_records:
+                        input_rows.append(row.copy())
+                    continue # Ignore unneeded labels.
+
                 label_value: str = row[label_value_column_idx]
-                if label_value != self.default_value:
+                if label_value == self.default_value:
+                    # We can ignore default values.
+                    #
+                    # TODO: There might be different semantics to default value handling between
+                    # this code and the merge code.
+                    if save_input and not self.remove_label_records:
+                        input_rows.append(row.copy())
+                    continue # Ignore default values.
+
+                process_label: bool
+                if language_filtering:
+                    sigil: str
+                    if len(label_value) == 0:
+                        # An empty value is not a valid label when filtering by language.
+                        process_label = False
+
+                    elif self.prioritize:
+                        current_priority: int = label_priorities.get(label_key, 999999)
+                        sigil = label_value[0]
+                        priority: int
+                        lf: str
+                        for priority, lf in enumerate(language_filter):
+                            if priority >= current_priority:
+                                process_label = False
+                                break
+
+                            elif sigil == KgtkFormat.STRING_SIGIL:
+                                if lf == "NONE":
+                                    process_label = True
+                                    break
+                                
+                            elif sigil == KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL:
+                                if (lf == "ANY" or label_value.endswith(lf)):
+                                    process_label = True
+                                    break
+
+                            else:
+                                process_label = False
+                                break # Do not allow values that are neither strings nor lqstrings.
+                        else:
+                            process_label = False
+
+
+                        if process_label:
+                            label_priorities[label_key] = priority
+                            if label_key in labels:
+                                del labels[label_key] # Remove the prior label
+                    else:
+                        sigil = label_value[0]
+                        if sigil == KgtkFormat.STRING_SIGIL:
+                            process_label = allow_all_strings
+
+                        elif sigil == KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL:
+                            process_label = allow_all_lqstrings or label_value.endswith(language_filter_tuple)
+
+                        else:
+                            # Do not allow values that are neither strings nor lqstrings.
+                            process_label = False
+                else:
+                    process_label = True
+
+                if process_label:
                     if label_key in labels:
                         # This label already exists in the table.
                         if self.suppress_duplicate_labels:
@@ -279,15 +375,9 @@ class KgtkLift(KgtkFormat):
                             label_rows[label_key].append(row.copy())
                     else:
                         # This is the first instance of this label definition.
-                        if labels_needed is not None:
-                            if label_key in labels_needed:
-                                labels[label_key] = label_value
-                                if label_rows is not None:
-                                    label_rows[label_key] = [ row.copy() ]
-                        else:
-                            labels[label_key] = label_value
-                            if label_rows is not None:
-                                label_rows[label_key] = [ row.copy() ]
+                        labels[label_key] = label_value
+                        if label_rows is not None:
+                            label_rows[label_key] = [ row.copy() ]
                 if save_input and not self.remove_label_records:
                     input_rows.append(row.copy())
             else:
@@ -721,6 +811,28 @@ class KgtkLift(KgtkFormat):
         if len(lift_column_idxs) != 1:
             raise ValueError("Expecting exactly one lift_column_idxs, got %d" % len(lift_column_idxs))
 
+        # Setup for language filtering:
+        language_filtering: bool = self.languages is not None and len(self.languages) > 0
+        allow_all_strings: bool = False
+        allow_all_lqstrings: bool = False
+        language_filter: typing.List[str] = list()
+        language_filter_tuple: typing.Tuple[str, ...] = ()
+        if language_filtering:
+            for lf in self.languages:
+                if lf == 'NONE':
+                    if self.prioritize:
+                        language_filter.append(lf)
+                    else:
+                        allow_all_strings = True
+                elif lf == 'ANY':
+                    if self.prioritize:
+                        language_filter.append(lf)
+                    else:
+                        allow_all_lqstrings = True
+                else:
+                    language_filter.append("'@" + lf)
+            language_filter_tuple = tuple(language_filter)
+
         ew: KgtkWriter
         lifted_output_column_idxs: typing.List[int]
         ew, lifted_output_column_idxs = self.open_output_writer(ikr, lift_column_idxs)
@@ -803,10 +915,66 @@ class KgtkLift(KgtkFormat):
 
                 # While the label records have node1 values equal to the value we are trying to lift,
                 # look for label values from the label file.
+                current_priority: int = 9999999 # Large numbers are low priority.
                 while more_labels and current_label_row is not None and current_label_row[label_match_column_idx] == value_to_lift:
                     if label_select_column_idx < 0 or current_label_row[label_select_column_idx] == self.label_select_column_value:
                         label_value: str = current_label_row[label_value_column_idx]
-                        if len(label_value) > 0:
+
+                        process_label: bool
+                        sigil: str
+                        if language_filtering:
+                            if len(label_value) == 0:
+                                # Empty values are not valid for language filtering.
+                                process_label = False
+                                
+                            elif self.prioritize:
+                                # We will not use a label value unless it passes one of
+                                # the priority-ordered filters.
+                                process_label = False
+                                sigil = label_value[0]
+                                priority: int
+                                lf: str
+                                for priority, lf in enumerate(language_filter):
+                                    if priority >= current_priority:
+                                        # A priori label is higher priority.
+                                        break
+
+                                    elif sigil == KgtkFormat.STRING_SIGIL:
+                                        # This is a KGTK string without language qualification.
+                                        if lf == "NONE":
+                                            # We will allow it.
+                                            current_priority = priority
+                                            process_label = True
+                                            break
+
+                                    elif sigil == KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL:
+                                        # This is a KGTK language-qualified string.
+                                        if lf == "ANY" or label_value.endswith(lf):
+                                            # We will allow it.
+                                            current_priority = priority
+                                            process_label = True
+                                            break
+
+                                    else:
+                                        # Do not allow values that are neither strings nor lqstrings.
+                                        break
+                                            
+                            else:
+                                # Optimized code for non-prioritized langiage selection.
+                                sigil = label_value[0]
+                                if sigil == KgtkFormat.STRING_SIGIL:
+                                    process_label = allow_all_strings
+
+                                elif sigil == KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL:
+                                    process_label = allow_all_lqstrings or label_value.endswith(language_filter_tuple)
+
+                                else:
+                                    # Do not allow values that are neither strings nor lqstrings.
+                                    process_label = False
+                        else:
+                            process_label = True
+
+                        if process_label:
                             # TODO: is this code positioned correctly?
                             if mlkw is not None:
                                 mlkw.write(current_label_row)
@@ -973,7 +1141,6 @@ class KgtkLift(KgtkFormat):
                                    verbose=self.verbose,
                                    very_verbose=self.very_verbose)        
             
-
         if self.input_lifting_column_names is not None and len(self.input_lifting_column_names) == 1 and \
            not self.suppress_empty_columns and \
            self.input_is_presorted and \
