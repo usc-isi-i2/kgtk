@@ -14,8 +14,6 @@ RUN apt-get update && apt-get install -y \
 
 RUN apt-get install --reinstall build-essential -y
 
-RUN pip install huggingface-hub==0.0.17
-
 RUN git clone https://github.com/usc-isi-i2/kgtk/ --branch dev
 
 RUN cd /kgtk && python setup.py install
