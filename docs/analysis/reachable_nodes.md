@@ -894,13 +894,12 @@ kgtk reachable-nodes -i examples/docs/reachable-nodes-depth-limit.tsv \
 
 
 ```bash
-kgtk reachable-nodes -i  datasets/arnold/claims.wikibase-item.tsv.gz --root Q7889 \
---prop P279 --breadth-first True --show-distance True --depth-limit 1
+kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv  --root metal-block \
+--prop isa --breadth-first True --show-distance True --depth-limit 1 --undirected
 ```
 
 | node1 | label | node2 | distance |
 | -- | -- | -- | -- |
-| Q7889 | reachable | Q166142 | 1 |
-| Q7889 | reachable | Q17537576 | 1 |
-| Q7889 | reachable | Q2249149 | 1 |
-| Q7889 | reachable | Q2431196 | 1 |
+| metal-block | reachable | block | 1 |
+| metal-block | reachable | gold-block | 1 |
+| metal-block | reachable | silver-block | 1 |
