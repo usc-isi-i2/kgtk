@@ -4,6 +4,7 @@ Constants and helpers for the KGTK file format.
 """
 
 import ast
+import datetime as dt
 from enum import Enum, unique
 import sys
 import typing
@@ -206,3 +207,15 @@ class KgtkFormat:
             daystr = "0" + daystr
 
         return cls.DATE_AND_TIMES_SIGIL + yearstr + "-" + monthstr + "-" + daystr + "T00:00:00/11"
+
+    @classmethod
+    def from_datetime(cls, d: dt.datetime, precision: typing.Optional[typing.Union[int, str]]=None)->str:
+        if precision is None:
+            return cls.DATE_AND_TIMES_SIGIL + dt.isoformat()
+        else:
+            return cls.DATE_AND_TIMES_SIGIL + dt.isoformat() + "/" + str(precision)
+            
+
+    @classmethod
+    def lat_lon(cls, lat: typing.Union[int, float], lon: typing.Union[int, float])->str:
+        return cls.LOCATION_COORDINATES_SIGIL + str(lat) + '/' + str(lon)
