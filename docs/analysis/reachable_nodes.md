@@ -239,6 +239,8 @@ usage: kgtk reachable-nodes [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                             [--show-properties [True|False]]
                             [--breadth-first [True|False]]
                             [--depth-limit DEPTH_LIMIT]
+                            [--show-distance [True|False]]
+                            [--dist-col-name DIST_COL_NAME]
                             [-v [optional True|False]]
 
 optional arguments:
@@ -321,6 +323,13 @@ optional arguments:
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).
+                        
+  --show-distance [True|False]
+                        When True, also given breadth first true, append
+                        another column showing the shortest distance, default
+                        col name is distance
+  --dist-col-name DIST_COL_NAME
+                        The column name for distance, default is distance
 ```
 
 ## Examples
@@ -882,3 +891,16 @@ kgtk reachable-nodes -i examples/docs/reachable-nodes-depth-limit.tsv \
 | node1 | label | node2 |
 | -- | -- | -- |
 | red_top | reachable | red_one |
+
+
+```bash
+kgtk reachable-nodes -i  datasets/arnold/claims.wikibase-item.tsv.gz --root Q7889 \
+--prop P279 --breadth-first True --show-distance True --depth-limit 1
+```
+
+| node1 | label | node2 | distance |
+| -- | -- | -- | -- |
+| Q7889 | reachable | Q166142 | 1 |
+| Q7889 | reachable | Q17537576 | 1 |
+| Q7889 | reachable | Q2249149 | 1 |
+| Q7889 | reachable | Q2431196 | 1 |
