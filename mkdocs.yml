@@ -62,6 +62,7 @@ nav:
       - 'validate': 'curate/validate.md'
       - 'validate-properties': 'curate/validate_properties.md'
   - 'Analysis commands':
+      - 'community-detection': 'analysis/community-detection.md'
       - 'connected-components': 'analysis/connected_components.md'
       - 'graph-embeddings': 'analysis/graph_embeddings.md'
       - 'graph-statistics': 'analysis/graph_statistics.md'
