@@ -11,7 +11,8 @@ jobs:
       - name: Install Python
         uses: actions/setup-python@v2
         with:
-          python-version: '3.8'
+          python-version: '3.9'
+# 16-Dec-2021: Updating python version to 3.9
 # 11-Oct-2021: Adding the system conda gives pip
 # access python 3.9 site packages:
 #
@@ -27,7 +28,7 @@ jobs:
         uses: s-weigand/setup-conda@v1
         with:
           update-conda: true
-          python-version: '3.8'
+          python-version: '3.9'
           conda-channels: anaconda, conda-forge
       - name: Setup env
         run: |
