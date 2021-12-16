@@ -74,6 +74,10 @@ class KgtkReaderOptions():
     no_input_header: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     supply_missing_column_names: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     number_of_columns: bool = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(int)), default=None)
+    require_column_names: typing.Optional[typing.List[str]] = attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
+                                                                                                                                     iterable_validator=attr.validators.instance_of(list))),
+                                                                    default=None)
+    no_additional_columns: bool = attr.ib(validator=attr.validators.instance_of(int), default=False)
 
     # Data record sampling, pre-validation.
     #
@@ -282,6 +286,20 @@ class KgtkReaderOptions():
                             help=h(prefix3 + "The expected number of columns in the header. (default=%(default)s)."),
                             type=int, **d(default=None))
 
+        hgroup.add_argument(prefix1 + "require-column-names",
+                            dest=prefix2 + "require_column_names",
+                            help=h(prefix3 + "The list of column names required in the input file. (default=None)."),
+                            nargs='+')
+
+        hgroup.add_argument(prefix1 + "no-additional-columns",
+                            dest=prefix2 + "no_additional_columns",
+                            metavar="optional True|False",
+                            help=h(prefix3 + "When True, do not allow any column names other than the required " +
+                                   "column names.  When --require-column-names is not specified, then " +
+                                   "disallow  columns other than [node1, label, node2, id] (or aliases) " +
+                                   "for an edge file, and [id] for a node file. (default=%(default)s)."),
+                            type=optional_bool, nargs='?', const=True, **d(default=False))
+
         hgroup.add_argument(prefix1 + "header-error-action",
                             dest=prefix2 + "header_error_action",
                             help=h(prefix3 + "The action to take when a header error is detected.  Only ERROR or EXIT are supported (default=%(default)s)."),
@@ -429,6 +447,8 @@ class KgtkReaderOptions():
             no_input_header=lookup("no_input_header", False),
             supply_missing_column_names=lookup("supply_missing_column_names", False),
             number_of_columns=lookup("number_of_columns", None),
+            require_column_names=lookup("require_column_names", None),
+            no_additional_columns=lookup("no_additional_columns", False),
             use_mgzip=lookup("use_mgzip", False),
             mgzip_threads=lookup("mgzip_threads", cls.MGZIP_THREAD_COUNT_DEFAULT),
             gzip_in_parallel=lookup("gzip_in_parallel", False),
@@ -475,6 +495,9 @@ class KgtkReaderOptions():
         print("%ssupply-missing-column-names=%s" % (prefix, str(self.supply_missing_column_names)), file=out)
         if self.number_of_columns is not None:
             print("%snumber-of-columns=%d" % (prefix, self.number_of_columns), file=out)
+        if self.require_column_names is not None:
+            print("%srequire-column-names=%s" % (prefix, " ".join(self.require_column_names)), file=out)
+        print("%sno-additional-columns=%s" % (prefix, str(self.no_additional_columns)), file=out)
         print("%serror-limit=%s" % (prefix, str(self.error_limit)), file=out)
         print("%srepair-and-validate-lines=%s" % (prefix, str(self.repair_and_validate_lines)), file=out)
         print("%srepair-and-validate-values=%s" % (prefix, str(self.repair_and_validate_values)), file=out)
