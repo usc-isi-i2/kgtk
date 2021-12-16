@@ -790,12 +790,27 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                                prohibit_whitespace_in_column_names=options.prohibit_whitespace_in_column_names,
                                supply_missing_column_names=options.supply_missing_column_names)
 
+
         # Build a map from column name to column index.
         column_name_map: typing.Mapping[str, int] = cls.build_column_name_map(column_names,
                                                                               header_line=header,
                                                                               who=who,
                                                                               error_action=options.header_error_action,
                                                                               error_file=error_file)
+
+        # If there is a list of required columns names, are they all present?
+        if options.require_column_names is not None and len(options.require_column_names) > 0:
+            missing_column_names: typing.List(str) = list()
+            require_column_name: str
+            for require_column_name in options.require_column_names:
+                if require_column_name not in column_name_map:
+                    missing_column_names.append(require_column_name)
+            if len(missing_column_names) > 0:
+                cls._yelp("The following required columns were missing: %s" % repr(missing_column_names),
+                          header_line=header,
+                          who=who,
+                          error_action=options.header_error_action,
+                          error_file=error_file)
 
         # Should we automatically determine if this is an edge file or a node file?
         if mode is None:
@@ -850,6 +865,10 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                                                                                      label_column_idx,
                                                                                      node2_column_idx,
                                                                                      id_column_idx), file=error_file, flush=True)
+
+        # Are additional columns allowed?
+        if options.no_additional_columns:
+            pass
 
         # Select the best inplementation class.
         if use_graph_cache and gca is not None:
