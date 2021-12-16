@@ -105,7 +105,7 @@ optional arguments:
 The following file will be used to illustrate some of the capabilities of `kgtk reachable-nodes`.
 
 ```bash
-head arnold_family.tsv
+head examples/docs/community-detection-arnold.tsv
 ```
 
 | node1 | label | node2 |
@@ -135,7 +135,7 @@ head arnold_family.tsv
 Find the communities using blockmodel.
 
 ```bash
-kgtk community-detection -i arnold_family.tsv --method blockmodel
+kgtk community-detection -i examples/docs/community-detection-arnold.tsv --method blockmodel
 ```
 
 |node1                                        |label|node2    |
@@ -218,7 +218,7 @@ kgtk community-detection -i arnold_family.tsv --method blockmodel
 ### nested model
 
 ```bash
-kgtk community-detection -i arnold_family.tsv --method nested
+kgtk community-detection -i examples/docs/community-detection-arnold.tsv --method nested
 ```
 
 |node1                                        |label|node2    |
@@ -301,7 +301,7 @@ kgtk community-detection -i arnold_family.tsv --method nested
 ### MCMC model
 
 ```bash
-kgtk community-detection -i arnold_family.tsv --method mcmc
+kgtk community-detection -i examples/docs/community-detection-arnold.tsv --method mcmc
 ```
 |node1                                        |label|node2    |node2;prob         |
 |---------------------------------------------|-----|---------|-------------------|

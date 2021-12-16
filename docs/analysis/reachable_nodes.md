@@ -239,6 +239,8 @@ usage: kgtk reachable-nodes [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                             [--show-properties [True|False]]
                             [--breadth-first [True|False]]
                             [--depth-limit DEPTH_LIMIT]
+                            [--show-distance [True|False]]
+                            [--dist-col-name DIST_COL_NAME]
                             [-v [optional True|False]]
 
 optional arguments:
@@ -321,6 +323,13 @@ optional arguments:
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).
+                        
+  --show-distance [True|False]
+                        When True, also given breadth first true, append
+                        another column showing the shortest distance, default
+                        col name is distance
+  --dist-col-name DIST_COL_NAME
+                        The column name for distance, default is distance
 ```
 
 ## Examples
@@ -882,3 +891,15 @@ kgtk reachable-nodes -i examples/docs/reachable-nodes-depth-limit.tsv \
 | node1 | label | node2 |
 | -- | -- | -- |
 | red_top | reachable | red_one |
+
+
+```bash
+kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv  --root metal-block \
+--prop isa --breadth-first True --show-distance True --depth-limit 1 --undirected
+```
+
+| node1 | label | node2 | distance |
+| -- | -- | -- | -- |
+| metal-block | reachable | block | 1 |
+| metal-block | reachable | gold-block | 1 |
+| metal-block | reachable | silver-block | 1 |
