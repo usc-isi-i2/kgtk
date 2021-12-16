@@ -72,6 +72,8 @@ class KgtkReaderOptions():
                                                                                                                                      iterable_validator=attr.validators.instance_of(list))),
                                                                     default=None)
     no_input_header: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    supply_missing_column_names: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    number_of_columns: bool = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(int)), default=None)
 
     # Data record sampling, pre-validation.
     #
@@ -268,6 +270,18 @@ class KgtkReaderOptions():
                                    "has not been specified. (default=%(default)s)."),
                             type=optional_bool, nargs='?', const=True, **d(default=False))
 
+        hgroup.add_argument(prefix1 + "supply-missing-column-names",
+                            dest=prefix2 + "supply_missing_column_names",
+                            metavar="optional True|False",
+                            help=h(prefix3 + "Supply column names that are missing. (default=%(default)s)."),
+                            type=optional_bool, nargs='?', const=True, **d(default=False))
+
+        hgroup.add_argument(prefix1 + "number-of-columns",
+                            dest=prefix2 + "number_of_columns",
+                            metavar="COUNT",
+                            help=h(prefix3 + "The expected number of columns in the header. (default=%(default)s)."),
+                            type=int, **d(default=None))
+
         hgroup.add_argument(prefix1 + "header-error-action",
                             dest=prefix2 + "header_error_action",
                             help=h(prefix3 + "The action to take when a header error is detected.  Only ERROR or EXIT are supported (default=%(default)s)."),
@@ -413,6 +427,8 @@ class KgtkReaderOptions():
             fill_short_lines=lookup("fill_short_lines", False),
             force_column_names=lookup("force_column_names", None),
             no_input_header=lookup("no_input_header", False),
+            supply_missing_column_names=lookup("supply_missing_column_names", False),
+            number_of_columns=lookup("number_of_columns", None),
             use_mgzip=lookup("use_mgzip", False),
             mgzip_threads=lookup("mgzip_threads", cls.MGZIP_THREAD_COUNT_DEFAULT),
             gzip_in_parallel=lookup("gzip_in_parallel", False),
@@ -456,6 +472,9 @@ class KgtkReaderOptions():
         if self.force_column_names is not None:
             print("%sforce-column-names=%s" % (prefix, " ".join(self.force_column_names)), file=out)
         print("%sno-input-header=%s" % (prefix, str(self.no_input_header)), file=out)
+        print("%ssupply-missing-column-names=%s" % (prefix, str(self.supply_missing_column_names)), file=out)
+        if self.number_of_columns is not None:
+            print("%snumber-of-columns=%d" % (prefix, self.number_of_columns), file=out)
         print("%serror-limit=%s" % (prefix, str(self.error_limit)), file=out)
         print("%srepair-and-validate-lines=%s" % (prefix, str(self.repair_and_validate_lines)), file=out)
         print("%srepair-and-validate-values=%s" % (prefix, str(self.repair_and_validate_values)), file=out)
@@ -726,10 +745,18 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             # header back, too, for use in debugging and error messages.
             (header, column_names) = cls._build_column_names(source, options, input_format, error_file=error_file, verbose=verbose)
 
+        if options.number_of_columns is not None and len(column_names) != options.number_of_columns:
+            cls._yelp("Expected %d columns, got %d in the header" % (options.number_of_columns, len(column_names)),
+                      header_line=header,
+                      who=who,
+                      error_action=options.header_error_action,
+                      error_file=error_file)
+
         # If there's an implied label, add the column to the end.  If a label column
         # already exists, then later we'll detect a duplicate column name.
         if options.implied_label is not None:
             column_names.append(cls.LABEL)
+
                   
         # Check for unsafe column names.
         cls.check_column_names(column_names,
@@ -737,7 +764,8 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                                who=who,
                                error_action=options.unsafe_column_name_action,
                                error_file=error_file,
-                               prohibit_whitespace_in_column_names=options.prohibit_whitespace_in_column_names)
+                               prohibit_whitespace_in_column_names=options.prohibit_whitespace_in_column_names,
+                               supply_missing_column_names=options.supply_missing_column_names)
 
         # Build a map from column name to column index.
         column_name_map: typing.Mapping[str, int] = cls.build_column_name_map(column_names,
@@ -1003,6 +1031,12 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         """
         column_names: typing.List[str]
         if options.force_column_names is None:
+            if options.no_input_header:
+                if options.number_of_columns is not None:
+                    column_names: typing.List[str] = [ "" ] * options.number_of_columns
+                    return options.column_separator.join(column_names), column_names
+                else:
+                    raise ValueError("Cannot read a file with no header and an unnown number of columns.")
             # Read the column names from the first line, stripping end-of-line characters.
             #
             # TODO: if the read fails, throw a more useful exception with the line number.
