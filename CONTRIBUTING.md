@@ -16,4 +16,7 @@ to keep features modular.
 * Make commits of logical and atomic units.
 * Do pull requests **only** against the `dev` branch. Please avoid working directly
 on the `main` branch.
-  * Specify which issues does your pull request address.
+  * Specify which issues does your pull request address. 
+* Add/Update unit tests for the new changes.
+* Update the documentation, if there are such changes, in the consequent file under the `docs` folder.
+* Add a link to a new documentation file in the `mkdocs.yml` file, otherwise it will not show up in https://kgtk.readthedocs.io/en/latest/
