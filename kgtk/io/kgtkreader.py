@@ -704,10 +704,6 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         if verbose:
             print("input format: %s" % input_format, file=error_file, flush=True)
 
-        # If an input_filter has been supplied, check it for validity:
-        if input_filter is not None:
-            cls._validate_input_filter(input_filter, column_names)
-
         # Get the graph cache from the options or an envar:
         graph_cache: typing.Optional[str] = options.graph_cache
         if options.use_graph_cache_envar and graph_cache is None:
@@ -717,6 +713,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
         source: ClosableIter[str]
         header: str
+        column_name: str
         column_names: typing.List[str]
 
         # Decide whether or not to use the graph cache or the fast read path.
@@ -801,10 +798,9 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         # If there is a list of required columns names, are they all present?
         if options.require_column_names is not None and len(options.require_column_names) > 0:
             missing_column_names: typing.List(str) = list()
-            require_column_name: str
-            for require_column_name in options.require_column_names:
-                if require_column_name not in column_name_map:
-                    missing_column_names.append(require_column_name)
+            for column_name in options.require_column_names:
+                if column_name not in column_name_map:
+                    missing_column_names.append(column_name)
             if len(missing_column_names) > 0:
                 cls._yelp("The following required columns were missing: %s" % repr(missing_column_names),
                           header_line=header,
@@ -844,6 +840,10 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         elif mode is KgtkReaderMode.NONE:
             pass
 
+        if verbose:
+            print("KgtkReader: is_edge_file=%s is_node_file=%s" % (repr(is_edge_file), repr(is_node_file)),
+                  file=error_file, flush=True)
+
         # Get the indices of the special columns.
         node1_column_idx: int
         label_column_idx: int
@@ -864,11 +864,52 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             print("KgtkReader: Special columns: node1=%d label=%d node2=%d id=%d" % (node1_column_idx,
                                                                                      label_column_idx,
                                                                                      node2_column_idx,
-                                                                                     id_column_idx), file=error_file, flush=True)
+                                                                                     id_column_idx),
+                  file=error_file, flush=True)
 
         # Are additional columns allowed?
         if options.no_additional_columns:
-            pass
+            unexpected_column_names: typing.List[str] = list()
+            if options.require_column_names is not None and len(options.require_column_names) > 0:
+                if verbose:
+                    print("KgtkReader: disallowing additional columns based on required column names",
+                          file=error_file, flush=True) # ***
+                for column_name in column_names:
+                    if column_name not in options.require_column_names:
+                        unexpected_column_names.append(column_name)
+
+            elif is_edge_file:
+                if verbose:
+                    print("KgtkReader: disallowing additional columns: edge file", file=error_file, flush=True)
+                for column_name in column_names:
+                    idx: int = column_name_map[column_name]
+                    if idx not in (node1_column_idx,
+                                   label_column_idx,
+                                   node2_column_idx,
+                                   id_column_idx):
+                        unexpected_column_names.append(column_name)
+
+            elif is_node_file:
+                if verbose:
+                    print("KgtkReader: disallowing additional columns: node file", file=error_file, flush=True)
+                for column_name in column_names:
+                    if column_name_map[column_name] != id_column_idx:
+                        unexpected_column_names.append(column_name)
+            else:
+                if verbose:
+                    print("KgtkReader: disallowing additional columns: neither edge nor node file", file=error_file, flush=True)
+
+            if len(unexpected_column_names) > 0:
+                cls._yelp("The following additional columns are unexpected: %s" % repr(unexpected_column_names),
+                          header_line=header,
+                          who=who,
+                          error_action=options.header_error_action,
+                          error_file=error_file)
+
+
+        # If an input_filter has been supplied, check it for validity:
+        if input_filter is not None:
+            cls._validate_input_filter(input_filter, column_names)
 
         # Select the best inplementation class.
         if use_graph_cache and gca is not None:
