@@ -57,7 +57,7 @@ optional arguments:
                         Print additional progress messages (default=False).
 ```
 
-## Examples
+
 
 Edge File contains:
 - `node1`: the subject column (source node)
@@ -81,7 +81,7 @@ Optional:
 - `x`: x_coordinate of node
 - `y`: y_coordinate of node
 
-Import a TSV file into Graph-tool, and store the result to disk. We store the statistics to log.txt. 
+## Examples
 
 ```
 kgtk visualize-force-graph -i examples/docs/visualize_force_graph_example.tsv --direction arrow --show-edge-label True -o graph.html
