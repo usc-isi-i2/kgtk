@@ -60,20 +60,18 @@ optional arguments:
 ## Examples
 
 Edge File contains:
+- `node1`: the subject column (source node)
+- `label`: the predicate column (property name)
+- `node2`: the object column (target node)
+- `node1;label`: the subject label (source node)
+- `label;label`: the predicate label (property name)
+- `node2;label`: the object label (target node)
 
-    node1, label, node2, node1;label, label;label; node2;label 
     
 Optional:
-
-    thickness, color(string, float from 0-1, or hex color)
+- `thickness`: thickness of edge (property name)
+- `color`: color(string, float from 0-1, or hex color)
     
-Node File contains:
-
-    node1, label, node2, node1;label, label;label; node2;label 
-    
-Optional:
-
-    thickness, color(string, float from 0-1, or hex color)
  
 Node File contains:
     id, color(string, float from 0-1, or hex color) node;label
