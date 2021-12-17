@@ -61,21 +61,29 @@ optional arguments:
 
 Edge File contains:
 
-    node1, label, node2, node1;label, label;label; node2;label, color(string, float from 0-1, or hex color)
+    node1, label, node2, node1;label, label;label; node2;label 
     
 Optional:
 
-    thickness
+    thickness, color(string, float from 0-1, or hex color)
+    
+Node File contains:
+
+    node1, label, node2, node1;label, label;label; node2;label 
+    
+Optional:
+
+    thickness, color(string, float from 0-1, or hex color)
  
 Node File contains:
-    id, color(string, float from 0-1, or hex color)
+    id, color(string, float from 0-1, or hex color) node;label
 Optional:
      x, y as user input coordinates for node
 
 Import a TSV file into Graph-tool, and store the result to disk. We store the statistics to log.txt. 
 
 ```
-kgtk visualize-force-graph -i arnold_with_number.tsv --direction arrow --show-edge-label True --node-file node_coor.tsv -o graph.html
+kgtk visualize-force-graph -i examples/docs/visualize_force_graph_example.tsv --direction arrow --show-edge-label True -o graph.html
 ```
 
 
