@@ -74,9 +74,12 @@ Optional:
     
  
 Node File contains:
-    id, color(string, float from 0-1, or hex color) node;label
+- `id`: id of the node
+- `color`: color(string, float from 0-1, or hex color)
+- `node;label`: the node label
 Optional:
-     x, y as user input coordinates for node
+- `x`: x_coordinate of node
+- `y`: y_coordinate of node
 
 Import a TSV file into Graph-tool, and store the result to disk. We store the statistics to log.txt. 
 
