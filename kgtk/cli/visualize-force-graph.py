@@ -173,11 +173,11 @@ def add_arguments_extended(parser: KGTKArgumentParser,
                         help="Specify color categorical scale for edge d3-scale-chromatic")
 
     parser.add_argument('--node-gradient-scale', dest='node_gradient_scale', type=str,
-                        default='d3.schemeRdBu',
+                        default='d3.interpolateRdBu',
                         help="Specify color gradient scale for node from d3-scale-chromatic")
 
     parser.add_argument('--edge-gradient-scale', dest='edge_gradient_scale', type=str,
-                        default='d3.schemeRdBu',
+                        default='d3.interpolateRdBu',
                         help="Specify color gradient scale for edge d3-scale-chromatic")
 
 
@@ -227,8 +227,8 @@ def run(input_file: KGTKFiles,
         text_node: str = 'None',
         node_categorical_scale: str = 'd3.schemeCategory10',
         edge_categorical_scale: str = 'd3.schemeCategory10',
-        node_gradient_scale: str = 'd3.schemeRdBu',
-        edge_gradient_scale: str = 'd3.schemeRdBu',
+        node_gradient_scale: str = 'd3.interpolateRdBu',
+        edge_gradient_scale: str = 'd3.interpolateRdBu',
 
         **kwargs  # Whatever KgtkFileOptions and KgtkValueOptions want.
         ) -> int:
@@ -470,16 +470,31 @@ def run(input_file: KGTKFiles,
 
               if node_color_column != 'None':
                 if node_color_style == 'gradient':
-                  if node_color_mapping == 'fixed':
-                      temp['color'] = df[node_color_column][i] if not pd.isna(df[node_color_column][i]) else node_color_default
-                  elif node_color_scale == 'linear':
+                  if node_color_scale == 'linear':
                       node_color = 1
                       color_value = (df[node_color_column][i]-df[node_color_column].min()) / (df[node_color_column].max() - df[node_color_column].min())
                       temp['color'] = float(color_value) if not pd.isna(df[node_color_column][i]) else node_color_default
                   elif node_color_scale == 'log':
                       node_color = 1
-                      color_value = math.log((pow(base, edge['width_orig']) - pow(base, min(arr)) * (pow(base, 1)) / (pow(base, max(arr)) - pow(base, min(arr)))), base)
+                      if df[node_color_column].min() == 0:
+                        log_min = 0
+                      else:
+                        log_min = math.log(df[node_color_column].min(), base)
+
+                      if df[node_color_column].max() == 0:
+                        log_max = 0
+                      else:
+                        log_max = math.log(df[node_color_column].max(), base)
+
+                      if df[node_color_column][i] == 0:
+                        log_cur = 0
+                      else:
+                        log_cur = math.log(df[node_color_column][i], base)
+
+                      color_value = 0 + (log_cur - log_min) * (1 - 0) / (log_max - log_min)
                       temp['color'] = float(color_value) if not pd.isna(df[node_color_column][i]) else node_color_default
+                  else:
+                      temp['color'] = df[node_color_column][i] if not pd.isna(df[node_color_column][i]) else node_color_default
                 else:
                   node_color = 2
                   if df[node_color_column][i] not in color_set:
@@ -519,7 +534,6 @@ def run(input_file: KGTKFiles,
                  temp['fx'] = float(df['x'][i])
                  temp['fy'] = float(df['y'][i])
               d['nodes'].append(temp)
-
 
         f = open(output_kgtk_file, 'w')
         
