@@ -17,44 +17,73 @@ optional arguments:
   --show-edge-label EDGE_LABEL
                         Specify direction (arrow, particle and None), default
                         none
-  --old-id-column-name COLUMN_NAME
-                        The name of the old ID column. (default=id).
-  --new-id-column-name COLUMN_NAME
-                        The name of the new ID column. (default=id).
-  --overwrite-id [optional true|false]
-                        When true, replace existing ID values. When false,
-                        copy existing ID values. When --overwrite-id is
-                        omitted, it defaults to False. When --overwrite-id is
-                        supplied without an argument, it is True.
-  --verify-id-unique [optional true|false]
-                        When true, verify ID uniqueness using an in-memory set
-                        of IDs. When --verify-id-unique is omitted, it
-                        defaults to False. When --verify-id-unique is supplied
-                        without an argument, it is True.
-  --id-style {node1-label-node2,node1-label-num,node1-label-node2-num,node1-label-node2-id,empty,prefix###,wikidata,wikidata-with-claim-id}
-                        The ID generation style. (default=prefix###).
-  --id-prefix PREFIX    The prefix for a prefix### ID. (default=E).
-  --initial-id INTEGER  The initial numeric value for a prefix### ID.
-                        (default=1).
-  --id-prefix-num-width INTEGER
-                        The width of the numeric value for a prefix### ID.
-                        (default=1).
-  --id-concat-num-width INTEGER
-                        The width of the numeric value for a concatenated ID.
-                        (default=4).
-  --value-hash-width VALUE_HASH_WIDTH
-                        How many characters should be used in a value hash?
-                        (default=6)
-  --claim-id-hash-width CLAIM_ID_HASH_WIDTH
-                        How many characters should be used to hash the claim
-                        ID? 0 means do not hash the claim ID. (default=8)
-  --claim-id-column-name CLAIM_ID_COLUMN_NAME
-                        The name of the claim_id column. (default=claim_id)
-  --id-separator ID_SEPARATOR
-                        The separator user between ID subfields. (default=-)
-
-  -v [optional True|False], --verbose [optional True|False]
-                        Print additional progress messages (default=False).
+  --edge-color-column EDGE_COLOR_COLUMN
+                        Specify column used for edge color
+  --edge-color-style EDGE_COLOR_STYLE
+                        Specify style (categorical, gradient) used for edge
+                        color
+  --edge-color-mapping EDGE_COLOR_MAPPING
+                        Specify mapping (auto, fixed) used for edge color
+  --edge-color-default EDGE_COLOR_DEFAULT
+                        Specify default color for edge
+  --edge-width-column EDGE_WIDTH_COLUMN
+                        Specify column used for edge width
+  --edge-width-minimum EDGE_WIDTH_MINIMUM
+                        Specify edge width minimum
+  --edge-width-maximum EDGE_WIDTH_MAXIMUM
+                        Specify edge width maximum
+  --edge-width-mapping EDGE_WIDTH_MAPPING
+                        Specify mapping (auto, fixed) used for edge width
+  --edge-width-default EDGE_WIDTH_DEFAULT
+                        Specify default width for edge
+  --edge-width-scale EDGE_WIDTH_SCALE
+                        Specify scale for width for edge (linear, log)
+  --node-color-column NODE_COLOR_COLUMN
+                        Specify column used for node color
+  --node-color-style NODE_COLOR_STYLE
+                        Specify style (categorical, gradient) used for node
+                        color
+  --node-color-mapping NODE_COLOR_MAPPING
+                        Specify mapping (auto, fixed) used for node color
+  --node-color-default NODE_COLOR_DEFAULT
+                        Specify default color for node
+  --node-color-scale NODE_COLOR_SCALE
+                        Specify node color scale (linear/log)
+  --node-size-column NODE_SIZE_COLUMN
+                        Specify column used for node size
+  --node-size-minimum NODE_SIZE_MINIMUM
+                        Specify node size minimum
+  --node-size-maximum NODE_SIZE_MAXIMUM
+                        Specify node size maximum
+  --node-size-mapping NODE_SIZE_MAPPING
+                        Specify mapping (auto, fixed) used for node size
+  --node-size-default NODE_SIZE_DEFAULT
+                        Specify default size for node
+  --node-size-scale NODE_SIZE_SCALE
+                        Specify scale for node size (linear, log)
+  --node-file-id NODE_FILE_ID
+                        Specify id column name in node file, default is id
+  --show-text SHOW_TEXT
+                        When node number is greater than this number, will not
+                        show text as label, default is 500
+  --node-border-color NODE_BORDER_COLOR
+                        Specify node border color
+  --tooltip-column TOOLTIP_COLUMN
+                        Specify option to show tooltip
+  --text-node TEXT_NODE
+                        Specify option to show text (false, center, above)
+  --node-categorical-scale NODE_CATEGORICAL_SCALE
+                        Specify color categorical scale for node from
+                        d3-scale-chromatic
+  --edge-categorical-scale EDGE_CATEGORICAL_SCALE
+                        Specify color categorical scale for edge d3-scale-
+                        chromatic
+  --node-gradient-scale NODE_GRADIENT_SCALE
+                        Specify color gradient scale for node from d3-scale-
+                        chromatic
+  --edge-gradient-scale EDGE_GRADIENT_SCALE
+                        Specify color gradient scale for edge d3-scale-
+                        chromatic
 ```
 
 
