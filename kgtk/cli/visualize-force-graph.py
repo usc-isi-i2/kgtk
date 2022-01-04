@@ -135,7 +135,7 @@ def add_arguments_extended(parser: KGTKArgumentParser,
                         help="Specify mapping (auto, fixed) used for node size")
 
     parser.add_argument('--node-size-default', dest='node_size_default', type=float,
-                        default=1.0,
+                        default=2.0,
                         help="Specify default size for node")
 
     parser.add_argument('--node-size-scale', dest='node_size_scale', type=str,
@@ -216,7 +216,7 @@ def run(input_file: KGTKFiles,
         node_color_scale: str = "None",
         node_size_column: str = "None",
         node_size_mapping: str = "None",
-        node_size_default: float = 1.0,
+        node_size_default: float = 2.0,
         node_size_minimum: float = 1.0,
         node_size_maximum: float = 5.0,
         node_size_scale: str = 'None',
@@ -529,6 +529,9 @@ def run(input_file: KGTKFiles,
 
                       size_value = node_size_minimum + (log_cur - log_min) * (node_size_maximum - node_size_minimum) / (log_max - log_min)
                       temp['size'] = (size_value) if not pd.isna(df[node_size_column][i]) else node_size_default
+
+              else:
+                  temp['size'] = node_size_default
 
               if 'x' in df.columns:
                  temp['fx'] = float(df['x'][i])
