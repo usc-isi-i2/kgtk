@@ -19,6 +19,7 @@ nav:
   - 'Export commands':
       - 'export-gt': 'export/export_gt.md'
       - 'generate_wikidata_triples': 'export/generate_wikidata_triples.md'
+      - 'visualize-force-graph': 'export/visualize-force-graph.md'
   - 'Transformation commands':
       - 'add-id': 'transform/add_id.md'
       - 'add-labels': 'transform/add_labels.md'
@@ -62,6 +63,7 @@ nav:
       - 'validate': 'curate/validate.md'
       - 'validate-properties': 'curate/validate_properties.md'
   - 'Analysis commands':
+      - 'community-detection': 'analysis/community-detection.md'
       - 'connected-components': 'analysis/connected_components.md'
       - 'graph-embeddings': 'analysis/graph_embeddings.md'
       - 'graph-statistics': 'analysis/graph_statistics.md'

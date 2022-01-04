@@ -24,7 +24,8 @@ class ElasticsearchManager(object):
                                 add_text=False,
                                 description_properties=None,
                                 separate_languages=True,
-                                property_datatype_file=None
+                                property_datatype_file=None,
+                                languages=None
                                 ):
         """
         builds a json lines file and a mapping file to support retrieval of candidates
@@ -42,6 +43,8 @@ class ElasticsearchManager(object):
 
         """
 
+        if languages is None:
+            languages = {'en'}
         labels = label_fields.split(',')
         aliases = alias_fields.split(',') if alias_fields else []
         extra_aliases_properties = set(extra_alias_properties.split(',')) if extra_alias_properties else set()
@@ -187,38 +190,40 @@ class ElasticsearchManager(object):
                                 tmp_val, lang = ElasticsearchManager.separate_language_text_tag(vals[node2_id])
                             else:
                                 tmp_val = ElasticsearchManager.remove_language_tag(vals[node2_id])
-                            if lang not in _labels:
-                                _labels[lang] = set()
-                                all_langs.add(lang)
+                            if lang in languages:
+                                if lang not in _labels:
+                                    _labels[lang] = set()
+                                    all_langs.add(lang)
 
-                            if tmp_val.strip() != '':
-                                _labels[lang].add(tmp_val)
-                                all_labels.add(tmp_val)
+                                if tmp_val.strip() != '':
+                                    _labels[lang].add(tmp_val)
+                                    all_labels.add(tmp_val)
 
-                                if lang in {'en', 'de', 'es', 'fr', 'it', 'pt'}:
-                                    # add transilerated value as well
-                                    _ascii_label = ElasticsearchManager.transliterate_label(tmp_val)
-                                    if _ascii_label != "" and _ascii_label not in all_labels:
-                                        ascii_labels.add(_ascii_label)
+                                    if lang in {'en', 'de', 'es', 'fr', 'it', 'pt'}:
+                                        # add transilerated value as well
+                                        _ascii_label = ElasticsearchManager.transliterate_label(tmp_val)
+                                        if _ascii_label != "" and _ascii_label not in all_labels:
+                                            ascii_labels.add(_ascii_label)
 
                         elif vals[label_id] in aliases:
                             if separate_languages:
                                 tmp_val, lang = ElasticsearchManager.separate_language_text_tag(vals[node2_id])
                             else:
                                 tmp_val = ElasticsearchManager.remove_language_tag(vals[node2_id])
-                            if lang not in _aliases:
-                                _aliases[lang] = set()
-                                all_langs.add(lang)
+                            if lang in languages:
+                                if lang not in _aliases:
+                                    _aliases[lang] = set()
+                                    all_langs.add(lang)
 
-                            if tmp_val.strip() != '':
-                                _aliases[lang].add(tmp_val)
-                                all_labels.add(tmp_val)
+                                if tmp_val.strip() != '':
+                                    _aliases[lang].add(tmp_val)
+                                    all_labels.add(tmp_val)
 
-                                if lang in {'en', 'de', 'es', 'fr', 'it', 'pt'}:
-                                    # add transilerated value as well
-                                    _ascii_alias = ElasticsearchManager.transliterate_label(tmp_val)
-                                    if _ascii_alias != "" and _ascii_alias not in all_labels:
-                                        ascii_labels.add(_ascii_alias)
+                                    if lang in {'en', 'de', 'es', 'fr', 'it', 'pt'}:
+                                        # add transilerated value as well
+                                        _ascii_alias = ElasticsearchManager.transliterate_label(tmp_val)
+                                        if _ascii_alias != "" and _ascii_alias not in all_labels:
+                                            ascii_labels.add(_ascii_alias)
 
                         elif vals[label_id] in pagerank:
                             tmp_val = ElasticsearchManager.to_float(vals[node2_id])
@@ -229,11 +234,12 @@ class ElasticsearchManager(object):
                                 tmp_val, lang = ElasticsearchManager.separate_language_text_tag(vals[node2_id])
                             else:
                                 tmp_val = ElasticsearchManager.remove_language_tag(vals[node2_id])
-                            if lang not in _descriptions:
-                                _descriptions[lang] = set()
-                                all_langs.add(lang)
-                            if tmp_val.strip() != '':
-                                _descriptions[lang].add(tmp_val)
+                            if lang in languages:
+                                if lang not in _descriptions:
+                                    _descriptions[lang] = set()
+                                    all_langs.add(lang)
+                                if tmp_val.strip() != '':
+                                    _descriptions[lang].add(tmp_val)
                         elif vals[label_id].strip() == 'isa_star' or vals[label_id].strip() == 'P39' \
                                 or vals[label_id].strip() == 'P106' or vals[label_id].strip() == 'Pisa_star':
                             _instance_ofs.add(vals[node2_id])
@@ -288,13 +294,14 @@ class ElasticsearchManager(object):
                             else:
                                 tmp_val = ElasticsearchManager.remove_language_tag(vals[node2_id])
 
-                            if tmp_val.strip() != '':
-                                _extra_aliases.add(tmp_val)
+                            if lang in languages:
+                                if tmp_val.strip() != '':
+                                    _extra_aliases.add(tmp_val)
 
-                                if lang in {'en', 'de', 'es', 'fr', 'it', 'pt'}:
-                                    _ascii_label = ElasticsearchManager.transliterate_label(tmp_val)
-                                    if _ascii_label != "":
-                                        _extra_aliases.add(_ascii_label)
+                                    if lang in {'en', 'de', 'es', 'fr', 'it', 'pt'}:
+                                        _ascii_label = ElasticsearchManager.transliterate_label(tmp_val)
+                                        if _ascii_label != "":
+                                            _extra_aliases.add(_ascii_label)
 
                         if vals[label_id].startswith('P'):  # add to set of properties
                             _properties.add(vals[label_id])
