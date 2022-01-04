@@ -31,8 +31,9 @@ def add_arguments(parser: KGTKArgumentParser):
     parser.add_argument('--index_file_out', action='store', dest='index_file_out', required=True,
                         help="Output .idx file where the index fill be saved.")
 
-    parser.add_argument('--index_to_qnode_file_out', action='store', dest='index_to_qnode_file_out', required=True,
-                        help="Output Kgtk-format file containing index --> qnode.")
+    parser.add_argument('--index_to_qnode_file_out', action='store', dest='index_to_qnode_file_out', required=False,
+                        help="Output Kgtk-format file containing index --> qnode.",
+                        default=None)
     
     # OPTIONAL #
     # Related to input file
@@ -56,8 +57,8 @@ def add_arguments(parser: KGTKArgumentParser):
 
     parser.add_argument('--metric_type', action='store', type=str, dest='metric_type', required=False,
                         help="A string denoting the Faiss metric to be used. This will be passed to" +
-                        "faiss.index_factory(). Currently, the only option is metric_l2.",
-                        default="metric_l2", metavar="metric_l2")
+                        "faiss.index_factory().",
+                        default="L2", metavar="Inner_product|L2|L1|Linf|Lp|Canberra|BrayCurtis|JensenShannon")
 
     parser.add_argument('--metric_arg', action='store', type=float, dest='metric_arg', required=False,
                         help="If you choose Lp as your metric_type, this parameter should be used to " +

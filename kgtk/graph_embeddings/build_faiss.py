@@ -77,30 +77,31 @@ def build_faiss(embeddings_file, embeddings_format, index_file_out, index_to_qno
                     index = line_num-1 if embeddings_format == "w2v" else line_num
                     
                     f_out.write("{}\tindex_to_node\t{}".format(index,node))
-                    
-                    if line_num > 1000000: #just for testing
-                        print("breaking early for the sake of testing!")
-                        break
 
     # TODO: support...
-    # vector quantization option
+    # vector quantization option -- done (handled by index string / index factory)
     # sharding option
 
-    # Load training exaples for index training
+    # Load training examples for index training
     train_vecs = []
     print("Loading training vectors...")
     num_lines_to_read_for_training = max_train_examples if embeddings_format!="w2v" else max_train_examples + 1
     num_lines_to_read_for_training = min(num_lines, num_lines_to_read_for_training)
     with open(embeddings_file, 'r') as f_in:
         for line_num, line in enumerate(tqdm(f_in, total=num_lines_to_read_for_training)):
+            # control number of lines read
+            if line_num == num_lines_to_read_for_training:
+                break
             # skip first line if w2v format
             if embeddings_format == "w2v" and line_num == 0:
                 continue
             train_vecs.append(get_embedding_from_line(line, embeddings_format))
+    train_vecs = np.array(train_vecs, dtype=np.float32) # faiss requires input to be np.array of floats
     
     # Setting up untrained index instance...
     # Limit cpu usage
-    faiss.omp_set_num_threads(workers)
+    if workers is not None:
+        faiss.omp_set_num_threads(workers)
     # Instantiate index with specified metric
     index = faiss.index_factory(dim, index_string, faiss_metric) # TODO -- add quantizer option / other options
     index.verbose = True # TODO -- turn on only if verbose
@@ -135,11 +136,11 @@ def build_faiss(embeddings_file, embeddings_format, index_file_out, index_to_qno
 
                 # flush loaded vecs if we reach batch size
                 if len(vecs) == batch_size:
-                    index.add(vecs)
+                    index.add(np.array(vecs, dtype=np.float32))
                     vecs = []
         # add the last batch if there is anything in it
         if len(vecs) > 0:
-            index.add(vecs)
+            index.add(np.array(vecs, dtype=np.float32))
 
     # Save index
     faiss.write_index(index, index_file_out)
