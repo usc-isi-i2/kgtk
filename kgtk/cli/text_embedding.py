@@ -336,18 +336,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         help="if set, will also save the embedding sentences to output.")
     parser.add_argument('--embedding-projector-metadata-path', action='store', dest='output_uri', default="",
                         help="output path for the metadata file, default will be current user's home directory")
-    parser.add_argument('-o', '--out-file', action='store', dest='output_file', default="",
+    parser.add_argument('-o', '--out-file', action='store', dest='output_file', default="-",
                         help="output path for the text embedding file, by default it will be printed in console")
     parser.add_argument('--output-data-format', action='store', dest='output_data_format',
                         default="kgtk_format", choices=("tsv_format", "kgtk_format"),
-
-
-
-
-
-
-
-
                         help="output format, can either be `tsv_format` or `kgtk_format`. \nIf choose `tsv_format`, the output "
                              "will be a tsv file, with each row contains only the vector representation of a node. Each "
                              "dimension is separated by a tab")
