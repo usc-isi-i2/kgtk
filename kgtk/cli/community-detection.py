@@ -2,8 +2,10 @@
 adding ID values.
 TODO: Need KgtkWriterOptions
 """
-from graph_tool.all import *
-import graph_tool as gt
+from graph_tool import Graph
+from graph_tool.inference.minimize import minimize_blockmodel_dl, \
+    minimize_nested_blockmodel_dl
+import graph_tool
 from argparse import Namespace, SUPPRESS
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
@@ -128,7 +130,7 @@ def run(input_file: KGTKFiles,
             g.add_edge(g.vertex(d[ele[0]]), g.vertex(d[ele[1]]))
 
         if method == 'blockmodel':
-            state = graph_tool.inference.minimize.minimize_blockmodel_dl(g)
+            state = minimize_blockmodel_dl(g)
             arr = []
 
             for i in range(0, len(nodes)):
@@ -144,8 +146,7 @@ def run(input_file: KGTKFiles,
                 kw.write([nodes[i], 'in', arr[i]])
 
         elif method == 'nested':
-            state = graph_tool.inference.minimize.\
-            minimize_nested_blockmodel_dl(g)
+            state = minimize_nested_blockmodel_dl(g)
 
             arr = []
 
@@ -171,7 +172,7 @@ def run(input_file: KGTKFiles,
             for i in range(0, len(nodes)):
                 kw.write([nodes[i], 'in', arr[i]])
         elif method == 'mcmc':
-            state = graph_tool.inference.minimize.minimize_blockmodel_dl(g)
+            state = minimize_blockmodel_dl(g)
             graph_tool.inference.mcmc.\
                 mcmc_equilibrate(state, wait=1000, mcmc_args=dict(niter=10))
 
@@ -194,8 +195,7 @@ def run(input_file: KGTKFiles,
                 callback=collect_partitions)
 
             # Disambiguate partitions and obtain marginals
-            pmode = graph_tool.inference.partition_modes.\
-                PartitionModeState(bs, converge=True)
+            pmode = graph_tool.inference.partition_modes.PartitionModeState(bs, converge=True)
             pv = list(pmode.get_marginal(g))
             m = list(pmode.get_max(g))
 
