@@ -693,7 +693,7 @@ class EmbeddingVector:
         #     output_file = open(output_file, "w")
         if output_format == "kgtk_format":
             if output_file != "":
-                output_mode = KgtkWriter.Mode.EDGE
+                output_mode = KgtkWriter.Mode.NODE
                 ew: KgtkWriter = KgtkWriter.open(self.column_names,
                                             output_file,
                                             require_all_columns=False,
@@ -735,7 +735,7 @@ class EmbeddingVector:
 
         elif output_format == "tsv_format":
             if output_file != "":
-                output_mode = KgtkWriter.Mode.EDGE
+                output_mode = KgtkWriter.Mode.NONE
                 ew: KgtkWriter = KgtkWriter.open(None,
                                             output_file,
                                             require_all_columns=False,
