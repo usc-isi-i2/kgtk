@@ -679,18 +679,10 @@ class EmbeddingVector:
                     for i in each:
                         _ = f.write(str(i) + "\t")
                     _ = f.write("\n")
-    # def print_vector_line(self, vector_line, output_file):
-    #     if output_file == "":
-    #         print(vector_line,end='')
-    #     else:
-    #         # output_file.write(vector_line)
-    #         output_file.write_kgtk(vector_line)
 
     def print_vector(self, vectors, output_properties: str = "text_embedding",
                      output_format="kgtk_format", save_embedding_sentence=False, output_file=""):
         self._logger.debug("START printing the vectors")
-        # if output_file != "":
-        #     output_file = open(output_file, "w")
         if output_format == "kgtk_format":
             if output_file != "":
                 output_mode = KgtkWriter.Mode.NONE
@@ -706,7 +698,6 @@ class EmbeddingVector:
                                             error_file=self.error_file,
                                             verbose=True,
                                             very_verbose=False)
-            # self.print_vector_line("node\tproperty\tvalue\n", output_file)
             all_nodes = list(self.vectors_map.keys())
             ten_percent_len = math.ceil(len(vectors) / 10)
             for i, each_vector in enumerate(vectors):
@@ -715,13 +706,10 @@ class EmbeddingVector:
                     self._logger.debug("Finished {}%".format(percent))
                 node_id = all_nodes[i]
                 props = output_properties
-                # self.print_vector_line("{}\t{}\t".format(all_nodes[i], output_properties), ew)
                 embedding = ""
                 for each_dimension in each_vector[:-1]:
-                    # self.print_vector_line(str(each_dimension) + ",", ew)
                     embedding += str(each_dimension) + ","
                 embedding += str(each_vector[-1])
-                # self.print_vector_line(str(each_vector[-1]) + '\n', ew)
                 if output_file == "":
                     print("{}\t{}\t{}".format(node_id, props, embedding))
                 else:
@@ -752,16 +740,13 @@ class EmbeddingVector:
                 embedding = []
                 for each_dimension in each_vector[:-1]:
                     embedding.append(str(each_dimension))
-                    # self.print_vector_line(str(each_dimension) + "\t", output_file)
                 embedding.append(str(each_vector[-1]))
-                # self.print_vector_line(str(each_vector[-1]) + '\n', output_file)
                 if output_file == "":
                     print('\t'.join(embedding))
                 else:
                     ew.write_tsv(embedding)
         if output_file != "":
             ew.close()
-            # output_file.close()
         self._logger.debug("END printing the vectors")
 
     def plot_result(self, output_properties: dict, input_format="kgtk_format",
