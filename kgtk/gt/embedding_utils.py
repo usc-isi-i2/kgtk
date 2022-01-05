@@ -693,7 +693,7 @@ class EmbeddingVector:
         #     output_file = open(output_file, "w")
         if output_format == "kgtk_format":
             if output_file != "":
-                output_mode = KgtkWriter.Mode.NODE
+                output_mode = KgtkWriter.Mode.NONE
                 ew: KgtkWriter = KgtkWriter.open(self.column_names,
                                             output_file,
                                             require_all_columns=False,
