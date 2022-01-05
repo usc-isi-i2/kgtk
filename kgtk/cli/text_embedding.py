@@ -334,9 +334,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     # output
     parser.add_argument('--save-embedding-sentence', action='store_true', dest='save_embedding_sentence',
                         help="if set, will also save the embedding sentences to output.")
-    parser.add_argument('-o', '--embedding-projector-metadata-path', action='store', dest='output_uri', default="",
+    parser.add_argument('--embedding-projector-metadata-path', action='store', dest='output_uri', default="",
                         help="output path for the metadata file, default will be current user's home directory")
-    parser.add_argument('--out-file', action='store', dest='output_file', default="",
+    parser.add_argument('-o', '--out-file', action='store', dest='output_file', default="",
                         help="output path for the text embedding file, by default it will be printed in console")
     parser.add_argument('--output-data-format', action='store', dest='output_data_format',
                         default="kgtk_format", choices=("tsv_format", "kgtk_format"),
