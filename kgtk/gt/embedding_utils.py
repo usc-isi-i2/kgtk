@@ -23,6 +23,7 @@ from SPARQLWrapper import SPARQLWrapper, JSON, POST, URLENCODED  # type: ignore
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 from kgtk.kgtkformat import KgtkFormat
+from kgtk.io.kgtkwriter import KgtkWriter
 import torch
 
 
@@ -63,6 +64,8 @@ class EmbeddingVector:
         self.token_pattern = re.compile(r"(?u)\b\w\w+\b")
         self.selected_gpu_device_index = 0
         self.total_gpu_count = torch.cuda.device_count()
+        self.column_names = ['node', 'property', 'value']
+        self.error_file = sys.stderr
 
     def retry_next_gpu(self, error):
         self.selected_gpu_device_index += 1
@@ -628,20 +631,6 @@ class EmbeddingVector:
         """
             main function to get the vector representations of the descriptions
         """
-        # if self._parallel_count == 1:
-        #     start_all = time.time()
-        #     self._logger.info("Now generating embedding vector.")
-        #     for q_node, each_item in tqdm(self.candidates.items()):
-        #         # do process for each row(one target)
-        #         sentence = each_item["sentence"]
-        #         if isinstance(sentence, bytes):
-        #             sentence = sentence.decode("utf-8")
-        #         vectors = self.get_sentences_embedding([sentence], [q_node])
-        #         self.vectors_map[q_node] = vectors[0]
-        #     self._logger.info("Totally used {} seconds.".format(str(time.time() - start_all)))
-        # else:
-        #     # Skip get vector function because we already get them
-        #     pass
         if self._parallel_count == 1:
             start_all = time.time()
             self._logger.info("Now generating embedding vector.")
@@ -690,41 +679,89 @@ class EmbeddingVector:
                     for i in each:
                         _ = f.write(str(i) + "\t")
                     _ = f.write("\n")
-    def print_vector_line(self, vector_line, output_file):
-        if output_file == "":
-            print(vector_line,end='')
-        else:
-            output_file.write(vector_line)
+    # def print_vector_line(self, vector_line, output_file):
+    #     if output_file == "":
+    #         print(vector_line,end='')
+    #     else:
+    #         # output_file.write(vector_line)
+    #         output_file.write_kgtk(vector_line)
 
     def print_vector(self, vectors, output_properties: str = "text_embedding",
                      output_format="kgtk_format", save_embedding_sentence=False, output_file=""):
         self._logger.debug("START printing the vectors")
-        if output_file != "":
-            output_file = open(output_file, "w")
+        # if output_file != "":
+        #     output_file = open(output_file, "w")
         if output_format == "kgtk_format":
-            # TODO: This should be comverted to use KgtkWriter
-            self.print_vector_line("node\tproperty\tvalue\n", output_file)
+            if output_file != "":
+                output_mode = KgtkWriter.Mode.EDGE
+                ew: KgtkWriter = KgtkWriter.open(self.column_names,
+                                            output_file,
+                                            require_all_columns=False,
+                                            prohibit_extra_columns=True,
+                                            fill_missing_columns=True,
+                                            mode=output_mode,
+                                            output_format='kgtk',
+                                            output_column_names=self.column_names,
+                                            no_header=False,
+                                            error_file=self.error_file,
+                                            verbose=True,
+                                            very_verbose=False)
+            # self.print_vector_line("node\tproperty\tvalue\n", output_file)
             all_nodes = list(self.vectors_map.keys())
             ten_percent_len = math.ceil(len(vectors) / 10)
             for i, each_vector in enumerate(vectors):
                 if i % ten_percent_len == 0:
                     percent = i / ten_percent_len * 10
                     self._logger.debug("Finished {}%".format(percent))
-                self.print_vector_line("{}\t{}\t".format(all_nodes[i], output_properties), output_file)
+                node_id = all_nodes[i]
+                props = output_properties
+                # self.print_vector_line("{}\t{}\t".format(all_nodes[i], output_properties), ew)
+                embedding = ""
                 for each_dimension in each_vector[:-1]:
-                    self.print_vector_line(str(each_dimension) + ",", output_file)
-                self.print_vector_line(str(each_vector[-1]) + '\n', output_file)
+                    # self.print_vector_line(str(each_dimension) + ",", ew)
+                    embedding += str(each_dimension) + ","
+                embedding += str(each_vector[-1])
+                # self.print_vector_line(str(each_vector[-1]) + '\n', ew)
+                if output_file == "":
+                    print("{}\t{}\t{}".format(node_id, props, embedding))
+                else:
+                    ew.write_kgtk([node_id, props, embedding])
                 if save_embedding_sentence:
-                    self.print_vector_line("{}\t{}\t{}\n".format(all_nodes[i], "embedding_sentence",
-                                              self.candidates[all_nodes[i]]["sentence"]), output_file)
+                    if output_file == "":
+                        print("{}\t{}\t{}\n".format(all_nodes[i], "embedding_sentence",
+                                              self.candidates[all_nodes[i]]["sentence"]))
+                    else:
+                        ew.write_kgtk([all_nodes[i], "embedding_sentence", self.candidates[all_nodes[i]]["sentence"]])
 
         elif output_format == "tsv_format":
+            if output_file != "":
+                output_mode = KgtkWriter.Mode.EDGE
+                ew: KgtkWriter = KgtkWriter.open(None,
+                                            output_file,
+                                            require_all_columns=False,
+                                            prohibit_extra_columns=True,
+                                            fill_missing_columns=True,
+                                            mode=output_mode,
+                                            output_format='tsv',
+                                            output_column_names=None,
+                                            no_header=True,
+                                            error_file=self.error_file,
+                                            verbose=True,
+                                            very_verbose=False)
             for each_vector in vectors:
+                embedding = []
                 for each_dimension in each_vector[:-1]:
-                    self.print_vector_line(str(each_dimension) + "\t", output_file)
-                self.print_vector_line(str(each_vector[-1]) + '\n', output_file)
+                    embedding.append(str(each_dimension))
+                    # self.print_vector_line(str(each_dimension) + "\t", output_file)
+                embedding.append(str(each_vector[-1]))
+                # self.print_vector_line(str(each_vector[-1]) + '\n', output_file)
+                if output_file == "":
+                    print('\t'.join(embedding))
+                else:
+                    ew.write_tsv(embedding)
         if output_file != "":
-            output_file.close()
+            ew.close()
+            # output_file.close()
         self._logger.debug("END printing the vectors")
 
     def plot_result(self, output_properties: dict, input_format="kgtk_format",
