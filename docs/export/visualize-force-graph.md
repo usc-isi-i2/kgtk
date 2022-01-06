@@ -113,5 +113,5 @@ Optional:
 ```
 kgtk visualize-force-graph -i example.tsv -o default.html
 ```
-<img src="/visualize-force-graph-examples/1_default.jpg" width="150"/>
+<img src="docs/images/visualize-force-graph-examples/1_default.jpg" width="150"/>
 
