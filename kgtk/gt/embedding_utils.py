@@ -684,20 +684,19 @@ class EmbeddingVector:
                      output_format="kgtk_format", save_embedding_sentence=False, output_file=""):
         self._logger.debug("START printing the vectors")
         if output_format == "kgtk_format":
-            if output_file != "-":
-                output_mode = KgtkWriter.Mode.NONE
-                ew: KgtkWriter = KgtkWriter.open(self.column_names,
-                                            output_file,
-                                            require_all_columns=False,
-                                            prohibit_extra_columns=True,
-                                            fill_missing_columns=True,
-                                            mode=output_mode,
-                                            output_format='kgtk',
-                                            output_column_names=self.column_names,
-                                            no_header=False,
-                                            error_file=self.error_file,
-                                            verbose=True,
-                                            very_verbose=False)
+            output_mode = KgtkWriter.Mode.NONE
+            ew: KgtkWriter = KgtkWriter.open(self.column_names,
+                                        output_file,
+                                        require_all_columns=False,
+                                        prohibit_extra_columns=True,
+                                        fill_missing_columns=True,
+                                        mode=output_mode,
+                                        output_format='kgtk',
+                                        output_column_names=self.column_names,
+                                        no_header=False,
+                                        error_file=self.error_file,
+                                        verbose=True,
+                                        very_verbose=False)
             all_nodes = list(self.vectors_map.keys())
             ten_percent_len = math.ceil(len(vectors) / 10)
             for i, each_vector in enumerate(vectors):
@@ -710,43 +709,31 @@ class EmbeddingVector:
                 for each_dimension in each_vector[:-1]:
                     embedding += str(each_dimension) + ","
                 embedding += str(each_vector[-1])
-                if output_file == "-":
-                    print("{}\t{}\t{}".format(node_id, props, embedding))
-                else:
-                    ew.write_kgtk([node_id, props, embedding])
+                ew.write_kgtk([node_id, props, embedding])
                 if save_embedding_sentence:
-                    if output_file == "-":
-                        print("{}\t{}\t{}\n".format(all_nodes[i], "embedding_sentence",
-                                              self.candidates[all_nodes[i]]["sentence"]))
-                    else:
-                        ew.write_kgtk([all_nodes[i], "embedding_sentence", self.candidates[all_nodes[i]]["sentence"]])
+                    ew.write_kgtk([all_nodes[i], "embedding_sentence", self.candidates[all_nodes[i]]["sentence"]])
 
         elif output_format == "tsv_format":
-            if output_file != "-":
-                output_mode = KgtkWriter.Mode.NONE
-                ew: KgtkWriter = KgtkWriter.open(None,
-                                            output_file,
-                                            require_all_columns=False,
-                                            prohibit_extra_columns=True,
-                                            fill_missing_columns=True,
-                                            mode=output_mode,
-                                            output_format='tsv',
-                                            output_column_names=None,
-                                            no_header=True,
-                                            error_file=self.error_file,
-                                            verbose=True,
-                                            very_verbose=False)
+            output_mode = KgtkWriter.Mode.NONE
+            ew: KgtkWriter = KgtkWriter.open(None,
+                                        output_file,
+                                        require_all_columns=False,
+                                        prohibit_extra_columns=True,
+                                        fill_missing_columns=True,
+                                        mode=output_mode,
+                                        output_format='tsv',
+                                        output_column_names=None,
+                                        no_header=True,
+                                        error_file=self.error_file,
+                                        verbose=True,
+                                        very_verbose=False)
             for each_vector in vectors:
                 embedding = []
                 for each_dimension in each_vector[:-1]:
                     embedding.append(str(each_dimension))
                 embedding.append(str(each_vector[-1]))
-                if output_file == "-":
-                    print('\t'.join(embedding))
-                else:
-                    ew.write_tsv(embedding)
-        if output_file != "-":
-            ew.close()
+                ew.write_tsv(embedding)
+        ew.close()
         self._logger.debug("END printing the vectors")
 
     def plot_result(self, output_properties: dict, input_format="kgtk_format",
