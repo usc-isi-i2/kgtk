@@ -40,17 +40,18 @@ kgtk text-embedding \
     --output-data-format <string> # optional, default is `kgtk_format`
     --output-property <string> \ # optional, default is "text_embedding"
     --embedding-projector-metatada <list_of_string> \ # optional
-    --embedding-projector-path/ -o <string> # optional, default is the home directory of current user
+    --embedding-projector-path <string> # optional, default is the home directory of current user
     --black-list / -b <string> # optional,default is None
     --logging-level / -l <string> \ # optional, default is `info`
     --dimensional-reduction pca \ # optional, default is none
     --dimension 5 \ #optional, default is 2
     --parallel 4 # optional, default is 1
     --save-embedding-sentence # optional
+    --out-file/ -o <string> \ by default embeddings to console
 ```
 ##### Example 1:
 For easiest running, just give the input file and let it write output to `output_embeddings.csv` at current folder
-`kgtk text-embedding < input_file.csv > output_embeddings.csv`
+using `kgtk text-embedding -i input_file.csv -o output_embeddings.csv`
 ##### Example 2:
 Running with more specific parameters and then run TSNE to reduce output dimension:
 ```
