@@ -3,6 +3,7 @@
 import pandas as pd
 import json
 from argparse import Namespace, SUPPRESS
+import sys
 
 import math
 
@@ -43,11 +44,11 @@ def add_arguments_extended(parser: KGTKArgumentParser,
     parser.add_output_file()
 
     parser.add_argument('--node-file', dest='node_file', type=str,
-                        default="None",
+                        default=None,
                         help="Specify the location of node file.")
 
     parser.add_argument('--direction', dest='direction', type=str,
-                        default="None",
+                        default=None,
                         help="Specify direction (arrow, particle and None), default none")
 
     parser.add_argument('--show-edge-label', dest='edge_label', type=bool,
@@ -55,23 +56,23 @@ def add_arguments_extended(parser: KGTKArgumentParser,
                         help="Specify direction (arrow, particle and None), default none")
 
     parser.add_argument('--edge-color-column', dest='edge_color_column', type=str,
-                        default="None",
+                        default=None,
                         help="Specify column used for edge color")
 
     parser.add_argument('--edge-color-style', dest='edge_color_style', type=str,
-                        default="None",
+                        default=None,
                         help="Specify style (categorical, gradient) used for edge color")
 
     parser.add_argument('--edge-color-mapping', dest='edge_color_mapping', type=str,
-                        default="None",
+                        default=None,
                         help="Specify mapping (auto, fixed) used for edge color")
 
     parser.add_argument('--edge-color-default', dest='edge_color_default', type=str,
-                        default="None",
+                        default=None,
                         help="Specify default color for edge")
 
     parser.add_argument('--edge-width-column', dest='edge_width_column', type=str,
-                        default="None",
+                        default=None,
                         help="Specify column used for edge width")
 
     parser.add_argument('--edge-width-minimum', dest='edge_width_minimum', type=float,
@@ -84,7 +85,7 @@ def add_arguments_extended(parser: KGTKArgumentParser,
 
 
     parser.add_argument('--edge-width-mapping', dest='edge_width_mapping', type=str,
-                        default="None",
+                        default=None,
                         help="Specify mapping (auto, fixed) used for edge width")
 
     parser.add_argument('--edge-width-default', dest='edge_width_default', type=float,
@@ -92,33 +93,33 @@ def add_arguments_extended(parser: KGTKArgumentParser,
                         help="Specify default width for edge")
 
     parser.add_argument('--edge-width-scale', dest='edge_width_scale', type=str,
-                        default='None',
+                        default=None,
                         help="Specify scale for width for edge (linear, log)")
 
 
     parser.add_argument('--node-color-column', dest='node_color_column', type=str,
-                        default="None",
+                        default=None,
                         help="Specify column used for node color")
 
     parser.add_argument('--node-color-style', dest='node_color_style', type=str,
-                        default="None",
+                        default=None,
                         help="Specify style (categorical, gradient) used for node color")
 
     parser.add_argument('--node-color-mapping', dest='node_color_mapping', type=str,
-                        default="None",
+                        default=None,
                         help="Specify mapping (auto, fixed) used for node color")
 
     parser.add_argument('--node-color-default', dest='node_color_default', type=str,
-                        default="None",
+                        default=None,
                         help="Specify default color for node")
 
     parser.add_argument('--node-color-scale', dest='node_color_scale', type=str,
-                        default="None",
+                        default=None,
                         help="Specify node color scale (linear/log)")
 
 
     parser.add_argument('--node-size-column', dest='node_size_column', type=str,
-                        default="None",
+                        default=None,
                         help="Specify column used for node size")
 
     parser.add_argument('--node-size-minimum', dest='node_size_minimum', type=float,
@@ -131,7 +132,7 @@ def add_arguments_extended(parser: KGTKArgumentParser,
 
 
     parser.add_argument('--node-size-mapping', dest='node_size_mapping', type=str,
-                        default="None",
+                        default=None,
                         help="Specify mapping (auto, fixed) used for node size")
 
     parser.add_argument('--node-size-default', dest='node_size_default', type=float,
@@ -139,7 +140,7 @@ def add_arguments_extended(parser: KGTKArgumentParser,
                         help="Specify default size for node")
 
     parser.add_argument('--node-size-scale', dest='node_size_scale', type=str,
-                        default='None',
+                        default=None,
                         help="Specify scale for node size (linear, log)")
 
 
@@ -152,11 +153,11 @@ def add_arguments_extended(parser: KGTKArgumentParser,
                         help="When node number is greater than this number, will not show text as label, default is 500")
 
     parser.add_argument('--node-border-color', dest='node_border_color', type=str,
-                        default='None',
+                        default=None,
                         help="Specify node border color ")
 
     parser.add_argument('--tooltip-column', dest='tooltip_column', type=str,
-                        default='None',
+                        default=None,
                         help="Specify option to show tooltip ")
 
     parser.add_argument('--text-node', dest='text_node', type=str,
@@ -196,41 +197,41 @@ def run(input_file: KGTKFiles,
         show_options: bool = False,
         verbose: bool = False,
         very_verbose: bool = False,
-        node_file: str = "None",
-        direction: str = "None",
+        node_file: str = None,
+        direction: str = None,
         edge_label: bool = False,
-        edge_color_column: str = "None",
-        edge_color_style: str = "None",
-        edge_color_mapping: str = "None",
-        edge_color_default: str = "None",
-        edge_width_column: str = "None",
-        edge_width_mapping: str = "None",
+        edge_color_column: str = None,
+        edge_color_style: str = None,
+        edge_color_mapping: str = None,
+        edge_color_default: str = None,
+        edge_width_column: str = None,
+        edge_width_mapping: str = None,
         edge_width_default: float = 1.0,
         edge_width_minimum: float = 1.0,
         edge_width_maximum: float = 5.0,
-        edge_width_scale: str = 'None',
-        node_color_column: str = "None",
-        node_color_style: str = "None",
-        node_color_mapping: str = "None",
-        node_color_default: str = "None",
-        node_color_scale: str = "None",
-        node_size_column: str = "None",
-        node_size_mapping: str = "None",
+        edge_width_scale: str = None,
+        node_color_column: str = None,
+        node_color_style: str = None,
+        node_color_mapping: str = None,
+        node_color_default: str = None,
+        node_color_scale: str = None,
+        node_size_column: str = None,
+        node_size_mapping: str = None,
         node_size_default: float = 2.0,
         node_size_minimum: float = 1.0,
         node_size_maximum: float = 5.0,
-        node_size_scale: str = 'None',
+        node_size_scale: str = None,
         node_file_id: str = 'id',
         show_text: int = 250,
-        node_border_color: str = 'None',
-        tooltip_column: str = 'None',
-        text_node: str = 'None',
+        node_border_color: str = None,
+        tooltip_column: str = None,
+        text_node: str = None,
         node_categorical_scale: str = 'd3.schemeCategory10',
         edge_categorical_scale: str = 'd3.schemeCategory10',
         node_gradient_scale: str = 'd3.interpolateRdBu',
         edge_gradient_scale: str = 'd3.interpolateRdBu',
 
-        **kwargs  # Whatever KgtkFileOptions and KgtkValueOptions want.
+        **kwargs  # Whatever KgtkFileOptions and KgtkValueOptions want. 
         ) -> int:
     # import modules locally
     from pathlib import Path
@@ -272,6 +273,7 @@ def run(input_file: KGTKFiles,
                                           very_verbose=very_verbose,
         )
 
+
         d = {}
         nodes = set()
         edges = []
@@ -284,52 +286,50 @@ def run(input_file: KGTKFiles,
             edge_width_minimum = 0.01
 
         if 'node1' not in kr.column_name_map:
-          print('No node1 col in edge file')
+          print('No node1 col in edge file', file=sys.stderr, flush=True)
         if 'node2' not in kr.column_name_map:
-          print('No node2 col in edge file')
+          print('No node2 col in edge file', file=sys.stderr, flush=True)
 
 
-        if 'node1;label' in kr.column_name_map and 'None' not in node_file:
-          print('node1;label in edge file will not be read due to the existence of node file')
+        if 'node1;label' in kr.column_name_map and node_file != None:
+          print('node1;label in edge file will not be read due to the existence of node file', file=sys.stderr, flush=True)
 
-        if 'node2;label' in kr.column_name_map and 'None' not in node_file:
-          print('node2;label in edge file will not be read due to the existence of node file')
+        if 'node2;label' in kr.column_name_map and node_file != None:
+          print('node2;label in edge file will not be read due to the existence of node file', file=sys.stderr, flush=True)
 
-
-
-        number = False
         n1 = kr.column_name_map['node1']
         n2 = kr.column_name_map['node2']
 
-        if 'None' in node_file and 'node1;label' in kr.column_name_map:
+        if node_file == None and 'node1;label' in kr.column_name_map:
           l1 = kr.column_name_map['node1;label']
 
-        if 'None' in node_file and 'node1;label' in kr.column_name_map:
+
+        if node_file == None and 'node1;label' in kr.column_name_map:
           l3 = kr.column_name_map['node2;label']
 
-        if 'None' in node_file and 'node1;label' in kr.column_name_map:
+        if node_file == None and 'node1;label' in kr.column_name_map:
           l2 = kr.column_name_map['label;label']
 
-        if 'node1;label' not in kr.column_name_map and 'None' in node_file:
-          print('node1;label not in edge file')
+        if 'node1;label' not in kr.column_name_map and node_file == None:
+          print('node1;label not in edge file', file=sys.stderr, flush=True)
           l1 = kr.column_name_map['node1']
 
-        if 'node2;label' not in kr.column_name_map and 'None' in node_file:
-          print('node2;label not in edge file')
+        if 'node2;label' not in kr.column_name_map and node_file == None:
+          print('node2;label not in edge file', file=sys.stderr, flush=True)
           l3 = kr.column_name_map['node2']
 
         if 'label;label' not in kr.column_name_map:
-          print('No label;label col in edge file')
+          print('No label;label col in edge file', file=sys.stderr, flush=True)
           l2 = kr.column_name_map['label']
         else:
           l2 = kr.column_name_map['label;label']
 
         color_d = {}
         count = 0
-        flag = 0
         color_set = {}
+
         for row in kr:
-          if 'None' in node_file:
+          if node_file == None:
             if '@' in row[l1]:
               nodes.add((row[n1], row[l1][1:row[l1].find('@')-1])) 
             else:
@@ -341,7 +341,7 @@ def run(input_file: KGTKFiles,
               nodes.add((row[n2], row[l3]))  
 
 
-          if edge_width_column != 'None':
+          if edge_width_column != None:
               if (not pd.isna(row[kr.column_name_map[edge_width_column]])) and str(row[kr.column_name_map[edge_width_column]]) != '':
                 width_orig = float(row[kr.column_name_map[edge_width_column]]) 
               else:
@@ -351,35 +351,27 @@ def run(input_file: KGTKFiles,
           
 
 
-          if edge_color_column != 'None' and '@' in row[l2]:
+          if edge_color_column != None and '@' in row[l2]:
               if edge_color_mapping == 'fixed':
                   edges.append({'source': row[n1], 'target': row[n2], 'label': row[l2][1:row[l2].find('@')-1], 'color': row[kr.column_name_map[edge_color_column]] if not pd.isna(row[kr.column_name_map[edge_color_column]]) else edge_color_default, 'width_orig': width_orig})
               elif edge_color_style == 'gradient':
-                  flag = 1
-                  number = True
                   edges.append({'source': row[n1], 'target': row[n2], 'label': row[l2][1:row[l2].find('@')-1], 'color': row[kr.column_name_map[edge_color_column]] if not pd.isna(row[kr.column_name_map[edge_color_column]]) else edge_color_default, 'width_orig': width_orig})
               else:
-                  flag = 2
-                  number = True
                   if row[kr.column_name_map[edge_color_column]] not in color_set:
                        color_set[row[kr.column_name_map[edge_color_column]]] = count
                        count += 1
                   edges.append({'source': row[n1], 'target': row[n2], 'label': row[l2][1:row[l2].find('@')-1], 'color': min(color_set[row[kr.column_name_map[edge_color_column]]], 9) if not pd.isna(row[kr.column_name_map[edge_color_column]]) else edge_color_default,  'width_orig': width_orig})
-          elif edge_color_column != 'None' and '@' not in row[l2]:
+          elif edge_color_column != None and '@' not in row[l2]:
               if edge_color_style == 'fixed':
                   edges.append({'source': row[n1], 'target': row[n2], 'label': row[l2], 'color': row[kr.column_name_map[edge_color_column]] if not pd.isna(row[kr.column_name_map[edge_color_column]]) else edge_color_default, 'width_orig': width_orig})
               elif edge_color_style == 'gradient':
-                  flag = 1
-                  number = True
                   edges.append({'source': row[n1], 'target': row[n2], 'label': row[l2], 'color': row[kr.column_name_map[edge_color_column]] if not pd.isna(row[kr.column_name_map[edge_color_column]]) else edge_color_default, 'width_orig': width_orig})
               else:
-                  flag = 2
-                  number = True
                   if row[kr.column_name_map[edge_color_column]] not in color_set:
                        color_set[row[kr.column_name_map[edge_color_column]]] = count
                        count += 1
                   edges.append({'source': row[n1], 'target': row[n2], 'label': row[l2], 'color': min(color_set[row[kr.column_name_map[edge_color_column]]], 9) if not pd.isna(row[kr.column_name_map[edge_color_column]]) else edge_color_default, 'width_orig': width_orig})
-          elif edge_color_column == 'None' and '@' in row[l2]:
+          elif edge_color_column == None and '@' in row[l2]:
               edges.append({'source': row[n1], 'target': row[n2], 'label': row[l2][1:row[l2].find('@')-1], 'width_orig': width_orig})
           else:
               edges.append({'source': row[n1], 'target': row[n2], 'label': row[l2], 'width_orig': width_orig})
@@ -428,115 +420,151 @@ def run(input_file: KGTKFiles,
               edge['width'] = edge_width_default
 
 
+        if node_file == None:
+            d['nodes'] = []
+            for ele in nodes:
+                d['nodes'].append({'id': ele[0], 'label': ele[1], 'tooltip': ele[1]})
+        else:
+            d['nodes'] = []
 
-        d['nodes'] = []
         d['links'] = edges
         color_set = {}
         count = 0
 
         node_color = 0
 
-        if 'None' in node_file:
-            for ele in nodes:
-                d['nodes'].append({'id': ele[0], 'label': ele[1]})
-        else:
-            if '.tsv' in node_file:
-                df = pd.read_csv(node_file, sep = '\t')
-            else:
-                df = pd.read_csv(node_file)
-            if 'id' not in df.columns:
-              print('Missing id column in node file')
-            if 'label' not in df.columns:
-              print('Missing label column in node file')
-            for i in range(0, len(df)):
-              temp = {'id': df[node_file_id][i]}
-              if 'label' not in df.columns:
-                temp['label'] = df[node_file_id][i]
-              elif '@' in str(df['label'][i]):
-                temp['label'] = df['label'][i][1:df['label'][i].find('@')-1]
-              elif pd.isna(df['label'][i]) or str(df['label'][i]).lower() == 'nan' or str(df['label'][i]).lower() == '':
-                temp['label'] = df[node_file_id][i]
-              else:
-                temp['label'] = df['label'][i]
-
-              if tooltip_column != 'None':
-                if (not pd.isna(df[tooltip_column][i])) and str(df[tooltip_column][i]) != '':
-                  temp['tooltip'] = str(df[tooltip_column][i]) 
-                else:
-                  temp['tooltip'] = str(df[node_file_id][i]) 
-              else:
-                temp['tooltip'] = temp['label']
 
 
-              if node_color_column != 'None':
-                if node_color_style == 'gradient':
-                  if node_color_scale == 'linear':
-                      node_color = 1
-                      color_value = (df[node_color_column][i]-df[node_color_column].min()) / (df[node_color_column].max() - df[node_color_column].min())
-                      temp['color'] = float(color_value) if not pd.isna(df[node_color_column][i]) else node_color_default
-                  elif node_color_scale == 'log':
-                      node_color = 1
-                      if df[node_color_column].min() == 0:
-                        log_min = 0
-                      else:
-                        log_min = math.log(df[node_color_column].min(), base)
+        if node_file != None:
+            kr_node: KgtkReader = KgtkReader.open(node_file,
+                                              error_file=error_file,
+                                              options=reader_options,
+                                              value_options=value_options,
+                                              verbose=verbose,
+                                              very_verbose=very_verbose,
+            )
 
-                      if df[node_color_column].max() == 0:
-                        log_max = 0
-                      else:
-                        log_max = math.log(df[node_color_column].max(), base)
 
-                      if df[node_color_column][i] == 0:
-                        log_cur = 0
-                      else:
-                        log_cur = math.log(df[node_color_column][i], base)
+            node_color_list = []
+            node_size_list = []
 
-                      color_value = 0 + (log_cur - log_min) * (1 - 0) / (log_max - log_min)
-                      temp['color'] = float(color_value) if not pd.isna(df[node_color_column][i]) else node_color_default
+            for row in kr.node:
+                if node_color_scale == 'linear' or node_color_scale == 'gradient':
+                    if not pd.isna(row[kr_node.column_name_map[node_color_column]]):
+                        node_color_list.append(row[kr_node.column_name_map[node_color_column]])
+                if node_size_scale == 'linear' or node_size_scale == 'gradient':
+                    if not pd.isna(row[kr_node.column_name_map[node_size_column]]):
+                        node_size_list.append(row[kr_node.column_name_map[node_size_column]])
+
+
+
+            kr_node.close()
+
+            kr_node: KgtkReader = KgtkReader.open(node_file,
+                                              error_file=error_file,
+                                              options=reader_options,
+                                              value_options=value_options,
+                                              verbose=verbose,
+                                              very_verbose=very_verbose,
+            )
+
+            if 'id' not in kr_node.column_name_map:
+                print('Missing id column in node file', file=sys.stderr, flush=True)
+            if 'label' not in kr_node.column_name_map:
+                print('Missing label column in node file', file=sys.stderr, flush=True)
+
+
+            for row in kr_node:             
+                  temp = {'id': row[kr_node.column_name_map[node_file_id]]}
+                  if 'label' not in row.columns:
+                    temp['label'] = row[kr_node.column_name_map[node_file_id]]
+                  elif '@' in str(row[kr_node.column_name_map['label']]):
+                    temp['label'] = row[kr_node.column_name_map['label']][1:row[kr_node.column_name_map['label']].find('@')-1]
+                  elif pd.isna(row[kr_node.column_name_map['label']]) or str(row[kr_node.column_name_map['label']]).lower() == 'nan' or str(row[kr_node.column_name_map['label']]).lower() == '':
+                    temp['label'] = row[kr_node.column_name_map[node_file_id]]
                   else:
-                      temp['color'] = df[node_color_column][i] if not pd.isna(df[node_color_column][i]) else node_color_default
-                else:
-                  node_color = 2
-                  if df[node_color_column][i] not in color_set:
-                    color_set[df[node_color_column][i]] = count
-                    count += 1
-                  temp['color'] = min(color_set[df[node_color_column][i]], 9) if not pd.isna(df[node_color_column][i]) else node_color_default
+                    temp['label'] = row[kr_node.column_name_map['label']]
 
-              if node_size_column != 'None':
-                  if node_size_mapping == 'fixed':
-                      temp['size'] = df[node_size_column][i] if not pd.isna(df[node_size_column][i]) else node_size_default
-                  elif node_size_scale == 'linear':
-                      node_size = 1
-                      size_value = node_size_minimum + (df[node_size_column][i]-df[node_size_column].min()) * (node_size_maximum - node_size_minimum) / (df[node_size_column].max() - df[node_size_column].min())
-                      temp['size'] = float(size_value) if not pd.isna(df[node_size_column][i]) else node_size_default
-                  elif node_size_scale == 'log':
-                      node_size = 1
-                      if df[node_size_column].min() == 0:
-                        log_min = 0
+                  if tooltip_column != None:
+                    if (not pd.isna(row[kr_node.column_name_map[tooltip_column]])) and str(row[kr_node.column_name_map[tooltip_column]]) != '':
+                      temp['tooltip'] = str(row[kr_node.column_name_map[tooltip_column]]) 
+                    else:
+                      temp['tooltip'] = str(row[kr_node.column_name_map[node_file_id]]) 
+                  else:
+                    temp['tooltip'] = temp[kr_node.column_name_mapp['label']]
+
+
+                  if node_color_column != None:
+                    if node_color_style == 'gradient':
+                      if node_color_scale == 'linear':
+                          node_color = 1
+                          color_value = (row[kr_node.column_name_map[node_color_column]] - min(node_color_list)) / (max(node_color_list) - min(node_color_list))
+                          temp['color'] = float(color_value) if not pd.isna(row[kr_node.column_name_map[node_color_column]]) else node_color_default
+                      elif node_color_scale == 'log':
+                          node_color = 1
+                          if min(node_color_list) == 0:
+                            log_min = 0
+                          else:
+                            log_min = math.log(min(node_color_list), base)
+
+                          if max(node_color_list)  == 0:
+                            log_max = 0
+                          else:
+                            log_max = math.log(max(node_color_list), base)
+
+                          if row[kr_node.column_name_map[node_color_column]] == 0:
+                            log_cur = 0
+                          else:
+                            log_cur = math.log(row[kr_node.column_name_map[node_color_column]], base)
+
+                          color_value = 0 + (log_cur - log_min) * (1 - 0) / (log_max - log_min)
+                          temp['color'] = float(color_value) if not pd.isna(row[kr_node.column_name_map[node_color_column]]) else node_color_default
                       else:
-                        log_min = math.log(df[node_size_column].min(), base)
+                          temp['color'] = row[kr_node.column_name_map[node_color_column]] if not pd.isna(row[kr_node.column_name_map[node_color_column]]) else node_color_default
+                    else:
+                      node_color = 2
+                      if row[node_color_column] not in color_set:
+                        color_set[row[kr_node.column_name_map[node_color_column]]] = count
+                        count += 1
+                      temp['color'] = min(color_set[row[kr_node.column_name_map[node_color_column]]], 9) if not pd.isna(row[kr_node.column_name_map[node_color_column]]) else node_color_default
 
-                      if df[node_size_column].max() == 0:
-                        log_max = 0
-                      else:
-                        log_max = math.log(df[node_size_column].max(), base)
+                  if node_size_column != None:
+                      if node_size_mapping == 'fixed':
+                          temp['size'] = row[kr_node.column_name_map[node_size_column]] if not pd.isna(row[kr_node.column_name_map[node_size_column]]) else node_size_default
+                      elif node_size_scale == 'linear':
+                          node_size = 1
+                          size_value = node_size_minimum + (row[kr_node.column_name_map[node_size_column]]-min(node_size_list)) * (node_size_maximum - node_size_minimum) / (max(node_size_list) - min(node_size_list))
+                          temp['size'] = float(size_value) if not pd.isna(row[kr_node.column_name_map[node_size_column]]) else node_size_default
+                      elif node_size_scale == 'log':
+                          node_size = 1
+                          if min(node_size_list) == 0:
+                            log_min = 0
+                          else:
+                            log_min = math.log(min(node_size_list), base)
 
-                      if df[node_size_column][i] == 0:
-                        log_cur = 0
-                      else:
-                        log_cur = math.log(df[node_size_column][i], base)
+                          if max(node_size_list) == 0:
+                            log_max = 0
+                          else:
+                            log_max = math.log(max(node_size_list), base)
+
+                          if row[kr_node.column_name_map[node_size_column]] == 0:
+                            log_cur = 0
+                          else:
+                            log_cur = math.log(row[kr_node.column_name_map[node_size_column]], base)
 
 
-                      size_value = node_size_minimum + (log_cur - log_min) * (node_size_maximum - node_size_minimum) / (log_max - log_min)
-                      temp['size'] = (size_value) if not pd.isna(df[node_size_column][i]) else node_size_default
+                          size_value = node_size_minimum + (log_cur - log_min) * (node_size_maximum - node_size_minimum) / (log_max - log_min)
+                          temp['size'] = (size_value) if not pd.isna(row[kr_node.column_name_map[node_size_column]]) else node_size_default
 
-              else:
-                  temp['size'] = node_size_default
+                  else:
+                      temp['size'] = node_size_default
 
-              if 'x' in df.columns:
-                 temp['fx'] = float(df['x'][i])
-                 temp['fy'] = float(df['y'][i])
-              d['nodes'].append(temp)
+                  if 'x' in row.columns:
+                     temp['fx'] = float(row[kr_node.column_name_map['x']])
+                     temp['fy'] = float(row[kr_node.column_name_map['y']])
+                  d['nodes'].append(temp)
+            kr_node.close()
+
 
         f = open(output_kgtk_file, 'w')
         
@@ -586,7 +614,7 @@ def run(input_file: KGTKFiles,
           node_text_format = node_categorical_scale + '[node.color]'
 
 
-        if node_border_color != 'None':
+        if node_border_color != None:
             node_text_format = "'" + node_border_color + "'"
 
         if direction == 'arrow':
@@ -700,6 +728,7 @@ def run(input_file: KGTKFiles,
         f.write('''  </script>
 </body>''')
         kr.close()
+
 
         return 0
 
