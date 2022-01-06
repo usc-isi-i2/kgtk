@@ -113,7 +113,5 @@ Optional:
 ```
 kgtk visualize-force-graph -i example.tsv -o default.html
 ```
-
-
-The html file is the visualization of tsv edge file.
+<img src="/visualize-force-graph-examples/1_default.png" width="150"/>
 
