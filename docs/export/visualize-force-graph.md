@@ -92,28 +92,26 @@ Edge File contains:
 - `node1`: the subject column (source node)
 - `label`: the predicate column (property name)
 - `node2`: the object column (target node)
-- `node1;label`: the subject label (source node)
-- `label;label`: the predicate label (property name)
-- `node2;label`: the object label (target node)
 
     
 Optional:
-- `thickness`: thickness of edge (property name)
-- `color`: color(string, float from 0-1, or hex color)
-    
+- `node1;label`: the subject label (source node)
+- `label;label`: the predicate label (property name)
+- `node2;label`: the object label (target node)
  
 Node File contains:
-- `id`: id of the node
-- `color`: color(string, float from 0-1, or hex color)
-- `node;label`: the node label
+- `id`: id of the node. Default is 'id' col, but can be configured through --node-file-id option.
+
 Optional:
+- `label`: the node label
 - `x`: x_coordinate of node
 - `y`: y_coordinate of node
 
 ## Examples
 
+## 1. Default
 ```
-kgtk visualize-force-graph -i examples/docs/visualize_force_graph_example.tsv --direction arrow --show-edge-label True -o graph.html
+kgtk visualize-force-graph -i example.tsv -o default.html
 ```
 
 
