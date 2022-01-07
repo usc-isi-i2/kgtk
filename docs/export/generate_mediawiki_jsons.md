@@ -125,12 +125,7 @@ The following tsv file is a minimal sample `input.tsv` file.
 ```bash
 kgtk cat -i examples/docs/generate-mediawiki-jsons-input.tsv
 ```
-| node1 | label | node2 | id |
-| -- | -- | -- | -- |
-| Q2140726727_mag_author | P6366 | 2140726727 | id1 |
-| Q2140726727_mag_author | label | 'Zunyou Wu'@en | id2 |
-| Q2140726727_mag_author | P1416 | Q184490438_mag_affiliation | id3 |
-| Q184490438_mag_affiliation | label | 'Chinese Center For Disease Control And Prevention'@en | id4 |
+
 
 
 Similar to `generate-wikidata_triples`, we need a `property` file
@@ -140,10 +135,45 @@ to declare the properties' data_values. Its content is below:
 kgtk cat -i examples/docs/generate-mediawiki-jsons-properties.tsv
 ```
 
-| node1 | label | node2 |
-| -- | -- | -- |
-| P6366 | property_type | external-identifier |
-| P1416 | property_type | external-identifier |
+Edge File
+
+|id     |node;label|is_country|type|degree|type_missing|population|
+|-------|----------|----------|----|------|------------|----------|
+|Alice  |‘Alice’@en|0         |human|4     |            |          |
+|Susan  |‘Susan’@en|0         |human|4     |            |          |
+|John   |‘John’@en |0         |human|4     |            |          |
+|Claudia|‘Claudia’@en|0         |human|3     |            |          |
+|Ulrich |‘Ulrich’@en|0         |human|4     |            |          |
+|Fritz  |‘Fritz’@en|0         |human|4     |            |          |
+|USA    |‘USA’@en  |1         |country|5     |country     |300       |
+|Germany|‘Germany’@en|1         |country|5     |country     |50        |
+|Brazil |‘Brazil’@en|1         |country|2     |country     |200       |
+
+
+
+Node File
+
+|node1  |label |node2  |weight|
+|-------|------|-------|------|
+|Alice  |friend|Susan  |0.9   |
+|Susan  |friend|John   |0.3   |
+|John   |friend|Claudia|      |
+|Ulrich |friend|John   |      |
+|Fritz  |friend|Ulrich |      |
+|Fritz  |friend|Alice  |      |
+|Alice  |born  |USA    |      |
+|Susan  |born  |USA    |      |
+|John   |born  |USA    |      |
+|Claudia|born  |Germany|      |
+|Ulrich |born  |Germany|      |
+|Fritz  |born  |Germany|      |
+|Alice  |lives |Germany|      |
+|Susan  |lives |USA    |      |
+|John   |lives |Brazil |      |
+|Claudia|lives |Germany|      |
+|Ulrich |lives |Brazil |      |
+|Fritz  |lives |Germany|      |
+
 
 With the simplest command:
 
