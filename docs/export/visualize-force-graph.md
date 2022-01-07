@@ -118,5 +118,5 @@ kgtk visualize-force-graph -i example.tsv -o default.html
 <img src="https://github.com/GrantXie/kgtk/tree/dev_1/docs/images/visualize-force-graph-examples/1_default.jpg" alt="My cool logo"/>
 
 
-<img src="https://github.com/GrantXie/kgtk/raw/dev_1/docs/images/visualize-force-graph-examples/1_default.jpg" width="100"/>
+<img src="https://github.com/GrantXie/kgtk/raw/dev_1/docs/images/visualize-force-graph-examples/1_default.jpg" width="200"/>
 
