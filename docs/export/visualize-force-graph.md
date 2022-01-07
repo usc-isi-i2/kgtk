@@ -107,7 +107,7 @@ Optional:
 - `x`: x_coordinate of node
 - `y`: y_coordinate of node
 
-Both node file and edge file can contain additional column. These columns can be used to 
+Both node file and edge file can contain additional columns. These columns can be used to provide more information as needed (see examples below)
 
 ## Examples
 
