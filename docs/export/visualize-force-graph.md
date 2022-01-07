@@ -159,7 +159,7 @@ Node File
 ```
 kgtk visualize-force-graph -i example.tsv -o default.html
 ```
-
+This is the default version of this command, only producing a graph with default color, width and size
 
 <img src="https://github.com/GrantXie/kgtk/raw/dev_1/docs/images/visualize-force-graph-examples/1_default.jpg" width="300"/>
 
@@ -172,6 +172,7 @@ kgtk visualize-force-graph -i example.tsv \
 --node-color-style categorical \
 -o show_countries.html
 ```
+This customization uses is_country as columns for assigning colors. --node-color-style categorical indicates that we assign a unique color to each different string. The default d3.schemeCategory10 supports a max of 10 different colors.
 <img src="https://github.com/GrantXie/kgtk/raw/dev_1/docs/images/visualize-force-graph-examples/2_show_country.jpg" width="300"/>
 
 ## 3. Show types
@@ -182,6 +183,7 @@ kgtk visualize-force-graph -i example.tsv \
 --node-color-style categorical \
 -o show_types.html
 ```
+This customization uses type as columns for assigning colors. --node-color-style categorical indicates that we assign a unique color to each different string. The default d3.schemeCategory10 supports a max of 10 different colors 
 <img src="https://github.com/GrantXie/kgtk/raw/dev_1/docs/images/visualize-force-graph-examples/3_show_type.jpg" width="300"/>
 
 ## 4. Handle missing values
@@ -192,6 +194,8 @@ kgtk visualize-force-graph -i example.tsv \
 --node-color-style categorical \
 -o show_types_missing.html
 ```
+
+This customization uses type_missing as columns for assigning colors. --node-color-style categorical indicates that we assign a unique color to each different string. The default d3.schemeCategory10 supports a max of 10 different colors. Notice here there are missing values. All missing values will be assigned a color. 
 <img src="https://github.com/GrantXie/kgtk/raw/dev_1/docs/images/visualize-force-graph-examples/4_missing_value.jpg" width="300"/>
 
 ## 5. Node color gradient
@@ -203,6 +207,7 @@ kgtk visualize-force-graph -i example.tsv \
 --node-color-scale log \
 -o show_color_gradient.html
 ```
+This customization uses degree as columns for assigning colors. --node-color-style gradient indicates that we assign color based on interpolation of number in node-color-column to 0-1. The default scale is d3.interpolateRdBu.
 <img src="https://github.com/GrantXie/kgtk/raw/dev_1/docs/images/visualize-force-graph-examples/5_node_color_gradient.jpg" width="300"/>
 
 ## 6. Show Edge Color
@@ -212,6 +217,7 @@ kgtk visualize-force-graph -i example.tsv \
 --edge-color-style categorical \
 -o show_edge_color.html
 ```
+This customization uses label as categorical coloring. Each different label will be assigned a different color. The default d3.schemeCategory10 supports a max of 10 different colors.
 <img src="https://github.com/GrantXie/kgtk/raw/dev_1/docs/images/visualize-force-graph-examples/6_edge_color_categorical.jpg" width="300"/>
 
 
@@ -226,6 +232,7 @@ kgtk visualize-force-graph -i example.tsv \
 --node-color-scale linear \
 -o show_edge_node_color.html
 ```
+This customization uses label as categorical edge coloring and degree for gradient node coloring.
 <img src="https://github.com/GrantXie/kgtk/raw/dev_1/docs/images/visualize-force-graph-examples/7_edge_node_color.jpg" width="300"/>
 
 
@@ -240,6 +247,7 @@ kgtk visualize-force-graph -i example.tsv \
 --node-size-scale log \
 -o node_size_log1.html
 ```
+This customization uses population to interpolate node size based on log scale. Resulting range would be from 2 to 6. Any node with no value in population columns will be assigned the default size (6)
 <img src="https://github.com/GrantXie/kgtk/raw/dev_1/docs/images/visualize-force-graph-examples/8_node_size.jpg" width="300"/>
 
 ## 9. Edge width
@@ -253,6 +261,7 @@ kgtk visualize-force-graph -i example.tsv \
 -o show_edge_thickness.html
 ```
 <img src="https://github.com/GrantXie/kgtk/raw/dev_1/docs/images/visualize-force-graph-examples/9_edge_width.jpg" width="300"/>
+This customization use weight column in edge file to interpolate edge width from log scale. Resulting range will be from 2 to 5.  Any edge with no value in weight columns will be assigned the default size (2)
 
 ## 10. Text node
 ```
@@ -264,4 +273,5 @@ kgtk visualize-force-graph -i example.tsv \
 --text-node above \
 -o show_node_label.html
 ```
+This customization uses degree column in node file to interpolate color based on linear scale. Also the label of each nodes will be showing as text above nodes.
 <img src="https://github.com/GrantXie/kgtk/raw/dev_1/docs/images/visualize-force-graph-examples/10_text_node.jpg" width="300"/>
