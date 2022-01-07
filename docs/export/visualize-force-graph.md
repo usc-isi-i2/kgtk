@@ -117,3 +117,105 @@ kgtk visualize-force-graph -i example.tsv -o default.html
 
 <img src="https://github.com/GrantXie/kgtk/raw/dev_1/docs/images/visualize-force-graph-examples/1_default.jpg" width="300"/>
 
+
+## 2. Show countries
+```
+kgtk visualize-force-graph -i example.tsv \
+--node-file example_node.tsv \
+--node-color-column is_country \
+--node-color-style categorical \
+-o show_countries.html
+```
+<img src="https://github.com/GrantXie/kgtk/raw/dev_1/docs/images/visualize-force-graph-examples/2_show_country.jpg" width="300"/>
+
+## 3. Show types
+```
+kgtk visualize-force-graph -i example.tsv \
+--node-file example_node.tsv \
+--node-color-column type \
+--node-color-style categorical \
+-o show_types.html
+```
+<img src="https://github.com/GrantXie/kgtk/raw/dev_1/docs/images/visualize-force-graph-examples/3_show_type.jpg" width="300"/>
+
+## 4. Handle missing values
+```
+kgtk visualize-force-graph -i example.tsv \
+--node-file example_node.tsv \
+--node-color-column type_missing \
+--node-color-style categorical \
+-o show_types_missing.html
+```
+<img src="https://github.com/GrantXie/kgtk/raw/dev_1/docs/images/visualize-force-graph-examples/4_missing_value.jpg" width="300"/>
+
+## 5. Node color gradient
+```
+kgtk visualize-force-graph -i example.tsv \
+--node-file example_node.tsv \
+--node-color-column degree \
+--node-color-style gradient \
+--node-color-scale log \
+-o show_color_gradient.html
+```
+<img src="https://github.com/GrantXie/kgtk/raw/dev_1/docs/images/visualize-force-graph-examples/5_node_color_gradient.jpg" width="300"/>
+
+## 6. Show Edge Color
+```
+kgtk visualize-force-graph -i example.tsv \
+--edge-color-column label \
+--edge-color-style categorical \
+-o show_edge_color.html
+```
+<img src="https://github.com/GrantXie/kgtk/raw/dev_1/docs/images/visualize-force-graph-examples/6_edge_color_categorical.jpg" width="300"/>
+
+
+## 7. Show Edge and Node Color
+```
+kgtk visualize-force-graph -i example.tsv \
+--edge-color-column label \
+--edge-color-style categorical \
+--node-file example_node.tsv \
+--node-color-column degree \
+--node-color-style gradient \
+--node-color-scale linear \
+-o show_edge_node_color.html
+```
+<img src="https://github.com/GrantXie/kgtk/raw/dev_1/docs/images/visualize-force-graph-examples/7_edge_and_node_color.jpg" width="300"/>
+
+
+## 8. Node Size
+```
+kgtk visualize-force-graph -i example.tsv \
+--node-file example_node.tsv \
+--node-size-column population \
+--node-size-minimum 2.0 \
+--node-size-maximum 6.0 \
+--node-size-default 4.0 \
+--node-size-scale log \
+-o node_size_log1.html
+```
+<img src="https://github.com/GrantXie/kgtk/raw/dev_1/docs/images/visualize-force-graph-examples/8_node_size.jpg" width="300"/>
+
+## 9. Edge width
+```
+kgtk visualize-force-graph -i example.tsv \
+--edge-width-column weight \
+--edge-width-minimum 2.0 \
+--edge-width-maximum 5.0 \
+--edge-width-default 2.0 \
+--edge-width-scale log \
+-o show_edge_thickness.html
+```
+<img src="https://github.com/GrantXie/kgtk/raw/dev_1/docs/images/visualize-force-graph-examples/9_edge_width.jpg" width="300"/>
+
+## 10. Text node
+```
+kgtk visualize-force-graph -i example.tsv \
+--node-file example_node.tsv \
+--node-color-column degree \
+--node-color-style gradient \
+--node-color-scale linear \
+--text-node above \
+-o show_node_label.html
+```
+<img src="https://github.com/GrantXie/kgtk/raw/dev_1/docs/images/visualize-force-graph-examples/10_text_node.jpg" width="300"/>
