@@ -107,7 +107,53 @@ Optional:
 - `x`: x_coordinate of node
 - `y`: y_coordinate of node
 
+Both node file and edge file can contain additional column. These columns can be used to 
+
 ## Examples
+
+```bash
+kgtk cat -i examples/docs/generate-mediawiki-jsons-properties.tsv
+```
+
+Edge File
+
+|id     |node;label|is_country|type|degree|type_missing|population|
+|-------|----------|----------|----|------|------------|----------|
+|Alice  |‘Alice’@en|0         |human|4     |            |          |
+|Susan  |‘Susan’@en|0         |human|4     |            |          |
+|John   |‘John’@en |0         |human|4     |            |          |
+|Claudia|‘Claudia’@en|0         |human|3     |            |          |
+|Ulrich |‘Ulrich’@en|0         |human|4     |            |          |
+|Fritz  |‘Fritz’@en|0         |human|4     |            |          |
+|USA    |‘USA’@en  |1         |country|5     |country     |300       |
+|Germany|‘Germany’@en|1         |country|5     |country     |50        |
+|Brazil |‘Brazil’@en|1         |country|2     |country     |200       |
+
+
+
+Node File
+
+|node1  |label |node2  |weight|
+|-------|------|-------|------|
+|Alice  |friend|Susan  |0.9   |
+|Susan  |friend|John   |0.3   |
+|John   |friend|Claudia|      |
+|Ulrich |friend|John   |      |
+|Fritz  |friend|Ulrich |      |
+|Fritz  |friend|Alice  |      |
+|Alice  |born  |USA    |      |
+|Susan  |born  |USA    |      |
+|John   |born  |USA    |      |
+|Claudia|born  |Germany|      |
+|Ulrich |born  |Germany|      |
+|Fritz  |born  |Germany|      |
+|Alice  |lives |Germany|      |
+|Susan  |lives |USA    |      |
+|John   |lives |Brazil |      |
+|Claudia|lives |Germany|      |
+|Ulrich |lives |Brazil |      |
+|Fritz  |lives |Germany|      |
+
 
 ## 1. Default
 ```
