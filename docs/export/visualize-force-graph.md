@@ -180,7 +180,7 @@ kgtk visualize-force-graph -i example.tsv \
 --node-color-scale linear \
 -o show_edge_node_color.html
 ```
-<img src="https://github.com/GrantXie/kgtk/raw/dev_1/docs/images/visualize-force-graph-examples/7_edge_and_node_color.jpg" width="300"/>
+<img src="https://github.com/GrantXie/kgtk/raw/dev_1/docs/images/visualize-force-graph-examples/7_edge_node_color.jpg" width="300"/>
 
 
 ## 8. Node Size
