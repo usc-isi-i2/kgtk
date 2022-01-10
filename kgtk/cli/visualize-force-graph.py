@@ -5,6 +5,8 @@ import json
 from argparse import Namespace, SUPPRESS
 import sys
 
+from kgtk.functions import kgtk, kypher
+
 import math
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
@@ -110,7 +112,7 @@ def add_arguments_extended(parser: KGTKArgumentParser,
                         help="Specify mapping (auto, fixed) used for node color")
 
     parser.add_argument('--node-color-default', dest='node_color_default', type=str,
-                        default=None,
+                        default='#000000',
                         help="Specify default color for node")
 
     parser.add_argument('--node-color-scale', dest='node_color_scale', type=str,
@@ -148,7 +150,7 @@ def add_arguments_extended(parser: KGTKArgumentParser,
                         default='id',
                         help="Specify id column name in node file, default is id")
 
-    parser.add_argument('--show-text', dest='show_text', type=int,
+    parser.add_argument('--show-text-limit', dest='show_text_limit', type=int,
                         default=500,
                         help="When node number is greater than this number, will not show text as label, default is 500")
 
@@ -213,7 +215,7 @@ def run(input_file: KGTKFiles,
         node_color_column: str = None,
         node_color_style: str = None,
         node_color_mapping: str = None,
-        node_color_default: str = None,
+        node_color_default: str = '#000000',
         node_color_scale: str = None,
         node_size_column: str = None,
         node_size_mapping: str = None,
@@ -222,7 +224,7 @@ def run(input_file: KGTKFiles,
         node_size_maximum: float = 5.0,
         node_size_scale: str = None,
         node_file_id: str = 'id',
-        show_text: int = 250,
+        show_text_limit: int = 500,
         node_border_color: str = None,
         tooltip_column: str = None,
         text_node: str = None,
@@ -273,30 +275,17 @@ def run(input_file: KGTKFiles,
                                           very_verbose=very_verbose,
         )
 
-
         d = {}
         nodes = set()
         edges = []
         base = math.e
 
 
-        if node_size_minimum == 0.0:
-            node_size_minimum = 0.01
+        if node_size_minimum == 0.0 and node_size_scale == 'log':
+            raise ValueError("node size cannot be 0 when using log scale")
 
-        if edge_width_minimum == 0:
-            edge_width_minimum = 0.01
-
-        if 'node1' not in kr.column_name_map:
-          print('No node1 col in edge file', file=sys.stderr, flush=True)
-        if 'node2' not in kr.column_name_map:
-          print('No node2 col in edge file', file=sys.stderr, flush=True)
-
-
-        if 'node1;label' in kr.column_name_map and node_file != None:
-          print('node1;label in edge file will not be read due to the existence of node file', file=sys.stderr, flush=True)
-
-        if 'node2;label' in kr.column_name_map and node_file != None:
-          print('node2;label in edge file will not be read due to the existence of node file', file=sys.stderr, flush=True)
+        if edge_width_minimum == 0 and edge_width_scale == 'log':
+            raise ValueError("edge width cannot be 0 when using log scale")
 
         n1 = kr.column_name_map['node1']
         n2 = kr.column_name_map['node2']
@@ -312,15 +301,12 @@ def run(input_file: KGTKFiles,
           l2 = kr.column_name_map['label;label']
 
         if 'node1;label' not in kr.column_name_map and node_file == None:
-          print('node1;label not in edge file', file=sys.stderr, flush=True)
           l1 = kr.column_name_map['node1']
 
         if 'node2;label' not in kr.column_name_map and node_file == None:
-          print('node2;label not in edge file', file=sys.stderr, flush=True)
           l3 = kr.column_name_map['node2']
 
         if 'label;label' not in kr.column_name_map:
-          print('No label;label col in edge file', file=sys.stderr, flush=True)
           l2 = kr.column_name_map['label']
         else:
           l2 = kr.column_name_map['label;label']
@@ -483,11 +469,8 @@ def run(input_file: KGTKFiles,
                                               mode = KgtkReaderMode.NONE,
             )
 
-            if 'id' not in kr_node.column_name_map:
-                print('Missing id column in node file', file=sys.stderr, flush=True)
-            if 'label' not in kr_node.column_name_map:
-                print('Missing label column in node file', file=sys.stderr, flush=True)
-
+            if node_file_id not in kr_node.column_name_map:
+                raise ValueError("no id column in node file")
 
             for row in kr_node:      
                   temp = {'id': row[kr_node.column_name_map[node_file_id]]}
@@ -715,7 +698,7 @@ def run(input_file: KGTKFiles,
     ''')
 
 
-        if text_node != 'false' and show_text > len(d['nodes']):
+        if text_node != 'false' and show_text_limit > len(d['nodes']):
 
             if text_node == 'center':
                 y_move = 0
@@ -764,3 +747,13 @@ def run(input_file: KGTKFiles,
         raise KGTKException("Exit requested")
     except Exception as e:
         raise KGTKException(str(e))
+
+
+
+
+
+
+
+
+
+
