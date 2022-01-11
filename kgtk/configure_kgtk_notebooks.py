@@ -59,6 +59,7 @@ class ConfigureKGTK(object):
                        project_name: str = "kgtk",
                        graph_cache_path: str = None,
                        json_config_file: str = None,
+                       additional_files: dict = None,
                        debug=False):
         """
         configures the environment for a jupyter notebook.
@@ -81,6 +82,10 @@ class ConfigureKGTK(object):
                 self.graph_files.update(_files_config)
             except Exception as e:
                 print(e)
+
+        if additional_files is not None:
+            self.graph_files.update(additional_files)
+
         # If the input graph path is not None, it is assumed it has the files required
         if input_graph_path is None:
             input_graph_path = f"{self.user_home}/{self.default_folder}/input"

@@ -71,6 +71,7 @@ nav:
       - 'reachable-nodes': 'analysis/reachable_nodes.md'
       - 'text-embeddings': 'analysis/text_embedding.md'
   - Using pipes: pipes.md
+  - Configure KGTK Notebooks: configure-kgtk-notebooks-readme.md
 
 theme:
   name: material
