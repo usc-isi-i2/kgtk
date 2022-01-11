@@ -112,7 +112,7 @@ Both node file and edge file can contain additional columns. These columns can b
 ## Examples
 
 ```bash
-kgtk cat -i examples/docs/generate-mediawiki-jsons-properties.tsv
+kgtk cat -i examples/docs/visualize_force_graph_example2.tsv
 ```
 
 Edge File
@@ -129,7 +129,9 @@ Edge File
 |Germany|‘Germany’@en|1         |country|5     |country     |50        |
 |Brazil |‘Brazil’@en|1         |country|2     |country     |200       |
 
-
+```bash
+kgtk cat -i examples/docs/visualize_force_graph_example2_node.tsv
+```
 
 Node File
 
@@ -157,7 +159,7 @@ Node File
 
 ## 1. Default
 ```
-kgtk visualize-force-graph -i example.tsv -o default.html
+kgtk visualize-force-graph -i examples/docs/visualize_force_graph_example2.tsv -o default.html
 ```
 This is the default version of this command, only producing a graph with default color, width and size
 
@@ -166,8 +168,8 @@ This is the default version of this command, only producing a graph with default
 
 ## 2. Show countries
 ```
-kgtk visualize-force-graph -i example.tsv \
---node-file example_node.tsv \
+kgtk visualize-force-graph -i examples/docs/visualize_force_graph_example2.tsv \
+--node-file examples/docs/visualize_force_graph_example2_node.tsv \
 --node-color-column is_country \
 --node-color-style categorical \
 -o show_countries.html
@@ -178,8 +180,8 @@ This customization uses is_country as columns for assigning colors. --node-color
 
 ## 3. Show types
 ```
-kgtk visualize-force-graph -i example.tsv \
---node-file example_node.tsv \
+kgtk visualize-force-graph -i examples/docs/visualize_force_graph_example2.tsv \
+--node-file examples/docs/visualize_force_graph_example2_node.tsv \
 --node-color-column type \
 --node-color-style categorical \
 -o show_types.html
@@ -190,8 +192,8 @@ This customization uses type as columns for assigning colors. --node-color-style
 
 ## 4. Handle missing values
 ```
-kgtk visualize-force-graph -i example.tsv \
---node-file example_node.tsv \
+kgtk visualize-force-graph -i examples/docs/visualize_force_graph_example2.tsv \
+--node-file examples/docs/visualize_force_graph_example2_node.tsv \
 --node-color-column type_missing \
 --node-color-style categorical \
 -o show_types_missing.html
@@ -203,8 +205,8 @@ This customization uses type_missing as columns for assigning colors. --node-col
 
 ## 5. Node color gradient
 ```
-kgtk visualize-force-graph -i example.tsv \
---node-file example_node.tsv \
+kgtk visualize-force-graph -i examples/docs/visualize_force_graph_example2.tsv \
+--node-file examples/docs/visualize_force_graph_example2_node.tsv \
 --node-color-column degree \
 --node-color-style gradient \
 --node-color-scale log \
@@ -216,7 +218,7 @@ This customization uses degree as columns for assigning colors. --node-color-sty
 
 ## 6. Show Edge Color
 ```
-kgtk visualize-force-graph -i example.tsv \
+kgtk visualize-force-graph -i examples/docs/visualize_force_graph_example2.tsv \
 --edge-color-column label \
 --edge-color-style categorical \
 -o show_edge_color.html
@@ -228,10 +230,10 @@ This customization uses label as categorical coloring. Each different label will
 
 ## 7. Show Edge and Node Color
 ```
-kgtk visualize-force-graph -i example.tsv \
+kgtk visualize-force-graph -i examples/docs/visualize_force_graph_example2.tsv \
 --edge-color-column label \
 --edge-color-style categorical \
---node-file example_node.tsv \
+--node-file examples/docs/visualize_force_graph_example2_node.tsv \
 --node-color-column degree \
 --node-color-style gradient \
 --node-color-scale linear \
@@ -244,8 +246,8 @@ This customization uses label as categorical edge coloring and degree for gradie
 
 ## 8. Node Size
 ```
-kgtk visualize-force-graph -i example.tsv \
---node-file example_node.tsv \
+kgtk visualize-force-graph -i examples/docs/visualize_force_graph_example2.tsv \
+--node-file examples/docs/visualize_force_graph_example2_node.tsv \
 --node-size-column population \
 --node-size-minimum 2.0 \
 --node-size-maximum 6.0 \
@@ -259,7 +261,7 @@ This customization uses population to interpolate node size based on log scale. 
 
 ## 9. Edge width
 ```
-kgtk visualize-force-graph -i example.tsv \
+kgtk visualize-force-graph -i examples/docs/visualize_force_graph_example2.tsv \
 --edge-width-column weight \
 --edge-width-minimum 2.0 \
 --edge-width-maximum 5.0 \
@@ -274,8 +276,8 @@ This customization use weight column in edge file to interpolate edge width from
 
 ## 10. Text node
 ```
-kgtk visualize-force-graph -i example.tsv \
---node-file example_node.tsv \
+kgtk visualize-force-graph -i examples/docs/visualize_force_graph_example2.tsv \
+--node-file examples/docs/visualize_force_graph_example2_node.tsv \
 --node-color-column degree \
 --node-color-style gradient \
 --node-color-scale linear \
