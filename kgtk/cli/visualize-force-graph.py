@@ -165,9 +165,9 @@ def add_arguments_extended(parser: KGTKArgumentParser,
                         help="Specify option to show tooltip ")
 
     parser.add_argument('--text-node', dest='text_node', type=str,
-                        default=False,
+                        default=None,
                         help="Specify option to show text" +
-                        " (False, center, above) ")
+                        " (None, center, above), default is None")
 
     parser.add_argument('--node-categorical-scale',
                         dest='node_categorical_scale',
@@ -233,7 +233,7 @@ def run(input_file: KGTKFiles,
         show_text_limit: int = 500,
         node_border_color: str = None,
         tooltip_column: str = None,
-        text_node: str = False,
+        text_node: str = None,
         node_categorical_scale: str = 'd3.schemeCategory10',
         edge_categorical_scale: str = 'd3.schemeCategory10',
         node_gradient_scale: str = 'd3.interpolateRdBu',
