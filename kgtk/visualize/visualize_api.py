@@ -19,8 +19,6 @@ def parser():
 def to_html(input_file: KGTKFiles,
             output_file: KGTKFiles,
             errors_to_stdout: bool = False,
-            errors_to_stderr: bool = True,
-            show_options: bool = False,
             verbose: bool = False,
             very_verbose: bool = False,
             node_file: str = None,
@@ -51,7 +49,7 @@ def to_html(input_file: KGTKFiles,
             show_text_limit: int = 500,
             node_border_color: str = None,
             tooltip_column: str = None,
-            text_node: str = None,
+            text_node: str = 'false',
             node_categorical_scale: str = 'd3.schemeCategory10',
             edge_categorical_scale: str = 'd3.schemeCategory10',
             node_gradient_scale: str = 'd3.interpolateRdBu',
@@ -77,8 +75,7 @@ def to_html(input_file: KGTKFiles,
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
 
     # Build the option structures.
-    idbuilder_options: KgtkIdBuilderOptions = \
-        KgtkIdBuilderOptions.from_dict(kwargs)
+
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
 
@@ -115,17 +112,12 @@ def to_html(input_file: KGTKFiles,
 
         if node_file is None and 'node1;label' in kr.column_name_map:
             l1 = kr.column_name_map['node1;label']
+        else:
+            l1 = kr.column_name_map['node1']
 
         if node_file is None and 'node1;label' in kr.column_name_map:
             l3 = kr.column_name_map['node2;label']
-
-        if node_file is None and 'node1;label' in kr.column_name_map:
-            l2 = kr.column_name_map['label;label']
-
-        if 'node1;label' not in kr.column_name_map and node_file is None:
-            l1 = kr.column_name_map['node1']
-
-        if 'node2;label' not in kr.column_name_map and node_file is None:
+        else:
             l3 = kr.column_name_map['node2']
 
         if 'label;label' not in kr.column_name_map:
@@ -133,7 +125,6 @@ def to_html(input_file: KGTKFiles,
         else:
             l2 = kr.column_name_map['label;label']
 
-        color_d = {}
         count = 0
         color_set = {}
 
@@ -209,6 +200,7 @@ def to_html(input_file: KGTKFiles,
                 edges.append(
                     {'source': row[n1], 'target': row[n2], 'label': row[l2], 'width_orig': width_orig})
 
+        arr = []
         if edge_width_mapping == 'fixed':
             for edge in edges:
                 if pd.isna(edge['width_orig']) or str(edge['width_orig']) == '':
@@ -219,7 +211,6 @@ def to_html(input_file: KGTKFiles,
                 else:
                     edge['width'] = edge_width_default
         elif edge_width_scale == 'linear':
-            arr = []
             for edge in edges:
                 if pd.isna(edge['width_orig']) or str(edge['width_orig']) == '':
                     edge['width'] = edge_width_default
@@ -236,7 +227,6 @@ def to_html(input_file: KGTKFiles,
                 else:
                     edge['width'] = edge_width_default
         elif edge_width_scale == 'log':
-            arr = []
             for edge in edges:
                 if pd.isna(edge['width_orig']) or str(edge['width_orig']) == '':
                     edge['width'] = edge_width_default
@@ -343,7 +333,7 @@ def to_html(input_file: KGTKFiles,
                                     1:row[kr_node.column_name_map['label']].find('@') - 1]
                 elif pd.isna(row[kr_node.column_name_map['label']]) or str(
                         row[kr_node.column_name_map['label']]).lower() == 'nan' or str(
-                    row[kr_node.column_name_map['label']]).lower() == '':
+                        row[kr_node.column_name_map['label']]).lower() == '':
                     temp['label'] = row[kr_node.column_name_map[node_file_id]]
                 else:
                     temp['label'] = row[kr_node.column_name_map['label']]
@@ -360,9 +350,12 @@ def to_html(input_file: KGTKFiles,
                     temp['tooltip'] = temp['label']
 
                 if node_color_column is not None:
-                    if pd.isna(row[kr_node.column_name_map[node_color_column]]) or str(
-                            row[kr_node.column_name_map[node_color_column]]) == '':
-                        temp['color'] = node_color_default
+                    if node_color_mapping == 'fixed':
+                        if pd.isna(row[kr_node.column_name_map[node_color_column]]) or str(
+                                row[kr_node.column_name_map[node_color_column]]) == '':
+                            temp['color'] = node_color_default
+                        else:
+                            temp['color'] = row[kr_node.column_name_map[node_color_column]]
                     else:
                         if node_color_style == 'gradient':
                             if node_color_scale == 'linear':
@@ -370,20 +363,23 @@ def to_html(input_file: KGTKFiles,
                                 temp['color'] = (float(row[kr_node.column_name_map[node_color_column]]) -
                                                  min(node_color_list)) / (max(node_color_list) - min(node_color_list)) \
                                     if not pd.isna(row[kr_node.column_name_map[node_color_column]]) \
+                                    or str(row[kr_node.column_name_map[node_color_column]]) == ''\
                                     else node_color_default
                             elif node_color_scale == 'log':
                                 node_color = 1
-                                if min(node_color_list) == 0:
+                                node_color_min = min(node_color_list)
+                                node_color_max = max(node_color_list)
+                                if node_color_min == 0:
                                     log_min = 0
                                 else:
                                     log_min = math.log(
-                                        min(node_color_list), base)
+                                        node_color_min, base)
 
-                                if max(node_color_list) == 0:
+                                if node_color_max == 0:
                                     log_max = 0
                                 else:
                                     log_max = math.log(
-                                        max(node_color_list), base)
+                                        node_color_max, base)
 
                                 if float(row[kr_node.column_name_map[node_color_column]]) == 0:
                                     log_cur = 0
@@ -415,7 +411,6 @@ def to_html(input_file: KGTKFiles,
                         temp['size'] = node_size_default
                     else:
                         if node_size_scale == 'linear':
-                            node_size = 1
                             size_value = node_size_minimum + (
                                     row[kr_node.column_name_map[node_size_column]] - min(node_size_list)) * (
                                                  node_size_maximum - node_size_minimum) / (
@@ -423,8 +418,6 @@ def to_html(input_file: KGTKFiles,
                             temp['size'] = float(size_value) if not pd.isna(
                                 row[kr_node.column_name_map[node_size_column]]) else node_size_default
                         elif node_size_scale == 'log':
-                            node_size = 1
-
                             if min(node_size_list) == 0:
                                 log_min = 0
                             else:
@@ -443,7 +436,7 @@ def to_html(input_file: KGTKFiles,
 
                             size_value = node_size_minimum + (log_cur - log_min) * (
                                     node_size_maximum - node_size_minimum) / (log_max - log_min)
-                            temp['size'] = (size_value) if not pd.isna(
+                            temp['size'] = size_value if not pd.isna(
                                 row[kr_node.column_name_map[node_size_column]]) else node_size_default
 
                 else:
@@ -462,17 +455,14 @@ def to_html(input_file: KGTKFiles,
 </body>''')
         f.write('''<head>
 <style> body { margin: 0; } </style>
-
 <script src="https://cdn.jsdelivr.net/npm/d3-color@3"></script>
 <script src="https://cdn.jsdelivr.net/npm/d3-interpolate@3"></script>
 <script src="https://cdn.jsdelivr.net/npm/d3-scale-chromatic@3"></script>
 <script src="https://unpkg.com/force-graph"></script>
 <!--<script src="../../dist/force-graph.js"></script>-->
 </head>
-
 <body>
 <div id="graph"></div>
-
 <script>
    const j = ''')
         f.write(json.dumps(d, indent=4))
@@ -514,11 +504,11 @@ def to_html(input_file: KGTKFiles,
 
         if edge_color_style == 'categorical':
             f.write(
-                f'''        .linkColor((link) => link.color[0] == "#" ? link.color : 
+                f'''        .linkColor((link) => link.color[0] == "#" ? link.color :
                 {edge_categorical_scale}[link.color])''')
         elif edge_color_style == 'gradient':
             f.write(
-                f'''        .linkColor((link) => link.color[0] == "#" ? link.color : 
+                f'''        .linkColor((link) => link.color[0] == "#" ? link.color :
                 {edge_gradient_scale}(link.color))''')
         else:
             f.write('''        .linkColor((link) => link.color)''')
@@ -528,47 +518,34 @@ def to_html(input_file: KGTKFiles,
     .linkCanvasObject((link, ctx) => {
       const MAX_FONT_SIZE = 4;
       const LABEL_NODE_MARGIN = Graph.nodeRelSize() * 1.5;
-
       const start = link.source;
       const end = link.target;
-
       // ignore unbound links
       if (typeof start !== 'object' || typeof end !== 'object') return;
-
       // calculate label positioning
       const textPos = Object.assign(...['x', 'y'].map(c => ({
         [c]: start[c] + (end[c] - start[c]) / 2 // calc middle point
       })));
-
       const relLink = { x: end.x - start.x, y: end.y - start.y };
-
       const maxTextLength = Math.sqrt(Math.pow(relLink.x, 2) + Math.pow(relLink.y, 2)) - LABEL_NODE_MARGIN * 2;
-
       let textAngle = Math.atan2(relLink.y, relLink.x);
       // maintain label vertical orientation for legibility
       if (textAngle > Math.PI / 2) textAngle = -(Math.PI - textAngle);
       if (textAngle < -Math.PI / 2) textAngle = -(-Math.PI - textAngle);
-
       const label = `${link.label}`;
-
       // estimate fontSize to fit in link length
-
       const color = `rgba(${link.color}, 0.8)`;
-
       ctx.font = '1px Sans-Serif';
       const fontSize = Math.min(MAX_FONT_SIZE, maxTextLength / ctx.measureText(label).width);
       ctx.font = `${fontSize}px Sans-Serif`;
       const textWidth = ctx.measureText(label).width;
       const bckgDimensions = [textWidth, fontSize].map(n => n + fontSize * 0.2); // some padding
-
       // draw text label (with background rect)
       ctx.save();
       ctx.translate(textPos.x, textPos.y);
       ctx.rotate(textAngle);
-
       ctx.fillStyle = 'rgba(255, 255, 255)';
       ctx.fillRect(- bckgDimensions[0] / 2, - bckgDimensions[1] / 2, ...bckgDimensions);
-
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = 'darkgrey';
@@ -596,7 +573,6 @@ def to_html(input_file: KGTKFiles,
             f.write(f'''
           ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
           ctx.fillRect(node.x - bckgDimensions[0] / 2, node.y - {y_move} - bckgDimensions[1] / 2, ...bckgDimensions);
-
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ''')
@@ -652,7 +628,7 @@ class KgtkVisualize:
             node_color_column: str = None,
             node_color_style: str = None,
             node_color_mapping: str = None,
-            node_color_default: str = None,
+            node_color_default: str = '#000000',
             node_color_scale: str = None,
             node_size_column: str = None,
             node_size_mapping: str = None,
@@ -664,11 +640,12 @@ class KgtkVisualize:
             show_text_limit: int = 500,
             node_border_color: str = None,
             tooltip_column: str = None,
-            text_node: str = None,
+            text_node: str = 'false',
             node_categorical_scale: str = 'd3.schemeCategory10',
             edge_categorical_scale: str = 'd3.schemeCategory10',
             node_gradient_scale: str = 'd3.interpolateRdBu',
-            edge_gradient_scale: str = 'd3.interpolateRdBu'):
+            edge_gradient_scale: str = 'd3.interpolateRdBu',
+            kwargs={'errors_to_stderr': True, 'show_options': False}):
         self.input_file = Path(input_file)
         self.output_file = Path(output_file)
         self.errors_to_stdout = errors_to_stdout
@@ -709,6 +686,7 @@ class KgtkVisualize:
         self.edge_categorical_scale = edge_categorical_scale
         self.node_gradient_scale = node_gradient_scale
         self.edge_gradient_scale = edge_gradient_scale
+        self.kwargs = kwargs
 
     def execute(self):
         to_html(input_file=self.input_file,
@@ -750,4 +728,20 @@ class KgtkVisualize:
                 node_categorical_scale=self.node_categorical_scale,
                 edge_categorical_scale=self.edge_categorical_scale,
                 node_gradient_scale=self.node_gradient_scale,
-                edge_gradient_scale=self.edge_gradient_scale)
+                edge_gradient_scale=self.edge_gradient_scale,
+                kwargs=self.kwargs)
+
+'''
+Example 1:
+import kgtk.visualize.visualize_api as api
+kv1 = api.KgtkVisualize(input_file = 'example.tsv', 
+                        output_file = 'example2.html')
+kv1.execute()
+
+Example 2
+kv2 = api.KgtkVisualize(input_file = 'example.tsv',
+                       edge_color_column = 'weight',
+                       edge_color_style = 'gradient',
+                       output_file = 'example2.html')
+kv2.execute()
+'''
