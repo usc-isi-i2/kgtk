@@ -1,8 +1,12 @@
-"""Convert edge file to html visualization
+"""Convert edge file and optional node file to html visualization
 """
 import pandas as pd
 import json
 from argparse import Namespace, SUPPRESS
+import sys
+
+import math
+from kgtk.visualize.visualize_api import KgtkVisualize
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
@@ -10,7 +14,8 @@ from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 def parser():
     return {
         'help': 'Convert edge file to html visualization',
-        'description': 'Convert edge file (optional node file) to html graph visualization file' 
+        'description': 'Convert edge file (optional node file)' +
+        'to html graph visualization file'
     }
 
 
@@ -41,18 +46,155 @@ def add_arguments_extended(parser: KGTKArgumentParser,
     parser.add_output_file()
 
     parser.add_argument('--node-file', dest='node_file', type=str,
-                        default="None",
+                        default=None,
                         help="Specify the location of node file.")
 
     parser.add_argument('--direction', dest='direction', type=str,
-                        default="None",
-                        help="Specify direction (arrow, particle and None), default none")
+                        default=None,
+                        help="Specify direction (arrow, " +
+                        "particle and None), default none")
 
     parser.add_argument('--show-edge-label', dest='edge_label', type=bool,
                         default=False,
-                        help="Specify direction (arrow, particle and None), default none")
+                        help="Specify direction (arrow, particle and None)" +
+                        ", default none")
 
+    parser.add_argument('--edge-color-column',
+                        dest='edge_color_column', type=str,
+                        default=None,
+                        help="Specify column used for edge color")
 
+    parser.add_argument('--edge-color-style',
+                        dest='edge_color_style', type=str,
+                        default=None,
+                        help="Specify style (categorical, gradient)" +
+                        "used for edge color")
+
+    parser.add_argument('--edge-color-mapping',
+                        dest='edge_color_mapping', type=str,
+                        default=None,
+                        help="Specify mapping (auto, fixed) for edge color")
+
+    parser.add_argument('--edge-color-default',
+                        dest='edge_color_default', type=str,
+                        default='#000000',
+                        help="Specify default color for edge")
+
+    parser.add_argument('--edge-width-column',
+                        dest='edge_width_column', type=str,
+                        default=None,
+                        help="Specify column used for edge width")
+
+    parser.add_argument('--edge-width-minimum', dest='edge_width_minimum',
+                        type=float, default=1.0,
+                        help="Specify edge width minimum")
+
+    parser.add_argument('--edge-width-maximum', dest='edge_width_maximum',
+                        type=float, default=5.0,
+                        help="Specify edge width maximum")
+
+    parser.add_argument('--edge-width-mapping', dest='edge_width_mapping',
+                        type=str, default=None,
+                        help="Specify mapping (auto, fixed) for edge width")
+
+    parser.add_argument('--edge-width-default', dest='edge_width_default',
+                        type=float, default=1.0,
+                        help="Specify default width for edge")
+
+    parser.add_argument('--edge-width-scale', dest='edge_width_scale',
+                        type=str, default=None,
+                        help="Specify scale for width for edge (linear, log)")
+
+    parser.add_argument('--node-color-column', dest='node_color_column',
+                        type=str, default=None,
+                        help="Specify column used for node color")
+
+    parser.add_argument('--node-color-style', dest='node_color_style',
+                        type=str, default=None,
+                        help="Specify style (categorical, gradient)" +
+                        " used for node color")
+
+    parser.add_argument('--node-color-mapping', dest='node_color_mapping',
+                        type=str, default=None,
+                        help="Specify mapping (auto, fixed)" +
+                        " for node color")
+
+    parser.add_argument('--node-color-default', dest='node_color_default',
+                        type=str, default='#000000',
+                        help="Specify default color for node")
+
+    parser.add_argument('--node-color-scale', dest='node_color_scale',
+                        type=str, default=None,
+                        help="Specify node color scale (linear/log)")
+
+    parser.add_argument('--node-size-column', dest='node_size_column',
+                        type=str, default=None,
+                        help="Specify column used for node size")
+
+    parser.add_argument('--node-size-minimum', dest='node_size_minimum',
+                        type=float, default=1.0,
+                        help="Specify node size minimum")
+
+    parser.add_argument('--node-size-maximum', dest='node_size_maximum',
+                        type=float, default=5.0,
+                        help="Specify node size maximum")
+
+    parser.add_argument('--node-size-mapping', dest='node_size_mapping',
+                        type=str, default=None,
+                        help="Specify mapping (auto, fixed) for node size")
+
+    parser.add_argument('--node-size-default', dest='node_size_default',
+                        type=float, default=2.0,
+                        help="Specify default size for node")
+
+    parser.add_argument('--node-size-scale', dest='node_size_scale', type=str,
+                        default=None,
+                        help="Specify scale for node size (linear, log)")
+
+    parser.add_argument('--node-file-id', dest='node_file_id', type=str,
+                        default='id',
+                        help="Specify id column name in node file," +
+                        " default is id")
+
+    parser.add_argument('--show-text-limit', dest='show_text_limit', type=int,
+                        default=500,
+                        help="When node number is greater than this number, " +
+                        "will not show text as label, default is 500")
+
+    parser.add_argument('--node-border-color', dest='node_border_color',
+                        type=str, default=None,
+                        help="Specify node border color ")
+
+    parser.add_argument('--tooltip-column', dest='tooltip_column', type=str,
+                        default=None,
+                        help="Specify option to show tooltip ")
+
+    parser.add_argument('--text-node', dest='text_node', type=str,
+                        default='false',
+                        help="Specify option to show text" +
+                        " (false, center, above) ")
+
+    parser.add_argument('--node-categorical-scale',
+                        dest='node_categorical_scale',
+                        type=str, default='d3.schemeCategory10',
+                        help="Specify color categorical scale " +
+                        "for node from d3-scale-chromatic")
+
+    parser.add_argument('--edge-categorical-scale',
+                        dest='edge_categorical_scale',
+                        type=str, default='d3.schemeCategory10',
+                        help="Specify color categorical scale " +
+                        "for edge d3-scale-chromatic")
+
+    parser.add_argument('--node-gradient-scale', dest='node_gradient_scale',
+                        type=str, default='d3.interpolateRdBu',
+                        help="Specify color gradient scale" +
+                        " for node from d3-scale-chromatic")
+
+    parser.add_argument('--edge-gradient-scale', dest='edge_gradient_scale',
+                        type=str, default='d3.interpolateRdBu',
+                        help="Specify color gradient scale" +
+                        " for edge d3-scale-chromatic")
 
     KgtkIdBuilderOptions.add_arguments(parser,
                                        expert=True)  # Show all the options.
@@ -68,318 +210,82 @@ def run(input_file: KGTKFiles,
         show_options: bool = False,
         verbose: bool = False,
         very_verbose: bool = False,
-        node_file: str = "None",
-        direction: str = "None",
+        node_file: str = None,
+        direction: str = None,
         edge_label: bool = False,
+        edge_color_column: str = None,
+        edge_color_style: str = None,
+        edge_color_mapping: str = None,
+        edge_color_default: str = '#000000',
+        edge_width_column: str = None,
+        edge_width_mapping: str = None,
+        edge_width_default: float = 1.0,
+        edge_width_minimum: float = 1.0,
+        edge_width_maximum: float = 5.0,
+        edge_width_scale: str = None,
+        node_color_column: str = None,
+        node_color_style: str = None,
+        node_color_mapping: str = None,
+        node_color_default: str = '#000000',
+        node_color_scale: str = None,
+        node_size_column: str = None,
+        node_size_mapping: str = None,
+        node_size_default: float = 2.0,
+        node_size_minimum: float = 1.0,
+        node_size_maximum: float = 5.0,
+        node_size_scale: str = None,
+        node_file_id: str = 'id',
+        show_text_limit: int = 500,
+        node_border_color: str = None,
+        tooltip_column: str = None,
+        text_node: str = None,
+        node_categorical_scale: str = 'd3.schemeCategory10',
+        edge_categorical_scale: str = 'd3.schemeCategory10',
+        node_gradient_scale: str = 'd3.interpolateRdBu',
+        edge_gradient_scale: str = 'd3.interpolateRdBu',
 
         **kwargs  # Whatever KgtkFileOptions and KgtkValueOptions want.
         ) -> int:
-    # import modules locally
-    from pathlib import Path
-    import sys
-    import typing
-
-    from kgtk.exceptions import KGTKException
-    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
-    from kgtk.io.kgtkwriter import KgtkWriter
-    from kgtk.reshape.kgtkidbuilder import KgtkIdBuilder, KgtkIdBuilderOptions
-    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
-
-    input_kgtk_file: Path = KGTKArgumentParser.get_input_file(input_file)
-    output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
-
-    # Select where to send error messages, defaulting to stderr.
-    error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
-
-    # Build the option structures.
-    idbuilder_options: KgtkIdBuilderOptions =\
-    KgtkIdBuilderOptions.from_dict(kwargs)
-    reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
-    value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
-
-    # Show the final option structures for debugging and documentation.
-    try:
-
-        # First create the KgtkReader.  It provides parameters used by the ID
-        # column builder. Next, create the ID column builder, which provides a
-        # possibly revised list of column names for the KgtkWriter.  Create
-        # the KgtkWriter.  Last, process the data stream.
-
-        # Open the input file.
-        kr: KgtkReader = KgtkReader.open(input_kgtk_file,
-                                          error_file=error_file,
-                                          options=reader_options,
-                                          value_options=value_options,
-                                          verbose=verbose,
-                                          very_verbose=very_verbose,
-        )
-
-        d = {}
-        nodes = set()
-        edges = []
-
-        number = False
-        l1 = kr.column_name_map['node1;label']
-        l2 = kr.column_name_map['label;label']
-        l3 = kr.column_name_map['node2;label']
-
-        color_d = {}
-        color_count = 0
-        flag = 0
-        for row in kr:
-            if 'thickness' in kr.column_name_map:
-                width = float(row[kr.column_name_map['node2;label'][thickness]])
-            else:
-                width = 1
-            if 'color' in kr.column_name_map and '@' in row[l1]:
-                nodes.add(row[l1][1:row[l1].find('@')-1])
-                nodes.add(row[l3][1:row[l3].find('@')-1])
-                if '#' in row[kr.column_name_map['color']]:
-                    h = row[kr.column_name_map['color']].lstrip('#')
-                    s = str(tuple(int(h[i:i+2], 16) for i in (0, 2, 4)))
-                    s1 = 'rgba(' + s[1:-1]  + ', '+ str(thickness) +')'
-                    edges.append({'source': row[l1][1:row[l1].find('@')-1], 'target': row[l3][1:row[l3].find('@')-1], 'label': row[l2][1:row[l2].find('@')-1], 'color': tuple(int(h[i:i+2], 16) for i in (0, 2, 4)), 'color_s' : s1, 'width': width})
-                elif row[kr.column_name_map['color']].replace('.', '').isdigit():
-                    flag = 1
-                    number = True
-                    edges.append({'source': row[l1][1:row[l1].find('@')-1], 'target': row[l3][1:row[l3].find('@')-1], 'label': row[l2][1:row[l2].find('@')-1], 'color': row[kr.column_name_map['color']], 'width': width})
-                else:
-                    flag = 2
-                    number = True
-                    if row[kr.column_name_map['color']] not in color_set:
-                         color_set[row[kr.column_name_map['color']]] = count
-                         count += 1
-                    edges.append({'source': row[l1][1:row[l1].find('@')-1], 'target': row[l3][1:row[l3].find('@')-1], 'label': row[l2][1:row[l2].find('@')-1], 'color': min(color_set[row[kr.column_name_map['color']]], 9), 'width': width})
-            else:
-                nodes.add(row[l1])
-                nodes.add(row[l3])
-                edges.append({'source': row[l1], 'target': row[l3], 'label': row[l2], 'width': width})
-     
-
-        d['nodes'] = []
-        d['links'] = edges
-
-        if 'None' in node_file:
-            for ele in nodes:
-                d['nodes'].append({'id': ele})
-        elif '.tsv' in node_file:
-            df = pd.read_csv(node_file, sep = '\t')
-            for i in range(0, len(df)):
-                if 'x' in df.columns:
-                    h = df['color'][i].lstrip('#')
-                    s = 'rgba' + str(tuple(int(h[i:i+2], 16) for i in (0, 2, 4)))
-                    d['nodes'].append({'id': df['node;label'][i][1:df['node;label'][i].find('@')-1], 'color': s, 'fx': float(df['x'][i]), 'fy': float(df['y'][i])})
-                else:
-                    h = df['color'][i].lstrip('#')
-                    s = 'rgba' + str(tuple(int(h[i:i+2], 16) for i in (0, 2, 4)))
-                    d['nodes'].append({'id': df['node;label'][i], 'color': s})
-        else:
-            df = pd.read_csv(node_file)
-            for i in range(0, len(df)):
-                if 'x' in df.columns:
-                    h = df['color'][i].lstrip('#')
-                    s = 'rgba' + str(tuple(int(h[i:i+2], 16) for i in (0, 2, 4)))
-                    d['nodes'].append({'id': df['node;label'][i][1:df['node;label'][i].find('@')-1], 'color': s, 'fx': float(df['x'][i]), 'fy': float(df['y'][i])})
-                else:
-                    h = df['color'][i].lstrip('#')
-                    s = 'rgba' + str(tuple(int(h[i:i+2], 16) for i in (0, 2, 4)))
-                    d['nodes'].append({'id': df['node;label'][i], 'color': s})
-        
-
-        f = open(output_kgtk_file, 'w')
-        if not number:
-            f.write('''<head>
-  <style> body { margin: 0; } </style>
-
-  <script src="https://unpkg.com/force-graph"></script>
-  <!--<script src="../../dist/force-graph.js"></script>-->
-</head>
-
-<body>
-  <div id="graph"></div>
-
-  <script>
-     const j = ''')
-            f.write(json.dumps(d, indent = 4))
-            f.write('''
-      const Graph = ForceGraph()
-      (document.getElementById('graph'))
-        .graphData(j)
-        .nodeId('id')
-        .nodeLabel('id')
-        .nodeAutoColorBy('group')
-        .linkWidth((link) => link.width)''')
-
-            if direction == 'arrow':
-                f.write('''
-	        .linkDirectionalArrowLength(6)
-	        .linkDirectionalArrowRelPos(1)''')
-            elif direction == 'particle':
-                f.write('''      .linkDirectionalParticles(2)
-	      ''')
-
-            if edge_label:
-                f.write('''        .linkColor((link) => link.color_s)
-                        .linkCanvasObjectMode(() => 'after')
-        .linkCanvasObject((link, ctx) => {
-          const MAX_FONT_SIZE = 4;
-          const LABEL_NODE_MARGIN = Graph.nodeRelSize() * 1.5;
-
-          const start = link.source;
-          const end = link.target;
-
-          // ignore unbound links
-          if (typeof start !== 'object' || typeof end !== 'object') return;
-
-          // calculate label positioning
-          const textPos = Object.assign(...['x', 'y'].map(c => ({
-            [c]: start[c] + (end[c] - start[c]) / 2 // calc middle point
-          })));
-
-          const relLink = { x: end.x - start.x, y: end.y - start.y };
-
-          const maxTextLength = Math.sqrt(Math.pow(relLink.x, 2) + Math.pow(relLink.y, 2)) - LABEL_NODE_MARGIN * 2;
-
-          let textAngle = Math.atan2(relLink.y, relLink.x);
-          // maintain label vertical orientation for legibility
-          if (textAngle > Math.PI / 2) textAngle = -(Math.PI - textAngle);
-          if (textAngle < -Math.PI / 2) textAngle = -(-Math.PI - textAngle);
-
-          const label = `${link.label}`;
-
-          // estimate fontSize to fit in link length
-          
-
-          const color = `rgba(${link.color}, 0.8)`;
-
-          ctx.font = '1px Sans-Serif';
-          const fontSize = Math.min(MAX_FONT_SIZE, maxTextLength / ctx.measureText(label).width);
-          ctx.font = `${fontSize}px Sans-Serif`;
-          const textWidth = ctx.measureText(label).width;
-          const bckgDimensions = [textWidth, fontSize].map(n => n + fontSize * 0.2); // some padding
-
-          // draw text label (with background rect)
-          ctx.save();
-          ctx.translate(textPos.x, textPos.y);
-          ctx.rotate(textAngle);
-
-          ctx.fillStyle = 'rgba(255, 255, 255)';
-          ctx.fillRect(- bckgDimensions[0] / 2, - bckgDimensions[1] / 2, ...bckgDimensions);
-
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillStyle = 'darkgrey';
-          ctx.fillText(label, 0, 0);
-          ctx.restore();
-        });
-  </script>
-</body>''')
-            else:
-                f.write('''  </script>
-</body>''')
-        else:
-            f.write('''<head>
-  <style> body { margin: 0; } </style>
-
-  <script src="https://cdn.jsdelivr.net/npm/d3-color@3"></script>
-  <script src="https://cdn.jsdelivr.net/npm/d3-interpolate@3"></script>
-  <script src="https://cdn.jsdelivr.net/npm/d3-scale-chromatic@3"></script>
-  <script src="https://unpkg.com/force-graph"></script>
-  <!--<script src="../../dist/force-graph.js"></script>-->
-</head>
-
-<body>
-  <div id="graph"></div>
-
-  <script>
-     const j = ''')
-            f.write(json.dumps(d, indent = 4))
-            f.write('''
-      const Graph = ForceGraph()
-      (document.getElementById('graph'))
-        .graphData(j)
-        .nodeId('id')
-        .nodeLabel('id')
-        .nodeAutoColorBy('group')
-        .linkWidth((link) => link.width)''')
-
-            if direction == 'arrow':
-                f.write('''
-	        .linkDirectionalArrowLength(6)
-	        .linkDirectionalArrowRelPos(1)''')
-            elif direction == 'particle':
-                f.write('''      .linkDirectionalParticles(2)
-	      ''')
-
-            if flag == 1:
-                f.write('''        .linkColor((link) => d3.interpolateYlGn(link.color))''')
-            else:
-                f.write('''        .linkColor((link) =>  d3.schemeCategory10[link.color])''')
-
-
-            if edge_label:
-                f.write('''                        .linkCanvasObjectMode(() => 'after')
-        .linkCanvasObject((link, ctx) => {
-          const MAX_FONT_SIZE = 4;
-          const LABEL_NODE_MARGIN = Graph.nodeRelSize() * 1.5;
-
-          const start = link.source;
-          const end = link.target;
-
-          // ignore unbound links
-          if (typeof start !== 'object' || typeof end !== 'object') return;
-
-          // calculate label positioning
-          const textPos = Object.assign(...['x', 'y'].map(c => ({
-            [c]: start[c] + (end[c] - start[c]) / 2 // calc middle point
-          })));
-
-          const relLink = { x: end.x - start.x, y: end.y - start.y };
-
-          const maxTextLength = Math.sqrt(Math.pow(relLink.x, 2) + Math.pow(relLink.y, 2)) - LABEL_NODE_MARGIN * 2;
-
-          let textAngle = Math.atan2(relLink.y, relLink.x);
-          // maintain label vertical orientation for legibility
-          if (textAngle > Math.PI / 2) textAngle = -(Math.PI - textAngle);
-          if (textAngle < -Math.PI / 2) textAngle = -(-Math.PI - textAngle);
-
-          const label = `${link.label}`;
-
-          // estimate fontSize to fit in link length
-          
-
-          const color = `rgba(${link.color}, 0.8)`;
-
-          ctx.font = '1px Sans-Serif';
-          const fontSize = Math.min(MAX_FONT_SIZE, maxTextLength / ctx.measureText(label).width);
-          ctx.font = `${fontSize}px Sans-Serif`;
-          const textWidth = ctx.measureText(label).width;
-          const bckgDimensions = [textWidth, fontSize].map(n => n + fontSize * 0.2); // some padding
-
-          // draw text label (with background rect)
-          ctx.save();
-          ctx.translate(textPos.x, textPos.y);
-          ctx.rotate(textAngle);
-
-          ctx.fillStyle = 'rgba(255, 255, 255)';
-          ctx.fillRect(- bckgDimensions[0] / 2, - bckgDimensions[1] / 2, ...bckgDimensions);
-
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillStyle = 'darkgrey';
-          ctx.fillText(label, 0, 0);
-          ctx.restore();
-        });
-  </script>
-</body>''')
-            
-            else:
-                f.write('''  </script>
-</body>''')
-        kr.close()
-        return 0
-
-    except SystemExit as e:
-        raise KGTKException("Exit requested")
-    except Exception as e:
-        raise KGTKException(str(e))
+    kv: KgtkVisualize = KgtkVisualize(
+                        input_file=input_file,
+                        output_file=output_file,
+                        errors_to_stdout=errors_to_stdout,
+                        errors_to_stderr=errors_to_stderr,
+                        show_options=show_options,
+                        verbose=verbose,
+                        very_verbose=very_verbose,
+                        node_file=node_file,
+                        direction=direction,
+                        edge_label=edge_label,
+                        edge_color_column=edge_color_column,
+                        edge_color_style=edge_color_style,
+                        edge_color_mapping=edge_color_mapping,
+                        edge_color_default=edge_color_default,
+                        edge_width_column=edge_width_column,
+                        edge_width_mapping=edge_width_mapping,
+                        edge_width_default=edge_width_default,
+                        edge_width_minimum=edge_width_minimum,
+                        edge_width_maximum=edge_width_maximum,
+                        edge_width_scale=edge_width_scale,
+                        node_color_column=node_color_column,
+                        node_color_style=node_color_style,
+                        node_color_mapping=node_color_mapping,
+                        node_color_default=node_color_default,
+                        node_color_scale=node_color_scale,
+                        node_size_column=node_size_column,
+                        node_size_mapping=node_size_mapping,
+                        node_size_default=node_size_default,
+                        node_size_minimum=node_size_minimum,
+                        node_size_maximum=node_size_maximum,
+                        node_size_scale=node_size_scale,
+                        node_file_id=node_file_id,
+                        show_text_limit=show_text_limit,
+                        node_border_color=node_border_color,
+                        tooltip_column=tooltip_column,
+                        text_node=text_node,
+                        node_categorical_scale=node_categorical_scale,
+                        edge_categorical_scale=edge_categorical_scale,
+                        node_gradient_scale=node_gradient_scale,
+                        edge_gradient_scale=edge_gradient_scale
+                )
+    kv.execute()
