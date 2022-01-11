@@ -450,9 +450,7 @@ def to_html(input_file: KGTKFiles,
             kr_node.close()
 
         f = open(output_kgtk_file, 'w')
-
-        f.write('''  </script>
-</body>''')
+        
         f.write('''<head>
 <style> body { margin: 0; } </style>
 <script src="https://cdn.jsdelivr.net/npm/d3-color@3"></script>
