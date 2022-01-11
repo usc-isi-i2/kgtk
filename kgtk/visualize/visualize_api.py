@@ -554,7 +554,7 @@ def to_html(input_file: KGTKFiles,
     });
     ''')
 
-        if text_node != False and show_text_limit > len(d['nodes']):
+        if str(text_node) != 'False' and show_text_limit > len(d['nodes']):
 
             if text_node == 'center':
                 y_move = 0
