@@ -49,7 +49,7 @@ def to_html(input_file: KGTKFiles,
             show_text_limit: int = 500,
             node_border_color: str = None,
             tooltip_column: str = None,
-            text_node: str = 'false',
+            text_node: str = False,
             node_categorical_scale: str = 'd3.schemeCategory10',
             edge_categorical_scale: str = 'd3.schemeCategory10',
             node_gradient_scale: str = 'd3.interpolateRdBu',
@@ -554,7 +554,7 @@ def to_html(input_file: KGTKFiles,
     });
     ''')
 
-        if text_node != 'false' and show_text_limit > len(d['nodes']):
+        if text_node != False and show_text_limit > len(d['nodes']):
 
             if text_node == 'center':
                 y_move = 0
@@ -640,7 +640,7 @@ class KgtkVisualize:
             show_text_limit: int = 500,
             node_border_color: str = None,
             tooltip_column: str = None,
-            text_node: str = 'false',
+            text_node: str = False,
             node_categorical_scale: str = 'd3.schemeCategory10',
             edge_categorical_scale: str = 'd3.schemeCategory10',
             node_gradient_scale: str = 'd3.interpolateRdBu',
@@ -730,19 +730,3 @@ class KgtkVisualize:
                 node_gradient_scale=self.node_gradient_scale,
                 edge_gradient_scale=self.edge_gradient_scale,
                 kwargs=self.kwargs)
-
-
-'''
-Example 1:
-import kgtk.visualize.visualize_api as api
-kv1 = api.KgtkVisualize(input_file = 'example.tsv',
-                        output_file = 'example2.html')
-kv1.execute()
-
-Example 2
-kv2 = api.KgtkVisualize(input_file = 'example.tsv',
-                       edge_color_column = 'weight',
-                       edge_color_style = 'gradient',
-                       output_file = 'example2.html')
-kv2.execute()
-'''
