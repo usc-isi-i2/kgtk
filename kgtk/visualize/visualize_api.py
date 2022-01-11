@@ -49,7 +49,7 @@ def to_html(input_file: KGTKFiles,
             show_text_limit: int = 500,
             node_border_color: str = None,
             tooltip_column: str = None,
-            text_node: str = False,
+            text_node: str = None,
             node_categorical_scale: str = 'd3.schemeCategory10',
             edge_categorical_scale: str = 'd3.schemeCategory10',
             node_gradient_scale: str = 'd3.interpolateRdBu',
@@ -552,7 +552,7 @@ def to_html(input_file: KGTKFiles,
     });
     ''')
 
-        if str(text_node) != 'False' and show_text_limit > len(d['nodes']):
+        if text_node is not None and show_text_limit > len(d['nodes']):
 
             if text_node == 'center':
                 y_move = 0
@@ -638,7 +638,7 @@ class KgtkVisualize:
             show_text_limit: int = 500,
             node_border_color: str = None,
             tooltip_column: str = None,
-            text_node: str = False,
+            text_node: str = None,
             node_categorical_scale: str = 'd3.schemeCategory10',
             edge_categorical_scale: str = 'd3.schemeCategory10',
             node_gradient_scale: str = 'd3.interpolateRdBu',
