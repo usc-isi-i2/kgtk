@@ -731,10 +731,11 @@ class KgtkVisualize:
                 edge_gradient_scale=self.edge_gradient_scale,
                 kwargs=self.kwargs)
 
+
 '''
 Example 1:
 import kgtk.visualize.visualize_api as api
-kv1 = api.KgtkVisualize(input_file = 'example.tsv', 
+kv1 = api.KgtkVisualize(input_file = 'example.tsv',
                         output_file = 'example2.html')
 kv1.execute()
 
