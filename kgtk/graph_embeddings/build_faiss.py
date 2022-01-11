@@ -16,14 +16,13 @@ from kgtk.exceptions import KGTKException
 # - ...
 # - look up what is faiss.set_direct_map_type and if I need more params for this.
 #   - still not sure. Very little information about it is easily available
-# - verbose flag support
 # - add support for sharding
     
 
 
 
-def build_faiss(embeddings_file, embeddings_format, index_file_out, index_to_qnode_file_out,
-                max_train_examples, workers, index_string, metric_type, p=None):
+def build_faiss(embeddings_file, embeddings_format, no_input_header, index_file_out, index_to_qnode_file_out,
+                max_train_examples, workers, index_string, metric_type, p=None, verbose=False):
     
     # validate input file path
     if not os.path.exists(embeddings_file):
@@ -56,27 +55,32 @@ def build_faiss(embeddings_file, embeddings_format, index_file_out, index_to_qno
         raise KGTKException("Unrecognized value for embeddings_format parameter: {}.".format(embeddings_format) + 
                                 " Please choose one of kgtk | w2v | glove.")
         
-    # infer dim (TODO: possibly more validation? e.g. validate file format agrees with the given format?)
-    dim = infer_embedding_dim(embeddings_file, embeddings_format)
+    # file formats that have a header
+    has_header = embeddings_format == "w2v" or (embeddings_format == "kgtk" and not no_input_header)
 
-    # Find total number of lines  
-    num_lines = sum(1 for _ in open(embeddings_file, 'r'))
+    # infer dim (TODO: possibly more validation? e.g. validate file format agrees with the given format?)
+    dim = infer_embedding_dim(embeddings_file, embeddings_format, has_header)
+
+    # Find total number of lines
+    with open(embeddings_file, 'r') as f:
+        num_lines = sum(1 for _ in f)
 
     # Build the index to qnode file
     if index_to_qnode_file_out is not None:
-        print("Writing index-to-qnode file...")
+        if verbose:
+            print("Writing index-to-qnode file...")
         with open(embeddings_file, 'r') as f_in:
             with open(index_to_qnode_file_out, 'w+') as f_out:
                 f_out.write("node1\tlabel\tnode2\n") # header
-                for line_num, line in enumerate(tqdm(f_in, total=num_lines)):
-                    # skip first line if w2v format
-                    if embeddings_format == "w2v" and line_num == 0:
+                for line_num, line in enumerate(tqdm(f_in, total=num_lines) if verbose else f_in):
+                    # skip first line if there is header
+                    if has_header and line_num == 0:
                         continue
                         
                     node = line.split('\t')[0]
-                    index = line_num-1 if embeddings_format == "w2v" else line_num
+                    index = line_num-1 if has_header else line_num
                     
-                    f_out.write("{}\tindex_to_node\t{}".format(index,node))
+                    f_out.write("{}\tindex_to_node\t{}\n".format(index,node))
 
     # TODO: support...
     # vector quantization option -- done (handled by index string / index factory)
@@ -84,16 +88,17 @@ def build_faiss(embeddings_file, embeddings_format, index_file_out, index_to_qno
 
     # Load training examples for index training
     train_vecs = []
-    print("Loading training vectors...")
-    num_lines_to_read_for_training = max_train_examples if embeddings_format!="w2v" else max_train_examples + 1
+    if verbose:
+        print("Loading training vectors...")
+    num_lines_to_read_for_training = max_train_examples if not has_header else max_train_examples + 1
     num_lines_to_read_for_training = min(num_lines, num_lines_to_read_for_training)
     with open(embeddings_file, 'r') as f_in:
-        for line_num, line in enumerate(tqdm(f_in, total=num_lines_to_read_for_training)):
+        for line_num, line in enumerate(tqdm(f_in, total=num_lines_to_read_for_training) if verbose else f_in):
             # control number of lines read
             if line_num == num_lines_to_read_for_training:
                 break
-            # skip first line if w2v format
-            if embeddings_format == "w2v" and line_num == 0:
+            # skip header
+            if has_header and line_num == 0:
                 continue
             train_vecs.append(get_embedding_from_line(line, embeddings_format))
     train_vecs = np.array(train_vecs, dtype=np.float32) # faiss requires input to be np.array of floats
@@ -104,30 +109,34 @@ def build_faiss(embeddings_file, embeddings_format, index_file_out, index_to_qno
         faiss.omp_set_num_threads(workers)
     # Instantiate index with specified metric
     index = faiss.index_factory(dim, index_string, faiss_metric) # TODO -- add quantizer option / other options
-    index.verbose = True # TODO -- turn on only if verbose
+    index.verbose = verbose
     # Set metric arguement if relevant
     if metric_type == "Lp":
         index.metric_arg = metric_arg
     # TODO -- look more into what this is doing / if need to provide more options for it.
-    index.set_direct_map_type(faiss.DirectMap.Array)
+#     index.set_direct_map_type(faiss.DirectMap.Array)
 
-    print(f"Training index using {min(num_lines,max_train_examples)} examples...")
+    if verbose:
+        print(f"Training index using {min(num_lines,max_train_examples)} examples...")
     index.train(train_vecs)
 
 
     # Add all vecs to index
-    print("Adding all vectors to the trained index...")
+    if verbose:
+        print("Adding all vectors to the trained index...")
     # Start with alread-loaded vectors used for training.
-    print("Adding training vectors...")
+    if verbose:
+        print("Adding training vectors...")
     index.add(train_vecs)
     del train_vecs # free up space
     # Incrementally load and add any additional vectors in batches
     if num_lines_to_read_for_training < num_lines:
-        print(f"Incrementally loading and adding remaining vectors...")
+        if verbose:
+            print(f"Incrementally loading and adding remaining vectors...")
         vecs = []
         batch_size = max_train_examples
         with open(embeddings_file, 'r') as f_in:
-            for line_num, line in enumerate(tqdm(f_in, total=num_lines)):
+            for line_num, line in enumerate(tqdm(f_in, total=num_lines) if verbose else f_in):
                 # Skip past already-added training examples
                 if line_num < num_lines_to_read_for_training:
                     continue
@@ -148,25 +157,27 @@ def build_faiss(embeddings_file, embeddings_format, index_file_out, index_to_qno
 
 # ASSUMPTIONS: 
 # * embeddings_format has already been validated and is one of w2v, kgtk, or glove.
-def infer_embedding_dim(embeddings_file, embeddings_format):
+def infer_embedding_dim(embeddings_file, embeddings_format, has_header):
     with open(embeddings_file, 'r') as f:
-            l = f.readline().strip()
-    if embeddings_format == "w2v":
-        # node count and embedding dimension are given in the first line
-        dim = l.split("\t")[1]
-    elif embeddings_format == "kgtk":
-        # comma-separated embeddings are in the 3rd column
-        emb = l.split("\t")[2]
-        dim = len(emb.split(","))
-    else: # embeddings_format == "glove"
-        # First column is for the node, then each following column contains
-        # a dimension of the corresponding embedding
-        dim = len(l.split("\t")) - 1
+        l = f.readline().strip()
+        if embeddings_format == "w2v":
+            # node count and embedding dimension are given in the first line
+            dim = int(l.split("\t")[1])
+        elif embeddings_format == "kgtk":
+            if has_header:
+                l = f.readline().strip() # look at second line
+            # comma-separated embeddings are in the 3rd column
+            emb = l.split("\t")[2]
+            dim = len(emb.split(","))
+        else: # embeddings_format == "glove"
+            # First column is for the node, then each following column contains
+            # a dimension of the corresponding embedding
+            dim = len(l.split("\t")) - 1
     return dim
 
 # ASSUMPTIONS:
 # * embeddings_format has already been validated and is one of w2v, kgtk, or glove.
-# * if embeddings_format is w2v, then the given line is not the first line from the file.
+# * if embeddings have a header line, then the given line is not the first line from the file.
 def get_embedding_from_line(line, embeddings_format):
     # formats that have embeddings in columns starting with second column
     if embeddings_format in ["w2v", "glove"]:
