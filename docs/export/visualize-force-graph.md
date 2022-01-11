@@ -63,7 +63,7 @@ optional arguments:
                         Specify scale for node size (linear, log)
   --node-file-id NODE_FILE_ID
                         Specify id column name in node file, default is id
-  --show-text SHOW_TEXT
+  --show-text-limit SHOW_TEXT_LIMIT
                         When node number is greater than this number, will not
                         show text as label, default is 500
   --node-border-color NODE_BORDER_COLOR
@@ -71,7 +71,7 @@ optional arguments:
   --tooltip-column TOOLTIP_COLUMN
                         Specify option to show tooltip
   --text-node TEXT_NODE
-                        Specify option to show text (false, center, above)
+                        Specify option to show text (None, center, above), default is None
   --node-categorical-scale NODE_CATEGORICAL_SCALE
                         Specify color categorical scale for node from
                         d3-scale-chromatic
