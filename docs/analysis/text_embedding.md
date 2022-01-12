@@ -21,8 +21,8 @@ An example sentence is “Saint David, patron saint of Wales is a human, Catholi
 
 
 | subject  |  predicate  |  object  |
-| -- | -- |
-|  Q1    |    text_embedding   | “0.222, 0.333, ..” |
+| -- | -- | -- |
+|  Q1    |   text_embedding   | “0.222, 0.333, ..” |
 |  Q2    |   text_embedding   | “0.444, 0.555, ..” |
 ```
 
