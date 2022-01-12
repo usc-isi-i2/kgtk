@@ -9,7 +9,7 @@ The input is an kgtk format .tsv file where each line of these files contains in
 
 | id |   node1  |  relation |   node2  |  node1;label  |  node2;label |   relation;label  |  relation;dimension |   source  |  sentence|
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-|/c/en/000-/r/RelatedTo-/c/en/112-0000  |  /c/en/000 /r/RelatedTo  |  /c/en/112  |  000  |  112  |  related to  |  CN | ... |
+|/c/en/000-/r/RelatedTo-/c/en/112-0000  |  /c/en/000 | /r/RelatedTo  |  /c/en/112  |  000  |  112  |  related to  |  | CN | ... |
 
 For further format details, please refer to the KGTK data specification.
 
