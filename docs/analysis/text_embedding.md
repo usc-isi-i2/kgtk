@@ -24,7 +24,7 @@ An example sentence is “Saint David, patron saint of Wales is a human, Catholi
 | -- | -- | -- |
 |  Q1    |   text_embedding   | “0.222, 0.333, ..” |
 |  Q2    |   text_embedding   | “0.444, 0.555, ..” |
-```
+
 
 ### Run
 You can call the functions directly with given args as 
