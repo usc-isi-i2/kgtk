@@ -28,6 +28,7 @@ An example sentence is “Saint David, patron saint of Wales is a human, Catholi
 
 ### Run
 You can call the functions directly with given args as 
+
 ```
 kgtk text-embedding \ 
     -input-file / -i <string> \ # * optional, path to the file
