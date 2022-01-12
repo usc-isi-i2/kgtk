@@ -6,10 +6,11 @@ Given a kgtk format file, this command will compute the the embeddings of this f
 ## Input format
 The input is an kgtk format .tsv file where each line of these files contains information about nodes and relation. Each line is separated by tabs into columns which contains the node and relation data. For example:
 
-```
-id    node1    relation    node2    node1;label    node2;label    relation;label    relation;dimension    source    sentence
-/c/en/000-/r/RelatedTo-/c/en/112-0000    /c/en/000 /r/RelatedTo    /c/en/112    000    112    related to    CN ...
-```
+
+| id |   node1  |  relation |   node2  |  node1;label  |  node2;label |   relation;label  |  relation;dimension |   source  |  sentence|
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+|/c/en/000-/r/RelatedTo-/c/en/112-0000  |  /c/en/000 /r/RelatedTo  |  /c/en/112  |  000  |  112  |  related to  |  CN | ... |
+
 For further format details, please refer to the KGTK data specification.
 
 ## Output format
