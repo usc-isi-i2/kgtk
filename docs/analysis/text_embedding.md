@@ -19,10 +19,11 @@ To generate the embeddings, the command first generates a sentence for each node
 
 An example sentence is “Saint David, patron saint of Wales is a human, Catholic priest, Catholic bishop, and has date of death, religion and canonization status”
 
-```
-subject        predicate        object
-Q1        text_embedding    “0.222, 0.333, ..”
-Q2        text_embedding    “0.444, 0.555, ..”
+
+| subject  |  predicate  |  object  |
+| -- | -- |
+|  Q1    |    text_embedding   | “0.222, 0.333, ..” |
+|  Q2    |   text_embedding   | “0.444, 0.555, ..” |
 ```
 
 ### Run
