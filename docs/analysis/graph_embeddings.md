@@ -18,9 +18,9 @@ There are three  supported formats: glove, w2v, and kgtk.
 
 ### glove format
 When using this format, the output is a .tsv file where each line is the embedding for a node.  Each line is represented by a single node followed respectively by the components of its embedding, each in a different column, all separated by tabs. For example: 
-```
+
 |"work"  |  -0.014022544    -0.062030070    -0.012535412    -0.023111001    -0.038317516 ...
-```
+
 
 ### w2v format (default)
 When using this format, the output is a .tsv file which it is almost the same as glove format, the only difference is that the word2vec format has a first line which indicates the shape of the embedding (e.g., "9 4" for 9 entities with 4 dimensions), each column of first line is separated by tabs. Here we use w2v as our default output format. For example:
