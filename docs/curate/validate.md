@@ -645,9 +645,9 @@ Validate an input file with an empty column name:
 ```bash
 cat examples/docs/validate-empty-column-name.tsv
 ```
-~~~
-	label	node2
-~~~
+
+|   |   | label | node2 |
+| -- | -- | -- |
 
 ```bash
 kgtk validate -i examples/docs/validate-empty-column-name.tsv
@@ -672,9 +672,10 @@ messages, use `--header-error-action COMPLAIN` to continue processing.
 ```bash
 cat examples/docs/validate-empty-column-name.tsv
 ```
-~~~
-	label	node2
-~~~
+
+|   |   | label | node2 |
+| -- | -- | -- |
+
 
 ```bash
 kgtk validate -i examples/docs/validate-empty-column-name.tsv \
@@ -706,9 +707,8 @@ column names have initial whitespace.
 ```bash
 cat examples/docs/validate-column-names-initial-whitespace.tsv
 ```
-~~~
-id	 node1	 label	 node2
-~~~
+| id |  node1 |  label |  node2 | 
+|----|--------|--------|--------| 
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-initial-whitespace.tsv
@@ -740,9 +740,10 @@ whitespace is detected.
 ```bash
 cat examples/docs/validate-column-names-initial-whitespace.tsv
 ```
-~~~
-id	 node1	 label	 node2
-~~~
+
+| id |  node1 |  label |  node2 | 
+|----|--------|--------|--------| 
+
 
 ```bash
 
@@ -772,9 +773,8 @@ column names have trailing whitespace.
 ```bash
 cat examples/docs/validate-column-names-trailing-whitespace.tsv
 ```
-~~~
-id	node1 	label 	node2 
-~~~
+| id | node1  | label  | node2  | 
+|----|--------|--------|-------| 
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-trailing-whitespace.tsv
@@ -805,9 +805,8 @@ whitespace is detected.
 ```bash
 cat examples/docs/validate-column-names-trailing-whitespace.tsv
 ```
-~~~
-id	node1 	label 	node2 
-~~~
+| id | node1  | label  | node2 | 
+|----|--------|--------|-------| 
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-trailing-whitespace.tsv \
@@ -836,9 +835,8 @@ but it may be prohibited on request.
 ```bash
 cat examples/docs/validate-column-names-internal-whitespace.tsv
 ```
-~~~
-id	node 1	label	node 2
-~~~
+| id | node 1 | label | node 2 | 
+|----|--------|-------|--------| 
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-internal-whitespace.tsv \
@@ -869,9 +867,8 @@ whitespace is detected.
 ```bash
 cat examples/docs/validate-column-names-internal-whitespace.tsv
 ```
-~~~
-id	node 1	label	node 2
-~~~
+| id | node 1 | label | node 2 | 
+|----|--------|-------|--------| 
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-internal-whitespace.tsv \
@@ -899,9 +896,8 @@ column names have a comma (`,`) at the end.
 ```bash
 cat examples/docs/validate-column-names-with-comma.tsv
 ```
-~~~
-node1,	label,	node2,	id
-~~~
+| node1, | label, | node2, | id | 
+|--------|--------|--------|----| 
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-with-comma.tsv
@@ -932,9 +928,8 @@ whitespace is detected.
 ```bash
 cat examples/docs/validate-column-names-with-comma.tsv
 ```
-~~~
-node1,	label,	node2,	id
-~~~
+| node1, | label, | node2, | id | 
+|--------|--------|--------|----| 
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-with-comma.tsv \
@@ -1011,9 +1006,8 @@ Validate an input file with two `node1` columns instead of
 ```bash
 cat examples/docs/validate-column-names-with-duplicates.tsv
 ```
-~~~
-node1	label	node1	id
-~~~
+| node1 | label | node1 | id | 
+|-------|-------|-------|----| 
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-with-duplicates.tsv
@@ -1038,9 +1032,9 @@ the file to be treated as a Node file by specifying `--mode=NODE`.
 ```bash
 cat examples/docs/validate-column-names-without-required-columns.tsv
 ```
-~~~
-col1	col2	col3
-~~~
+| col1 | col2 | col3 | 
+|------|------|------| 
+
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-without-required-columns.tsv \
@@ -1066,9 +1060,10 @@ the file to be treated as a Edge file by specifying `--mode=EDGE`.
 ```bash
 cat examples/docs/validate-column-names-without-required-columns.tsv
 ```
-~~~
-col1	col2	col3
-~~~
+| col1 | col2 | col3 | 
+|------|------|------| 
+
+
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-without-required-columns.tsv \
@@ -1094,9 +1089,9 @@ and we force auto-mode sensing with `--mode=AUTO`.
 ```bash
 cat examples/docs/validate-column-names-without-required-columns.tsv
 ```
-~~~
-col1	col2	col3
-~~~
+| col1 | col2 | col3 | 
+|------|------|------| 
+
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-without-required-columns.tsv \
@@ -1121,9 +1116,8 @@ disabled with `--mode=NONE`
 ```bash
 cat examples/docs/validate-column-names-without-required-columns.tsv
 ```
-~~~
-col1	col2	col3
-~~~
+| col1 | col2 | col3 | 
+|------|------|------| 
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-without-required-columns.tsv \
@@ -1146,9 +1140,10 @@ Validate an input file with a `node1` column abd its alias `from`.
 ```bash
 cat examples/docs/validate-column-names-with-ambiguities.tsv
 ```
-~~~
-node1	label	node2	id	from
-~~~
+
+| node1 | label | node2 | id | from | 
+|-------|-------|-------|----|------| 
+
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-with-ambiguities.tsv
@@ -1177,12 +1172,11 @@ when `--empty-line-action=EXCLUDE` (the default).
 ```bash
 cat examples/docs/validate-empty-lines.tsv
 ```
-~~~
-node1	label	node2
-line1	isa	line
-
-line3	isa	line
-~~~
+| node1 | label | node2 | 
+|-------|-------|-------| 
+| line1 | isa   | line  | 
+|       |       |       | 
+| line3 | isa   | line  | 
 
 ```bash
 kgtk validate -i examples/docs/validate-empty-lines.tsv
@@ -1233,12 +1227,11 @@ Whitespace lines are silently ignored in input files during validation whe
 ```bash
 cat examples/docs/validate-whitespace-lines.tsv
 ```
-~~~
-node1	label	node2
-line1	isa	line
-		
-line3	isa	line
-~~~
+| node1 | label | node2 | 
+|-------|-------|-------| 
+| line1 | isa   | line  | 
+|       |       |       | 
+| line3 | isa   | line  | 
 
 ```bash
 kgtk validate -i examples/docs/validate-whitespace-lines.tsv
@@ -1265,12 +1258,13 @@ during validation if `fill-short-lines=False` (the default) and
 ```bash
 cat examples/docs/validate-short-lines.tsv
 ```
-~~~
-node1	label	node2
-line1	isa	line
-line2	isashortline
-line3	isa	line
-~~~
+
+| node1 | label        | node2 | 
+|-------|--------------|-------| 
+| line1 | isa          | line  | 
+| line2 | isashortline |       | 
+| line3 | isa          | line  | 
+
 
 ```bash
 kgtk validate -i examples/docs/validate-short-lines.tsv
@@ -1306,12 +1300,11 @@ will not be triggered.
 ```bash
 cat examples/docs/validate-short-lines.tsv
 ```
-~~~
-node1	label	node2
-line1	isa	line
-line2	isashortline
-line3	isa	line
-~~~
+| node1 | label        | node2 | 
+|-------|--------------|-------| 
+| line1 | isa          | line  | 
+| line2 | isashortline |       | 
+| line3 | isa          | line  | 
 
 ```bash
 kgtk validate -i examples/docs/validate-short-lines.tsv \
@@ -1336,12 +1329,12 @@ during validation if `truncate-long-lines=True` (the default) and
 ```bash
 cat examples/docs/validate-long-lines.tsv
 ```
-~~~
-node1	label	node2
-line1	isa	line
-line2	isa	long	line
-line3	isa	line
-~~~
+
+| node1 | label | node2 |      | 
+|-------|-------|-------|------| 
+| line1 | isa   | line  |      | 
+| line2 | isa   | long  | line | 
+| line3 | isa   | line  |      |
 
 ```bash
 kgtk validate -i examples/docs/validate-long-lines.tsv
@@ -1375,12 +1368,13 @@ will not be triggered.
 ```bash
 cat examples/docs/validate-long-lines.tsv
 ```
-~~~
-node1	label	node2
-line1	isa	line
-line2	isa	long	line
-line3	isa	line
-~~~
+
+| node1 | label | node2 |      | 
+|-------|-------|-------|------| 
+| line1 | isa   | line  |      | 
+| line2 | isa   | long  | line | 
+| line3 | isa   | line  |      |
+
 
 ```bash
 kgtk validate -i examples/docs/validate-long-lines.tsv \
@@ -1404,10 +1398,11 @@ This constraint is applied when `--prohibited-list-action==COMPLAIN` (the defaul
 ```bash
 cat examples/docs/validate-node1-list.tsv
 ```
-~~~
-node1	label	node2	id
-line1|line3	isa	line	id1
-~~~
+
+| node1        | label | node2 | id  | 
+|--------------|-------|-------|-----| 
+| line1\|line3 | isa   | line  | id1 | 
+
 
 ```bash
 kgtk validate -i examples/docs/validate-node1-list.tsv
@@ -1445,10 +1440,11 @@ This constraint is applied when `--prohibited-list-action==COMPLAIN` (the defaul
 ```bash
 cat examples/docs/validate-label-list.tsv
 ```
-~~~
-node1	label	node2	id
-line1	isa|equals	line	id1
-~~~
+
+| node1 | label       | node2 | id  | 
+|-------|-------------|-------|-----| 
+| line1 | isa\|equals | line  | id1 | 
+
 
 ```bash
 kgtk validate -i examples/docs/validate-label-list.tsv
@@ -1486,10 +1482,11 @@ This constraint is applied when `--prohibited-list-action==COMPLAIN` (the defaul
 ```bash
 cat examples/docs/validate-node2-list.tsv
 ```
-~~~
-node1	label	node2	id
-line1	isa	line|record	id1
-~~~
+
+| node1 | label | node2        | id  | 
+|-------|-------|--------------|-----| 
+| line1 | isa   | line\|record | id1 |
+
 
 ```bash
 kgtk validate -i examples/docs/validate-node2-list.tsv
@@ -1529,10 +1526,9 @@ removed by specifying `--prohibited-list-action=PASS` or
 ```bash
 cat examples/docs/validate-node2-list.tsv
 ```
-~~~
-node1	label	node2	id
-line1	isa	line|record	id1
-~~~
+| node1 | label | node2        | id  | 
+|-------|-------|--------------|-----| 
+| line1 | isa   | line\|record | id1 |
 
 ```bash
 kgtk validate -i examples/docs/validate-node2-list.tsv \
@@ -1582,10 +1578,11 @@ The `node1` field may not be blank in a KGTK edge file.
 ```bash
 cat examples/docs/validate-node1-blank-edge.tsv
 ```
-~~~
-node1	label	node2	id
-	isa	line	id1
-~~~
+
+| node1 | label | node2 | id  | 
+|-------|-------|-------|-----| 
+|       | isa   | line  | id1 |
+
 
 ```bash
 kgtk validate -i examples/docs/validate-node1-blank-edge.tsv
@@ -1606,10 +1603,11 @@ The `node1` field may be blank in a KGTK node file.
 ```bash
 cat examples/docs/validate-node1-blank-node.tsv
 ```
-~~~
-id	size	color	node1
-id1	large	red	
-~~~
+
+| id  | size  | color | node1 | 
+|-----|-------|-------|-------| 
+| id1 | large | red   |       |
+
 
 ```bash
 kgtk validate -i examples/docs/validate-node1-blank-node.tsv \
@@ -1634,10 +1632,9 @@ The `label` field may be blank in a KGTK edge file.
 ```bash
 cat examples/docs/validate-label-blank-edge.tsv
 ```
-~~~
-node1	label	node2	id
-line1		line	id1
-~~~
+| node1 | label | node2 | id  | 
+|-------|-------|-------|-----| 
+| line1 |       | line  | id1 |
 
 ```bash
 kgtk validate -i examples/docs/validate-label-blank-edge.tsv
@@ -1657,10 +1654,11 @@ The `label` field may be blank in a KGTK node file.
 ```bash
 cat examples/docs/validate-label-blank-node.tsv
 ```
-~~~
-id	size	color	label
-id1	large	red	
-~~~
+
+| id  | size  | color | label | 
+|-----|-------|-------|-------| 
+| id1 | large | red   |       |
+
 
 ```bash
 kgtk validate -i examples/docs/validate-label-blank-node.tsv
@@ -1680,10 +1678,11 @@ The `node2` field may not be blank in a KGTK edge file.
 ```bash
 cat examples/docs/validate-node2-blank-edge.tsv
 ```
-~~~
-node1	label	node2	id
-line1	isa		id1
-~~~
+
+| node1 | label | node2 | id  | 
+|-------|-------|-------|-----| 
+| line1 | isa   |       | id1 | 
+
 
 ```bash
 kgtk validate -i examples/docs/validate-node2-blank-edge.tsv
@@ -1704,10 +1703,11 @@ The `node2` field may be blank in a KGTK node file.
 ```bash
 cat examples/docs/validate-node2-blank-node.tsv
 ```
-~~~
-id	size	color	node2
-id1	large	red	
-~~~
+
+| id  | size  | color | node2 | 
+|-----|-------|-------|-------| 
+| id1 | large | red   |       | 
+
 
 ```bash
 kgtk validate -i examples/docs/validate-node2-blank-node.tsv
@@ -1727,10 +1727,10 @@ The `id` field may be blank in a KGTK edge file.
 ```bash
 cat examples/docs/validate-id-blank-edge.tsv
 ```
-~~~
-node1	label	node2	id
-line1	isa	line	
-~~~
+| node1 | label | node2 | id | 
+|-------|-------|-------|----| 
+| line1 | isa   | line  |    | 
+
 
 ```bash
 kgtk validate -i examples/docs/validate-id-blank-edge.tsv
@@ -1750,10 +1750,10 @@ The `id` field may not be blank in a KGTK node file.
 ```bash
 cat examples/docs/validate-id-blank-node.tsv
 ```
-~~~
-id	size	color
-	large	red
-~~~
+| id | size  | color | 
+|----|-------|-------| 
+|    | large | red   | 
+
 
 ```bash
 kgtk validate -i examples/docs/validate-id-blank-node.tsv
