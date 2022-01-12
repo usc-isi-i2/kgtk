@@ -646,7 +646,7 @@ Validate an input file with an empty column name:
 cat examples/docs/validate-empty-column-name.tsv
 ```
 
-|   |   | label | node2 |
+|    | label | node2 |
 | -- | -- | -- |
 
 ```bash
@@ -673,7 +673,7 @@ messages, use `--header-error-action COMPLAIN` to continue processing.
 cat examples/docs/validate-empty-column-name.tsv
 ```
 
-|   |   | label | node2 |
+|   | label | node2 |
 | -- | -- | -- |
 
 
