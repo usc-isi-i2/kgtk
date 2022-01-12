@@ -38,7 +38,7 @@ Here 16231 represents the number of nodes, 100 represents the dimension number o
 ### kgtk format
 When using this format, the output is a .tsv file where each line is the embedding for a node.  Each line has 3 columns, first column represents entity node, second node represent its embedding type (here is `graph_embeddings`), third column represents the entity's embeddings. For example: 
 
-| | |
+| <!-- --> | <!-- --> |
 | -- | -- |
 | Q5  |  graph_embeddings |  014022544,-0.062030070,-0.012535412,0.038317516 
 | Q6  |  graph_embeddings |  014022544,-0.062030070,-0.012535412,0.038317516 
