@@ -18,7 +18,7 @@ There are three  supported formats: glove, w2v, and kgtk.
 
 ### glove format
 When using this format, the output is a .tsv file where each line is the embedding for a node.  Each line is represented by a single node followed respectively by the components of its embedding, each in a different column, all separated by tabs. For example: 
-
+| -- | -- |
 |"work"  |  -0.014022544    -0.062030070    -0.012535412    -0.023111001    -0.038317516 ...
 
 
