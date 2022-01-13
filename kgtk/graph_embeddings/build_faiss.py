@@ -21,7 +21,7 @@ from kgtk.exceptions import KGTKException
 
 
 
-def build_faiss(embeddings_file, embeddings_format, no_input_header, index_file_out, index_to_qnode_file_out,
+def build_faiss(embeddings_file, embeddings_format, no_input_header, index_file_out, index_to_node_file_out,
                 max_train_examples, workers, index_string, metric_type, p=None, verbose=False):
     
     # validate input file path
@@ -65,12 +65,12 @@ def build_faiss(embeddings_file, embeddings_format, no_input_header, index_file_
     with open(embeddings_file, 'r') as f:
         num_lines = sum(1 for _ in f)
 
-    # Build the index to qnode file
-    if index_to_qnode_file_out is not None:
+    # Build the index to node file
+    if index_to_node_file_out is not None:
         if verbose:
-            print("Writing index-to-qnode file...")
+            print("Writing index-to-node file...")
         with open(embeddings_file, 'r') as f_in:
-            with open(index_to_qnode_file_out, 'w+') as f_out:
+            with open(index_to_node_file_out, 'w+') as f_out:
                 f_out.write("node1\tlabel\tnode2\n") # header
                 for line_num, line in enumerate(tqdm(f_in, total=num_lines) if verbose else f_in):
                     # skip first line if there is header

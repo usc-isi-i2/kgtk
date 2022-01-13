@@ -37,7 +37,7 @@ class TestBuildFaiss(unittest.TestCase):
         cli_entry("kgtk", "build_faiss", "-i", self.emb_file, "-o", self.idx_file_out, "-id2n", self.id2n_file_out,
                   "-ef", fmt, "--no_input_header", str(no_input_header), '-te', str(self.max_train_examples), 
                   '-is', self.idx_str , '-m', self.metric_type_str)
-        # validate idx2qnode output file
+        # validate idx2node output file
         with open(self.id2n_file_out, 'r') as f:
             data = f.read().splitlines()
             # one line for each word + a header

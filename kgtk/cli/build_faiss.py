@@ -44,9 +44,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         help="Output .idx file where the index fill be saved.",
                         metavar="INDEX_FILE_OUT")
 
-    parser.add_argument('-id2n', '--index_to_qnode_file_out', action='store', dest='index_to_qnode_file_out', required=False,
-                        help="Output Kgtk-format file containing index --> qnode.",
-                        default=None, metavar="INDEX_TO_QNODE_FILE_OUT")
+    parser.add_argument('-id2n', '--index_to_node_file_out', action='store', dest='index_to_node_file_out', required=False,
+                        help="Output Kgtk-format file containing index --> node.",
+                        default=None, metavar="INDEX_TO_NODE_FILE_OUT")
     
     # OPTIONAL #
     # Related to input file
@@ -55,7 +55,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         default="w2v", choices=["kgtk","w2v","glove"], metavar="kgtk|w2v|glove")
 
     parser.add_argument('--no_input_header', action='store', type=optional_bool, dest="no_input_header",
-                        required=False, help='If your input embeddings file is in KGTK format, this' +
+                        required=False, help='If your input embeddings file is in KGTK format, this ' +
                         'allows you to specify if it has a header line or not.',
                         const=True, nargs='?', default=False, metavar='True|False')
 
@@ -69,12 +69,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         default=None)
 
     parser.add_argument('-is', '--index_string', action='store', type=str, dest='index_string', required=False,
-                        help="A string denoting the type of index to be used. This will be passed to" +
+                        help="A string denoting the type of index to be used. This will be passed to " +
                         "faiss.index_factory()",
                         default="IVF8192_HNSW32,Flat")
 
     parser.add_argument('-m', '--metric_type', action='store', type=str, dest='metric_type', required=False,
-                        help="A string denoting the Faiss metric to be used. This will be passed to" +
+                        help="A string denoting the Faiss metric to be used. This will be passed to " +
                         "faiss.index_factory().",
                         default="L2", choices=["Inner_product","L2","L1","Linf","Lp","Canberra","BrayCurtis","JensenShannon"],
                         metavar="Inner_product|L2|L1|Linf|Lp|Canberra|BrayCurtis|JensenShannon")
@@ -101,7 +101,7 @@ def run(**kwargs):
                     kwargs['embeddings_format'],
                     kwargs['no_input_header'],
                     kwargs['index_file_out'],
-                    kwargs['index_to_qnode_file_out'],
+                    kwargs['index_to_node_file_out'],
                     kwargs['max_train_examples'],
                     kwargs['workers'],
                     kwargs['index_string'],
