@@ -7,23 +7,15 @@ from kgtk.exceptions import KGTKException
 
 
 # # TODO:
-# - refactor
-# (done) add support for all metrics
-# (done) add support for quantization *** -- already done since taken care of by index factory string
-# - update cli to accept shorter params and make more of them optional
-# - unit tests??
-# (done for now) look for additional things need to support... composite indexes... various other params... don't think we need these
-# - ...
 # - look up what is faiss.set_direct_map_type and if I need more params for this.
 #   - still not sure. Very little information about it is easily available
 # - add support for sharding
+# - add support for cosine similarity as a distance metric
     
-
-
 
 def build_faiss(embeddings_file, embeddings_format, no_input_header, index_file_out, index_to_node_file_out,
                 max_train_examples, workers, index_string, metric_type, p=None, verbose=False):
-    
+
     # validate input file path
     if not os.path.exists(embeddings_file):
         raise KGTKException("File path given for embeddings_file parameter does not exist: " + embeddings_file)
@@ -32,14 +24,14 @@ def build_faiss(embeddings_file, embeddings_format, no_input_header, index_file_
 
     # validate metric type and translate to a faiss metric
     metrics = {
-        "Inner_product" : faiss.METRIC_INNER_PRODUCT,
-        "L2" : faiss.METRIC_L2,
-        "L1" : faiss.METRIC_L1,
-        "Linf" : faiss.METRIC_Linf,
-        "Lp" : faiss.METRIC_Lp,
-        "Canberra" : faiss.METRIC_Canberra,
-        "BrayCurtis" : faiss.METRIC_BrayCurtis,
-        "JensenShannon" : faiss.METRIC_JensenShannon
+        "Inner_product": faiss.METRIC_INNER_PRODUCT,
+        "L2": faiss.METRIC_L2,
+        "L1": faiss.METRIC_L1,
+        "Linf": faiss.METRIC_Linf,
+        "Lp": faiss.METRIC_Lp,
+        "Canberra": faiss.METRIC_Canberra,
+        "BrayCurtis": faiss.METRIC_BrayCurtis,
+        "JensenShannon": faiss.METRIC_JensenShannon
     }
     if metric_type in metrics:
         faiss_metric = metrics[metric_type]
@@ -52,9 +44,9 @@ def build_faiss(embeddings_file, embeddings_format, no_input_header, index_file_
 
     # validate embedding format string
     if embeddings_format not in ["w2v", "kgtk", "glove"]:
-        raise KGTKException("Unrecognized value for embeddings_format parameter: {}.".format(embeddings_format) + 
-                                " Please choose one of kgtk | w2v | glove.")
-        
+        raise KGTKException("Unrecognized value for embeddings_format parameter: {}.".format(embeddings_format) +
+                            " Please choose one of kgtk | w2v | glove.")
+
     # file formats that have a header
     has_header = embeddings_format == "w2v" or (embeddings_format == "kgtk" and not no_input_header)
 
@@ -71,16 +63,16 @@ def build_faiss(embeddings_file, embeddings_format, no_input_header, index_file_
             print("Writing index-to-node file...")
         with open(embeddings_file, 'r') as f_in:
             with open(index_to_node_file_out, 'w+') as f_out:
-                f_out.write("node1\tlabel\tnode2\n") # header
+                f_out.write("node1\tlabel\tnode2\n")  # header
                 for line_num, line in enumerate(tqdm(f_in, total=num_lines) if verbose else f_in):
                     # skip first line if there is header
                     if has_header and line_num == 0:
                         continue
-                        
+
                     node = line.split('\t')[0]
                     index = line_num-1 if has_header else line_num
-                    
-                    f_out.write("{}\tindex_to_node\t{}\n".format(index,node))
+
+                    f_out.write("{}\tindex_to_node\t{}\n".format(index, node))
 
     # TODO: support...
     # vector quantization option -- done (handled by index string / index factory)
@@ -101,14 +93,14 @@ def build_faiss(embeddings_file, embeddings_format, no_input_header, index_file_
             if has_header and line_num == 0:
                 continue
             train_vecs.append(get_embedding_from_line(line, embeddings_format))
-    train_vecs = np.array(train_vecs, dtype=np.float32) # faiss requires input to be np.array of floats
-    
+    train_vecs = np.array(train_vecs, dtype=np.float32)  # faiss requires input to be np.array of floats
+
     # Setting up untrained index instance...
     # Limit cpu usage
     if workers is not None:
         faiss.omp_set_num_threads(workers)
     # Instantiate index with specified metric
-    index = faiss.index_factory(dim, index_string, faiss_metric) # TODO -- add quantizer option / other options
+    index = faiss.index_factory(dim, index_string, faiss_metric)  # TODO -- add quantizer option / other options
     index.verbose = verbose
     # Set metric arguement if relevant
     if metric_type == "Lp":
@@ -120,7 +112,6 @@ def build_faiss(embeddings_file, embeddings_format, no_input_header, index_file_
         print(f"Training index using {min(num_lines,max_train_examples)} examples...")
     index.train(train_vecs)
 
-
     # Add all vecs to index
     if verbose:
         print("Adding all vectors to the trained index...")
@@ -128,7 +119,7 @@ def build_faiss(embeddings_file, embeddings_format, no_input_header, index_file_
     if verbose:
         print("Adding training vectors...")
     index.add(train_vecs)
-    del train_vecs # free up space
+    del train_vecs  # free up space
     # Incrementally load and add any additional vectors in batches
     if num_lines_to_read_for_training < num_lines:
         if verbose:
@@ -155,25 +146,26 @@ def build_faiss(embeddings_file, embeddings_format, no_input_header, index_file_
     faiss.write_index(index, index_file_out)
 
 
-# ASSUMPTIONS: 
+# ASSUMPTIONS:
 # * embeddings_format has already been validated and is one of w2v, kgtk, or glove.
 def infer_embedding_dim(embeddings_file, embeddings_format, has_header):
     with open(embeddings_file, 'r') as f:
-        l = f.readline().strip()
+        line = f.readline().strip()
         if embeddings_format == "w2v":
             # node count and embedding dimension are given in the first line
-            dim = int(l.split("\t")[1])
+            dim = int(line.split("\t")[1])
         elif embeddings_format == "kgtk":
             if has_header:
-                l = f.readline().strip() # look at second line
+                line = f.readline().strip()  # look at second line
             # comma-separated embeddings are in the 3rd column
-            emb = l.split("\t")[2]
+            emb = line.split("\t")[2]
             dim = len(emb.split(","))
-        else: # embeddings_format == "glove"
+        else:  # embeddings_format == "glove"
             # First column is for the node, then each following column contains
             # a dimension of the corresponding embedding
-            dim = len(l.split("\t")) - 1
+            dim = len(line.split("\t")) - 1
     return dim
+
 
 # ASSUMPTIONS:
 # * embeddings_format has already been validated and is one of w2v, kgtk, or glove.
@@ -188,4 +180,3 @@ def get_embedding_from_line(line, embeddings_format):
         emb = line.split('\t')[-1].split(',')
 
     return emb
-

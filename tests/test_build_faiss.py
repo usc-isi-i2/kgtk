@@ -5,6 +5,7 @@ import shutil
 from kgtk.cli_entry import cli_entry
 import faiss
 
+
 class TestBuildFaiss(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.mkdtemp()
@@ -14,7 +15,7 @@ class TestBuildFaiss(unittest.TestCase):
         self.dim = 32
         self.words = 100
         self.max_train_examples = 20
-        self.idx_str = "HNSW32" # or can try defaults, but then would be good to increase words to 100000
+        self.idx_str = "HNSW32"  # or can try defaults, but then would be good to increase words to 100000
         self.metric_type_str = "L2"
         self.faiss_metric = faiss.METRIC_L2
 
@@ -26,7 +27,7 @@ class TestBuildFaiss(unittest.TestCase):
             if format in ["w2v", "glove"]:
                 for i in range(words):
                     f.write("q{}\t{}\n".format(i, '\t'.join(str(v) for v in np.random.random(dim))))
-            else: # kgtk
+            else:  # kgtk
                 if kgtk_header:
                     f.write('node1\tlabel\tnode2\n')
                 for i in range(words):
@@ -35,8 +36,8 @@ class TestBuildFaiss(unittest.TestCase):
     def test_build_faiss(self, fmt, no_input_header=False):
         self.create_emb_file(fmt, self.words, self.dim, kgtk_header=(not no_input_header))
         cli_entry("kgtk", "build_faiss", "-i", self.emb_file, "-o", self.idx_file_out, "-id2n", self.id2n_file_out,
-                  "-ef", fmt, "--no_input_header", str(no_input_header), '-te', str(self.max_train_examples), 
-                  '-is', self.idx_str , '-m', self.metric_type_str)
+                  "-ef", fmt, "--no_input_header", str(no_input_header), '-te', str(self.max_train_examples),
+                  '-is', self.idx_str, '-m', self.metric_type_str)
         # validate idx2node output file
         with open(self.id2n_file_out, 'r') as f:
             data = f.read().splitlines()
