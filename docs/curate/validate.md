@@ -707,6 +707,7 @@ column names have initial whitespace.
 ```bash
 cat examples/docs/validate-column-names-initial-whitespace.tsv
 ```
+
 | id |  node1 |  label |  node2 | 
 |----|--------|--------|--------| 
 
@@ -773,6 +774,7 @@ column names have trailing whitespace.
 ```bash
 cat examples/docs/validate-column-names-trailing-whitespace.tsv
 ```
+
 | id | node1  | label  | node2  | 
 |----|--------|--------|-------| 
 
@@ -805,6 +807,7 @@ whitespace is detected.
 ```bash
 cat examples/docs/validate-column-names-trailing-whitespace.tsv
 ```
+
 | id | node1  | label  | node2 | 
 |----|--------|--------|-------| 
 
@@ -835,6 +838,7 @@ but it may be prohibited on request.
 ```bash
 cat examples/docs/validate-column-names-internal-whitespace.tsv
 ```
+
 | id | node 1 | label | node 2 | 
 |----|--------|-------|--------| 
 
@@ -867,6 +871,7 @@ whitespace is detected.
 ```bash
 cat examples/docs/validate-column-names-internal-whitespace.tsv
 ```
+
 | id | node 1 | label | node 2 | 
 |----|--------|-------|--------| 
 
@@ -896,6 +901,7 @@ column names have a comma (`,`) at the end.
 ```bash
 cat examples/docs/validate-column-names-with-comma.tsv
 ```
+
 | node1, | label, | node2, | id | 
 |--------|--------|--------|----| 
 
@@ -928,6 +934,7 @@ whitespace is detected.
 ```bash
 cat examples/docs/validate-column-names-with-comma.tsv
 ```
+
 | node1, | label, | node2, | id | 
 |--------|--------|--------|----| 
 
@@ -1006,6 +1013,7 @@ Validate an input file with two `node1` columns instead of
 ```bash
 cat examples/docs/validate-column-names-with-duplicates.tsv
 ```
+
 | node1 | label | node1 | id | 
 |-------|-------|-------|----| 
 
@@ -1032,6 +1040,7 @@ the file to be treated as a Node file by specifying `--mode=NODE`.
 ```bash
 cat examples/docs/validate-column-names-without-required-columns.tsv
 ```
+
 | col1 | col2 | col3 | 
 |------|------|------| 
 
@@ -1060,6 +1069,7 @@ the file to be treated as a Edge file by specifying `--mode=EDGE`.
 ```bash
 cat examples/docs/validate-column-names-without-required-columns.tsv
 ```
+
 | col1 | col2 | col3 | 
 |------|------|------| 
 
@@ -1089,6 +1099,7 @@ and we force auto-mode sensing with `--mode=AUTO`.
 ```bash
 cat examples/docs/validate-column-names-without-required-columns.tsv
 ```
+
 | col1 | col2 | col3 | 
 |------|------|------| 
 
@@ -1116,6 +1127,7 @@ disabled with `--mode=NONE`
 ```bash
 cat examples/docs/validate-column-names-without-required-columns.tsv
 ```
+
 | col1 | col2 | col3 | 
 |------|------|------| 
 
@@ -1172,6 +1184,7 @@ when `--empty-line-action=EXCLUDE` (the default).
 ```bash
 cat examples/docs/validate-empty-lines.tsv
 ```
+
 | node1 | label | node2 | 
 |-------|-------|-------| 
 | line1 | isa   | line  | 
@@ -1227,6 +1240,7 @@ Whitespace lines are silently ignored in input files during validation whe
 ```bash
 cat examples/docs/validate-whitespace-lines.tsv
 ```
+
 | node1 | label | node2 | 
 |-------|-------|-------| 
 | line1 | isa   | line  | 
@@ -1300,6 +1314,7 @@ will not be triggered.
 ```bash
 cat examples/docs/validate-short-lines.tsv
 ```
+
 | node1 | label        | node2 | 
 |-------|--------------|-------| 
 | line1 | isa          | line  | 
@@ -1526,6 +1541,7 @@ removed by specifying `--prohibited-list-action=PASS` or
 ```bash
 cat examples/docs/validate-node2-list.tsv
 ```
+
 | node1 | label | node2        | id  | 
 |-------|-------|--------------|-----| 
 | line1 | isa   | line\|record | id1 |
@@ -1632,6 +1648,7 @@ The `label` field may be blank in a KGTK edge file.
 ```bash
 cat examples/docs/validate-label-blank-edge.tsv
 ```
+
 | node1 | label | node2 | id  | 
 |-------|-------|-------|-----| 
 | line1 |       | line  | id1 |
@@ -1727,6 +1744,7 @@ The `id` field may be blank in a KGTK edge file.
 ```bash
 cat examples/docs/validate-id-blank-edge.tsv
 ```
+
 | node1 | label | node2 | id | 
 |-------|-------|-------|----| 
 | line1 | isa   | line  |    | 
@@ -1750,6 +1768,7 @@ The `id` field may not be blank in a KGTK node file.
 ```bash
 cat examples/docs/validate-id-blank-node.tsv
 ```
+
 | id | size  | color | 
 |----|-------|-------| 
 |    | large | red   | 

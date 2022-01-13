@@ -44,6 +44,7 @@ as needed, but without additional columns.  These edges are typically in a seper
 a `property pattern file` or `pattern file`.
 
 Here is a brief sample of a property pattern file:
+
 | node1 | label | node2 | id |
 | ----- | ----- | ----- | -- |
 | red | `isa` | rgbcolor |
