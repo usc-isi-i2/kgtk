@@ -59,6 +59,7 @@ class ConfigureKGTK(object):
                        project_name: str = "kgtk",
                        graph_cache_path: str = None,
                        json_config_file: str = None,
+                       additional_files: dict = None,
                        debug=False):
         """
         configures the environment for a jupyter notebook.
@@ -67,7 +68,8 @@ class ConfigureKGTK(object):
         :param output_path: path where the output and temp files will be created. By default, "isi-kgtk-tutorial-out" in
         user home
         :param project_name: output folder name, 'kgtk' by default
-        :param graph_cache_path: absolute path to the '.db' file. If not specified, create a new cache file in output path
+        :param graph_cache_path: absolute path to the '.db' file. If not specified, create a new cache file in output
+        path
         :param json_config_file: absolute path to json file which contains "file_key": "file_name" key-value pairs. By
         default, read a file from kgtk repo
         :return:
@@ -79,8 +81,14 @@ class ConfigureKGTK(object):
             try:
                 _files_config = json.load(open(json_config_file))
                 self.graph_files.update(_files_config)
+                self.files.extend(list(_files_config))
             except Exception as e:
                 print(e)
+
+        if additional_files is not None:
+            self.graph_files.update(additional_files)
+            self.files.extend(list(additional_files))
+
         # If the input graph path is not None, it is assumed it has the files required
         if input_graph_path is None:
             input_graph_path = f"{self.user_home}/{self.default_folder}/input"

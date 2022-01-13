@@ -19,6 +19,7 @@ nav:
   - 'Export commands':
       - 'export-gt': 'export/export_gt.md'
       - 'generate_wikidata_triples': 'export/generate_wikidata_triples.md'
+      - 'visualize-force-graph': 'export/visualize-force-graph.md'
   - 'Transformation commands':
       - 'add-id': 'transform/add_id.md'
       - 'add-labels': 'transform/add_labels.md'
@@ -63,6 +64,7 @@ nav:
       - 'validate-properties': 'curate/validate_properties.md'
   - 'Analysis commands':
       - 'build-faiss': 'analysis/build_faiss.md'
+      - 'community-detection': 'analysis/community-detection.md'
       - 'connected-components': 'analysis/connected_components.md'
       - 'graph-embeddings': 'analysis/graph_embeddings.md'
       - 'graph-statistics': 'analysis/graph_statistics.md'
@@ -70,6 +72,7 @@ nav:
       - 'reachable-nodes': 'analysis/reachable_nodes.md'
       - 'text-embeddings': 'analysis/text_embedding.md'
   - Using pipes: pipes.md
+  - Configure KGTK Notebooks: configure-kgtk-notebooks-readme.md
 
 theme:
   name: material
