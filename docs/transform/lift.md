@@ -201,6 +201,7 @@ Lift this file, lifting just the `node1` column:
 kgtk lift --input-file examples/docs/lift-file4.tsv \
           --columns-to-lift node1
 ```
+
 The output will be the following table in KGTK format:
 
 | node1 | label | node2 | node1;label |
@@ -248,6 +249,7 @@ kgtk lift --input-file examples/docs/lift-file5.tsv \
           --label-file examples/docs/lift-file6.tsv \
           --columns-to-lift node1
 ```
+
 The output will be the following table in KGTK format:
 
 | node1 | label | node2 | node1;label |
@@ -272,6 +274,7 @@ kgtk lift --input-file examples/docs/lift-file5.tsv \
           --label-file-is-presorted \
           --columns-to-lift node1
 ```
+
 The output will be the following table in KGTK format:
 
 | node1 | label | node2 | node1;label |
@@ -297,6 +300,7 @@ kgtk lift --input-file examples/docs/lift-file5.tsv \
           --label-file examples/docs/lift-file6.tsv \
           --prefilter-labels
 ```
+
 | node1 | label | node2 | node1;label | label;label | node2;label |
 | -- | -- | -- | -- | -- | -- |
 | Q1 | P1 | Q5 | "Elmo" | "instance of" | "human" |
@@ -363,6 +367,7 @@ and suppose that `lift-file9.tsv` contains the following file in KGTK format:
 ```bash
 kgtk cat --input-file examples/docs/lift-file9.tsv
 ```
+
 | node1 | label | node2 | full-name |
 | -- | -- | -- | -- |
 | P1 | label | "instance of" |  |
@@ -381,6 +386,7 @@ Let's start with a default lift with the seperate label file:
 kgtk lift --input-file examples/docs/lift-file8.tsv \
           --label-file examples/docs/lift-file9.tsv
 ```
+
 | node1 | label | node2 | confident | node1;label | label;label | node2;label |
 | -- | -- | -- | -- | -- | -- | -- |
 | Q1 | P1 | Q5 | True |  | "instance of" |  |
@@ -664,6 +670,7 @@ kgtk lift --input-file examples/docs/lift-file5.tsv \
           --label-file examples/docs/lift-file11.tsv \
           --language en
 ```
+
 | node1 | label | node2 | node1;label | label;label | node2;label |
 | -- | -- | -- | -- | -- | -- |
 | Q1 | P1 | Q5 | 'Elmo'@en |  |  |
@@ -680,6 +687,7 @@ kgtk lift --input-file examples/docs/lift-file5.tsv \
           --label-file examples/docs/lift-file11.tsv \
           --languages en fr
 ```
+
 | node1 | label | node2 | node1;label | label;label | node2;label |
 | -- | -- | -- | -- | -- | -- |
 | Q1 | P1 | Q5 | 'Elmo'@en |  |  |
@@ -697,6 +705,7 @@ kgtk lift --input-file examples/docs/lift-file5.tsv \
           --label-file examples/docs/lift-file11.tsv \
           --language ANY
 ```
+
 | node1 | label | node2 | node1;label | label;label | node2;label |
 | -- | -- | -- | -- | -- | -- |
 | Q1 | P1 | Q5 | 'Elmo'@en |  |  |
@@ -713,6 +722,7 @@ kgtk lift --input-file examples/docs/lift-file5.tsv \
           --label-file examples/docs/lift-file11.tsv \
           --language NONE
 ```
+
 | node1 | label | node2 | node1;label | label;label | node2;label |
 | -- | -- | -- | -- | -- | -- |
 | Q1 | P1 | Q5 |  | "instance of" | "human" |
@@ -729,6 +739,7 @@ kgtk lift --input-file examples/docs/lift-file5.tsv \
           --label-file examples/docs/lift-file11.tsv \
           --language en NONE
 ```
+
 | node1 | label | node2 | node1;label | label;label | node2;label |
 | -- | -- | -- | -- | -- | -- |
 | Q1 | P1 | Q5 | 'Elmo'@en | "instance of" | "human" |
@@ -764,6 +775,7 @@ kgtk add-labels --input-file examples/docs/lift-file5.tsv \
                 --label-file examples/docs/lift-file12.tsv \
                 --language en
 ```
+
 | node1 | label | node2 | node1;label | node2;label |
 | -- | -- | -- | -- | -- |
 | Q1 | P1 | Q5 | 'Elmo'@en |  |
@@ -778,6 +790,7 @@ kgtk add-labels --input-file examples/docs/lift-file5.tsv \
                 --label-file examples/docs/lift-file12.tsv \
                 --language es
 ```
+
 | node1 | label | node2 | node1;label | node2;label |
 | -- | -- | -- | -- | -- |
 | Q1 | P1 | Q5 | 'Sr Elmo'@es |  |
@@ -792,6 +805,7 @@ kgtk add-labels --input-file examples/docs/lift-file5.tsv \
                 --label-file examples/docs/lift-file12.tsv \
                 --languages en es
 ```
+
 | node1 | label | node2 | node1;label | node2;label |
 | -- | -- | -- | -- | -- |
 | Q1 | P1 | Q5 | 'Elmo'@en |  |
@@ -806,6 +820,7 @@ kgtk add-labels --input-file examples/docs/lift-file5.tsv \
                 --label-file examples/docs/lift-file12.tsv \
                 --languages es en
 ```
+
 | node1 | label | node2 | node1;label | node2;label |
 | -- | -- | -- | -- | -- |
 | Q1 | P1 | Q5 | 'Sr Elmo'@es |  |
@@ -820,6 +835,7 @@ kgtk add-labels --input-file examples/docs/lift-file5.tsv \
                 --label-file examples/docs/lift-file12.tsv \
                 --languages fr en es
 ```
+
 | node1 | label | node2 | node1;label | node2;label |
 | -- | -- | -- | -- | -- |
 | Q1 | P1 | Q5 | 'Elmo'@en |  |

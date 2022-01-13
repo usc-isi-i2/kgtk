@@ -595,6 +595,7 @@ Consider the following input file:
 ```bash
 kgtk cat -i examples/docs/movies_durations.tsv
 ```
+
 | id | node1 | label | node2 |
 | -- | -- | -- | -- |
 | t16 | terminator | duration | 108 |
