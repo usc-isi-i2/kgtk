@@ -123,29 +123,29 @@ Additional columns can be used to specify edges about an edge.  For example:
 
 Each edge is uniquely identified by its (node1, label, node2) triple (ignoring the order in which these columns were specified in the file).  So, additional values about a particular edge can be added by repeating the edge and listing the value.  For example:
 
-```
-node1     label     node2   creator   source    
-“Moe”     rdf:type  Person  “Hans”    Wikipedia
-“Larry”   rdf:type  Person  “Hans”    Wikipedia
-“Curly”   rdf:type  Person  “Hans”    Wikipedia
-# we repeat the edge triple but only list additional
-# values where they apply, other columns are left blank:
-“Curly”   rdf:type  Person            IMDB
-```
+|node1  |label   |node2 |creator|source   |
+|-------|--------|------|-------|---------|
+|“Moe”  |rdf:type|Person|“Hans” |Wikipedia|
+|“Larry”|rdf:type|Person|“Hans” |Wikipedia|
+|“Curly”|rdf:type|Person|“Hans” |Wikipedia|
+|# we repeat the edge triple but only list additional|
+|# values where they apply, other columns are left blank:|
+|“Curly”|rdf:type|Person|  |   IMDB     |
+
 To allow us to use edges in both the node1 and node2 positions of an edge or to use them as arguments in an explicit node1/label/node2 triple, we can name or alias them via an explicit id column.  The names or aliases can then be used as stand-ins for the explicit triple.  For example:
 
-```
-node1     label     node2   creator   id
-“Moe”     rdf:type  Person  “Hans”    E1
-“Larry”   rdf:type  Person  “Hans”    E2
-“Curly”   rdf:type  Person  “Hans”    E3
-E1        source    Wikipedia
-E2        source    Wikipedia
-E3        source    Wikipedia
-E3        source    IMDB
-# the first creator edge is equivalent to this one:
-E1      creator     “Hans”
-```
+|node1  |label   |node2 |creator|id       |
+|-------|--------|------|-------|---------|
+|“Moe”  |rdf:type|Person|“Hans” |E1       |
+|“Larry”|rdf:type|Person|“Hans” |E2       |
+|“Curly”|rdf:type|Person|“Hans” |E3       |
+|E1     |source  |Wikipedia|       |         |
+|E2     |source  |Wikipedia|       |         |
+|E3     |source  |Wikipedia|       |         |
+|E3     |source  |IMDB  |       |         |
+|# the first creator edge is equivalent to this one:|
+|E1     |creator |“Hans”|       |         |
+
 
 
 Column values in the edges table are simply a shorthand for a more explicit line-based edge representation using edge IDs.  However, for edges without explicitly provided IDs, columns are the only way to say something about them.  Column values are only related to the edge they are modifying, they are not related or linked to each other in any way.
@@ -296,53 +296,56 @@ Booleans: we use two special symbols True and False to indicate boolean values. 
 Structured (or fancy) literals are useful to concisely represent values such as dates or locations that have further internal structure.  For example, `@043.26193/010.92708` represents the location with latitude `043.26193` and longitude `010.92708`.  Structured literals are simply a shorthand that imply additional edges that do not need to be explicitly stated, for example, the latitude and longitude edges leading to the respective numeric values for a location.
 
 **Language-qualified strings**: strings can be qualified with a language tag to indicate the human language used.  We use the RDF convention for this but single quotes to distinguish them from unqualified strings, for example, `‘Sprechen sie deutsch?’@de`.  Language tags are two-letter ISO 639-1 codes.  Example use in edge file:
-```
-node1       label     node2
-N1          label     ‘Curly’@en
-# implied edges:
-‘Curly’@en  text      “Curly”
-‘Curly’@en  language  “en”
-```
+
+| node1 | label | node2 |
+|---|---|---|
+| N1 | label | ‘Curly’@en |
+| # implied edges:  |
+| ‘Curly’@en | text | “Curly” |
+| ‘Curly’@en | language | “en” |
 
 **Quantities**: numbers can be dimensioned to represent quantities, e.g., a length such as 5 meters or a weight such as 10 pounds.  For quantities we use a variant of the Wikidata format amount~toleranceUxxxx.  A quantity starts with a number, followed by an optional tolerance interval, and then followed by either a combination of standard (SI) units (see Appendix) or a Wikidata node defining the unit, for example, Q11573 which indicates “meter”.  Here are some examples: `10m, +10m/s2, -1.2e+2[-1.0,+1.0]kg.m/s2, +17.2Q494083`
 
 Example use in edge file:
 
-```
-node1     label     node2
-N1        speed     10.2m/s2
-# implied edges:
-10.2m/s2  magnitude 10.2
-10.2m/s2  unit      “m/s2”
-```
+
+| node1 | label | node2 |
+|---|---|---|
+| N1 | speed | 10.2m/s2 |
+| #  implied edges:   |
+| 10.2m/s2 | magnitude | 10.2 |
+| 10.2m/s2 | unit | “m/s2” |
+
 
 **Location coordinates**: we also use the Wikidata format `@LAT/LON`, for example: `@043.26193/010.92708`
 
 Example use in edge file:
 
-```
-node1                 label     node2
-N1                    location    @043.26193/010.92708
-# implied edges:
-@043.26193/010.92708  latitude  043.26193
-@043.26193/010.92708  longitude 010.92708
-```
+
+| node1                | label     | node2                |
+|----------------------|-----------|----------------------|
+| N1                   | location  | @043.26193/010.92708 |
+| # implied edges:      |
+| @043.26193/010.92708 | latitude  | 043.26193            |
+| @043.26193/010.92708 | longitude | 010.92708            |
+
+
 
 **Dates and times**: temporal literals are started with a ^ caret character (indicating the tip of a clock hand) and followed by an ISO 8601 date and an optional precision designator, for example: ^1839-00-00T00:00:00Z/9
 
 Example use in edge file:
 
-```
-node1                 label     node2
-N1                    time      ^2020-02-24T17:05:30
-# implied edges:
-^2020-02-24T17:05:30  year      2020
-^2020-02-24T17:05:30  month     2
-^2020-02-24T17:05:30  day       24
-^2020-02-24T17:05:30  hour      17
-^2020-02-24T17:05:30  minute    5
-^2020-02-24T17:05:30  second    30
-```
+| node1                | label  | node2                |
+|----------------------|--------|----------------------|
+| N1                   | time   | ^2020-02-24T17:05:30 |
+| # implied edges:     |        |                      |
+| ^2020-02-24T17:05:30 | year   | 2020                 |
+| ^2020-02-24T17:05:30 | month  | 2                    |
+| ^2020-02-24T17:05:30 | day    | 24                   |
+| ^2020-02-24T17:05:30 | hour   | 17                   |
+| ^2020-02-24T17:05:30 | minute | 5                    |
+| ^2020-02-24T17:05:30 | second | 30                   |
+
 
 ## Notes, Issues:
 There is no support for calendar, we could allow it as an optional qnode after the precision designator, eg, `+1839-00-00T00:00:00Z/9/Q12138`
@@ -354,13 +357,12 @@ The single-caret notation is to be used for special schemes such as “timex3”
 
 The double-caret notation is used for arbitrary typed literals.  These will always expand to a pair of value/type edges.  For example:
 
-```
-node1               label     node2
-N1                  price     !1000^^dbpedia:USD
-# implied edges:
-!1000^^dbpedia:USD  value     1000
-!1000^^dbpedia:USD  type      dbpedia:USD
-```
+| node1                | label     | node2                |
+|----------------------|-----------|----------------------|
+| N1                   | location  | @043.26193/010.92708 |
+| # implied edges:      |
+| @043.26193/010.92708 | latitude  | 043.26193            |
+| @043.26193/010.92708 | longitude | 010.92708            |
 
 ## Object Identity
 We have to define when two node or edge IDs or labels are the same, so KGTK can know when to add something to an existing node or edge, and when to create a new one.  The following rules apply:
