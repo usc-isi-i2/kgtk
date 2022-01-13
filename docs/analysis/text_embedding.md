@@ -184,6 +184,7 @@ This will have all the embedded vectors values for each Q nodes. This will be pr
 Note: There will only texet embedding related things outputed, please run other commands 
 
 If output as `kgtk_format`, the output file will looks like:
+
 |  |  |  |
 | -- | -- | -- |
 | Q1 | text_embedding | 0.2,0.3,0.4,0.5 |
