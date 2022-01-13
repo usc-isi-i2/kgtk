@@ -70,7 +70,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument('-m', '--metric_type', action='store', type=str, dest='metric_type', required=False,
                         help="A string denoting the Faiss metric to be used. This will be passed to " +
-                        "faiss.index_factory().", default="L2", 
+                        "faiss.index_factory().", default="L2",
                         choices=["Inner_product", "L2", "L1", "Linf", "Lp", "Canberra", "BrayCurtis", "JensenShannon"],
                         metavar="Inner_product|L2|L1|Linf|Lp|Canberra|BrayCurtis|JensenShannon")
 
