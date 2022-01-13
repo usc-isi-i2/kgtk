@@ -3,7 +3,7 @@ Train and populate a faiss index that can compute nearest neighbors of given emb
 """
 
 from argparse import Namespace
-from kgtk.cli_argparse import KGTKArgumentParser 
+from kgtk.cli_argparse import KGTKArgumentParser
 
 
 def parser():
@@ -70,9 +70,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument('-m', '--metric_type', action='store', type=str, dest='metric_type', required=False,
                         help="A string denoting the Faiss metric to be used. This will be passed to " +
-                        "faiss.index_factory().",
-                        default="L2", choices=["Inner_product", "L2", "L1", "Linf", "Lp",
-                        "Canberra", "BrayCurtis", "JensenShannon"],
+                        "faiss.index_factory().", default="L2", 
+                        choices=["Inner_product", "L2", "L1", "Linf", "Lp", "Canberra", "BrayCurtis", "JensenShannon"],
                         metavar="Inner_product|L2|L1|Linf|Lp|Canberra|BrayCurtis|JensenShannon")
 
     parser.add_argument('-ma', '--metric_arg', action='store', type=float, dest='metric_arg', required=False,
@@ -89,7 +88,6 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
 
 def run(**kwargs):
-    import traceback
     from kgtk.exceptions import KGTKException
     from kgtk.graph_embeddings.build_faiss import build_faiss
     try:

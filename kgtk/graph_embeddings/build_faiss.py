@@ -1,6 +1,5 @@
 import numpy as np
 import faiss
-import json
 import os
 from tqdm import tqdm
 from kgtk.exceptions import KGTKException
@@ -11,7 +10,7 @@ from kgtk.exceptions import KGTKException
 #   - still not sure. Very little information about it is easily available
 # - add support for sharding
 # - add support for cosine similarity as a distance metric
-    
+
 
 def build_faiss(embeddings_file, embeddings_format, no_input_header, index_file_out, index_to_node_file_out,
                 max_train_examples, workers, index_string, metric_type, p=None, verbose=False):
@@ -104,7 +103,7 @@ def build_faiss(embeddings_file, embeddings_format, no_input_header, index_file_
     index.verbose = verbose
     # Set metric arguement if relevant
     if metric_type == "Lp":
-        index.metric_arg = metric_arg
+        index.metric_arg = p
     # TODO -- look more into what this is doing / if need to provide more options for it.
 #     index.set_direct_map_type(faiss.DirectMap.Array)
 
@@ -123,7 +122,7 @@ def build_faiss(embeddings_file, embeddings_format, no_input_header, index_file_
     # Incrementally load and add any additional vectors in batches
     if num_lines_to_read_for_training < num_lines:
         if verbose:
-            print(f"Incrementally loading and adding remaining vectors...")
+            print("Incrementally loading and adding remaining vectors...")
         vecs = []
         batch_size = max_train_examples
         with open(embeddings_file, 'r') as f_in:
