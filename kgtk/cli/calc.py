@@ -61,9 +61,11 @@ XOR_OP: str = "xor" # (boolean, boolean) -> boolean
 
 # Date and times
 IS_DATE_OP: str = "is_date" # -> bool
-DATE_DAY_OP: str = "date_day" # -> int or str
-DATE_MONTH_OP: str = "date_month"
-DATE_YEAR_OP: str = "date_year"
+DATE_DATE_OP: str = "date_date"   # -> int (YYYYMMDD) or str ("YYYYMMDD")
+DATE_DATE_ISO_OP: str = "date_date_iso" # -> str ("YYYY-MM-DD")
+DATE_DAY_OP: str = "date_day"     # -> int or str
+DATE_MONTH_OP: str = "date_month" # -> int or str
+DATE_YEAR_OP: str = "date_year"   # -> int or str
 
 # Numeric
 ABS_OP: str = "abs" # (column, ...)
@@ -124,6 +126,8 @@ OPERATIONS: typing.List[str] = [
     CAPITALIZE_OP,
     CASEFOLD_OP,
     COPY_OP,
+    DATE_DATE_OP,
+    DATE_DATE_ISO_OP,
     DATE_DAY_OP,
     DATE_MONTH_OP,
     DATE_YEAR_OP,
@@ -179,6 +183,8 @@ OVERWRITE_FALSE_OPERATIONS: typing.List[str] = [
 ]
 
 TO_STRING_TRUE_OPERATIONS: typing.List[str] = [
+    DATE_DATE_OP,
+    DATE_DATE_ISO_OP,
     DATE_DAY_OP,
     DATE_MONTH_OP,
     DATE_YEAR_OP,
@@ -766,6 +772,63 @@ def run(input_file: KGTKFiles,
                             output_row[into_column_idxs[src_idx]] = row[sources[src_idx]]
                     return True
             opfunc = copy_op
+
+        elif operation == DATE_DATE_OP:
+            # TODO:  Need date/time parsing options.
+            if len(sources) == 0:
+                raise KGTKException("date_date needs at least one source, got %d" % len(sources))
+            if len(sources) != len(into_column_idxs):
+                raise KGTKException("date_date needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
+
+            if to_string:
+                def date_date_op()->bool:
+                    src_idx: int
+                    for src_idx in range(len(sources)):
+                        item: str = row[sources[src_idx]]
+                        # TODO: optimize this.
+                        kv: KgtkValue = KgtkValue(item) # TODO: Need options!
+                        if kv.is_date_and_times(validate=True, parse_fields=True) and kv.fields is not None:
+                            output_row[into_column_idxs[src_idx]] = \
+                                KgtkFormat.STRING_SIGIL + kv.fields.yearstr + kv.fields.monthstr + kv.fields.daystr + KgtkFormat.STRING_SIGIL
+                        else:
+                            output_row[into_column_idxs[src_idx]] = ""
+                    return True
+            else:
+                def date_date_op()->bool:
+                    src_idx: int
+                    for src_idx in range(len(sources)):
+                        item: str = row[sources[src_idx]]
+                        # TODO: optimize this.
+                        kv: KgtkValue = KgtkValue(item) # TODO: Need options!
+                        if kv.is_date_and_times(validate=True, parse_fields=True) and kv.fields is not None:
+                            output_row[into_column_idxs[src_idx]] = \
+                                kv.fields.yearstr + kv.fields.monthstr + kv.fields.daystr
+                        else:
+                            output_row[into_column_idxs[src_idx]] = ""
+                    return True
+            opfunc = date_date_op
+
+        elif operation == DATE_DATE_ISO_OP:
+            # TODO:  Need date/time parsing options.
+            if len(sources) == 0:
+                raise KGTKException("date_date_iso needs at least one source, got %d" % len(sources))
+            if len(sources) != len(into_column_idxs):
+                raise KGTKException("date_date_iso needs the same number of input columns and into columns, got %d and %d" % (len(sources), len(into_column_idxs)))
+
+            def date_date_iso_op()->bool:
+                src_idx: int
+                for src_idx in range(len(sources)):
+                    item: str = row[sources[src_idx]]
+                    # TODO: optimize this.
+                    kv: KgtkValue = KgtkValue(item) # TODO: Need options!
+                    if kv.is_date_and_times(validate=True, parse_fields=True) and kv.fields is not None:
+                        output_row[into_column_idxs[src_idx]] = \
+                            KgtkFormat.STRING_SIGIL + kv.fields.yearstr + '-' + kv.fields.monthstr + '-' + kv.fields.daystr + KgtkFormat.STRING_SIGIL
+                    else:
+                        output_row[into_column_idxs[src_idx]] = ""
+                return True
+    
+            opfunc = date_date_iso_op
 
         elif operation == DATE_DAY_OP:
             # TODO:  Need date/time parsing options.

@@ -23,6 +23,8 @@ from SPARQLWrapper import SPARQLWrapper, JSON, POST, URLENCODED  # type: ignore
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 from kgtk.kgtkformat import KgtkFormat
+from kgtk.io.kgtkwriter import KgtkWriter
+import torch
 
 
 class EmbeddingVector:
@@ -33,7 +35,10 @@ class EmbeddingVector:
         else:
             self.model_name = model_name
         self._logger.info("Using model {}".format(self.model_name))
-        self.model = SentenceTransformer(self.model_name)
+        if torch.cuda.is_available():
+            self.model = SentenceTransformer(self.model_name, device=('cuda:0'))
+        else:
+            self.model = SentenceTransformer(self.model_name)
         # setup redis cache server
         if query_server is None or query_server == "":
             self.wikidata_server = "https://query.wikidata.org/sparql"
@@ -57,6 +62,19 @@ class EmbeddingVector:
         self.gt_indexes = set()
         self.input_format = ""
         self.token_pattern = re.compile(r"(?u)\b\w\w+\b")
+        self.selected_gpu_device_index = 0
+        self.total_gpu_count = torch.cuda.device_count()
+        self.column_names = ['node', 'property', 'value']
+        self.error_file = sys.stderr
+
+    def retry_next_gpu(self, error):
+        self.selected_gpu_device_index += 1
+        if self.selected_gpu_device_index >= self.total_gpu_count:
+            self._logger.error("Attempted task on all available GPUs")
+            raise error
+        else:
+            self.model = SentenceTransformer(self.model_name, device = ('cuda:' + str(self.selected_gpu_device_index)))
+            self._logger.debug(f"Reattempting task on GPU device: {('cuda:' + str(self.selected_gpu_device_index))}")
 
     def get_sentences_embedding(self, sentences: typing.List[str], qnodes: typing.List[str]):
         """
@@ -78,7 +96,13 @@ class EmbeddingVector:
                     sentence_embeddings.extend(each_embedding)
                     self.redis_server.set(query_cache_key, str(each_embedding[0].tolist()))
         else:
-            sentence_embeddings = self.model.encode(sentences, show_progress_bar=False)
+            while True: 
+                # Re-attempt executing the model on a different GPU until all GPU's have been tried
+                try:
+                    sentence_embeddings = self.model.encode(sentences, show_progress_bar=True)
+                    break # If there is no error, this will break the loop and return the results
+                except RuntimeError as e:
+                    self.retry_next_gpu(e)
         return sentence_embeddings
 
     def send_sparql_query(self, query_body: str):
@@ -610,13 +634,18 @@ class EmbeddingVector:
         if self._parallel_count == 1:
             start_all = time.time()
             self._logger.info("Now generating embedding vector.")
-            for q_node, each_item in tqdm(self.candidates.items()):
+            sentences = []
+            qnodes = []
+            for q_node, each_item in self.candidates.items():
                 # do process for each row(one target)
                 sentence = each_item["sentence"]
                 if isinstance(sentence, bytes):
                     sentence = sentence.decode("utf-8")
-                vectors = self.get_sentences_embedding([sentence], [q_node])
-                self.vectors_map[q_node] = vectors[0]
+                sentences.append(sentence)
+                qnodes.append(q_node)
+            vectors = self.get_sentences_embedding(sentences, qnodes)
+            for q_node, vector in zip(qnodes, vectors):
+                self.vectors_map[q_node] = vector
             self._logger.info("Totally used {} seconds.".format(str(time.time() - start_all)))
         else:
             # Skip get vector function because we already get them
@@ -652,36 +681,65 @@ class EmbeddingVector:
                     _ = f.write("\n")
 
     def print_vector(self, vectors, output_properties: str = "text_embedding",
-                     output_format="kgtk_format", save_embedding_sentence=False):
+                     output_format="kgtk_format", save_embedding_sentence=False, output_file=""):
         self._logger.debug("START printing the vectors")
         if output_format == "kgtk_format":
-            # TODO: This should be comverted to use KgtkWriter
-            print("node\tproperty\tvalue\n", end="")
+            output_mode = KgtkWriter.Mode.NONE
+            ew: KgtkWriter = KgtkWriter.open(self.column_names,
+                                        output_file,
+                                        require_all_columns=False,
+                                        prohibit_extra_columns=True,
+                                        fill_missing_columns=True,
+                                        mode=output_mode,
+                                        output_format='kgtk',
+                                        output_column_names=self.column_names,
+                                        no_header=False,
+                                        error_file=self.error_file,
+                                        verbose=True,
+                                        very_verbose=False)
             all_nodes = list(self.vectors_map.keys())
             ten_percent_len = math.ceil(len(vectors) / 10)
             for i, each_vector in enumerate(vectors):
                 if i % ten_percent_len == 0:
                     percent = i / ten_percent_len * 10
                     self._logger.debug("Finished {}%".format(percent))
-                print("{}\t{}\t".format(all_nodes[i], output_properties), end="")
+                node_id = all_nodes[i]
+                props = output_properties
+                embedding = ""
                 for each_dimension in each_vector[:-1]:
-                    print(str(each_dimension) + ",", end="")
-                print(str(each_vector[-1]))
+                    embedding += str(each_dimension) + ","
+                embedding += str(each_vector[-1])
+                ew.write_kgtk([node_id, props, embedding])
                 if save_embedding_sentence:
-                    print("{}\t{}\t{}".format(all_nodes[i], "embedding_sentence",
-                                              self.candidates[all_nodes[i]]["sentence"]))
+                    ew.write_kgtk([all_nodes[i], "embedding_sentence", self.candidates[all_nodes[i]]["sentence"]])
 
         elif output_format == "tsv_format":
+            output_mode = KgtkWriter.Mode.NONE
+            ew: KgtkWriter = KgtkWriter.open(None,
+                                        output_file,
+                                        require_all_columns=False,
+                                        prohibit_extra_columns=True,
+                                        fill_missing_columns=True,
+                                        mode=output_mode,
+                                        output_format='tsv',
+                                        output_column_names=None,
+                                        no_header=True,
+                                        error_file=self.error_file,
+                                        verbose=True,
+                                        very_verbose=False)
             for each_vector in vectors:
+                embedding = []
                 for each_dimension in each_vector[:-1]:
-                    print(str(each_dimension) + "\t", end="")
-                print(str(each_vector[-1]))
+                    embedding.append(str(each_dimension))
+                embedding.append(str(each_vector[-1]))
+                ew.write_tsv(embedding)
+        ew.close()
         self._logger.debug("END printing the vectors")
 
     def plot_result(self, output_properties: dict, input_format="kgtk_format",
                     output_uri: str = "", output_format="kgtk_format",
                     dimensional_reduction="none", dimension_val=2,
-                    save_embedding_sentence=False
+                    save_embedding_sentence=False, output_file=""
                     ):
         """
             transfer the vectors to lower dimension so that we can plot
@@ -756,12 +814,12 @@ class EmbeddingVector:
             self.print_vector(self.vectors_2D,
                               output_props,
                               output_format,
-                              save_embedding_sentence)
+                              save_embedding_sentence, output_file)
         else:
             self.print_vector(vectors,
                               output_props,
                               output_format,
-                              save_embedding_sentence)
+                              save_embedding_sentence, output_file)
 
     def evaluate_result(self):
         """

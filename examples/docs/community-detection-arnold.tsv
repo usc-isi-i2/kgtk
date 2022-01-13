@@ -1,0 +1,495 @@
+node1	label	node2	node1;label	label;label	node2;label
+Q1086823	P22	Q345517	'Christopher Lawford'@en	'father'@en	'Peter Lawford'@en
+Q1086823	P25	Q432694	'Christopher Lawford'@en	'mother'@en	'Patricia Kennedy Lawford'@en
+Q1086823	P26	Q75326809	'Christopher Lawford'@en	'spouse'@en	'Jean Edith Olssen'@en
+Q1086823	P3373	Q75326777	'Christopher Lawford'@en	'sibling'@en	'Victoria Lawford'@en
+Q1086823	P3373	Q75326779	'Christopher Lawford'@en	'sibling'@en	'Sydney Lawford'@en
+Q1086823	P3373	Q75326780	'Christopher Lawford'@en	'sibling'@en	'Robin Lawford'@en
+Q1086823	P3448	Q96079835	'Christopher Lawford'@en	'stepparent'@en	'Mary Rowan'@en
+Q1086823	P3448	Q96079836	'Christopher Lawford'@en	'stepparent'@en	'Deborah Gould'@en
+Q1086823	P3448	Q96079838	'Christopher Lawford'@en	'stepparent'@en	'Patricia Seaton'@en
+Q1086823	P40	Q76363382	'Christopher Lawford'@en	'child'@en	'David Christopher Lawford'@en
+Q1086823	P40	Q76363384	'Christopher Lawford'@en	'child'@en	'Savannah Rose Lawford'@en
+Q1086823	P40	Q76363386	'Christopher Lawford'@en	'child'@en	'Matthew Valentine Lawford'@en
+Q11673	P26	Q467912	'Andrew Cuomo'@en	'spouse'@en	'Kerry Kennedy'@en
+Q134549	P1290	Q9696	'Ted Kennedy'@en	'godparent'@en	'John F. Kennedy'@en
+Q134549	P22	Q313696	'Ted Kennedy'@en	'father'@en	'Joseph P. Kennedy Sr.'@en
+Q134549	P25	Q236540	'Ted Kennedy'@en	'mother'@en	'Rose Kennedy'@en
+Q134549	P26	Q441424	'Ted Kennedy'@en	'spouse'@en	'Joan Bennett Kennedy'@en
+Q134549	P26	Q7926996	'Ted Kennedy'@en	'spouse'@en	'Victoria Reggie Kennedy'@en
+Q134549	P3373	Q25310	'Ted Kennedy'@en	'sibling'@en	'Robert F. Kennedy'@en
+Q134549	P3373	Q265595	'Ted Kennedy'@en	'sibling'@en	'Rosemary Kennedy'@en
+Q134549	P3373	Q268799	'Ted Kennedy'@en	'sibling'@en	'Kathleen Cavendish, Marchioness of Hartington'@en
+Q134549	P3373	Q272401	'Ted Kennedy'@en	'sibling'@en	'Jean Kennedy Smith'@en
+Q134549	P3373	Q272908	'Ted Kennedy'@en	'sibling'@en	'Eunice Kennedy Shriver'@en
+Q134549	P3373	Q432694	'Ted Kennedy'@en	'sibling'@en	'Patricia Kennedy Lawford'@en
+Q134549	P3373	Q505178	'Ted Kennedy'@en	'sibling'@en	'Joseph P. Kennedy Jr.'@en
+Q134549	P3373	Q9696	'Ted Kennedy'@en	'sibling'@en	'John F. Kennedy'@en
+Q134549	P40	Q2383370	'Ted Kennedy'@en	'child'@en	'Kara Kennedy'@en
+Q134549	P40	Q3048622	'Ted Kennedy'@en	'child'@en	'Edward M. Kennedy Jr.'@en
+Q134549	P40	Q948920	'Ted Kennedy'@en	'child'@en	'Patrick J. Kennedy'@en
+Q1352872	P22	Q25310	'Robert F. Kennedy Jr.'@en	'father'@en	'Robert F. Kennedy'@en
+Q1352872	P25	Q258661	'Robert F. Kennedy Jr.'@en	'mother'@en	'Ethel Skakel Kennedy'@en
+Q1352872	P3373	Q1386420	'Robert F. Kennedy Jr.'@en	'sibling'@en	'Joseph P. Kennedy II'@en
+Q1352872	P3373	Q1804720	'Robert F. Kennedy Jr.'@en	'sibling'@en	'Michael LeMoyne Kennedy'@en
+Q1352872	P3373	Q1975383	'Robert F. Kennedy Jr.'@en	'sibling'@en	'David A. Kennedy'@en
+Q1352872	P3373	Q273833	'Robert F. Kennedy Jr.'@en	'sibling'@en	'Rory Kennedy'@en
+Q1352872	P3373	Q467861	'Robert F. Kennedy Jr.'@en	'sibling'@en	'Kathleen Kennedy Townsend'@en
+Q1352872	P3373	Q467912	'Robert F. Kennedy Jr.'@en	'sibling'@en	'Kerry Kennedy'@en
+Q1352872	P3373	Q5112377	'Robert F. Kennedy Jr.'@en	'sibling'@en	'Christopher G. Kennedy'@en
+Q1352872	P3373	Q5178632	'Robert F. Kennedy Jr.'@en	'sibling'@en	'Courtney Kennedy Hill'@en
+Q1352872	P3373	Q5301573	'Robert F. Kennedy Jr.'@en	'sibling'@en	'Douglas Harriman Kennedy'@en
+Q1352872	P3373	Q6794923	'Robert F. Kennedy Jr.'@en	'sibling'@en	'Max Kennedy'@en
+Q1386420	P22	Q25310	'Joseph P. Kennedy II'@en	'father'@en	'Robert F. Kennedy'@en
+Q1386420	P25	Q258661	'Joseph P. Kennedy II'@en	'mother'@en	'Ethel Skakel Kennedy'@en
+Q1386420	P3373	Q1352872	'Joseph P. Kennedy II'@en	'sibling'@en	'Robert F. Kennedy Jr.'@en
+Q1386420	P3373	Q1804720	'Joseph P. Kennedy II'@en	'sibling'@en	'Michael LeMoyne Kennedy'@en
+Q1386420	P3373	Q1975383	'Joseph P. Kennedy II'@en	'sibling'@en	'David A. Kennedy'@en
+Q1386420	P3373	Q273833	'Joseph P. Kennedy II'@en	'sibling'@en	'Rory Kennedy'@en
+Q1386420	P3373	Q467861	'Joseph P. Kennedy II'@en	'sibling'@en	'Kathleen Kennedy Townsend'@en
+Q1386420	P3373	Q467912	'Joseph P. Kennedy II'@en	'sibling'@en	'Kerry Kennedy'@en
+Q1386420	P3373	Q5112377	'Joseph P. Kennedy II'@en	'sibling'@en	'Christopher G. Kennedy'@en
+Q1386420	P3373	Q5178632	'Joseph P. Kennedy II'@en	'sibling'@en	'Courtney Kennedy Hill'@en
+Q1386420	P3373	Q5301573	'Joseph P. Kennedy II'@en	'sibling'@en	'Douglas Harriman Kennedy'@en
+Q1386420	P3373	Q6794923	'Joseph P. Kennedy II'@en	'sibling'@en	'Max Kennedy'@en
+Q165421	P26	Q9696	'Jacqueline Kennedy Onassis'@en	'spouse'@en	'John F. Kennedy'@en
+Q165421	P40	Q230303	'Jacqueline Kennedy Onassis'@en	'child'@en	'Caroline Kennedy'@en
+Q165421	P40	Q316064	'Jacqueline Kennedy Onassis'@en	'child'@en	'John F. Kennedy Jr.'@en
+Q165421	P40	Q3290402	'Jacqueline Kennedy Onassis'@en	'child'@en	'Patrick Bouvier Kennedy'@en
+Q165421	P40	Q75326753	'Jacqueline Kennedy Onassis'@en	'child'@en	'Arabelle Kennedy'@en
+Q1804720	P22	Q25310	'Michael LeMoyne Kennedy'@en	'father'@en	'Robert F. Kennedy'@en
+Q1804720	P25	Q258661	'Michael LeMoyne Kennedy'@en	'mother'@en	'Ethel Skakel Kennedy'@en
+Q1804720	P3373	Q1352872	'Michael LeMoyne Kennedy'@en	'sibling'@en	'Robert F. Kennedy Jr.'@en
+Q1804720	P3373	Q1386420	'Michael LeMoyne Kennedy'@en	'sibling'@en	'Joseph P. Kennedy II'@en
+Q1804720	P3373	Q1975383	'Michael LeMoyne Kennedy'@en	'sibling'@en	'David A. Kennedy'@en
+Q1804720	P3373	Q273833	'Michael LeMoyne Kennedy'@en	'sibling'@en	'Rory Kennedy'@en
+Q1804720	P3373	Q467861	'Michael LeMoyne Kennedy'@en	'sibling'@en	'Kathleen Kennedy Townsend'@en
+Q1804720	P3373	Q467912	'Michael LeMoyne Kennedy'@en	'sibling'@en	'Kerry Kennedy'@en
+Q1804720	P3373	Q5112377	'Michael LeMoyne Kennedy'@en	'sibling'@en	'Christopher G. Kennedy'@en
+Q1804720	P3373	Q5178632	'Michael LeMoyne Kennedy'@en	'sibling'@en	'Courtney Kennedy Hill'@en
+Q1804720	P3373	Q5301573	'Michael LeMoyne Kennedy'@en	'sibling'@en	'Douglas Harriman Kennedy'@en
+Q1804720	P3373	Q6794923	'Michael LeMoyne Kennedy'@en	'sibling'@en	'Max Kennedy'@en
+Q1975383	P22	Q25310	'David A. Kennedy'@en	'father'@en	'Robert F. Kennedy'@en
+Q1975383	P25	Q258661	'David A. Kennedy'@en	'mother'@en	'Ethel Skakel Kennedy'@en
+Q1975383	P3373	Q1352872	'David A. Kennedy'@en	'sibling'@en	'Robert F. Kennedy Jr.'@en
+Q1975383	P3373	Q1386420	'David A. Kennedy'@en	'sibling'@en	'Joseph P. Kennedy II'@en
+Q1975383	P3373	Q1804720	'David A. Kennedy'@en	'sibling'@en	'Michael LeMoyne Kennedy'@en
+Q1975383	P3373	Q273833	'David A. Kennedy'@en	'sibling'@en	'Rory Kennedy'@en
+Q1975383	P3373	Q467861	'David A. Kennedy'@en	'sibling'@en	'Kathleen Kennedy Townsend'@en
+Q1975383	P3373	Q467912	'David A. Kennedy'@en	'sibling'@en	'Kerry Kennedy'@en
+Q1975383	P3373	Q5112377	'David A. Kennedy'@en	'sibling'@en	'Christopher G. Kennedy'@en
+Q1975383	P3373	Q5178632	'David A. Kennedy'@en	'sibling'@en	'Courtney Kennedy Hill'@en
+Q1975383	P3373	Q5301573	'David A. Kennedy'@en	'sibling'@en	'Douglas Harriman Kennedy'@en
+Q1975383	P3373	Q6794923	'David A. Kennedy'@en	'sibling'@en	'Max Kennedy'@en
+Q230303	P22	Q9696	'Caroline Kennedy'@en	'father'@en	'John F. Kennedy'@en
+Q230303	P25	Q165421	'Caroline Kennedy'@en	'mother'@en	'Jacqueline Kennedy Onassis'@en
+Q230303	P3373	Q316064	'Caroline Kennedy'@en	'sibling'@en	'John F. Kennedy Jr.'@en
+Q230303	P3373	Q3290402	'Caroline Kennedy'@en	'sibling'@en	'Patrick Bouvier Kennedy'@en
+Q230303	P3373	Q75326753	'Caroline Kennedy'@en	'sibling'@en	'Arabelle Kennedy'@en
+Q230654	P22	Q317248	'Maria Shriver'@en	'father'@en	'Sargent Shriver'@en
+Q230654	P25	Q272908	'Maria Shriver'@en	'mother'@en	'Eunice Kennedy Shriver'@en
+Q230654	P26	Q2685	'Maria Shriver'@en	'spouse'@en	'Arnold Schwarzenegger'@en
+Q230654	P3373	Q3436301	'Maria Shriver'@en	'sibling'@en	'Bobby Shriver'@en
+Q230654	P3373	Q3529079	'Maria Shriver'@en	'sibling'@en	'Timothy Shriver'@en
+Q230654	P3373	Q4773467	'Maria Shriver'@en	'sibling'@en	'Anthony Shriver'@en
+Q230654	P3373	Q6769708	'Maria Shriver'@en	'sibling'@en	'Mark Shriver'@en
+Q230654	P40	Q28109921	'Maria Shriver'@en	'child'@en	'Christina Schwarzenegger'@en
+Q230654	P40	Q28109928	'Maria Shriver'@en	'child'@en	'Christopher Schwarzenegger'@en
+Q230654	P40	Q4521676	'Maria Shriver'@en	'child'@en	'Katherine Schwarzenegger'@en
+Q230654	P40	Q901541	'Maria Shriver'@en	'child'@en	'Patrick Schwarzenegger'@en
+Q236540	P26	Q313696	'Rose Kennedy'@en	'spouse'@en	'Joseph P. Kennedy Sr.'@en
+Q236540	P40	Q134549	'Rose Kennedy'@en	'child'@en	'Ted Kennedy'@en
+Q236540	P40	Q25310	'Rose Kennedy'@en	'child'@en	'Robert F. Kennedy'@en
+Q236540	P40	Q265595	'Rose Kennedy'@en	'child'@en	'Rosemary Kennedy'@en
+Q236540	P40	Q268799	'Rose Kennedy'@en	'child'@en	'Kathleen Cavendish, Marchioness of Hartington'@en
+Q236540	P40	Q272401	'Rose Kennedy'@en	'child'@en	'Jean Kennedy Smith'@en
+Q236540	P40	Q272908	'Rose Kennedy'@en	'child'@en	'Eunice Kennedy Shriver'@en
+Q236540	P40	Q432694	'Rose Kennedy'@en	'child'@en	'Patricia Kennedy Lawford'@en
+Q236540	P40	Q505178	'Rose Kennedy'@en	'child'@en	'Joseph P. Kennedy Jr.'@en
+Q236540	P40	Q9696	'Rose Kennedy'@en	'child'@en	'John F. Kennedy'@en
+Q23800185	P22	Q2685	'Joseph Baena'@en	'father'@en	'Arnold Schwarzenegger'@en
+Q23800185	P25	Q75494768	'Joseph Baena'@en	'mother'@en	'Mildred Patricia Baena'@en
+Q23800185	P3373	Q901541	'Joseph Baena'@en	'sibling'@en	'Patrick Schwarzenegger'@en
+Q23800370	P26	Q3288486	'Aurelia Schwarzenegger'@en	'spouse'@en	'Gustav Schwarzenegger'@en
+Q23800370	P26	Q96076900	'Aurelia Schwarzenegger'@en	'spouse'@en	'Jadrny'@en
+Q23800370	P40	Q2685	'Aurelia Schwarzenegger'@en	'child'@en	'Arnold Schwarzenegger'@en
+Q23800370	P40	Q38196234	'Aurelia Schwarzenegger'@en	'child'@en	'Meinhard Schwarzenegger'@en
+Q2383370	P22	Q134549	'Kara Kennedy'@en	'father'@en	'Ted Kennedy'@en
+Q2383370	P25	Q441424	'Kara Kennedy'@en	'mother'@en	'Joan Bennett Kennedy'@en
+Q2383370	P3373	Q3048622	'Kara Kennedy'@en	'sibling'@en	'Edward M. Kennedy Jr.'@en
+Q2383370	P3373	Q948920	'Kara Kennedy'@en	'sibling'@en	'Patrick J. Kennedy'@en
+Q24004771	P22	Q38196234	'Patrick M. Knapp Schwarzenegger'@en	'father'@en	'Meinhard Schwarzenegger'@en
+Q25310	P22	Q313696	'Robert F. Kennedy'@en	'father'@en	'Joseph P. Kennedy Sr.'@en
+Q25310	P25	Q236540	'Robert F. Kennedy'@en	'mother'@en	'Rose Kennedy'@en
+Q25310	P26	Q258661	'Robert F. Kennedy'@en	'spouse'@en	'Ethel Skakel Kennedy'@en
+Q25310	P3373	Q134549	'Robert F. Kennedy'@en	'sibling'@en	'Ted Kennedy'@en
+Q25310	P3373	Q265595	'Robert F. Kennedy'@en	'sibling'@en	'Rosemary Kennedy'@en
+Q25310	P3373	Q268799	'Robert F. Kennedy'@en	'sibling'@en	'Kathleen Cavendish, Marchioness of Hartington'@en
+Q25310	P3373	Q272401	'Robert F. Kennedy'@en	'sibling'@en	'Jean Kennedy Smith'@en
+Q25310	P3373	Q272908	'Robert F. Kennedy'@en	'sibling'@en	'Eunice Kennedy Shriver'@en
+Q25310	P3373	Q432694	'Robert F. Kennedy'@en	'sibling'@en	'Patricia Kennedy Lawford'@en
+Q25310	P3373	Q505178	'Robert F. Kennedy'@en	'sibling'@en	'Joseph P. Kennedy Jr.'@en
+Q25310	P3373	Q9696	'Robert F. Kennedy'@en	'sibling'@en	'John F. Kennedy'@en
+Q25310	P40	Q1352872	'Robert F. Kennedy'@en	'child'@en	'Robert F. Kennedy Jr.'@en
+Q25310	P40	Q1386420	'Robert F. Kennedy'@en	'child'@en	'Joseph P. Kennedy II'@en
+Q25310	P40	Q1804720	'Robert F. Kennedy'@en	'child'@en	'Michael LeMoyne Kennedy'@en
+Q25310	P40	Q1975383	'Robert F. Kennedy'@en	'child'@en	'David A. Kennedy'@en
+Q25310	P40	Q273833	'Robert F. Kennedy'@en	'child'@en	'Rory Kennedy'@en
+Q25310	P40	Q467861	'Robert F. Kennedy'@en	'child'@en	'Kathleen Kennedy Townsend'@en
+Q25310	P40	Q467912	'Robert F. Kennedy'@en	'child'@en	'Kerry Kennedy'@en
+Q25310	P40	Q5112377	'Robert F. Kennedy'@en	'child'@en	'Christopher G. Kennedy'@en
+Q25310	P40	Q5178632	'Robert F. Kennedy'@en	'child'@en	'Courtney Kennedy Hill'@en
+Q25310	P40	Q5301573	'Robert F. Kennedy'@en	'child'@en	'Douglas Harriman Kennedy'@en
+Q25310	P40	Q6794923	'Robert F. Kennedy'@en	'child'@en	'Max Kennedy'@en
+Q258661	P26	Q25310	'Ethel Skakel Kennedy'@en	'spouse'@en	'Robert F. Kennedy'@en
+Q258661	P40	Q1352872	'Ethel Skakel Kennedy'@en	'child'@en	'Robert F. Kennedy Jr.'@en
+Q258661	P40	Q1386420	'Ethel Skakel Kennedy'@en	'child'@en	'Joseph P. Kennedy II'@en
+Q258661	P40	Q1804720	'Ethel Skakel Kennedy'@en	'child'@en	'Michael LeMoyne Kennedy'@en
+Q258661	P40	Q1975383	'Ethel Skakel Kennedy'@en	'child'@en	'David A. Kennedy'@en
+Q258661	P40	Q273833	'Ethel Skakel Kennedy'@en	'child'@en	'Rory Kennedy'@en
+Q258661	P40	Q467861	'Ethel Skakel Kennedy'@en	'child'@en	'Kathleen Kennedy Townsend'@en
+Q258661	P40	Q467912	'Ethel Skakel Kennedy'@en	'child'@en	'Kerry Kennedy'@en
+Q258661	P40	Q5112377	'Ethel Skakel Kennedy'@en	'child'@en	'Christopher G. Kennedy'@en
+Q258661	P40	Q5178632	'Ethel Skakel Kennedy'@en	'child'@en	'Courtney Kennedy Hill'@en
+Q258661	P40	Q5301573	'Ethel Skakel Kennedy'@en	'child'@en	'Douglas Harriman Kennedy'@en
+Q258661	P40	Q6794923	'Ethel Skakel Kennedy'@en	'child'@en	'Max Kennedy'@en
+Q265595	P22	Q313696	'Rosemary Kennedy'@en	'father'@en	'Joseph P. Kennedy Sr.'@en
+Q265595	P25	Q236540	'Rosemary Kennedy'@en	'mother'@en	'Rose Kennedy'@en
+Q265595	P3373	Q134549	'Rosemary Kennedy'@en	'sibling'@en	'Ted Kennedy'@en
+Q265595	P3373	Q25310	'Rosemary Kennedy'@en	'sibling'@en	'Robert F. Kennedy'@en
+Q265595	P3373	Q268799	'Rosemary Kennedy'@en	'sibling'@en	'Kathleen Cavendish, Marchioness of Hartington'@en
+Q265595	P3373	Q272401	'Rosemary Kennedy'@en	'sibling'@en	'Jean Kennedy Smith'@en
+Q265595	P3373	Q272908	'Rosemary Kennedy'@en	'sibling'@en	'Eunice Kennedy Shriver'@en
+Q265595	P3373	Q432694	'Rosemary Kennedy'@en	'sibling'@en	'Patricia Kennedy Lawford'@en
+Q265595	P3373	Q505178	'Rosemary Kennedy'@en	'sibling'@en	'Joseph P. Kennedy Jr.'@en
+Q265595	P3373	Q9696	'Rosemary Kennedy'@en	'sibling'@en	'John F. Kennedy'@en
+Q2685	P22	Q3288486	'Arnold Schwarzenegger'@en	'father'@en	'Gustav Schwarzenegger'@en
+Q2685	P25	Q23800370	'Arnold Schwarzenegger'@en	'mother'@en	'Aurelia Schwarzenegger'@en
+Q2685	P26	Q230654	'Arnold Schwarzenegger'@en	'spouse'@en	'Maria Shriver'@en
+Q2685	P3373	Q38196234	'Arnold Schwarzenegger'@en	'sibling'@en	'Meinhard Schwarzenegger'@en
+Q2685	P40	Q23800185	'Arnold Schwarzenegger'@en	'child'@en	'Joseph Baena'@en
+Q2685	P40	Q28109921	'Arnold Schwarzenegger'@en	'child'@en	'Christina Schwarzenegger'@en
+Q2685	P40	Q28109928	'Arnold Schwarzenegger'@en	'child'@en	'Christopher Schwarzenegger'@en
+Q2685	P40	Q4521676	'Arnold Schwarzenegger'@en	'child'@en	'Katherine Schwarzenegger'@en
+Q2685	P40	Q901541	'Arnold Schwarzenegger'@en	'child'@en	'Patrick Schwarzenegger'@en
+Q2685	P451	Q75494768	'Arnold Schwarzenegger'@en	'unmarried partner'@en	'Mildred Patricia Baena'@en
+Q268799	P22	Q313696	'Kathleen Cavendish, Marchioness of Hartington'@en	'father'@en	'Joseph P. Kennedy Sr.'@en
+Q268799	P25	Q236540	'Kathleen Cavendish, Marchioness of Hartington'@en	'mother'@en	'Rose Kennedy'@en
+Q268799	P3373	Q134549	'Kathleen Cavendish, Marchioness of Hartington'@en	'sibling'@en	'Ted Kennedy'@en
+Q268799	P3373	Q25310	'Kathleen Cavendish, Marchioness of Hartington'@en	'sibling'@en	'Robert F. Kennedy'@en
+Q268799	P3373	Q265595	'Kathleen Cavendish, Marchioness of Hartington'@en	'sibling'@en	'Rosemary Kennedy'@en
+Q268799	P3373	Q272401	'Kathleen Cavendish, Marchioness of Hartington'@en	'sibling'@en	'Jean Kennedy Smith'@en
+Q268799	P3373	Q272908	'Kathleen Cavendish, Marchioness of Hartington'@en	'sibling'@en	'Eunice Kennedy Shriver'@en
+Q268799	P3373	Q432694	'Kathleen Cavendish, Marchioness of Hartington'@en	'sibling'@en	'Patricia Kennedy Lawford'@en
+Q268799	P3373	Q505178	'Kathleen Cavendish, Marchioness of Hartington'@en	'sibling'@en	'Joseph P. Kennedy Jr.'@en
+Q268799	P3373	Q9696	'Kathleen Cavendish, Marchioness of Hartington'@en	'sibling'@en	'John F. Kennedy'@en
+Q272401	P22	Q313696	'Jean Kennedy Smith'@en	'father'@en	'Joseph P. Kennedy Sr.'@en
+Q272401	P25	Q236540	'Jean Kennedy Smith'@en	'mother'@en	'Rose Kennedy'@en
+Q272401	P3373	Q134549	'Jean Kennedy Smith'@en	'sibling'@en	'Ted Kennedy'@en
+Q272401	P3373	Q25310	'Jean Kennedy Smith'@en	'sibling'@en	'Robert F. Kennedy'@en
+Q272401	P3373	Q265595	'Jean Kennedy Smith'@en	'sibling'@en	'Rosemary Kennedy'@en
+Q272401	P3373	Q268799	'Jean Kennedy Smith'@en	'sibling'@en	'Kathleen Cavendish, Marchioness of Hartington'@en
+Q272401	P3373	Q272908	'Jean Kennedy Smith'@en	'sibling'@en	'Eunice Kennedy Shriver'@en
+Q272401	P3373	Q432694	'Jean Kennedy Smith'@en	'sibling'@en	'Patricia Kennedy Lawford'@en
+Q272401	P3373	Q505178	'Jean Kennedy Smith'@en	'sibling'@en	'Joseph P. Kennedy Jr.'@en
+Q272401	P3373	Q9696	'Jean Kennedy Smith'@en	'sibling'@en	'John F. Kennedy'@en
+Q272908	P22	Q313696	'Eunice Kennedy Shriver'@en	'father'@en	'Joseph P. Kennedy Sr.'@en
+Q272908	P25	Q236540	'Eunice Kennedy Shriver'@en	'mother'@en	'Rose Kennedy'@en
+Q272908	P26	Q317248	'Eunice Kennedy Shriver'@en	'spouse'@en	'Sargent Shriver'@en
+Q272908	P3373	Q134549	'Eunice Kennedy Shriver'@en	'sibling'@en	'Ted Kennedy'@en
+Q272908	P3373	Q25310	'Eunice Kennedy Shriver'@en	'sibling'@en	'Robert F. Kennedy'@en
+Q272908	P3373	Q265595	'Eunice Kennedy Shriver'@en	'sibling'@en	'Rosemary Kennedy'@en
+Q272908	P3373	Q268799	'Eunice Kennedy Shriver'@en	'sibling'@en	'Kathleen Cavendish, Marchioness of Hartington'@en
+Q272908	P3373	Q272401	'Eunice Kennedy Shriver'@en	'sibling'@en	'Jean Kennedy Smith'@en
+Q272908	P3373	Q432694	'Eunice Kennedy Shriver'@en	'sibling'@en	'Patricia Kennedy Lawford'@en
+Q272908	P3373	Q505178	'Eunice Kennedy Shriver'@en	'sibling'@en	'Joseph P. Kennedy Jr.'@en
+Q272908	P3373	Q9696	'Eunice Kennedy Shriver'@en	'sibling'@en	'John F. Kennedy'@en
+Q272908	P40	Q230654	'Eunice Kennedy Shriver'@en	'child'@en	'Maria Shriver'@en
+Q272908	P40	Q3436301	'Eunice Kennedy Shriver'@en	'child'@en	'Bobby Shriver'@en
+Q272908	P40	Q3529079	'Eunice Kennedy Shriver'@en	'child'@en	'Timothy Shriver'@en
+Q272908	P40	Q4773467	'Eunice Kennedy Shriver'@en	'child'@en	'Anthony Shriver'@en
+Q272908	P40	Q6769708	'Eunice Kennedy Shriver'@en	'child'@en	'Mark Shriver'@en
+Q273833	P22	Q25310	'Rory Kennedy'@en	'father'@en	'Robert F. Kennedy'@en
+Q273833	P25	Q258661	'Rory Kennedy'@en	'mother'@en	'Ethel Skakel Kennedy'@en
+Q273833	P3373	Q1352872	'Rory Kennedy'@en	'sibling'@en	'Robert F. Kennedy Jr.'@en
+Q273833	P3373	Q1386420	'Rory Kennedy'@en	'sibling'@en	'Joseph P. Kennedy II'@en
+Q273833	P3373	Q1804720	'Rory Kennedy'@en	'sibling'@en	'Michael LeMoyne Kennedy'@en
+Q273833	P3373	Q1975383	'Rory Kennedy'@en	'sibling'@en	'David A. Kennedy'@en
+Q273833	P3373	Q467861	'Rory Kennedy'@en	'sibling'@en	'Kathleen Kennedy Townsend'@en
+Q273833	P3373	Q467912	'Rory Kennedy'@en	'sibling'@en	'Kerry Kennedy'@en
+Q273833	P3373	Q5112377	'Rory Kennedy'@en	'sibling'@en	'Christopher G. Kennedy'@en
+Q273833	P3373	Q5178632	'Rory Kennedy'@en	'sibling'@en	'Courtney Kennedy Hill'@en
+Q273833	P3373	Q5301573	'Rory Kennedy'@en	'sibling'@en	'Douglas Harriman Kennedy'@en
+Q273833	P3373	Q6794923	'Rory Kennedy'@en	'sibling'@en	'Max Kennedy'@en
+Q28109921	P22	Q2685	'Christina Schwarzenegger'@en	'father'@en	'Arnold Schwarzenegger'@en
+Q28109921	P25	Q230654	'Christina Schwarzenegger'@en	'mother'@en	'Maria Shriver'@en
+Q28109921	P3373	Q28109928	'Christina Schwarzenegger'@en	'sibling'@en	'Christopher Schwarzenegger'@en
+Q28109921	P3373	Q4521676	'Christina Schwarzenegger'@en	'sibling'@en	'Katherine Schwarzenegger'@en
+Q28109921	P3373	Q901541	'Christina Schwarzenegger'@en	'sibling'@en	'Patrick Schwarzenegger'@en
+Q28109928	P22	Q2685	'Christopher Schwarzenegger'@en	'father'@en	'Arnold Schwarzenegger'@en
+Q28109928	P25	Q230654	'Christopher Schwarzenegger'@en	'mother'@en	'Maria Shriver'@en
+Q28109928	P3373	Q28109921	'Christopher Schwarzenegger'@en	'sibling'@en	'Christina Schwarzenegger'@en
+Q28109928	P3373	Q4521676	'Christopher Schwarzenegger'@en	'sibling'@en	'Katherine Schwarzenegger'@en
+Q28109928	P3373	Q901541	'Christopher Schwarzenegger'@en	'sibling'@en	'Patrick Schwarzenegger'@en
+Q3048622	P22	Q134549	'Edward M. Kennedy Jr.'@en	'father'@en	'Ted Kennedy'@en
+Q3048622	P25	Q441424	'Edward M. Kennedy Jr.'@en	'mother'@en	'Joan Bennett Kennedy'@en
+Q3048622	P3373	Q2383370	'Edward M. Kennedy Jr.'@en	'sibling'@en	'Kara Kennedy'@en
+Q3048622	P3373	Q948920	'Edward M. Kennedy Jr.'@en	'sibling'@en	'Patrick J. Kennedy'@en
+Q313696	P26	Q236540	'Joseph P. Kennedy Sr.'@en	'spouse'@en	'Rose Kennedy'@en
+Q313696	P40	Q134549	'Joseph P. Kennedy Sr.'@en	'child'@en	'Ted Kennedy'@en
+Q313696	P40	Q25310	'Joseph P. Kennedy Sr.'@en	'child'@en	'Robert F. Kennedy'@en
+Q313696	P40	Q265595	'Joseph P. Kennedy Sr.'@en	'child'@en	'Rosemary Kennedy'@en
+Q313696	P40	Q268799	'Joseph P. Kennedy Sr.'@en	'child'@en	'Kathleen Cavendish, Marchioness of Hartington'@en
+Q313696	P40	Q272401	'Joseph P. Kennedy Sr.'@en	'child'@en	'Jean Kennedy Smith'@en
+Q313696	P40	Q272908	'Joseph P. Kennedy Sr.'@en	'child'@en	'Eunice Kennedy Shriver'@en
+Q313696	P40	Q432694	'Joseph P. Kennedy Sr.'@en	'child'@en	'Patricia Kennedy Lawford'@en
+Q313696	P40	Q505178	'Joseph P. Kennedy Sr.'@en	'child'@en	'Joseph P. Kennedy Jr.'@en
+Q313696	P40	Q9696	'Joseph P. Kennedy Sr.'@en	'child'@en	'John F. Kennedy'@en
+Q316064	P22	Q9696	'John F. Kennedy Jr.'@en	'father'@en	'John F. Kennedy'@en
+Q316064	P25	Q165421	'John F. Kennedy Jr.'@en	'mother'@en	'Jacqueline Kennedy Onassis'@en
+Q316064	P3373	Q230303	'John F. Kennedy Jr.'@en	'sibling'@en	'Caroline Kennedy'@en
+Q316064	P3373	Q3290402	'John F. Kennedy Jr.'@en	'sibling'@en	'Patrick Bouvier Kennedy'@en
+Q316064	P3373	Q75326753	'John F. Kennedy Jr.'@en	'sibling'@en	'Arabelle Kennedy'@en
+Q317248	P22	Q96077739	'Sargent Shriver'@en	'father'@en	'Robert Sargent Shriver'@en
+Q317248	P25	Q96077740	'Sargent Shriver'@en	'mother'@en	'Hilda Shriver'@en
+Q317248	P26	Q272908	'Sargent Shriver'@en	'spouse'@en	'Eunice Kennedy Shriver'@en
+Q317248	P40	Q230654	'Sargent Shriver'@en	'child'@en	'Maria Shriver'@en
+Q317248	P40	Q3436301	'Sargent Shriver'@en	'child'@en	'Bobby Shriver'@en
+Q317248	P40	Q3529079	'Sargent Shriver'@en	'child'@en	'Timothy Shriver'@en
+Q317248	P40	Q4773467	'Sargent Shriver'@en	'child'@en	'Anthony Shriver'@en
+Q317248	P40	Q6769708	'Sargent Shriver'@en	'child'@en	'Mark Shriver'@en
+Q3288486	P26	Q23800370	'Gustav Schwarzenegger'@en	'spouse'@en	'Aurelia Schwarzenegger'@en
+Q3288486	P40	Q2685	'Gustav Schwarzenegger'@en	'child'@en	'Arnold Schwarzenegger'@en
+Q3288486	P40	Q38196234	'Gustav Schwarzenegger'@en	'child'@en	'Meinhard Schwarzenegger'@en
+Q3290402	P22	Q9696	'Patrick Bouvier Kennedy'@en	'father'@en	'John F. Kennedy'@en
+Q3290402	P25	Q165421	'Patrick Bouvier Kennedy'@en	'mother'@en	'Jacqueline Kennedy Onassis'@en
+Q3290402	P3373	Q230303	'Patrick Bouvier Kennedy'@en	'sibling'@en	'Caroline Kennedy'@en
+Q3290402	P3373	Q316064	'Patrick Bouvier Kennedy'@en	'sibling'@en	'John F. Kennedy Jr.'@en
+Q3290402	P3373	Q75326753	'Patrick Bouvier Kennedy'@en	'sibling'@en	'Arabelle Kennedy'@en
+Q3436301	P22	Q317248	'Bobby Shriver'@en	'father'@en	'Sargent Shriver'@en
+Q3436301	P25	Q272908	'Bobby Shriver'@en	'mother'@en	'Eunice Kennedy Shriver'@en
+Q3436301	P26	Q65589427	'Bobby Shriver'@en	'spouse'@en	'Malissa Feruzzi'@en
+Q3436301	P3373	Q230654	'Bobby Shriver'@en	'sibling'@en	'Maria Shriver'@en
+Q3436301	P3373	Q3529079	'Bobby Shriver'@en	'sibling'@en	'Timothy Shriver'@en
+Q3436301	P3373	Q4773467	'Bobby Shriver'@en	'sibling'@en	'Anthony Shriver'@en
+Q3436301	P3373	Q6769708	'Bobby Shriver'@en	'sibling'@en	'Mark Shriver'@en
+Q345517	P26	Q432694	'Peter Lawford'@en	'spouse'@en	'Patricia Kennedy Lawford'@en
+Q345517	P26	Q96079835	'Peter Lawford'@en	'spouse'@en	'Mary Rowan'@en
+Q345517	P26	Q96079836	'Peter Lawford'@en	'spouse'@en	'Deborah Gould'@en
+Q345517	P26	Q96079838	'Peter Lawford'@en	'spouse'@en	'Patricia Seaton'@en
+Q345517	P40	Q1086823	'Peter Lawford'@en	'child'@en	'Christopher Lawford'@en
+Q345517	P40	Q75326777	'Peter Lawford'@en	'child'@en	'Victoria Lawford'@en
+Q345517	P40	Q75326779	'Peter Lawford'@en	'child'@en	'Sydney Lawford'@en
+Q345517	P40	Q75326780	'Peter Lawford'@en	'child'@en	'Robin Lawford'@en
+Q3529079	P22	Q317248	'Timothy Shriver'@en	'father'@en	'Sargent Shriver'@en
+Q3529079	P25	Q272908	'Timothy Shriver'@en	'mother'@en	'Eunice Kennedy Shriver'@en
+Q3529079	P3373	Q230654	'Timothy Shriver'@en	'sibling'@en	'Maria Shriver'@en
+Q3529079	P3373	Q3436301	'Timothy Shriver'@en	'sibling'@en	'Bobby Shriver'@en
+Q3529079	P3373	Q4773467	'Timothy Shriver'@en	'sibling'@en	'Anthony Shriver'@en
+Q3529079	P3373	Q6769708	'Timothy Shriver'@en	'sibling'@en	'Mark Shriver'@en
+Q38196234	P22	Q3288486	'Meinhard Schwarzenegger'@en	'father'@en	'Gustav Schwarzenegger'@en
+Q38196234	P25	Q23800370	'Meinhard Schwarzenegger'@en	'mother'@en	'Aurelia Schwarzenegger'@en
+Q38196234	P3373	Q2685	'Meinhard Schwarzenegger'@en	'sibling'@en	'Arnold Schwarzenegger'@en
+Q38196234	P40	Q24004771	'Meinhard Schwarzenegger'@en	'child'@en	'Patrick M. Knapp Schwarzenegger'@en
+Q43100988	P22	Q503706	'Jack Pratt'@en	'father'@en	'Chris Pratt'@en
+Q43100988	P25	Q4491	'Jack Pratt'@en	'mother'@en	'Anna Faris'@en
+Q432694	P22	Q313696	'Patricia Kennedy Lawford'@en	'father'@en	'Joseph P. Kennedy Sr.'@en
+Q432694	P25	Q236540	'Patricia Kennedy Lawford'@en	'mother'@en	'Rose Kennedy'@en
+Q432694	P26	Q345517	'Patricia Kennedy Lawford'@en	'spouse'@en	'Peter Lawford'@en
+Q432694	P3373	Q134549	'Patricia Kennedy Lawford'@en	'sibling'@en	'Ted Kennedy'@en
+Q432694	P3373	Q25310	'Patricia Kennedy Lawford'@en	'sibling'@en	'Robert F. Kennedy'@en
+Q432694	P3373	Q265595	'Patricia Kennedy Lawford'@en	'sibling'@en	'Rosemary Kennedy'@en
+Q432694	P3373	Q268799	'Patricia Kennedy Lawford'@en	'sibling'@en	'Kathleen Cavendish, Marchioness of Hartington'@en
+Q432694	P3373	Q272401	'Patricia Kennedy Lawford'@en	'sibling'@en	'Jean Kennedy Smith'@en
+Q432694	P3373	Q272908	'Patricia Kennedy Lawford'@en	'sibling'@en	'Eunice Kennedy Shriver'@en
+Q432694	P3373	Q505178	'Patricia Kennedy Lawford'@en	'sibling'@en	'Joseph P. Kennedy Jr.'@en
+Q432694	P3373	Q9696	'Patricia Kennedy Lawford'@en	'sibling'@en	'John F. Kennedy'@en
+Q432694	P40	Q1086823	'Patricia Kennedy Lawford'@en	'child'@en	'Christopher Lawford'@en
+Q432694	P40	Q75326777	'Patricia Kennedy Lawford'@en	'child'@en	'Victoria Lawford'@en
+Q432694	P40	Q75326779	'Patricia Kennedy Lawford'@en	'child'@en	'Sydney Lawford'@en
+Q432694	P40	Q75326780	'Patricia Kennedy Lawford'@en	'child'@en	'Robin Lawford'@en
+Q441424	P26	Q134549	'Joan Bennett Kennedy'@en	'spouse'@en	'Ted Kennedy'@en
+Q441424	P40	Q2383370	'Joan Bennett Kennedy'@en	'child'@en	'Kara Kennedy'@en
+Q441424	P40	Q3048622	'Joan Bennett Kennedy'@en	'child'@en	'Edward M. Kennedy Jr.'@en
+Q441424	P40	Q948920	'Joan Bennett Kennedy'@en	'child'@en	'Patrick J. Kennedy'@en
+Q4491	P26	Q503706	'Anna Faris'@en	'spouse'@en	'Chris Pratt'@en
+Q4491	P40	Q43100988	'Anna Faris'@en	'child'@en	'Jack Pratt'@en
+Q4521676	P22	Q2685	'Katherine Schwarzenegger'@en	'father'@en	'Arnold Schwarzenegger'@en
+Q4521676	P25	Q230654	'Katherine Schwarzenegger'@en	'mother'@en	'Maria Shriver'@en
+Q4521676	P26	Q503706	'Katherine Schwarzenegger'@en	'spouse'@en	'Chris Pratt'@en
+Q4521676	P3373	Q28109921	'Katherine Schwarzenegger'@en	'sibling'@en	'Christina Schwarzenegger'@en
+Q4521676	P3373	Q28109928	'Katherine Schwarzenegger'@en	'sibling'@en	'Christopher Schwarzenegger'@en
+Q4521676	P3373	Q901541	'Katherine Schwarzenegger'@en	'sibling'@en	'Patrick Schwarzenegger'@en
+Q467861	P22	Q25310	'Kathleen Kennedy Townsend'@en	'father'@en	'Robert F. Kennedy'@en
+Q467861	P25	Q258661	'Kathleen Kennedy Townsend'@en	'mother'@en	'Ethel Skakel Kennedy'@en
+Q467861	P3373	Q1352872	'Kathleen Kennedy Townsend'@en	'sibling'@en	'Robert F. Kennedy Jr.'@en
+Q467861	P3373	Q1386420	'Kathleen Kennedy Townsend'@en	'sibling'@en	'Joseph P. Kennedy II'@en
+Q467861	P3373	Q1804720	'Kathleen Kennedy Townsend'@en	'sibling'@en	'Michael LeMoyne Kennedy'@en
+Q467861	P3373	Q1975383	'Kathleen Kennedy Townsend'@en	'sibling'@en	'David A. Kennedy'@en
+Q467861	P3373	Q273833	'Kathleen Kennedy Townsend'@en	'sibling'@en	'Rory Kennedy'@en
+Q467861	P3373	Q467912	'Kathleen Kennedy Townsend'@en	'sibling'@en	'Kerry Kennedy'@en
+Q467861	P3373	Q5112377	'Kathleen Kennedy Townsend'@en	'sibling'@en	'Christopher G. Kennedy'@en
+Q467861	P3373	Q5178632	'Kathleen Kennedy Townsend'@en	'sibling'@en	'Courtney Kennedy Hill'@en
+Q467861	P3373	Q5301573	'Kathleen Kennedy Townsend'@en	'sibling'@en	'Douglas Harriman Kennedy'@en
+Q467861	P3373	Q6794923	'Kathleen Kennedy Townsend'@en	'sibling'@en	'Max Kennedy'@en
+Q467912	P22	Q25310	'Kerry Kennedy'@en	'father'@en	'Robert F. Kennedy'@en
+Q467912	P25	Q258661	'Kerry Kennedy'@en	'mother'@en	'Ethel Skakel Kennedy'@en
+Q467912	P26	Q11673	'Kerry Kennedy'@en	'spouse'@en	'Andrew Cuomo'@en
+Q467912	P3373	Q1352872	'Kerry Kennedy'@en	'sibling'@en	'Robert F. Kennedy Jr.'@en
+Q467912	P3373	Q1386420	'Kerry Kennedy'@en	'sibling'@en	'Joseph P. Kennedy II'@en
+Q467912	P3373	Q1804720	'Kerry Kennedy'@en	'sibling'@en	'Michael LeMoyne Kennedy'@en
+Q467912	P3373	Q1975383	'Kerry Kennedy'@en	'sibling'@en	'David A. Kennedy'@en
+Q467912	P3373	Q273833	'Kerry Kennedy'@en	'sibling'@en	'Rory Kennedy'@en
+Q467912	P3373	Q467861	'Kerry Kennedy'@en	'sibling'@en	'Kathleen Kennedy Townsend'@en
+Q467912	P3373	Q5112377	'Kerry Kennedy'@en	'sibling'@en	'Christopher G. Kennedy'@en
+Q467912	P3373	Q5178632	'Kerry Kennedy'@en	'sibling'@en	'Courtney Kennedy Hill'@en
+Q467912	P3373	Q5301573	'Kerry Kennedy'@en	'sibling'@en	'Douglas Harriman Kennedy'@en
+Q467912	P3373	Q6794923	'Kerry Kennedy'@en	'sibling'@en	'Max Kennedy'@en
+Q4773467	P22	Q317248	'Anthony Shriver'@en	'father'@en	'Sargent Shriver'@en
+Q4773467	P25	Q272908	'Anthony Shriver'@en	'mother'@en	'Eunice Kennedy Shriver'@en
+Q4773467	P26	Q65589450	'Anthony Shriver'@en	'spouse'@en	'Alina Shriver'@en
+Q4773467	P3373	Q230654	'Anthony Shriver'@en	'sibling'@en	'Maria Shriver'@en
+Q4773467	P3373	Q3436301	'Anthony Shriver'@en	'sibling'@en	'Bobby Shriver'@en
+Q4773467	P3373	Q3529079	'Anthony Shriver'@en	'sibling'@en	'Timothy Shriver'@en
+Q4773467	P3373	Q6769708	'Anthony Shriver'@en	'sibling'@en	'Mark Shriver'@en
+Q503706	P26	Q4491	'Chris Pratt'@en	'spouse'@en	'Anna Faris'@en
+Q503706	P26	Q4521676	'Chris Pratt'@en	'spouse'@en	'Katherine Schwarzenegger'@en
+Q503706	P40	Q43100988	'Chris Pratt'@en	'child'@en	'Jack Pratt'@en
+Q505178	P22	Q313696	'Joseph P. Kennedy Jr.'@en	'father'@en	'Joseph P. Kennedy Sr.'@en
+Q505178	P25	Q236540	'Joseph P. Kennedy Jr.'@en	'mother'@en	'Rose Kennedy'@en
+Q505178	P3373	Q134549	'Joseph P. Kennedy Jr.'@en	'sibling'@en	'Ted Kennedy'@en
+Q505178	P3373	Q25310	'Joseph P. Kennedy Jr.'@en	'sibling'@en	'Robert F. Kennedy'@en
+Q505178	P3373	Q265595	'Joseph P. Kennedy Jr.'@en	'sibling'@en	'Rosemary Kennedy'@en
+Q505178	P3373	Q268799	'Joseph P. Kennedy Jr.'@en	'sibling'@en	'Kathleen Cavendish, Marchioness of Hartington'@en
+Q505178	P3373	Q272401	'Joseph P. Kennedy Jr.'@en	'sibling'@en	'Jean Kennedy Smith'@en
+Q505178	P3373	Q272908	'Joseph P. Kennedy Jr.'@en	'sibling'@en	'Eunice Kennedy Shriver'@en
+Q505178	P3373	Q432694	'Joseph P. Kennedy Jr.'@en	'sibling'@en	'Patricia Kennedy Lawford'@en
+Q505178	P3373	Q9696	'Joseph P. Kennedy Jr.'@en	'sibling'@en	'John F. Kennedy'@en
+Q5112377	P22	Q25310	'Christopher G. Kennedy'@en	'father'@en	'Robert F. Kennedy'@en
+Q5112377	P25	Q258661	'Christopher G. Kennedy'@en	'mother'@en	'Ethel Skakel Kennedy'@en
+Q5112377	P3373	Q1352872	'Christopher G. Kennedy'@en	'sibling'@en	'Robert F. Kennedy Jr.'@en
+Q5112377	P3373	Q1386420	'Christopher G. Kennedy'@en	'sibling'@en	'Joseph P. Kennedy II'@en
+Q5112377	P3373	Q1804720	'Christopher G. Kennedy'@en	'sibling'@en	'Michael LeMoyne Kennedy'@en
+Q5112377	P3373	Q1975383	'Christopher G. Kennedy'@en	'sibling'@en	'David A. Kennedy'@en
+Q5112377	P3373	Q273833	'Christopher G. Kennedy'@en	'sibling'@en	'Rory Kennedy'@en
+Q5112377	P3373	Q467861	'Christopher G. Kennedy'@en	'sibling'@en	'Kathleen Kennedy Townsend'@en
+Q5112377	P3373	Q467912	'Christopher G. Kennedy'@en	'sibling'@en	'Kerry Kennedy'@en
+Q5112377	P3373	Q5178632	'Christopher G. Kennedy'@en	'sibling'@en	'Courtney Kennedy Hill'@en
+Q5112377	P3373	Q5301573	'Christopher G. Kennedy'@en	'sibling'@en	'Douglas Harriman Kennedy'@en
+Q5112377	P3373	Q6794923	'Christopher G. Kennedy'@en	'sibling'@en	'Max Kennedy'@en
+Q5178632	P22	Q25310	'Courtney Kennedy Hill'@en	'father'@en	'Robert F. Kennedy'@en
+Q5178632	P25	Q258661	'Courtney Kennedy Hill'@en	'mother'@en	'Ethel Skakel Kennedy'@en
+Q5178632	P3373	Q1352872	'Courtney Kennedy Hill'@en	'sibling'@en	'Robert F. Kennedy Jr.'@en
+Q5178632	P3373	Q1386420	'Courtney Kennedy Hill'@en	'sibling'@en	'Joseph P. Kennedy II'@en
+Q5178632	P3373	Q1804720	'Courtney Kennedy Hill'@en	'sibling'@en	'Michael LeMoyne Kennedy'@en
+Q5178632	P3373	Q1975383	'Courtney Kennedy Hill'@en	'sibling'@en	'David A. Kennedy'@en
+Q5178632	P3373	Q273833	'Courtney Kennedy Hill'@en	'sibling'@en	'Rory Kennedy'@en
+Q5178632	P3373	Q467861	'Courtney Kennedy Hill'@en	'sibling'@en	'Kathleen Kennedy Townsend'@en
+Q5178632	P3373	Q467912	'Courtney Kennedy Hill'@en	'sibling'@en	'Kerry Kennedy'@en
+Q5178632	P3373	Q5112377	'Courtney Kennedy Hill'@en	'sibling'@en	'Christopher G. Kennedy'@en
+Q5178632	P3373	Q5301573	'Courtney Kennedy Hill'@en	'sibling'@en	'Douglas Harriman Kennedy'@en
+Q5178632	P3373	Q6794923	'Courtney Kennedy Hill'@en	'sibling'@en	'Max Kennedy'@en
+Q5301573	P22	Q25310	'Douglas Harriman Kennedy'@en	'father'@en	'Robert F. Kennedy'@en
+Q5301573	P25	Q258661	'Douglas Harriman Kennedy'@en	'mother'@en	'Ethel Skakel Kennedy'@en
+Q5301573	P3373	Q1352872	'Douglas Harriman Kennedy'@en	'sibling'@en	'Robert F. Kennedy Jr.'@en
+Q5301573	P3373	Q1386420	'Douglas Harriman Kennedy'@en	'sibling'@en	'Joseph P. Kennedy II'@en
+Q5301573	P3373	Q1804720	'Douglas Harriman Kennedy'@en	'sibling'@en	'Michael LeMoyne Kennedy'@en
+Q5301573	P3373	Q1975383	'Douglas Harriman Kennedy'@en	'sibling'@en	'David A. Kennedy'@en
+Q5301573	P3373	Q273833	'Douglas Harriman Kennedy'@en	'sibling'@en	'Rory Kennedy'@en
+Q5301573	P3373	Q467861	'Douglas Harriman Kennedy'@en	'sibling'@en	'Kathleen Kennedy Townsend'@en
+Q5301573	P3373	Q467912	'Douglas Harriman Kennedy'@en	'sibling'@en	'Kerry Kennedy'@en
+Q5301573	P3373	Q5112377	'Douglas Harriman Kennedy'@en	'sibling'@en	'Christopher G. Kennedy'@en
+Q5301573	P3373	Q5178632	'Douglas Harriman Kennedy'@en	'sibling'@en	'Courtney Kennedy Hill'@en
+Q5301573	P3373	Q6794923	'Douglas Harriman Kennedy'@en	'sibling'@en	'Max Kennedy'@en
+Q65589427	P26	Q3436301	'Malissa Feruzzi'@en	'spouse'@en	'Bobby Shriver'@en
+Q65589450	P26	Q4773467	'Alina Shriver'@en	'spouse'@en	'Anthony Shriver'@en
+Q6769708	P22	Q317248	'Mark Shriver'@en	'father'@en	'Sargent Shriver'@en
+Q6769708	P25	Q272908	'Mark Shriver'@en	'mother'@en	'Eunice Kennedy Shriver'@en
+Q6769708	P3373	Q230654	'Mark Shriver'@en	'sibling'@en	'Maria Shriver'@en
+Q6769708	P3373	Q3436301	'Mark Shriver'@en	'sibling'@en	'Bobby Shriver'@en
+Q6769708	P3373	Q3529079	'Mark Shriver'@en	'sibling'@en	'Timothy Shriver'@en
+Q6769708	P3373	Q4773467	'Mark Shriver'@en	'sibling'@en	'Anthony Shriver'@en
+Q6794923	P22	Q25310	'Max Kennedy'@en	'father'@en	'Robert F. Kennedy'@en
+Q6794923	P25	Q258661	'Max Kennedy'@en	'mother'@en	'Ethel Skakel Kennedy'@en
+Q6794923	P3373	Q1352872	'Max Kennedy'@en	'sibling'@en	'Robert F. Kennedy Jr.'@en
+Q6794923	P3373	Q1386420	'Max Kennedy'@en	'sibling'@en	'Joseph P. Kennedy II'@en
+Q6794923	P3373	Q1804720	'Max Kennedy'@en	'sibling'@en	'Michael LeMoyne Kennedy'@en
+Q6794923	P3373	Q1975383	'Max Kennedy'@en	'sibling'@en	'David A. Kennedy'@en
+Q6794923	P3373	Q273833	'Max Kennedy'@en	'sibling'@en	'Rory Kennedy'@en
+Q6794923	P3373	Q467861	'Max Kennedy'@en	'sibling'@en	'Kathleen Kennedy Townsend'@en
+Q6794923	P3373	Q467912	'Max Kennedy'@en	'sibling'@en	'Kerry Kennedy'@en
+Q6794923	P3373	Q5112377	'Max Kennedy'@en	'sibling'@en	'Christopher G. Kennedy'@en
+Q6794923	P3373	Q5178632	'Max Kennedy'@en	'sibling'@en	'Courtney Kennedy Hill'@en
+Q6794923	P3373	Q5301573	'Max Kennedy'@en	'sibling'@en	'Douglas Harriman Kennedy'@en
+Q75326753	P22	Q9696	'Arabelle Kennedy'@en	'father'@en	'John F. Kennedy'@en
+Q75326753	P25	Q165421	'Arabelle Kennedy'@en	'mother'@en	'Jacqueline Kennedy Onassis'@en
+Q75326753	P3373	Q230303	'Arabelle Kennedy'@en	'sibling'@en	'Caroline Kennedy'@en
+Q75326753	P3373	Q316064	'Arabelle Kennedy'@en	'sibling'@en	'John F. Kennedy Jr.'@en
+Q75326753	P3373	Q3290402	'Arabelle Kennedy'@en	'sibling'@en	'Patrick Bouvier Kennedy'@en
+Q75326777	P22	Q345517	'Victoria Lawford'@en	'father'@en	'Peter Lawford'@en
+Q75326777	P25	Q432694	'Victoria Lawford'@en	'mother'@en	'Patricia Kennedy Lawford'@en
+Q75326777	P3373	Q1086823	'Victoria Lawford'@en	'sibling'@en	'Christopher Lawford'@en
+Q75326777	P3373	Q75326779	'Victoria Lawford'@en	'sibling'@en	'Sydney Lawford'@en
+Q75326777	P3373	Q75326780	'Victoria Lawford'@en	'sibling'@en	'Robin Lawford'@en
+Q75326779	P22	Q345517	'Sydney Lawford'@en	'father'@en	'Peter Lawford'@en
+Q75326779	P25	Q432694	'Sydney Lawford'@en	'mother'@en	'Patricia Kennedy Lawford'@en
+Q75326779	P3373	Q1086823	'Sydney Lawford'@en	'sibling'@en	'Christopher Lawford'@en
+Q75326779	P3373	Q75326777	'Sydney Lawford'@en	'sibling'@en	'Victoria Lawford'@en
+Q75326779	P3373	Q75326780	'Sydney Lawford'@en	'sibling'@en	'Robin Lawford'@en
+Q75326779	P3448	Q96079835	'Sydney Lawford'@en	'stepparent'@en	'Mary Rowan'@en
+Q75326779	P3448	Q96079836	'Sydney Lawford'@en	'stepparent'@en	'Deborah Gould'@en
+Q75326779	P3448	Q96079838	'Sydney Lawford'@en	'stepparent'@en	'Patricia Seaton'@en
+Q75326780	P22	Q345517	'Robin Lawford'@en	'father'@en	'Peter Lawford'@en
+Q75326780	P25	Q432694	'Robin Lawford'@en	'mother'@en	'Patricia Kennedy Lawford'@en
+Q75326780	P3373	Q1086823	'Robin Lawford'@en	'sibling'@en	'Christopher Lawford'@en
+Q75326780	P3373	Q75326777	'Robin Lawford'@en	'sibling'@en	'Victoria Lawford'@en
+Q75326780	P3373	Q75326779	'Robin Lawford'@en	'sibling'@en	'Sydney Lawford'@en
+Q75326809	P26	Q1086823	'Jean Edith Olssen'@en	'spouse'@en	'Christopher Lawford'@en
+Q75326809	P40	Q76363382	'Jean Edith Olssen'@en	'child'@en	'David Christopher Lawford'@en
+Q75326809	P40	Q76363384	'Jean Edith Olssen'@en	'child'@en	'Savannah Rose Lawford'@en
+Q75326809	P40	Q76363386	'Jean Edith Olssen'@en	'child'@en	'Matthew Valentine Lawford'@en
+Q75494768	P26	Q75496774	'Mildred Patricia Baena'@en	'spouse'@en	'Rogelio Baena'@en
+Q75494768	P40	Q23800185	'Mildred Patricia Baena'@en	'child'@en	'Joseph Baena'@en
+Q75494768	P451	Q2685	'Mildred Patricia Baena'@en	'unmarried partner'@en	'Arnold Schwarzenegger'@en
+Q75496774	P26	Q75494768	'Rogelio Baena'@en	'spouse'@en	'Mildred Patricia Baena'@en
+Q76363382	P22	Q1086823	'David Christopher Lawford'@en	'father'@en	'Christopher Lawford'@en
+Q76363382	P25	Q75326809	'David Christopher Lawford'@en	'mother'@en	'Jean Edith Olssen'@en
+Q76363384	P22	Q1086823	'Savannah Rose Lawford'@en	'father'@en	'Christopher Lawford'@en
+Q76363384	P25	Q75326809	'Savannah Rose Lawford'@en	'mother'@en	'Jean Edith Olssen'@en
+Q76363386	P22	Q1086823	'Matthew Valentine Lawford'@en	'father'@en	'Christopher Lawford'@en
+Q76363386	P25	Q75326809	'Matthew Valentine Lawford'@en	'mother'@en	'Jean Edith Olssen'@en
+Q7926996	P26	Q134549	'Victoria Reggie Kennedy'@en	'spouse'@en	'Ted Kennedy'@en
+Q901541	P22	Q2685	'Patrick Schwarzenegger'@en	'father'@en	'Arnold Schwarzenegger'@en
+Q901541	P25	Q230654	'Patrick Schwarzenegger'@en	'mother'@en	'Maria Shriver'@en
+Q901541	P3373	Q23800185	'Patrick Schwarzenegger'@en	'sibling'@en	'Joseph Baena'@en
+Q901541	P3373	Q28109921	'Patrick Schwarzenegger'@en	'sibling'@en	'Christina Schwarzenegger'@en
+Q901541	P3373	Q28109928	'Patrick Schwarzenegger'@en	'sibling'@en	'Christopher Schwarzenegger'@en
+Q901541	P3373	Q4521676	'Patrick Schwarzenegger'@en	'sibling'@en	'Katherine Schwarzenegger'@en
+Q948920	P22	Q134549	'Patrick J. Kennedy'@en	'father'@en	'Ted Kennedy'@en
+Q948920	P25	Q441424	'Patrick J. Kennedy'@en	'mother'@en	'Joan Bennett Kennedy'@en
+Q948920	P3373	Q2383370	'Patrick J. Kennedy'@en	'sibling'@en	'Kara Kennedy'@en
+Q948920	P3373	Q3048622	'Patrick J. Kennedy'@en	'sibling'@en	'Edward M. Kennedy Jr.'@en
+Q96076900	P26	Q23800370	'Jadrny'@en	'spouse'@en	'Aurelia Schwarzenegger'@en
+Q96077739	P26	Q96077740	'Robert Sargent Shriver'@en	'spouse'@en	'Hilda Shriver'@en
+Q96077739	P40	Q317248	'Robert Sargent Shriver'@en	'child'@en	'Sargent Shriver'@en
+Q96077740	P26	Q96077739	'Hilda Shriver'@en	'spouse'@en	'Robert Sargent Shriver'@en
+Q96077740	P40	Q317248	'Hilda Shriver'@en	'child'@en	'Sargent Shriver'@en
+Q96079835	P26	Q345517	'Mary Rowan'@en	'spouse'@en	'Peter Lawford'@en
+Q96079836	P26	Q345517	'Deborah Gould'@en	'spouse'@en	'Peter Lawford'@en
+Q96079838	P26	Q345517	'Patricia Seaton'@en	'spouse'@en	'Peter Lawford'@en
+Q9696	P22	Q313696	'John F. Kennedy'@en	'father'@en	'Joseph P. Kennedy Sr.'@en
+Q9696	P25	Q236540	'John F. Kennedy'@en	'mother'@en	'Rose Kennedy'@en
+Q9696	P26	Q165421	'John F. Kennedy'@en	'spouse'@en	'Jacqueline Kennedy Onassis'@en
+Q9696	P3373	Q134549	'John F. Kennedy'@en	'sibling'@en	'Ted Kennedy'@en
+Q9696	P3373	Q25310	'John F. Kennedy'@en	'sibling'@en	'Robert F. Kennedy'@en
+Q9696	P3373	Q265595	'John F. Kennedy'@en	'sibling'@en	'Rosemary Kennedy'@en
+Q9696	P3373	Q268799	'John F. Kennedy'@en	'sibling'@en	'Kathleen Cavendish, Marchioness of Hartington'@en
+Q9696	P3373	Q272401	'John F. Kennedy'@en	'sibling'@en	'Jean Kennedy Smith'@en
+Q9696	P3373	Q272908	'John F. Kennedy'@en	'sibling'@en	'Eunice Kennedy Shriver'@en
+Q9696	P3373	Q432694	'John F. Kennedy'@en	'sibling'@en	'Patricia Kennedy Lawford'@en
+Q9696	P3373	Q505178	'John F. Kennedy'@en	'sibling'@en	'Joseph P. Kennedy Jr.'@en
+Q9696	P40	Q230303	'John F. Kennedy'@en	'child'@en	'Caroline Kennedy'@en
+Q9696	P40	Q316064	'John F. Kennedy'@en	'child'@en	'John F. Kennedy Jr.'@en
+Q9696	P40	Q3290402	'John F. Kennedy'@en	'child'@en	'Patrick Bouvier Kennedy'@en
+Q9696	P40	Q75326753	'John F. Kennedy'@en	'child'@en	'Arabelle Kennedy'@en
+Q9696	P451	Q4616	'John F. Kennedy'@en	'unmarried partner'@en	'Marilyn Monroe'@en
