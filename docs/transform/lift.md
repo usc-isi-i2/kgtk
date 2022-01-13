@@ -303,6 +303,8 @@ kgtk lift --input-file examples/docs/lift-file5.tsv \
 | Q1 | P2 | Q6 | "Elmo" | "friend" | "Fred" |
 | Q6 | P1 | Q5 | "Fred" | "instance of" | "human" |
 
+
+
 ### Duplicate Labels
 
 Suppose that `lift-file7.tsv` contains the following table in KGTK format,
