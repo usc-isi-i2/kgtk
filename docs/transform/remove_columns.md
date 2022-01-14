@@ -111,6 +111,7 @@ unquoted list:
 kgtk remove-columns -i examples/docs/remove-columns-file1.tsv \
                     --columns location years
 ```
+
 | node1 | label | node2 |
 | -- | -- | -- |
 | john | zipcode | 12345 |
@@ -142,6 +143,7 @@ kgtk remove-columns -i examples/docs/remove-columns-file1.tsv \
                     --split-on-commas False \
                     --columns location years
 ```
+
 | node1 | label | node2 |
 | -- | -- | -- |
 | john | zipcode | 12345 |
@@ -167,6 +169,7 @@ comma-separated list:
 kgtk remove-columns -i examples/docs/remove-columns-file1.tsv \
                     --columns location,years
 ```
+
 | node1 | label | node2 |
 | -- | -- | -- |
 | john | zipcode | 12345 |
@@ -193,6 +196,7 @@ kgtk remove-columns -i examples/docs/remove-columns-file1.tsv \
                     --split-on-spaces True \
                     --columns "location years"
 ```
+
 | node1 | label | node2 |
 | -- | -- | -- |
 | john | zipcode | 12345 |

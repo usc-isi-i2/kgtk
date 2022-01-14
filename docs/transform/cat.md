@@ -189,6 +189,7 @@ Suppose that `movies_reduced.tsv` contains the following table in KGTK format:
 ```bash
 kgtk cat -i examples/docs/movies_reduced.tsv
 ```
+
 | id | node1 | label | node2 |
 | -- | -- | -- | -- |
 | t1 | terminator | label | 'The Terminator'@en |
@@ -215,6 +216,7 @@ Suppose that `tutorial_people_full.tsv` contains the following table in KGTK for
 ```bash
 kgtk cat -i examples/docs/tutorial_people_full.tsv
 ```
+
 | id | node1 | label | node2 |
 | -- | -- | -- | -- |
 | h1 | james_cameron | label | "James Cameron" |
@@ -249,6 +251,7 @@ These two files have only he 4 basic KGTK fields.
 ```bash
 kgtk cat -i examples/docs/movies_reduced.tsv examples/docs/tutorial_people_full.tsv
 ```
+
 The result will be the following file in KGTK format:
 
 | id | node1 | label | node2 |
@@ -381,7 +384,8 @@ Consider the following input file:
 
 ```bash
 kgtk cat -i examples/docs/no-header.tsv --mode=NONE
-````
+```
+
 | a | b | c | d |
 | -- | -- | -- | -- |
 | h21 | robert_patrick | label | "Robert Patrick" |
@@ -735,6 +739,9 @@ kgtk cat -i examples/docs/movies_reduced.tsv --no-output-header
 The result will be the following file in KGTK format except
 for missing the header line.
 
+
+|  |  |  |  |
+|---|---|---|---|
 | t1 | terminator | label | 'The Terminator'@en |
 | t2 | terminator | instance_of | film |
 | t3 | terminator | genre | action |
@@ -753,6 +760,8 @@ for missing the header line.
 | t16 | terminator | duration | 108 |
 | t17 | terminator | award | national_film_registry |
 | t18 | t17 | point_in_time | ^2008-01-01T00:00:00Z/9 |
+
+
 
 ### Expert Example: Reading Files without Header Records
 

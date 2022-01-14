@@ -183,12 +183,14 @@ kgtk query --graph-cache /data/amandeep/wikidata-20211027-dwd-v3/useful-files/te
   -i "/data/amandeep/wikidata-20211027-dwd-v3/labels.tsv.gz" --as label_all  
   -i "/data/amandeep/wikidata-20211027-dwd-v3/aliases.tsv.gz" --as alias_all  
   -i "/data/amandeep/wikidata-20211027-dwd-v3/descriptions.tsv.gz" --as description_all  --limit 3
-
-id	node1	label	node2	rank	node2;wikidatatype
-P10-P1628-32b85d-7927ece6-0	P10	P1628	"http://www.w3.org/2006/vcard/ns#Video"	normal	url
-P10-P1628-acf60d-b8950832-0	P10	P1628	"https://schema.org/video"	normal	url
-P10-P1629-Q34508-bcc39400-0	P10	P1629	Q34508	normal	wikibase-item
 ```
+
+|id                         |node1|label|node2                                |rank  |node2;wikidatatype|
+|---------------------------|-----|-----|-------------------------------------|------|------------------|
+|P10-P1628-32b85d-7927ece6-0|P10  |P1628|http://www.w3.org/2006/vcard/ns#Video|normal|url               |
+|P10-P1628-acf60d-b8950832-0|P10  |P1628|https://schema.org/video             |normal|url               |
+|P10-P1629-Q34508-bcc39400-0|P10  |P1629|Q34508                               |normal|wikibase-item     |
+
 
 Notice the files are loaded with an alias, `"/data/amandeep/wikidata-20211027-dwd-v3/claims.tsv.gz" --as claims`.
 

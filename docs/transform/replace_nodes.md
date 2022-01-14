@@ -763,6 +763,7 @@ Consider the following input file, which is not a KGTK edge or node file:
 ```bash
 kgtk cat --mode=NONE -i examples/docs/replace-nodes-input3.tsv
 ```
+
 | item | rel | shape |
 | -- | -- | -- |
 | box1 | isa | box |
@@ -802,6 +803,7 @@ Consider the following mapping file, which is not a KGTK edge or node file:
 ```bash
 kgtk cat --mode=NONE -i examples/docs/replace-nodes-mapping5.tsv
 ```
+
 | item | transform | replacement |
 | -- | -- | -- |
 | box1 | same_as_item | Q001 |

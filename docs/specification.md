@@ -72,106 +72,113 @@ The edge file is the core representational structure for KGTK graphs.  Everythin
 Edge files specify the set of edges in a knowledge graph.  They have three mandatory columns: node1, label, and node2 (or their aliases).  The label might be left blank to represent unlabeled graphs[CMR: I am concerned that blank label values may cause syntactic (not semantic) confusion. I think it would be better to use a special value, such as _.], however, we will ignore lines with blank node1 or node2 (for us that does not correspond to unknown, just missing). [For processing efficiency, we might want to define an edge file profile that disallows comment lines, blank lines, and lines with blank node1 or node2 values.]
 
 An optional edge ID field can be used to name an edge.  All additional columns have a user-defined meaning and are optional.  Here is a small example edge file:
-```
-node1   label       node2
-N1      rdf:type    Person
-N1      label       “Moe”
-N2      rdf:type    Person
-N2      label       “Larry”
-N3      rdf:type    Person
-N3      label       “Curly”
-N1      brotherOf   N3
-N1      friendOf    N2
-N1      friendOf    N3
-N1      diedAtAge   77
-```
+
+| node1 | label | node2 |
+|---|---|---|
+| N1 | rdf:type | Person |
+| N1 | label | “Moe” |
+| N2 | rdf:type | Person |
+| N2 | label | “Larry” |
+| N3 | rdf:type | Person |
+| N3 | label | “Curly” |
+| N1 | brotherOf | N3 |
+| N1 | friendOf | N2 |
+| N1 | friendOf | N3 |
+| N1 | diedAtAge | 77 |
+
 
 This file defines three nodes with types and respective labels (all specified via edges), and some relationships between them.  We used here an RDF-ish type label with an rdf: namespace prefix, but there is no requirement for that, any other label could have been used.  Similarly, type names such as Person could be prefixed with a namespace or use a full URI.  Multiple values as for N1’s friends can be specified via multiple entries or via a special list syntax described below.
 
 Any symbol or literal can serve as a node ID or label, so another representation for this information would be the following:
 
-```
-node1      label            node2
-“Moe”      rdf:type         Person
-“Larry”    rdf:type         Person
-“Curly”    rdf:type         Person
-“Moe”      brotherOf        “Curly”
-“Moe”      friendOf         “Larry”
-“Moe”      friendOf         “Curly”
-77         “death age of”   “Moe”
-```
+| node1 | label | node2 |
+|---|---|---|
+| “Moe” | rdf:type | Person |
+| “Larry” | rdf:type | Person |
+| “Curly” | rdf:type | Person |
+| “Moe” | brotherOf | “Curly” |
+| “Moe” | friendOf | “Larry” |
+| “Moe” | friendOf | “Curly” |
+| 77 | “death age of” | “Moe” |
+
 
 The meaning of a column is defined by its column header, so the order of columns does not matter.  The following would be an equivalent representation of the three node types:
 
-```
-label        node1        node2
-rdf:type     “Moe”        Person
-rdf:type     “Larry”      Person
-rdf:type     “Curly”      Person
-```
+
+|label|node1|node2|
+|-------|---------|-------|
+|rdf:type|“Moe”|Person|
+|rdf:type|“Larry”|Person|
+|rdf:type|“Curly”|Person|
+
 
 Additional columns can be used to specify edges about an edge.  For example:
 
-```
-node1       label       node2   creator     source      
-“Moe”       rdf:type    Person  “Hans”      Wikipedia   
-“Larry”     rdf:type    Person  “Hans”      Wikipedia
-“Curly”     rdf:type    Person  “Hans”      Wikipedia
-```
+
+| node1 | label | node2 | creator | source |
+|---------|----------|--------|---------|-----------|
+| “Moe” | rdf:type | Person | “Hans” | Wikipedia |
+| “Larry” | rdf:type | Person | “Hans” | Wikipedia |
+| “Curly” | rdf:type | Person | “Hans” | Wikipedia |
 
 Each edge is uniquely identified by its (node1, label, node2) triple (ignoring the order in which these columns were specified in the file).  So, additional values about a particular edge can be added by repeating the edge and listing the value.  For example:
 
-```
-node1     label     node2   creator   source    
-“Moe”     rdf:type  Person  “Hans”    Wikipedia
-“Larry”   rdf:type  Person  “Hans”    Wikipedia
-“Curly”   rdf:type  Person  “Hans”    Wikipedia
-# we repeat the edge triple but only list additional
-# values where they apply, other columns are left blank:
-“Curly”   rdf:type  Person            IMDB
-```
+|node1  |label   |node2 |creator|source   |
+|-------|--------|------|-------|---------|
+|“Moe”  |rdf:type|Person|“Hans” |Wikipedia|
+|“Larry”|rdf:type|Person|“Hans” |Wikipedia|
+|“Curly”|rdf:type|Person|“Hans” |Wikipedia|
+|# we repeat the edge triple but only list additional|
+|# values where they apply, other columns are left blank:|
+|“Curly”|rdf:type|Person|  |   IMDB     |
+
 To allow us to use edges in both the node1 and node2 positions of an edge or to use them as arguments in an explicit node1/label/node2 triple, we can name or alias them via an explicit id column.  The names or aliases can then be used as stand-ins for the explicit triple.  For example:
 
-```
-node1     label     node2   creator   id
-“Moe”     rdf:type  Person  “Hans”    E1
-“Larry”   rdf:type  Person  “Hans”    E2
-“Curly”   rdf:type  Person  “Hans”    E3
-E1        source    Wikipedia
-E2        source    Wikipedia
-E3        source    Wikipedia
-E3        source    IMDB
-# the first creator edge is equivalent to this one:
-E1      creator     “Hans”
-```
+|node1  |label   |node2 |creator|id       |
+|-------|--------|------|-------|---------|
+|“Moe”  |rdf:type|Person|“Hans” |E1       |
+|“Larry”|rdf:type|Person|“Hans” |E2       |
+|“Curly”|rdf:type|Person|“Hans” |E3       |
+|E1     |source  |Wikipedia|       |         |
+|E2     |source  |Wikipedia|       |         |
+|E3     |source  |Wikipedia|       |         |
+|E3     |source  |IMDB  |       |         |
+|# the first creator edge is equivalent to this one:|
+|E1     |creator |“Hans”|       |         |
+
 
 
 Column values in the edges table are simply a shorthand for a more explicit line-based edge representation using edge IDs.  However, for edges without explicitly provided IDs, columns are the only way to say something about them.  Column values are only related to the edge they are modifying, they are not related or linked to each other in any way.
 
 Columnar edges can themselves be named via IDs, for example:
-```
-node1     label     node2     creator     id
-“Moe”     rdf:type  Person    “Hans”      E1
-E1        creator   “Hans”                E11
-```
+
+
+| node1 | label | node2 | creator | id |
+|-------|----------|--------|---------|-----|
+| “Moe” | rdf:type | Person | “Hans” | E1 |
+| E1 | creator  | “Hans” |  | E11 |
+
 
 Note that explicit IDs are simply aliases for the internal edge ID based on the triple, they do not replace that ID, they simply point to it.  In future versions of KGTK, we might allow edge IDs that are only unique within a file which is OK since they will point to a global ID based on the edge triple.  Since edge IDs are simply aliases, an edge can have multiple IDs defined for it, all pointing to the same triple ID.
 
 ## Multi-valued Edges
 As shown above, multi-valued edges can be represented through separate entries in the edge table.  Alternatively, there is a list syntax available using the | separator.   For example, here is an alternative way to represent the multiple sources for one of the edges:
 
-```
-node1      label      node2     creator      source
-“Curly”    rdf:type   Person    “Hans”       Wikipedia|IMDB
-```
+
+| node1   | label    | node2  | creator | source              |
+|---------|----------|--------|---------|---------------------|
+| “Curly” | rdf:type | Person | “Hans”  | Wikipedia&#124;IMDB |
+
 
 This representation is equivalent to the following:
 
-```
-node1       label       node2     creator     source
-“Curly”     rdf:type    Person    “Hans”      Wikipedia
-“Curly”     rdf:type    Person                IMDB
-```
+
+|node1|label|node2|creator|source|
+|-------|---------|-------|-------|---------|
+|“Curly”|rdf:type|Person |“Hans” |Wikipedia|
+|“Curly”|rdf:type|Person |   |IMDB|
+
+
 For value lists care must be taken that individual values must either do not contain vertical bars, or if they do, theythat they must be are escaped by backslash escape syntax.
 
 List values will provide a valuable conciseness when records are viewed by humans. However, they may impost complexity on tools that use KGTK files. We may want to define a KGTK profile that excludes list values.
@@ -185,89 +192,90 @@ Even though unusual for knowledge graphs, edges might be unlabeled to represent 
 Node File Format
 Node files allow a more concise node-centric specification of edges.  They have one mandatory column for the node ID (using the predefined name or its alias(es)).  Lines with blank node IDs are ignored. Node files must not contain a node1 column, in order to distinguish node files from edge files, which may contain an id column. We might want to disallow node2 columns from node files, too.All other columns are optional and specify edges where the identified node is node1.  Here is a small example that simply adds labels to our three nodes:
 
-```
-id      label     
-N1      “Moe”
-N2      “Larry”
-N3      “Curly”
-```
+
+|id|label|
+|--|--|
+|N1|“Moe”|
+|N2|“Larry”|
+|N3|“Curly”|
+
 
 A minimal version of the nodes file above would only contain the id column (e.g., to communicate a set of nodes to some operation).  Here is a more elaborate example adding types, creators and sources:
 
-```
-id        label       rdf:type      creator        source
-N1        “Moe”       Person        “Hans”        Wikipedia
-N2        “Larry”     Person        “Hans”        Wikipedia
-N3        “Curly”     Person        “Hans”        Wikipedia|IMDB
-```
+
+|id|label|rdf:type|creator|source|
+|--|--|--|--|--|
+|N1|“Moe”|Person|“Hans”|Wikipedia|
+|N2|“Larry”|Person|“Hans”|Wikipedia|
+|N3“Curly”|Person|“Hans”|Wikipedia&#124;IMDB|
 
 The equivalent edge file for the above looks like this.  Note that here the creator and source edges are on nodes and not on edges as in our previous examples:
 
-```
-node1     label       node2
-N1        label       “Moe”
-N1        rdf:type    Person
-N1        creator     “Hans”
-N1        source      Wikipedia
-N2        label       “Larry”   
-N2        rdf:type    Person
-N2        creator     “Hans”
-N2        source      Wikipedia
-N3        label       “Curly”
-N3        rdf:type    Person
-N3        creator     “Hans”
-N3        source      Wikipedia
-N3        source      IMDB
-```
+
+| node1 | label | node2 |
+|---|---|---|
+| N1 | label | “Moe” |
+| N1 | rdf:type | Person |
+| N1 | creator | “Hans” |
+| N1 | source | Wikipedia |
+| N2 | label | “Larry” |
+| N2 | rdf:type | Person |
+| N2 | creator | “Hans” |
+| N2 | source | Wikipedia |
+| N3 | label | “Curly” |
+| N3 | rdf:type | Person |
+| N3 | creator | “Hans” |
+| N3 | source | Wikipedia |
+| N3 | source | IMDB |
+
 
 This example illustrates that the node table is simply a slightly more concise, node-centric representation that is most useful for dense edges, that is, edges that have values for most or all nodes.
 
 ## Edge Collections and Graphs
 KGTK does not have a specific graph type to collect or name sets of edges (different from RDF).  Instead, edges can be grouped by linking them to collection nodes using the same edge syntax as used for all other edges.  For example, the following edge table assigns the three type edges to the collection Stooges via a graph edge each:
 
-```
-node1     label     node2   graph     
-“Moe”     rdf:type  Person  Stooges
-“Larry”   rdf:type  Person  Stooges
-“Curly”   rdf:type  Person  Stooges
-```
+| node1 | label | node2 | graph |
+|---|---|---|---|
+| “Moe” | rdf:type | Person | Stooges |
+| “Larry” | rdf:type | Person | Stooges |
+| “Curly” | rdf:type | Person | Stooges |
 
 There is nothing special about the label graph used for those edges, any other name could have been used (for example, memberOf).  The above corresponds to the following explicit edge representation:
 
-```
-node1     label     node2   id
-“Moe”     rdf:type  Person  e1
-“Larry”   rdf:type  Person  e2
-“Curly”   rdf:type  Person  e3
-e1        graph     Stooges
-e2        graph     Stooges
-e3        graph     Stooges
-```
+| node1 | label | node2 | id |
+|---|---|---|---|
+| “Moe” | rdf:type | Person | e1 |
+| “Larry” | rdf:type | Person | e2 |
+| “Curly” | rdf:type | Person | e3 |
+| e1 | graph | Stooges |  |
+| e2 | graph | Stooges |  |
+| e3 | graph | Stooges |  |
 
 
 By defining collection or graph membership via explicit edges, edges can be in more than one graph.
 
 To make it possible to define such membership edges about columnar edges, without having to list all of them explicitly, we introduce a special syntax `*<label>` that can be used in a node or edge file header.  The syntax means that all edges defined in a row by non-star syntax will be a node1 to the specified `<label>` edge.  For example:
 
-```
-node1       label     node2       source          *graph
-“Moe”       rdf:type  Person      Wikipedia       Stooges
-“Larry”     rdf:type  Person      Wikipedia       Stooges
-“Curly”     rdf:type  Person      Wikipedia|IMDB  Stooges
-```
+|node1  |label  |node2 |source |*graph |
+|-------|-------|------|-------|-------|
+|“Moe”  |rdf:type|Person|Wikipedia|Stooges|
+|“Larry”|rdf:type|Person|Wikipedia|Stooges|
+|“Curly”|rdf:type|Person|Wikipedia&#124;IMDB|Stooges|
+
 
 The above corresponds to the following non-starred explicit edge representation which requires us to introduce edge IDs for the base edges so we can list the source edges explicitly:
 
-```
-node1       label       node2     id      source            graph
-“Moe”       rdf:type    Person    e1      Wikipedia         Stooges
-“Larry”     rdf:type    Person    e2      Wikipedia         Stooges
-“Curly”     rdf:type    Person    e3      Wikipedia|IMDB    Stooges
-e1          source      Wikipedia                           Stooges
-e2          source      Wikipedia                           Stooges
-e3          source      Wikipedia                           Stooges
-e3          source      IMDB                                Stooges
-```
+
+| node1 | label | node2 | id | source | graph |
+|---|---|---|---|---|---|
+| “Moe” | rdf:type | Person | e1 | Wikipedia | Stooges |
+| “Larry” | rdf:type | Person | e2 | Wikipedia | Stooges |
+| “Curly” | rdf:type | Person | e3 | Wikipedia|IMDB | Stooges |
+| e1 | source | Wikipedia |  |  | Stooges |
+| e2 | source | Wikipedia |  |  | Stooges |
+| e3 | source | Wikipedia |  |  | Stooges |
+| e3 | source | IMDB |  |  | Stooges |
+
 
 In this table, the source column is now redundant, we just left it for continuity with the previous example.
 
@@ -288,53 +296,56 @@ Booleans: we use two special symbols True and False to indicate boolean values. 
 Structured (or fancy) literals are useful to concisely represent values such as dates or locations that have further internal structure.  For example, `@043.26193/010.92708` represents the location with latitude `043.26193` and longitude `010.92708`.  Structured literals are simply a shorthand that imply additional edges that do not need to be explicitly stated, for example, the latitude and longitude edges leading to the respective numeric values for a location.
 
 **Language-qualified strings**: strings can be qualified with a language tag to indicate the human language used.  We use the RDF convention for this but single quotes to distinguish them from unqualified strings, for example, `‘Sprechen sie deutsch?’@de`.  Language tags are two-letter ISO 639-1 codes.  Example use in edge file:
-```
-node1       label     node2
-N1          label     ‘Curly’@en
-# implied edges:
-‘Curly’@en  text      “Curly”
-‘Curly’@en  language  “en”
-```
+
+| node1 | label | node2 |
+|---|---|---|
+| N1 | label | ‘Curly’@en |
+| # implied edges:  |
+| ‘Curly’@en | text | “Curly” |
+| ‘Curly’@en | language | “en” |
 
 **Quantities**: numbers can be dimensioned to represent quantities, e.g., a length such as 5 meters or a weight such as 10 pounds.  For quantities we use a variant of the Wikidata format amount~toleranceUxxxx.  A quantity starts with a number, followed by an optional tolerance interval, and then followed by either a combination of standard (SI) units (see Appendix) or a Wikidata node defining the unit, for example, Q11573 which indicates “meter”.  Here are some examples: `10m, +10m/s2, -1.2e+2[-1.0,+1.0]kg.m/s2, +17.2Q494083`
 
 Example use in edge file:
 
-```
-node1     label     node2
-N1        speed     10.2m/s2
-# implied edges:
-10.2m/s2  magnitude 10.2
-10.2m/s2  unit      “m/s2”
-```
+
+| node1 | label | node2 |
+|---|---|---|
+| N1 | speed | 10.2m/s2 |
+| #  implied edges:   |
+| 10.2m/s2 | magnitude | 10.2 |
+| 10.2m/s2 | unit | “m/s2” |
+
 
 **Location coordinates**: we also use the Wikidata format `@LAT/LON`, for example: `@043.26193/010.92708`
 
 Example use in edge file:
 
-```
-node1                 label     node2
-N1                    location    @043.26193/010.92708
-# implied edges:
-@043.26193/010.92708  latitude  043.26193
-@043.26193/010.92708  longitude 010.92708
-```
+
+| node1                | label     | node2                |
+|----------------------|-----------|----------------------|
+| N1                   | location  | @043.26193/010.92708 |
+| # implied edges:      |
+| @043.26193/010.92708 | latitude  | 043.26193            |
+| @043.26193/010.92708 | longitude | 010.92708            |
+
+
 
 **Dates and times**: temporal literals are started with a ^ caret character (indicating the tip of a clock hand) and followed by an ISO 8601 date and an optional precision designator, for example: ^1839-00-00T00:00:00Z/9
 
 Example use in edge file:
 
-```
-node1                 label     node2
-N1                    time      ^2020-02-24T17:05:30
-# implied edges:
-^2020-02-24T17:05:30  year      2020
-^2020-02-24T17:05:30  month     2
-^2020-02-24T17:05:30  day       24
-^2020-02-24T17:05:30  hour      17
-^2020-02-24T17:05:30  minute    5
-^2020-02-24T17:05:30  second    30
-```
+| node1                | label  | node2                |
+|----------------------|--------|----------------------|
+| N1                   | time   | ^2020-02-24T17:05:30 |
+| # implied edges:     |        |                      |
+| ^2020-02-24T17:05:30 | year   | 2020                 |
+| ^2020-02-24T17:05:30 | month  | 2                    |
+| ^2020-02-24T17:05:30 | day    | 24                   |
+| ^2020-02-24T17:05:30 | hour   | 17                   |
+| ^2020-02-24T17:05:30 | minute | 5                    |
+| ^2020-02-24T17:05:30 | second | 30                   |
+
 
 ## Notes, Issues:
 There is no support for calendar, we could allow it as an optional qnode after the precision designator, eg, `+1839-00-00T00:00:00Z/9/Q12138`
@@ -346,13 +357,12 @@ The single-caret notation is to be used for special schemes such as “timex3”
 
 The double-caret notation is used for arbitrary typed literals.  These will always expand to a pair of value/type edges.  For example:
 
-```
-node1               label     node2
-N1                  price     !1000^^dbpedia:USD
-# implied edges:
-!1000^^dbpedia:USD  value     1000
-!1000^^dbpedia:USD  type      dbpedia:USD
-```
+| node1                | label     | node2                |
+|----------------------|-----------|----------------------|
+| N1                   | location  | @043.26193/010.92708 |
+| # implied edges:      |
+| @043.26193/010.92708 | latitude  | 043.26193            |
+| @043.26193/010.92708 | longitude | 010.92708            |
 
 ## Object Identity
 We have to define when two node or edge IDs or labels are the same, so KGTK can know when to add something to an existing node or edge, and when to create a new one.  The following rules apply:
