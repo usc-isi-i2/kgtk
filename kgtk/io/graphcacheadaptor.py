@@ -75,24 +75,24 @@ class GraphCacheAdaptor:
             if file_path.is_file():
                 is_stale: bool = False
 
-                cached_file_size = file_info.get["size", None]
+                cached_file_size = file_info.get("size", None)
                 if cached_file_size is None:
                     is_stale = True
                     if verbose:
                         print("Graph cache %s: file %s is missing a cached file size." % (repr(str(graph_cache_path)), repr(str(file_path))), file=error_file, flush=True)
 
-                cached_file_modtime = file_info.get["modtime", None]
+                cached_file_modtime = file_info.get("modtime", None)
                 if cached_file_modtime is None:
                     is_stale = True
                     if verbose:
                         print("Graph cache %s: file %s is missing a cached modification time." % (repr(str(graph_cache_path)), repr(str(file_path))), file=error_file, flush=True)
 
                 if cached_file_size is not None and cached_file_modtime is not None:
-                    if cached_file_size != file_path.stat.st_size:
+                    if cached_file_size != file_path.stat().st_size:
                         is_stale = True
                         if verbose:
                             print("Graph cache %s: file %s: cached file size is stale." % (repr(str(graph_cache_path)), repr(str(file_path))), file=error_file, flush=True)
-                    if cached_file_modtime != file_path.stat.st_mtime:
+                    if cached_file_modtime != file_path.stat().st_mtime:
                         is_stale = True
                         if verbose:
                             print("Graph cache %s: file %s: cached file modification time is stale." % (repr(str(graph_cache_path)), repr(str(file_path))), file=error_file, flush=True)
