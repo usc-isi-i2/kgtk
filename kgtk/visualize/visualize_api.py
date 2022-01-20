@@ -23,6 +23,12 @@ def parser():
     }
 
 
+node_color_map = {
+    'few_subclasses': 0,
+    'many_subclasses': 1
+}
+
+
 class KgtkVisualize:
     def __init__(
             self,
@@ -413,7 +419,7 @@ class KgtkVisualize:
                                                      min(node_color_list)) / (max(node_color_list)
                                                                               - min(node_color_list)) \
                                         if not pd.isna(row[kr_node.column_name_map[self.node_color_column]]) \
-                                        or str(row[kr_node.column_name_map[self.node_color_column]]) == '' \
+                                           or str(row[kr_node.column_name_map[self.node_color_column]]) == '' \
                                         else self.node_color_default
                                 elif self.node_color_scale == 'log':
                                     node_color = 1
@@ -450,9 +456,13 @@ class KgtkVisualize:
                                 if row[kr_node.column_name_map[self.node_color_column]] not in color_set:
                                     color_set[row[kr_node.column_name_map[self.node_color_column]]] = count
                                     count += 1
-                                temp['color'] = min(color_set[row[kr_node.column_name_map[self.node_color_column]]],
-                                                    9) if not pd.isna(
-                                    row[kr_node.column_name_map[self.node_color_column]]) else self.node_color_default
+                                # temp['color'] = min(color_set[row[kr_node.column_name_map[self.node_color_column]]],
+                                #                     9) if not pd.isna(
+                                #     row[kr_node.column_name_map[self.node_color_column]]) else self.node_color_default
+                                # TODO this is a hack for now to get fix colors for few and many subclasses node,
+                                # TODO these are the only 2 options in the node graph, we'll fix it properly
+                                temp['color'] = node_color_map.get(row[kr_node.column_name_map[self.node_color_column]],
+                                                                   self.node_color_default)
 
                     if self.node_size_column is not None:
                         if self.node_size_mapping == 'fixed':
