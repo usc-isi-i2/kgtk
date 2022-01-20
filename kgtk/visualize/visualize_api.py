@@ -294,21 +294,24 @@ class KgtkVisualize:
                         continue
                     if edge['width_orig'] >= 0:
                         if min(arr) == 0:
-                            log_min = 0
+                            log_min = -1
                         else:
                             log_min = math.log(min(arr), base)
 
                         if max(arr) == 0:
-                            log_max = 0
+                            log_max = -1
                         else:
                             log_max = math.log(max(arr), base)
 
                         if edge['width_orig'] == 0:
-                            log_cur = 0
+                            log_cur = -1
                         else:
                             log_cur = math.log(edge['width_orig'], base)
 
-                        edge['width'] = self.edge_width_minimum + (log_cur - log_min) * (
+                        if log_max == log_min:
+                            edge['width'] = self.edge_width_default
+                        else:
+                            edge['width'] = self.edge_width_minimum + (log_cur - log_min) * (
                                 self.edge_width_maximum - self.edge_width_minimum) / (log_max - log_min)
                     else:
                         edge['width'] = self.edge_width_default
@@ -426,27 +429,31 @@ class KgtkVisualize:
                                     node_color_min = min(node_color_list)
                                     node_color_max = max(node_color_list)
                                     if node_color_min == 0:
-                                        log_min = 0
+                                        log_min = -1
                                     else:
                                         log_min = math.log(
                                             node_color_min, base)
 
                                     if node_color_max == 0:
-                                        log_max = 0
+                                        log_max = -1
                                     else:
                                         log_max = math.log(
                                             node_color_max, base)
 
                                     if float(row[kr_node.column_name_map[self.node_color_column]]) == 0:
-                                        log_cur = 0
+                                        log_cur = -1
                                     else:
                                         log_cur = math.log(float(row[kr_node.column_name_map[self.node_color_column]]),
                                                            base)
 
-                                    color_value = 0 + (log_cur - log_min) * (1 - 0) / (log_max - log_min)
-                                    temp['color'] = float(color_value) if not pd.isna(
-                                        row[kr_node.column_name_map[
-                                            self.node_color_column]]) else self.node_color_default
+                                    if log_max == log_min:
+                                        temp['color'] = self.node_color_default
+                                    else:
+                                        color_value\
+                                            = 0 + (log_cur - log_min) * (1 - 0) / (log_max - log_min)
+                                        temp['color'] = float(color_value) if not pd.isna(
+                                            row[kr_node.column_name_map[
+                                                self.node_color_column]]) else self.node_color_default
                                 else:
                                     temp['color'] = row[kr_node.column_name_map[self.node_color_column]] if not pd.isna(
                                         row[kr_node.column_name_map[
@@ -482,25 +489,28 @@ class KgtkVisualize:
                                     row[kr_node.column_name_map[self.node_size_column]]) else self.node_size_default
                             elif self.node_size_scale == 'log':
                                 if min(node_size_list) == 0:
-                                    log_min = 0
+                                    log_min = -1
                                 else:
                                     log_min = math.log(min(node_size_list), base)
 
                                 if max(node_size_list) == 0:
-                                    log_max = 0
+                                    log_max = -1
                                 else:
                                     log_max = math.log(max(node_size_list), base)
 
                                 if float(row[kr_node.column_name_map[self.node_size_column]]) == 0:
-                                    log_cur = 0
+                                    log_cur = -1
                                 else:
                                     log_cur = math.log(
                                         float(row[kr_node.column_name_map[self.node_size_column]]), base)
 
-                                size_value = self.node_size_minimum + (log_cur - log_min) * (
-                                        self.node_size_maximum - self.node_size_minimum) / (log_max - log_min)
-                                temp['size'] = size_value if not pd.isna(
-                                    row[kr_node.column_name_map[self.node_size_column]]) else self.node_size_default
+                                if log_max == log_min:
+                                    temp['size'] = self.node_size_default
+                                else:
+                                    size_value = self.node_size_minimum + (log_cur - log_min) * (
+                                            self.node_size_maximum - self.node_size_minimum) / (log_max - log_min)
+                                    temp['size'] = size_value if not pd.isna(
+                                        row[kr_node.column_name_map[self.node_size_column]]) else self.node_size_default
 
                     else:
                         temp['size'] = self.node_size_default
