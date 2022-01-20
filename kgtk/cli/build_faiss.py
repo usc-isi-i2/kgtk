@@ -29,33 +29,39 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     # REQUIRED #
     # Related to input file
-    parser.add_argument('-i', '--input_file', '--embeddings_file', action='store', dest='embeddings_file',
-                        required=True, metavar="EMBEDDINGS_FILE",
-                        help='Input file containing the embeddings for which a Faiss index will be created.')
+    parser.add_input_file(who="Input file containing the embeddings for which a Faiss index will be created.",
+                          options=["-i", "--input-file", "--embeddings-file"],
+                          metavar="EMBEDDINGS_FILE")
+    # parser.add_argument('-i', '--input_file', '--embeddings_file', action='store', dest='embeddings_file',
+    #                     required=True, metavar="EMBEDDINGS_FILE",
+    #                     help='Input file containing the embeddings for which a Faiss index will be created.')
 
     # Related to output
-    parser.add_argument('-o', '--output_file', '--index_file_out', action='store', dest='index_file_out',
-                        required=True, help="Output .idx file where the index fill be saved.",
-                        metavar="INDEX_FILE_OUT")
+    parser.add_output_file(who="Output .idx file where the index fill be saved.",
+                           options=['-o', '--output-file', '--index-file-out'],
+                           metavar="INDEX_FILE_OUT")
+    # parser.add_argument('-o', '--output_file', '--index_file_out', action='store', dest='index_file_out',
+    #                     required=True, help="Output .idx file where the index fill be saved.",
+    #                     metavar="INDEX_FILE_OUT")
 
-    parser.add_argument('-id2n', '--index_to_node_file_out', action='store', dest='index_to_node_file_out',
+    parser.add_argument('-id2n', '--index-to-node-file-out', action='store', dest='index_to_node_file_out',
                         required=False, help="Output Kgtk-format file containing index --> node.",
                         default=None, metavar="INDEX_TO_NODE_FILE_OUT")
 
     # OPTIONAL #
     # Related to input file
-    parser.add_argument('-ef', '--embeddings_format', action='store', type=str,
+    parser.add_argument('-ef', '--embeddings-format', action='store', type=str,
                         dest='embeddings_format', required=False,
                         help='Format of the input embeddings [Default: w2v] Choice: kgtk | w2v | glove',
                         default="w2v", choices=["kgtk", "w2v", "glove"], metavar="kgtk|w2v|glove")
 
-    parser.add_argument('--no_input_header', action='store', type=optional_bool, dest="no_input_header",
+    parser.add_argument('--no-input-header', action='store', type=optional_bool, dest="no_input_header",
                         required=False, help='If your input embeddings file is in KGTK format, this ' +
                         'allows you to specify if it has a header line or not.',
                         const=True, nargs='?', default=False, metavar='True|False')
 
     # Related to index building
-    parser.add_argument('-te', '--max_train_examples', action='store', type=int,
+    parser.add_argument('-te', '--max-train-examples', action='store', type=int,
                         dest='max_train_examples', required=False, default=10000000,
                         help="The maximum number of embeddings that will be used to train the index.")
 
@@ -63,18 +69,18 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         help="The number of worker processes for training. If not given, set to CPU count.",
                         default=None)
 
-    parser.add_argument('-is', '--index_string', action='store', type=str, dest='index_string', required=False,
+    parser.add_argument('-is', '--index-string', action='store', type=str, dest='index_string', required=False,
                         help="A string denoting the type of index to be used. This will be passed to " +
                         "faiss.index_factory()",
                         default="IVF8192_HNSW32,Flat")
 
-    parser.add_argument('-m', '--metric_type', action='store', type=str, dest='metric_type', required=False,
+    parser.add_argument('-m', '--metric-type', action='store', type=str, dest='metric_type', required=False,
                         help="A string denoting the Faiss metric to be used. This will be passed to " +
                         "faiss.index_factory().", default="L2",
                         choices=["Inner_product", "L2", "L1", "Linf", "Lp", "Canberra", "BrayCurtis", "JensenShannon"],
                         metavar="Inner_product|L2|L1|Linf|Lp|Canberra|BrayCurtis|JensenShannon")
 
-    parser.add_argument('-ma', '--metric_arg', action='store', type=float, dest='metric_arg', required=False,
+    parser.add_argument('-ma', '--metric-arg', action='store', type=float, dest='metric_arg', required=False,
                         help="If you choose Lp as your metric_type, this parameter should be used to " +
                         "specify the value of p to use.",
                         default=None)
