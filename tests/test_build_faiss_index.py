@@ -6,7 +6,7 @@ from kgtk.cli_entry import cli_entry
 import faiss
 
 
-class TestBuildFaiss(unittest.TestCase):
+class TestBuildFaissIndex(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.mkdtemp()
         self.emb_file = f'{self.temp_dir}/embeddings.tsv'
@@ -33,9 +33,9 @@ class TestBuildFaiss(unittest.TestCase):
                 for i in range(words):
                     f.write(f"q{i}\tembedding\t{','.join(str(v) for v in np.random.random(dim))}\n")
 
-    def test_build_faiss(self, fmt, no_input_header=False):
+    def test_build_faiss_index(self, fmt, no_input_header=False):
         self.create_emb_file(fmt, self.words, self.dim, kgtk_header=(not no_input_header))
-        cli_entry("kgtk", "build_faiss", "-i", self.emb_file, "-o", self.idx_file_out, "-id2n", self.id2n_file_out,
+        cli_entry("kgtk", "build-faiss-index", "-i", self.emb_file, "-o", self.idx_file_out, "-id2n", self.id2n_file_out,
                   "-ef", fmt, "--no-input-header", str(no_input_header), '-te', str(self.max_train_examples),
                   '-is', self.idx_str, '-m', self.metric_type_str)
         # validate idx2node output file

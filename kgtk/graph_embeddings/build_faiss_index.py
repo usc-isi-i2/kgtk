@@ -12,7 +12,7 @@ from kgtk.exceptions import KGTKException
 # - add support for cosine similarity as a distance metric
 
 
-def build_faiss(embeddings_file, embeddings_format, no_input_header, index_file_out, index_to_node_file_out,
+def build_faiss_index(embeddings_file, embeddings_format, no_input_header, index_file_out, index_to_node_file_out,
                 max_train_examples, workers, index_string, metric_type, p=None, verbose=False):
 
     # validate input file path

@@ -95,9 +95,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
 def run(**kwargs):
     from kgtk.exceptions import KGTKException
-    from kgtk.graph_embeddings.build_faiss import build_faiss
+    from kgtk.graph_embeddings.build_faiss_index import build_faiss_index
     try:
-        build_faiss(kwargs['embeddings_file'],
+        build_faiss_index(kwargs['embeddings_file'],
                     kwargs['embeddings_format'],
                     kwargs['no_input_header'],
                     kwargs['index_file_out'],
