@@ -1,4 +1,4 @@
-## Overview
+41;370;0c>## Overview
 
 The cat command combines (concatenates) one or more KGTK files, optionally
 decompressing input files and compressing the output file, while managing the
@@ -1006,3 +1006,6 @@ kgtk cat -i examples/docs/cat-edges-with-totals-and-averages.tsv \
 | P1037 | p585-count | 60 | 9317 | 155.28333333333333 |
 | P1040 | p585-count | 1 | 45073 | 45073.0 |
 | P1050 | p585-count | 246 | 226380 | 920.2439024390244 |
+
+!!! note
+    At the present time there is no option to list optional additional columns.
