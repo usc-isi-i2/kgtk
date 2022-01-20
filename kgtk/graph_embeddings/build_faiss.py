@@ -170,6 +170,7 @@ def infer_embedding_dim(embeddings_file, embeddings_format, has_header):
 # * embeddings_format has already been validated and is one of w2v, kgtk, or glove.
 # * if embeddings have a header line, then the given line is not the first line from the file.
 def get_embedding_from_line(line, embeddings_format):
+    line.strip('\n')
     # formats that have embeddings in columns starting with second column
     if embeddings_format in ["w2v", "glove"]:
         emb = line.split('\t')[1:]
