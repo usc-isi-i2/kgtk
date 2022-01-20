@@ -112,6 +112,6 @@ def run(**kwargs):
     except SystemExit as e:
         raise KGTKException("Exit requested")
     except KGTKException as e:
-        raise
+        raise e
     except Exception as e:
         raise KGTKException(str(e))
