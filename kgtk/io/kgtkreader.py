@@ -133,6 +133,7 @@ class KgtkReaderOptions():
     implied_label: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
 
     graph_cache: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    ignore_stale_graph_cache: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
     use_graph_cache_envar: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
     graph_cache_fetchmany_size: int = attr.ib(validator=attr.validators.instance_of(int), default=GRAPH_CACHE_FETCHMANY_SIZE_DEFAULT)
     graph_cache_filter_batch_size: int = attr.ib(validator=attr.validators.instance_of(int), default=GRAPH_CACHE_FILTER_BATCH_SIZE_DEFAULT)
@@ -230,6 +231,12 @@ class KgtkReaderOptions():
                             dest=prefix2 + "use_graph_cache_envar",
                             metavar="optional True|False",
                             help=h(prefix3 + "use KGTK_GRAPH_CACHE if --graph-cache is not specified. (default=%(default)s)."),
+                            type=optional_bool, nargs='?', const=True, **d(default=True))
+
+        fgroup.add_argument(prefix1 + "ignore-stale-graph-cache",
+                            dest=prefix2 + "ignore_stale_graph_cache",
+                            metavar="optional True|False",
+                            help=h(prefix3 + "Ignore the graph cache if the file exists with a differen size or modificatin time. (default=%(default)s)."),
                             type=optional_bool, nargs='?', const=True, **d(default=True))
 
         fgroup.add_argument(prefix1 + "graph-cache",
@@ -456,6 +463,7 @@ class KgtkReaderOptions():
             implied_label=lookup("implied_label", None),
             graph_cache=lookup("graph_cache", None),
             use_graph_cache_envar=lookup("use_graph_cache_envar", True),
+            ignore_stale_graph_cache=lookup("ignore_stale_graph_cache", True),
             graph_cache_fetchmany_size=lookup("graph_cache_fetchmany_size", cls.GRAPH_CACHE_FETCHMANY_SIZE_DEFAULT),
             graph_cache_filter_batch_size=lookup("graph_cache_filter_batch_size", cls.GRAPH_CACHE_FILTER_BATCH_SIZE_DEFAULT),
             header_error_action=lookup("header_error_action", ValidationAction.EXCLUDE),
@@ -532,6 +540,7 @@ class KgtkReaderOptions():
         if self.implied_label is not None:
             print("%simplied-label=%s" % (prefix, str(self.implied_label)), file=out)
         print("%suse-graph-cache-envar=%s" % (prefix, str(self.use_graph_cache_envar)), file=out)
+        print("%signore-stale-graph-cache=%s" % (prefix, str(self.ignore_stale_graph_cache)), file=out)
         print("%sgraph-cache-fetchmany-size=%s" % (prefix, str(self.graph_cache_fetchmany_size)), file=out)
         print("%sgraph-cache-filter-batch-size=%s" % (prefix, str(self.graph_cache_filter_batch_size)), file=out)
         if self.graph_cache is not None:
@@ -735,6 +744,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             from kgtk.io.graphcacheadaptor import GraphCacheAdaptor
             gca: typing.Optional[GraphCacheAdaptor] = GraphCacheAdaptor.open(graph_cache_path=Path(graph_cache),
                                                                              file_path=file_path,
+                                                                             ignore_stale_graph_cache=options.ignore_stale_graph_cache,
                                                                              error_file=error_file,
                                                                              verbose=verbose)
             if gca is not None:

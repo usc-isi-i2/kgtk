@@ -98,6 +98,7 @@ in a valid (all else being valid) KGTK edge file:
 ```bash
 kgtk expand -i examples/docs/expand-file2.tsv --mode=NONE --columns node1 label
 ```
+
 | node1 | label | node2 | location | years |
 | -- | -- | -- | -- | -- |
 | john | zipcode | 12345 | home | 10 |

@@ -455,6 +455,7 @@ In this example, the root file is a KGTK Node file.
 ```bash
 kgtk cat -i examples/docs/reachable-nodes-metal-blocks.tsv
 ```
+
 | id |
 | -- |
 | gold-block |

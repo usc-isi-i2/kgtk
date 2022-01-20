@@ -36,11 +36,6 @@ def add_arguments_extended(parser: KGTKArgumentParser,
     # This helper function makes it easy to suppress options from
     # The help message.  The options are still there, and initialize
     # what they need to initialize.
-    def h(msg: str) -> str:
-        if _expert:
-            return msg
-        else:
-            return SUPPRESS
 
     parser.add_input_file(positional=True)
     parser.add_output_file()
@@ -170,9 +165,9 @@ def add_arguments_extended(parser: KGTKArgumentParser,
                         help="Specify option to show tooltip ")
 
     parser.add_argument('--text-node', dest='text_node', type=str,
-                        default='false',
+                        default=None,
                         help="Specify option to show text" +
-                        " (false, center, above) ")
+                        " (None, center, above), default is None")
 
     parser.add_argument('--node-categorical-scale',
                         dest='node_categorical_scale',
@@ -246,6 +241,7 @@ def run(input_file: KGTKFiles,
 
         **kwargs  # Whatever KgtkFileOptions and KgtkValueOptions want.
         ) -> int:
+
     kv: KgtkVisualize = KgtkVisualize(
                         input_file=input_file,
                         output_file=output_file,
@@ -286,6 +282,7 @@ def run(input_file: KGTKFiles,
                         node_categorical_scale=node_categorical_scale,
                         edge_categorical_scale=edge_categorical_scale,
                         node_gradient_scale=node_gradient_scale,
-                        edge_gradient_scale=edge_gradient_scale
+                        edge_gradient_scale=edge_gradient_scale,
+                        kwargs=kwargs
                 )
     kv.execute()

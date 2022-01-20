@@ -100,6 +100,7 @@ kgtk ifnotempty -i examples/docs/ifnotempty-file1.tsv \
 kgtk ifnotempty -i examples/docs/ifnotempty-file1.tsv \
                 --columns location years
 ```
+
 | node1 | label | node2 | location | years |
 | -- | -- | -- | -- | -- |
 | john | zipcode | 12345 | home | 10 |
@@ -114,6 +115,7 @@ kgtk ifnotempty -i examples/docs/ifnotempty-file1.tsv \
                 --columns location years \
                 --reject-file ifempty-file1-rejects.tsv
 ```
+
 | node1 | label | node2 | location | years |
 | -- | -- | -- | -- | -- |
 | john | zipcode | 12345 | home | 10 |
@@ -126,6 +128,7 @@ Here are the rejected edges:
 ```bash
 kgtk cat -i ifempty-file1-rejects.tsv
 ```
+
 | node1 | label | node2 | location | years |
 | -- | -- | -- | -- | -- |
 | john | zipcode | 12346 |  |  |

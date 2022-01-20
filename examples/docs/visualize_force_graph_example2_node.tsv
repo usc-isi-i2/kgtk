@@ -1,0 +1,10 @@
+id	node;label	is_country	type	degree	type_missing	population
+Alice	‘Alice’@en	0	human	4		
+Susan	‘Susan’@en	0	human	4		
+John	‘John’@en	0	human	4		
+Claudia	‘Claudia’@en	0	human	3		
+Ulrich	‘Ulrich’@en	0	human	4		
+Fritz	‘Fritz’@en	0	human	4		
+USA	‘USA’@en	1	country	5	country	300
+Germany	‘Germany’@en	1	country	5	country	50
+Brazil	‘Brazil’@en	1	country	2	country	200
