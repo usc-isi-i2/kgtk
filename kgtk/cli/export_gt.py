@@ -110,14 +110,14 @@ def run(input_file: KGTKFiles,
 
         G2 = load_graph_from_kgtk(kr, directed=not undirected, ecols=(sub, obj), verbose=verbose, out=error_file)
 
-        if node_file != None:
+        if node_file is not None:
             kr_node: KgtkReader = KgtkReader.open(node_file,
-                                              error_file=error_file,
-                                              options=reader_options,
-                                              value_options=value_options,
-                                              verbose=verbose,
-                                              very_verbose=very_verbose,
-            )
+                                                  error_file=error_file,
+                                                  options=reader_options,
+                                                  value_options=value_options,
+                                                  verbose=verbose,
+                                                  very_verbose=very_verbose,
+                                                  )
             d = {}
             for i in range(0, len(list(G2.vp['name']))):
                 d[G2.vp['name'][i]] = i
