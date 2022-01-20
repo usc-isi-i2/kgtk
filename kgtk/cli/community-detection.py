@@ -2,10 +2,6 @@
 adding ID values.
 TODO: Need KgtkWriterOptions
 """
-from graph_tool import Graph
-from graph_tool.inference.minimize import minimize_blockmodel_dl, \
-    minimize_nested_blockmodel_dl
-import graph_tool
 from argparse import Namespace, SUPPRESS
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
@@ -72,7 +68,11 @@ def run(input_file: KGTKFiles,
     import sys
     import typing
 
-    from kgtk.exceptions import KGTKException
+    from graph_tool import Graph
+    from graph_tool.inference.minimize import minimize_blockmodel_dl, \
+        minimize_nested_blockmodel_dl
+    import graph_tool
+
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
     from kgtk.io.kgtkwriter import KgtkWriter
     from kgtk.reshape.kgtkidbuilder import KgtkIdBuilder, KgtkIdBuilderOptions
