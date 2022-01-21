@@ -219,27 +219,46 @@ def run(input_file: KGTKFiles,
                                   verbose=verbose,
                                   very_verbose=very_verbose)
 
-        input_count: int = 0
-        output_count: int = 0
-        reject_count: int = 0
+        def copy_sample_set()->typing.Tuple[int, int, int]:
+            input_count: int = 0
+            output_count: int = 0
+            reject_count: int = 0
 
-        row: typing.List[str]
-        for row in kr:
-            selected: bool
-            if exact:
-                selected = input_count in sample_set
-            else:
-                selected = probability > rg.random()
+            row: typing.List[str]
+            for row in kr:
+                if input_count in sample_set:
+                    kw.write(row)
+                    output_count += 1
 
-            if selected:
-                kw.write(row)
-                output_count += 1
+                elif rkw is not None:
+                    rkw.write(row)
+                    reject_count += 1
 
-            elif rkw is not None:
-                rkw.write(row)
-                reject_count += 1
+                input_count += 1
+            return input_count, output_count, reject_count
 
-            input_count += 1
+        def copy_probably()->typing.Tuple[int, int, int]:
+            input_count: int = 0
+            output_count: int = 0
+            reject_count: int = 0
+
+            row: typing.List[str]
+            for row in kr:
+                if probability > rg.random():
+                    kw.write(row)
+                    output_count += 1
+
+                elif rkw is not None:
+                    rkw.write(row)
+                    reject_count += 1
+
+                input_count += 1
+            return input_count, output_count, reject_count
+
+        input_count: int
+        output_count: int
+        reject_count: int
+        input_count, output_count, reject_count = copy_sample_set() if exact else copy_probably()
 
         kr.close()
         kw.close()
@@ -254,4 +273,3 @@ def run(input_file: KGTKFiles,
         raise KGTKException("Exit requested")
     except Exception as e:
         raise KGTKException(str(e))
-
