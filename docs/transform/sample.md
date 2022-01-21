@@ -71,8 +71,11 @@ kgtk sample -i examples/docs/sample-example1.tsv \
 
 | node1 | label | node2 | id |
 | -- | -- | -- | -- |
-| blue | maxoccurs | 1 |  |
-| rgbcolor | datatype | True |  |
+| green | isa | rgbcolor |  |
+| colorname | node2_values | green |  |
+| colorname | node2_values | blue |  |
+| sphere | property | True |  |
+| boxshape | datatype | True |  |
 
 ### Sampling with a Fixed Seed
 
