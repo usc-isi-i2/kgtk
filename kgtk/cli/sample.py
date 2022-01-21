@@ -2,11 +2,21 @@
 
 A probability option, `--probability frac`, determines the probability that
 an input record is passed to the standard output file. The probability ranges
-from 0.0 to 1.0, with 1 being the default.
+from 0.0 to 1.0, with 1 being the default.  The number of output records
+may not match the number of input records times the probability.
 
-Alternatively, `--input-count N' and '--desired-count n' may be provided.
-The sampling probability will be computed. The number of output records may not
-exactly match the desired count.
+The probability value must not be negative, and it must not be greater than 1.
+
+Alternatively, `--input-count N' and '--desired-count n' may be provided.  The
+sampling probability will be computed as n/N. The number of output records may not
+exactly match the desired count unless `--exact` is specified.  `--exact`
+consumes more memory on large input files.
+
+The input count, if specified, must be positive.  The desired count, if specified,
+must be positive.
+
+TODO: Optionally raise an exception if the desirec count is greater than the
+input count or the actual number of input records, as applicable.
 
 --mode=NONE is default.
 
@@ -148,6 +158,12 @@ def run(input_file: KGTKFiles,
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
+
+    if probability < 0.0:
+        raise KGTKException("The probability (%f) must not be negative." % probability)
+
+    if probability > 1.0:
+        raise KGTKException("The probability (%f) must not be greater than 1.0." % probability)
 
     if input_count is not None and input_count <= 0:
         raise KGTKException("The input count (%d) must be positive." % input_count)

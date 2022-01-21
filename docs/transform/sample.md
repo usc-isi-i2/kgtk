@@ -9,9 +9,15 @@ to each record (edge or node) in the input file independently.  The number of
 records in the output file might not be exactly the same as the fraction times
 the number of records in the input file.
 
+The probability value must not be negative, and it must not be greater than 1.
+
 Alternatively, `--input-count N` and `--desired-count n` may be provided.
-The sampling probability will be computed. The number of output records may not
-exactly match the desired countm unless `--exact` is specified.
+The sampling probability will be computed as n/N. The number of output records may not
+exactly match the desired countm unless `--exact` is specified. `--exact`
+consumes more memory on large input files.
+
+The input count, if specified, must be positive.  The desired count, if specified,
+must be positive.
 
 This command defaults to `--mode=NONE` since it doesn't attach special meaning
 to particular columns.
@@ -62,22 +68,7 @@ optional arguments:
 
 ## Examples
 
-### Sample 1 Record out of 10
-
-```bash
-kgtk sample -i examples/docs/sample-example1.tsv \
-            --probability .1
-```
-
-| node1 | label | node2 | id |
-| -- | -- | -- | -- |
-| green | isa | rgbcolor |  |
-| colorname | node2_values | green |  |
-| colorname | node2_values | blue |  |
-| sphere | property | True |  |
-| boxshape | datatype | True |  |
-
-### Sampling with a Fixed Seed
+### Sampling 1 record out of 10 with a Fixed Seed
 
 You can specify an integer seed to the random number generator to provide
 repeatable sampling.
@@ -97,6 +88,9 @@ kgtk sample -i examples/docs/sample-example1.tsv \
 | rgbcolor | isa | colorclass |  |
 | colorname | node1_type | symbol |  |
 | colorname | node2_values | green |  |
+
+! note
+  Omit `--seed 123` to obtain a nonrepeatable sample.
 
 ### Sampling an Approximate Number of Records
 
