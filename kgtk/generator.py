@@ -8,13 +8,13 @@ import typing
 from typing import List
 from etk.etk import ETK
 from etk.etk_module import ETKModule
-from etk.knowledge_graph import KGSchema
-from etk.wikidata import wiki_namespaces
+from kgtk.knowledge_graph import KGSchema
+from kgtk.wikidata import wiki_namespaces
 from kgtk.exceptions import KGTKException
-from etk.wikidata.entity import WDItem, WDProperty
+from kgtk.wikidata.entity import WDItem, WDProperty
 from kgtk.io.kgtkreader import KgtkReader
 
-from etk.wikidata.value import (
+from kgtk.wikidata.value import (
     Precision,
     Item,
     StringValue,
@@ -25,7 +25,7 @@ from etk.wikidata.value import (
     ExternalIdentifier,
     URLValue
 )
-from etk.knowledge_graph.node import LiteralType
+from kgtk.knowledge_graph.node import LiteralType
 
 BAD_CHARS = [":", "&", ",", " ",
              "(", ")", "\'", '\"', "/", "\\", "[", "]", ";", "|"]
