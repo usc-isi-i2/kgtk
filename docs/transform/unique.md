@@ -118,10 +118,12 @@ optional arguments:
                         (default=False).
   --min-count MIN_COUNT
                         The minimum count output filter (does not apply to
-                        'node' format). (default=0).
+                        'node' format). The minimum and maximum count filters
+                        are conjunctive. (default=0).
   --max-count MAX_COUNT
                         The minimum count output filter (does not apply to
-                        'node' format). (default=999999999999999).
+                        'node' format). The minimum and maximum count filters
+                        are conjunctive. (default=999999999999999).
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).

@@ -8,11 +8,12 @@
 #
 # TODO: Convert EmbeddingVector to use KgtkFormat and KgtkWriter.
 #
+from argparse import Namespace, SUPPRESS
 import typing
 from kgtk.exceptions import KGTKException
 from kgtk.cli_argparse import KGTKArgumentParser
 from kgtk.kgtkformat import KgtkFormat
-from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 from pathlib import Path
 import sys
@@ -33,7 +34,8 @@ ALL_EMBEDDING_MODELS_NAMES = [
     "roberta-base-nli-mean-tokens",
     "roberta-base-nli-stsb-mean-tokens",
     "roberta-large-nli-mean-tokens",
-    "roberta-large-nli-stsb-mean-tokens"
+    "roberta-large-nli-stsb-mean-tokens",
+    "sentence-transformers/all-distilroberta-v1"
 ]
 
 
@@ -176,6 +178,7 @@ def main(**kwargs):
         property_labels_filter = kwargs.get("property_labels_filter", [])
         query_server = kwargs.get("query_server")
         save_embedding_sentence = kwargs.get("save_embedding_sentence", False)
+        output_file = kwargs.get("output_file", "")
 
         # Select where to send error messages, defaulting to stderr.
         error_file: typing.TextIO = sys.stdout if kwargs.get("errors_to_stdout") else sys.stderr
@@ -257,7 +260,7 @@ def main(**kwargs):
             process.plot_result(output_properties=output_properties,
                                 input_format=data_format, output_uri=output_uri,
                                 dimensional_reduction=dimensional_reduction, dimension_val=dimension_val,
-                                output_format=output_format, save_embedding_sentence=save_embedding_sentence)
+                                output_format=output_format, save_embedding_sentence=save_embedding_sentence, output_file=output_file)
             # process.evaluate_result()
             _logger.info("*" * 20 + "finished" + "*" * 20)
     except Exception as e:
@@ -271,8 +274,10 @@ def parser():
     }
 
 
-def add_arguments(parser: KGTKArgumentParser):
+def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Namespace):
     from kgtk.utils.argparsehelpers import optional_bool
+
+    _expert: bool = parsed_shared_args._expert
 
     parser.accept_shared_argument('_debug')
 
@@ -329,8 +334,10 @@ def add_arguments(parser: KGTKArgumentParser):
     # output
     parser.add_argument('--save-embedding-sentence', action='store_true', dest='save_embedding_sentence',
                         help="if set, will also save the embedding sentences to output.")
-    parser.add_argument('-o', '--embedding-projector-metadata-path', action='store', dest='output_uri', default="",
+    parser.add_argument('--embedding-projector-metadata-path', action='store', dest='output_uri', default="",
                         help="output path for the metadata file, default will be current user's home directory")
+    parser.add_argument('-o', '--out-file', action='store', dest='output_file', default="-",
+                        help="output path for the text embedding file, by default it will be printed in console")
     parser.add_argument('--output-data-format', action='store', dest='output_data_format',
                         default="kgtk_format", choices=("tsv_format", "kgtk_format"),
                         help="output format, can either be `tsv_format` or `kgtk_format`. \nIf choose `tsv_format`, the output "
@@ -381,7 +388,10 @@ def add_arguments(parser: KGTKArgumentParser):
                         )
 
     KgtkReader.add_debug_arguments(parser, expert=False)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=False)
+    KgtkReaderOptions.add_arguments(parser,
+                                    mode_options=True,
+                                    default_mode=KgtkReaderMode[parsed_shared_args._mode],
+                                    expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=False)
 
 def run(**kwargs):

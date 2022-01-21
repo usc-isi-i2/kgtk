@@ -7,10 +7,14 @@ source common.sh
 
 # ==============================================================================
 # Setup working directories:
-mkdir --verbose ${DATADIR}
-mkdir --verbose ${TEMPDIR}
-mkdir --verbose ${LOGDIR}
-mkdir --verbose ${COUNTDIR}
+#mkdir --verbose ${DATADIR}
+mkdir -p ${DATADIR}
+#mkdir --verbose ${TEMPDIR}
+mkdir -p ${TEMPDIR}
+#mkdir --verbose ${LOGDIR}
+mkdir -p ${LOGDIR}
+#mkdir --verbose ${COUNTDIR}
+mkdir -p ${COUNTDIR}
 
 
 # ==============================================================================
@@ -48,10 +52,10 @@ kgtk ${KGTK_FLAGS} \
      --value-hash-width 6 \
      --claim-id-hash-width 8 \
      --use-kgtkwriter True \
-     --use-mgzip-for-input True \
-     --use-mgzip-for-output True \
+     --use-mgzip-for-input False \
+     --use-mgzip-for-output False \
      --use-shm True \
-     --procs 17 \
+     --procs 6 \
      --mapper-batch-size 5 \
      --max-size-per-mapper-queue 3 \
      --single-mapper-queue True \
@@ -69,7 +73,7 @@ kgtk ${KGTK_FLAGS} \
      --repair-lax-coordinates \
      --allow-language-suffixes \
      --allow-wikidata-lq-strings \
-    |& tee ${LOGDIR}/import-split-wikidata.log
+    | tee ${LOGDIR}/import-split-wikidata.log
 
 
 #     --additional-language-codes cnr hyw syz bh mo eml simple \

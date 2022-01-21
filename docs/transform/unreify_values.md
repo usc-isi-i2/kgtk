@@ -360,7 +360,7 @@ kgtk cat -i examples/docs/unreify-values-file1.tsv
 | gaia:entities/e34874a6-a857-4f14-8aee-9947d3e9caaf | ont:justifiedBy | XoBugQcoEt6xNnqGsHDXfTA:b1 |
 | gaia:entities/e34874a6-a857-4f14-8aee-9947d3e9caaf | ont:privateData | XoBugQcoEt6xNnqGsHDXfTA:g0 |
 | XoBugQcoEt6xNnqGsHDXfTA:g0 | rdf:type | ont:PrivateData |
-| XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:jsonContent | "{\"fileType\":\"en\"}" |
+| XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:jsonContent | "{\\"fileType\\":\\"en\\"}" |
 | XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:system | rpi:fileType |
 | gaia:entities/e34874a6-a857-4f14-8aee-9947d3e9caaf | ont:system | noBugQcoEt6xNnqGsHDXfTA-1: |
 | gaia:entities/e34874a6-a857-4f14-8aee-9947d3e9caaf | ont:textValue | "32" |
@@ -400,7 +400,7 @@ kgtk unreify-values -i examples/docs/unreify-values-file1.tsv \
 | node1 | label | node2 | id |
 | -- | -- | -- | -- |
 | XoBugQcoEt6xNnqGsHDXfTA:g0 | rdf:type | ont:PrivateData |  |
-| XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:jsonContent | "{\"fileType\":\"en\"}" |  |
+| XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:jsonContent | "{\\"fileType\\":\\"en\\"}" |  |
 | XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:system | rpi:fileType |  |
 | XoBugQcoEt6xNnqGsHDXfTA:g1 | rdf:type | ont:ClusterMembership |  |
 | XoBugQcoEt6xNnqGsHDXfTA:g1 | ont:cluster | gaia:events/03a41b2b-e0ef-42f9-a192-433e0abc3a70-cluster-projectedFromSingleton |  |
@@ -439,7 +439,7 @@ kgtk cat -i examples/docs/unreify-values-file1.tsv
 | gaia:entities/e34874a6-a857-4f14-8aee-9947d3e9caaf | ont:justifiedBy | XoBugQcoEt6xNnqGsHDXfTA:b1 |
 | gaia:entities/e34874a6-a857-4f14-8aee-9947d3e9caaf | ont:privateData | XoBugQcoEt6xNnqGsHDXfTA:g0 |
 | XoBugQcoEt6xNnqGsHDXfTA:g0 | rdf:type | ont:PrivateData |
-| XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:jsonContent | "{\"fileType\":\"en\"}" |
+| XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:jsonContent | "{\\"fileType\\":\\"en\\"}" |
 | XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:system | rpi:fileType |
 | gaia:entities/e34874a6-a857-4f14-8aee-9947d3e9caaf | ont:system | noBugQcoEt6xNnqGsHDXfTA-1: |
 | gaia:entities/e34874a6-a857-4f14-8aee-9947d3e9caaf | ont:textValue | "32" |
@@ -477,7 +477,7 @@ kgtk unreify-values -i examples/docs/unreify-values-file1.tsv \
 
 | node1 | label | node2 | id |
 | -- | -- | -- | -- |
-| gaia:entities/e34874a6-a857-4f14-8aee-9947d3e9caaf | ont:jsonContent | "{\"fileType\":\"en\"}" | XoBugQcoEt6xNnqGsHDXfTA:g0 |
+| gaia:entities/e34874a6-a857-4f14-8aee-9947d3e9caaf | ont:jsonContent | "{\\"fileType\\":\\"en\\"}" | XoBugQcoEt6xNnqGsHDXfTA:g0 |
 | XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:system | rpi:fileType | XoBugQcoEt6xNnqGsHDXfTA:g0-1 |
 | XoBugQcoEt6xNnqGsHDXfTA:g1 | rdf:type | ont:ClusterMembership |  |
 | XoBugQcoEt6xNnqGsHDXfTA:g1 | ont:cluster | gaia:events/03a41b2b-e0ef-42f9-a192-433e0abc3a70-cluster-projectedFromSingleton |  |
@@ -520,7 +520,7 @@ kgtk cat -i examples/docs/unreify-values-file1.tsv
 | gaia:entities/e34874a6-a857-4f14-8aee-9947d3e9caaf | ont:justifiedBy | XoBugQcoEt6xNnqGsHDXfTA:b1 |
 | gaia:entities/e34874a6-a857-4f14-8aee-9947d3e9caaf | ont:privateData | XoBugQcoEt6xNnqGsHDXfTA:g0 |
 | XoBugQcoEt6xNnqGsHDXfTA:g0 | rdf:type | ont:PrivateData |
-| XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:jsonContent | "{\"fileType\":\"en\"}" |
+| XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:jsonContent | "{\\"fileType\\":\\"en\\"}" |
 | XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:system | rpi:fileType |
 | gaia:entities/e34874a6-a857-4f14-8aee-9947d3e9caaf | ont:system | noBugQcoEt6xNnqGsHDXfTA-1: |
 | gaia:entities/e34874a6-a857-4f14-8aee-9947d3e9caaf | ont:textValue | "32" |
@@ -563,7 +563,7 @@ kgtk unreify-values -i examples/docs/unreify-values-file1.tsv \
 
 | node1 | label | node2 | id |
 | -- | -- | -- | -- |
-| gaia:entities/e34874a6-a857-4f14-8aee-9947d3e9caaf | ont:jsonContent | "{\"fileType\":\"en\"}" | XoBugQcoEt6xNnqGsHDXfTA:g0 |
+| gaia:entities/e34874a6-a857-4f14-8aee-9947d3e9caaf | ont:jsonContent | "{\\"fileType\\":\\"en\\"}" | XoBugQcoEt6xNnqGsHDXfTA:g0 |
 | XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:system | rpi:fileType | XoBugQcoEt6xNnqGsHDXfTA:g0-1 |
 | XoBugQcoEt6xNnqGsHDXfTA:g1 | rdf:type | ont:ClusterMembership |  |
 | XoBugQcoEt6xNnqGsHDXfTA:g1 | ont:cluster | gaia:events/03a41b2b-e0ef-42f9-a192-433e0abc3a70-cluster-projectedFromSingleton |  |
@@ -601,7 +601,7 @@ kgtk cat -i examples/docs/unreify-values-file2.tsv
 | gaia:entities/e34874a6-a857-4f14-8aee-9947d3e9caaf | ont:justifiedBy | XoBugQcoEt6xNnqGsHDXfTA:b1 | 03 |
 | gaia:entities/e34874a6-a857-4f14-8aee-9947d3e9caaf | ont:privateData | XoBugQcoEt6xNnqGsHDXfTA:g0 | 04 |
 | XoBugQcoEt6xNnqGsHDXfTA:g0 | rdf:type | ont:PrivateData | 05 |
-| XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:jsonContent | "{\"fileType\":\"en\"}" | 06 |
+| XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:jsonContent | "{\\"fileType\\":\\"en\\"}" | 06 |
 | XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:system | rpi:fileType | 07 |
 | gaia:entities/e34874a6-a857-4f14-8aee-9947d3e9caaf | ont:system | noBugQcoEt6xNnqGsHDXfTA-1: | 08 |
 | gaia:entities/e34874a6-a857-4f14-8aee-9947d3e9caaf | ont:textValue | "32" | 09 |
@@ -642,7 +642,7 @@ kgtk unreify-values -i examples/docs/unreify-values-file2.tsv \
 | node1 | label | node2 | record# | id |
 | -- | -- | -- | -- | -- |
 | XoBugQcoEt6xNnqGsHDXfTA:g0 | rdf:type | ont:PrivateData | 05 |  |
-| XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:jsonContent | "{\"fileType\":\"en\"}" | 06 |  |
+| XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:jsonContent | "{\\"fileType\\":\\"en\\"}" | 06 |  |
 | XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:system | rpi:fileType | 07 |  |
 | XoBugQcoEt6xNnqGsHDXfTA:g1 | rdf:type | ont:ClusterMembership | 10 |  |
 | XoBugQcoEt6xNnqGsHDXfTA:g1 | ont:cluster | gaia:events/03a41b2b-e0ef-42f9-a192-433e0abc3a70-cluster-projectedFromSingleton | 11 |  |
@@ -682,7 +682,7 @@ kgtk cat -i examples/docs/unreify-values-file3.tsv
 | gaia:entities/e34874a6-a857-4f14-8aee-9947d3e9caaf | ont:justifiedBy | XoBugQcoEt6xNnqGsHDXfTA:b1 |
 | gaia:entities/e34874a6-a857-4f14-8aee-9947d3e9caaf | ont:privateData | XoBugQcoEt6xNnqGsHDXfTA:g0 |
 | XoBugQcoEt6xNnqGsHDXfTA:g0 | rdf:type | ont:PrivateData |
-| XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:jsonContent | "{\"fileType\":\"en\"}" |
+| XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:jsonContent | "{\\"fileType\\":\\"en\\"}" |
 | XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:system | rpi:fileType |
 | gaia:entities/e34874a6-a857-4f14-8aee-9947d3e9caaf | ont:system | noBugQcoEt6xNnqGsHDXfTA-1: |
 | gaia:entities/e34874a6-a857-4f14-8aee-9947d3e9caaf | ont:textValue | "32" |
@@ -723,7 +723,7 @@ kgtk unreify-values -i examples/docs/unreify-values-file3.tsv \
 | node1 | label | node2 | id |
 | -- | -- | -- | -- |
 | XoBugQcoEt6xNnqGsHDXfTA:g0 | rdf:type | ont:PrivateData |  |
-| XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:jsonContent | "{\"fileType\":\"en\"}" |  |
+| XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:jsonContent | "{\\"fileType\\":\\"en\\"}" |  |
 | XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:system | rpi:fileType |  |
 | XoBugQcoEt6xNnqGsHDXfTA:g1 | rdf:type | ont:ClusterMembership |  |
 | XoBugQcoEt6xNnqGsHDXfTA:g1 | ont:cluster | gaia:events/03a41b2b-e0ef-42f9-a192-433e0abc3a70-cluster-projectedFromSingleton |  |
@@ -768,7 +768,7 @@ kgtk cat -i examples/docs/unreify-values-file3.tsv
 | gaia:entities/e34874a6-a857-4f14-8aee-9947d3e9caaf | ont:justifiedBy | XoBugQcoEt6xNnqGsHDXfTA:b1 |
 | gaia:entities/e34874a6-a857-4f14-8aee-9947d3e9caaf | ont:privateData | XoBugQcoEt6xNnqGsHDXfTA:g0 |
 | XoBugQcoEt6xNnqGsHDXfTA:g0 | rdf:type | ont:PrivateData |
-| XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:jsonContent | "{\"fileType\":\"en\"}" |
+| XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:jsonContent | "{\\"fileType\\":\\"en\\"}" |
 | XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:system | rpi:fileType |
 | gaia:entities/e34874a6-a857-4f14-8aee-9947d3e9caaf | ont:system | noBugQcoEt6xNnqGsHDXfTA-1: |
 | gaia:entities/e34874a6-a857-4f14-8aee-9947d3e9caaf | ont:textValue | "32" |
@@ -810,13 +810,13 @@ kgtk unreify-values -i examples/docs/unreify-values-file3.tsv \
 | node1 | label | node2 | id |
 | -- | -- | -- | -- |
 | XoBugQcoEt6xNnqGsHDXfTA:g0 | rdf:type | ont:PrivateData |  |
-| XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:jsonContent | "{\"fileType\":\"en\"}" |  |
+| XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:jsonContent | "{\\"fileType\\":\\"en\\"}" |  |
 | XoBugQcoEt6xNnqGsHDXfTA:g0 | ont:system | rpi:fileType |  |
 | XoBugQcoEt6xNnqGsHDXfTA:g1 | rdf:type | ont:ClusterMembership |  |
 | XoBugQcoEt6xNnqGsHDXfTA:g1 | ont:cluster | gaia:events/03a41b2b-e0ef-42f9-a192-433e0abc3a70-cluster-projectedFromSingleton |  |
 | XoBugQcoEt6xNnqGsHDXfTA:g1 | ont:clusterMember | gaia:events/03a41b2b-e0ef-42f9-a192-433e0abc3a70 |  |
 | XoBugQcoEt6xNnqGsHDXfTA:g1 | ont:system | noBugQcoEt6xNnqGsHDXfTA-2: |  |
-| XoBugQcoEt6xNnqGsHDXfTA:g1 | ont:confidenceValue | 2.0\|1.0 | XoBugQcoEt6xNnqGsHDXfTA:g2 |
+| XoBugQcoEt6xNnqGsHDXfTA:g1 | ont:confidenceValue | 1.0\|2.0 | XoBugQcoEt6xNnqGsHDXfTA:g2 |
 | XoBugQcoEt6xNnqGsHDXfTA:g2 | ont:system | noBugQcoEt6xNnqGsHDXfTA-2: | XoBugQcoEt6xNnqGsHDXfTA:g2-1 |
 | XoBugQcoEt6xNnqGsHDXfTA:g3 | rdf:type | rdf:Statement |  |
 | XoBugQcoEt6xNnqGsHDXfTA:g3 | rdf:object | gaia:entities/d1dcefce-badf-4948-bfcf-5d33116fa12c |  |

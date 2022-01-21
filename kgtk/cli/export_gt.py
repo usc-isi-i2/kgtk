@@ -10,6 +10,7 @@ TODO: Convert to KgtkReader and read the file only once.
 """
 from argparse import Namespace
 import typing
+import pandas as pd
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
@@ -25,7 +26,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
             parser (argparse.ArgumentParser)
     """
-    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
     from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
@@ -37,21 +38,30 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument('--undirected', dest="undirected",
                         help="When True, the graph is undirected. (default=%(default)s)",
                         type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+
+    parser.add_argument('--node-file', dest='node_file', type=str,
+                        default=None,
+                        help="Specify the location of node file.")
     
     KgtkReader.add_debug_arguments(parser, expert=_expert)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser,
+                                    mode_options=True,
+                                    default_mode=KgtkReaderMode[parsed_shared_args._mode],
+                                    expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 
 def run(input_file: KGTKFiles,
         output_file: KGTKFiles,
         undirected: bool,
+        node_file: None,
 
         errors_to_stdout: bool,
         errors_to_stderr: bool,
         show_options: bool,
         verbose: bool,
         very_verbose: bool,
+
 
         **kwargs, # Whatever KgtkFileOptions and KgtkValueOptions want.
         ):
@@ -99,6 +109,32 @@ def run(input_file: KGTKFiles,
             raise KGTKException("Exiting due to missing columns.")
 
         G2 = load_graph_from_kgtk(kr, directed=not undirected, ecols=(sub, obj), verbose=verbose, out=error_file)
+
+        if node_file != None:
+            kr_node: KgtkReader = KgtkReader.open(node_file,
+                                              error_file=error_file,
+                                              options=reader_options,
+                                              value_options=value_options,
+                                              verbose=verbose,
+                                              very_verbose=very_verbose,
+            )
+            d = {}
+            for i in range(0, len(list(G2.vp['name']))):
+                d[G2.vp['name'][i]] = i
+
+            vprop_dict = {}
+            for col in kr_node.column_name_map:
+                if col != 'id':
+                    vprop_dict[col] = G2.new_vertex_property("string")
+            for row in kr_node:
+                for col in kr_node.column_name_map:
+                    if col != 'id':
+                        v = G2.vertex(d[row[kr_node.column_name_map['id']]])
+                        vprop_dict[col][v] = row[kr_node.column_name_map[col]]
+            for col in kr_node.column_name_map:
+                if col != 'id':
+                    G2.vertex_properties[col] = vprop_dict[col]
+
 
         if verbose:
             print('graph loaded! It has %d nodes and %d edges.' % (G2.num_vertices(), G2.num_edges()), file=error_file, flush=True)

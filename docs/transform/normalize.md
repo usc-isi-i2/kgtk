@@ -234,6 +234,7 @@ kgtk cat -i examples/docs/normalize-file1.tsv
 ```bash
 kgtk lower -i examples/docs/normalize-file1.tsv
 ```
+
 | node1 | label | node2 |
 | -- | -- | -- |
 | Q1 | P1 | Q5 |
@@ -261,6 +262,7 @@ kgtk lower -i examples/docs/normalize-file1.tsv
 kgtk lower -i examples/docs/normalize-file1.tsv \
            --deduplicate-new-edges False
 ```
+
 | node1 | label | node2 |
 | -- | -- | -- |
 | Q1 | P1 | Q5 |
@@ -287,6 +289,7 @@ kgtk lower -i examples/docs/normalize-file1.tsv \
    / sort \
    / compact
 ```
+
 | node1 | label | node2 |
 | -- | -- | -- |
 | P1 | label | "instance of" |
@@ -575,6 +578,7 @@ kgtk lower -i examples/docs/normalize-file4.tsv \
            --columns      color material size \
 	   --base-columns node1  node1   node1
 ```
+
 | node1 | label | node2 |
 | -- | -- | -- |
 | block1 | isa | cube |
@@ -626,6 +630,7 @@ kgtk lower -i examples/docs/normalize-file4.tsv \
 	   --base-columns node1  node1   node1 \
 	   --label-values COLOR MATERIAL SIZE
 ```
+
 | node1 | label | node2 |
 | -- | -- | -- |
 | block1 | isa | cube |

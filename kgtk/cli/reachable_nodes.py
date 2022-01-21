@@ -24,7 +24,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
             parser (argparse.ArgumentParser)
     """
-    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
     from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
@@ -91,8 +91,17 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         help='An optional depth limit for breadth-first searches. (default=%(default)s)',
                         type=int, default=None)
 
+    parser.add_argument('--show-distance',dest='show_distance',
+                        help='When True, also given breadth first true, append another column showing the shortest distance, default col name is distance',
+                        type=optional_bool, nargs='?', const=True, default=False, metavar="True|False")
+
+    parser.add_argument('--dist-col-name', action='store', type=str, dest='dist_col_name', help='The column name for distance, default is distance',default="distance")
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser,
+                                    mode_options=True,
+                                    default_mode=KgtkReaderMode[parsed_shared_args._mode],
+                                    expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="input", expert=_expert, defaults=False)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="root", expert=_expert, defaults=False)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="props", expert=_expert, defaults=False)
@@ -135,6 +144,8 @@ def run(input_file: KGTKFiles,
         show_options: bool,
         verbose: bool,
         very_verbose: bool,
+        show_distance: bool,
+        dist_col_name: str,
 
         **kwargs, # Whatever KgtkFileOptions and KgtkValueOptions want.
         ):
@@ -520,7 +531,10 @@ def run(input_file: KGTKFiles,
     elif verbose:
         print("%d root nodes found in the graph." % len(index_list), file=error_file, flush=True)
 
-    output_header: typing.List[str] = ['node1','label','node2']
+    if breadth_first and show_distance:
+        output_header: typing.List[str] = ['node1','label','node2', dist_col_name]
+    else:
+        output_header: typing.List[str] = ['node1','label','node2']
 
     try:
         kw: KgtkWriter = KgtkWriter.open(output_header,
@@ -535,38 +549,81 @@ def run(input_file: KGTKFiles,
         raise KGTKException("Exiting.")
 
     for index in index_list:
-        if selflink_bool:
+        if selflink_bool and show_distance:
+            kw.writerow([name[index], label, name[index], 0])
+        elif selflink_bool and not show_distance:
             kw.writerow([name[index], label, name[index]])
                 
         if breadth_first:
             if depth_limit is None:
-                for e in bfs_iterator(G, G.vertex(index)):
-                    kw.writerow([name[index], label, name[e.target()]])
+                if show_distance:
+                    count = 0
+                    past = set()
+                    for e in bfs_iterator(G, G.vertex(index)):
+                        if e.source() in past:
+                            count += 1
+                            past = set()
+                        kw.writerow([name[index], label, name[e.target()], count+1])
+                        past.add(e.target())
 
-            else:
-                class DepthExceeded(Exception):
-                    pass
-
-                class DepthLimitedVisitor(BFSVisitor):
-                    def __init__(self, name, pred, dist):
-                        self.name = name
-                        self.pred = pred
-                        self.dist = dist
-
-                    def tree_edge(self, e):
-                        self.pred[e.target()] = int(e.source())
-                        newdist = self.dist[e.source()] + 1
-                        if depth_limit is not None and newdist > depth_limit:
-                           raise DepthExceeded
-                        self.dist[e.target()] = newdist
+                else:
+                    for e in bfs_iterator(G, G.vertex(index)):
                         kw.writerow([name[index], label, name[e.target()]])
 
-                dist = G.new_vertex_property("int")
-                pred = G.new_vertex_property("int64_t")
-                try:
-                    bfs_search(G, G.vertex(index), DepthLimitedVisitor(name, pred, dist))
-                except DepthExceeded:
-                    pass
+            else:
+                if show_distance:
+                    class DepthExceeded(Exception):
+                        pass
+
+                    class DepthLimitedVisitor(BFSVisitor):
+                        def __init__(self, name, pred, dist):
+                            self.name = name
+                            self.pred = pred
+                            self.dist = dist
+
+                        def tree_edge(self, e):
+                            self.pred[e.target()] = int(e.source())
+                            newdist = self.dist[e.source()] + 1
+
+                            if depth_limit is not None and newdist > depth_limit:
+                               raise DepthExceeded
+                            self.dist[e.target()] = newdist
+
+                            kw.writerow([name[index], label, name[e.target()], newdist])
+
+                    dist = G.new_vertex_property("int")
+                    pred = G.new_vertex_property("int64_t")
+
+                    try:
+                        bfs_search(G, G.vertex(index), DepthLimitedVisitor(name, pred, dist))
+                    except DepthExceeded:
+                        pass
+
+                else:
+                    class DepthExceeded(Exception):
+                        pass
+
+                    class DepthLimitedVisitor(BFSVisitor):
+                        def __init__(self, name, pred, dist):
+                            self.name = name
+                            self.pred = pred
+                            self.dist = dist
+
+                        def tree_edge(self, e):
+                            self.pred[e.target()] = int(e.source())
+                            newdist = self.dist[e.source()] + 1
+                            if depth_limit is not None and newdist > depth_limit:
+                               raise DepthExceeded
+                            self.dist[e.targt()] = newdist
+                            kw.writerow([name[index], label, name[e.target()]])
+
+                    dist = G.new_vertex_property("int")
+                    pred = G.new_vertex_property("int64_t")
+                    try:
+                        bfs_search(G, G.vertex(index), DepthLimitedVisitor(name, pred, dist))
+                    except DepthExceeded:
+                        pass
+
         else:
             for e in dfs_iterator(G, G.vertex(index)):
                 kw.writerow([name[index], label, name[e.target()]])

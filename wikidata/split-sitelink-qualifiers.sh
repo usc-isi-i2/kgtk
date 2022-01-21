@@ -12,7 +12,7 @@ kgtk ${KGTK_FLAGS} \
      --pattern "; sitelink-badge,sitelink-language,sitelink-site,sitelink-title ;" \
      --output-file ${TEMPDIR}/sitelinks.qualifiers.${UNSORTED_KGTK} \
      --reject-file ${TEMPDIR}/sitelinks.${UNSORTED_KGTK} \
-    |& tee ${LOGDIR}/split-sitelink-qualifiers.log
+    | tee ${LOGDIR}/split-sitelink-qualifiers.log
 
 echo -e "\nSplit ${TEMPDIR}/sitelinksraw.en.${SORTED_KGTK}"
 kgtk ${KGTK_FLAGS} \
@@ -21,4 +21,4 @@ kgtk ${KGTK_FLAGS} \
      --pattern "; sitelink-badge,sitelink-language,sitelink-site,sitelink-title ;" \
      --output-file ${TEMPDIR}/sitelinks.en.qualifiers.${UNSORTED_KGTK} \
      --reject-file ${TEMPDIR}/sitelinks.en.${UNSORTED_KGTK} \
-    |& tee ${LOGDIR}/split-sitelink-en-qualifiers.log
+    | tee ${LOGDIR}/split-sitelink-en-qualifiers.log

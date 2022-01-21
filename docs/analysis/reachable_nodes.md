@@ -143,6 +143,13 @@ no option to override this constraint.
 
 Note: `--inverted` and `--inverted-props` may not be used together.
 
+Note: If you want only certain props to be considered, and you want them inverted, then you need
+to specify *both* `--props` (and/or `--props-file`) and `--inverted-props` (and/or `--inverted-props-file`).  
+
+- `--props P249 --inverted-props P249` # Consider only P249, an inverted prop.
+- `--props P249 P731 --inverted-props P249` # Consider both P249 and P731, with P249 inverted.
+- `--inverted-props P249` # Since `--props` was not specified, *all* properties are used, with P249 inverted.
+
 `--inverted-props-file INVERTED_PROPS_FILE` can be used to read a file containing a list of
 properties to invert.   It should be a valid KGTK file.
 
@@ -232,6 +239,8 @@ usage: kgtk reachable-nodes [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                             [--show-properties [True|False]]
                             [--breadth-first [True|False]]
                             [--depth-limit DEPTH_LIMIT]
+                            [--show-distance [True|False]]
+                            [--dist-col-name DIST_COL_NAME]
                             [-v [optional True|False]]
 
 optional arguments:
@@ -314,6 +323,13 @@ optional arguments:
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).
+                        
+  --show-distance [True|False]
+                        When True, also given breadth first true, append
+                        another column showing the shortest distance, default
+                        col name is distance
+  --dist-col-name DIST_COL_NAME
+                        The column name for distance, default is distance
 ```
 
 ## Examples
@@ -439,6 +455,7 @@ In this example, the root file is a KGTK Node file.
 ```bash
 kgtk cat -i examples/docs/reachable-nodes-metal-blocks.tsv
 ```
+
 | id |
 | -- |
 | gold-block |
@@ -875,3 +892,15 @@ kgtk reachable-nodes -i examples/docs/reachable-nodes-depth-limit.tsv \
 | node1 | label | node2 |
 | -- | -- | -- |
 | red_top | reachable | red_one |
+
+
+```bash
+kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv  --root metal-block \
+--prop isa --breadth-first True --show-distance True --depth-limit 1 --undirected
+```
+
+| node1 | label | node2 | distance |
+| -- | -- | -- | -- |
+| metal-block | reachable | block | 1 |
+| metal-block | reachable | gold-block | 1 |
+| metal-block | reachable | silver-block | 1 |

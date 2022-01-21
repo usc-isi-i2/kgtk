@@ -6,10 +6,11 @@ Given a kgtk format file, this command will compute the the embeddings of this f
 ## Input format
 The input is an kgtk format .tsv file where each line of these files contains information about nodes and relation. Each line is separated by tabs into columns which contains the node and relation data. For example:
 
-```
-id    node1    relation    node2    node1;label    node2;label    relation;label    relation;dimension    source    sentence
-/c/en/000-/r/RelatedTo-/c/en/112-0000    /c/en/000 /r/RelatedTo    /c/en/112    000    112    related to    CN ...
-```
+
+| id |   node1  |  relation |   node2  |  node1;label  |  node2;label |   relation;label  |  relation;dimension |   source  |  sentence|
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+|/c/en/000-/r/RelatedTo-/c/en/112-0000  |  /c/en/000 | /r/RelatedTo  |  /c/en/112  |  000  |  112  |  related to  |  | CN | ... |
+
 For further format details, please refer to the KGTK data specification.
 
 ## Output format
@@ -18,25 +19,32 @@ There are three  supported formats: glove, w2v, and kgtk.
 
 ### glove format
 When using this format, the output is a .tsv file where each line is the embedding for a node.  Each line is represented by a single node followed respectively by the components of its embedding, each in a different column, all separated by tabs. For example: 
-```
-"work"    -0.014022544    -0.062030070    -0.012535412    -0.023111001    -0.038317516 ...
-```
+
+|  |  |
+| -- | -- |
+|"work"  |  -0.014022544    -0.062030070    -0.012535412    -0.023111001    -0.038317516 ... |
+
 
 ### w2v format (default)
 When using this format, the output is a .tsv file which it is almost the same as glove format, the only difference is that the word2vec format has a first line which indicates the shape of the embedding (e.g., "9 4" for 9 entities with 4 dimensions), each column of first line is separated by tabs. Here we use w2v as our default output format. For example:
-```
-16213    100 
-"work"    -0.014022544    -0.062030070    -0.012535412    -0.023111001    -0.038317516 ...
-"home"    -0.014021411    -0.090830070    -0.012534120    -0.073111301    -0.068317516 ...
-```
+
+|  |  |
+| -- | -- |
+| 16213  |  100  |
+| "work" |   -0.014022544    -0.062030070    -0.012535412    -0.023111001    -0.038317516 ... |
+| "home" |   -0.014021411    -0.090830070    -0.012534120    -0.073111301    -0.068317516 ... |
+
+
 Here 16231 represents the number of nodes, 100 represents the dimension number of each node embedding.
 
 ### kgtk format
 When using this format, the output is a .tsv file where each line is the embedding for a node.  Each line has 3 columns, first column represents entity node, second node represent its embedding type (here is `graph_embeddings`), third column represents the entity's embeddings. For example: 
-```
-Q5    graph_embeddings   014022544,-0.062030070,-0.012535412,0.038317516 
-Q6    graph_embeddings   014022544,-0.062030070,-0.012535412,0.038317516 
-```
+
+|  |  |
+| -- | -- |
+| Q5  |  graph_embeddings |  014022544,-0.062030070,-0.012535412,0.038317516 
+| Q6  |  graph_embeddings |  014022544,-0.062030070,-0.012535412,0.038317516 
+
 
 ## Algorithm
 
@@ -249,16 +257,18 @@ Line parsing:
 For easiest running, just give the input file and let it write its output to `output_embeddings.csv` at current folder
 
 
-``
-`kgtk graph-embeddings -i input_file.tsv  -o output_file.tsv
+```
+kgtk graph-embeddings -i input_file.tsv  -o output_file.tsv
 ```
 
 The output_file.tsv may look like:
-```
-172131    100
-"work"    -0.014022544    -0.062030070    -0.012535412    -0.023111001    -0.038317516 ...
-"home"    -0.014021411    -0.090830070    -0.012534120    -0.073111301    -0.068317516 ...
-```
+
+|  |  |
+| -- | -- |
+| 172131  |  100 |
+| "work" |  -0.014022544    -0.062030070    -0.012535412    -0.023111001    -0.038317516 ... |
+| "home" |   -0.014021411    -0.090830070    -0.012534120    -0.073111301    -0.068317516 ... |
+
 
 
 ### Example 2
@@ -275,11 +285,13 @@ kgtk graph-embeddings
 ```
 
 The `output_file.tsv` may look like:
-```
-172131    100
-"work"    -0.014022544    -0.062030070    -0.012535412    -0.023111001    -0.038317516 ...
-"home"    -0.014021411    -0.090830070    -0.012534120    -0.073111301    -0.068317516 ...
-```
+
+|  |  |
+| -- | -- |
+| 172131  |  100  |
+| "work"  |  -0.014022544    -0.062030070    -0.012535412    -0.023111001    -0.038317516 ... |
+| "home"  |  -0.014021411    -0.090830070    -0.012534120    -0.073111301    -0.068317516 ... |
+
 
 ### Example 3
 Using glove format to generate graph embeddings
@@ -291,10 +303,12 @@ kgtk graph-embeddings
 ```
 
 The `output_file.tsv` may look like:
-```
-"work"    -0.014022544    -0.062030070    -0.012535412    -0.023111001    -0.038317516 ...
-"home"    -0.014021411    -0.090830070    -0.012534120    -0.073111301    -0.068317516 ...
-```
+
+|  |  |
+| -- | -- |
+| "work" |   -0.014022544    -0.062030070    -0.012535412    -0.023111001    -0.038317516 ... |
+| "home" |   -0.014021411    -0.090830070    -0.012534120    -0.073111301    -0.068317516 ... |
+
 
 ### Example 4
 Using kgtk format to generate graph embeddings
@@ -306,9 +320,10 @@ kgtk graph-embeddings
 ```
 
 The `output_file.tsv` may look like:
-```
-"work"    graph_embeddings   -0.014022544,-0.062030070,-0.012535412,-0.023111001,-0.038317516 ...
-"home"    graph_embeddings   -0.014021411,-0.090830070,-0.012534120,-0.073111301,-0.068317516 ...
-```
+
+|  |  |  |
+| -- | -- | -- |
+| "work"  |  graph_embeddings | -0.014022544,-0.062030070,-0.012535412,-0.023111001,-0.038317516 ... |
+| "home"  |  graph_embeddings |  -0.014021411,-0.090830070,-0.012534120,-0.073111301,-0.068317516 ... |
 
 

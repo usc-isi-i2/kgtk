@@ -20,7 +20,40 @@ KGTK can process Wikidata-sized KGs with billions of edges on a laptop. We have 
 
 KGTK is open source software, well documented, actively used and developed, and released using the MIT license. We invite the community to try KGTK. It is easy to get started with our tutorial notebooks available and executable online.
 
+## Installation
 
+> The following instructions install KGTK and the KGTK Jupyter Notebooks on
+    Linux and MacOS systems.
+
+    If you want to install KGTK on a Microsoft Windows system, please
+    contact the KGTK team.
+
+Our KGTK installations use a Conda virtual environment. If you
+don't have the Conda tools installed, follow this
+[guide](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) to
+install it. We recommend installing Miniconda installation rather than the
+full Anaconda installation.
+
+Next, execute the following steps to install the latest stable release
+of KGTK:
+
+```bash
+conda create -n kgtk-env python=3.9
+conda activate kgtk-env
+conda install -c conda-forge graph-tool
+conda install -c conda-forge jupyterlab
+pip --no-cache install -U kgtk
+python -m spacy download en_core_web_sm
+```
+
+Please see our [installation document](/docs/install.md) for more details.  If
+you encounter problems with your installation, or are interested in a detailed
+explanation of these commands, [read more about the installation procedure
+here](docs/KGTK-Installation-Procedure-Details.md).
+
+### Installing KGTK with Docker
+
+Please refer to [this document](docs/install-with-docker.md) for installing KGTK with Docker
 
 ## Getting started
 
@@ -31,31 +64,13 @@ You can read our latest documentation online with:
 https://kgtk.readthedocs.io/en/latest/
 
 
-### Try KGTK Online with MyBinder
-The easiest, no-cost way of trying out KGTK is through [MyBinder](https://mybinder.org/). We have made available several **example notebooks** to show some of the features of KGTK, which can be run in two environments:
-
-* **Basic KGTK functionality**: This notebook may take **5-10 minutes** to launch, please be patient. Note that in this notebook some KGTK commands (graph analytics and embeddings) **will not run**. To launch the notebook in your browser, click on the "Binder" icon: [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/usc-isi-i2/kgtk/master?filepath=examples%2FExample5%20-%20AIDA%20AIF.ipynb)
-
-* **Advanced KGTK functionality**: This notebook may take **10-20 minutes to launch**. It includes basic KGTK functionality and **graph analytics and embedding capabilities** of KGTK:  [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/dgarijo/kgtk/dev?filepath=%2Fkgtk%2Fexamples%2FCSKG%20Use%20Case.ipynb)
-
-For executing KGTK with large datasets, **we recommend a Docker/local installation**.
-
 ### KGTK Notebooks
 
-The [examples folder](examples/) provides a larger and constantly increasing number of easy-to-follow Jupyter Notebooks which showcase different functionalities of KGTK. These include computing:
-* Embeddings for ConceptNet nodes
-* Graph statistics over a curated subset of Wikidata
-* Reachable occupations for selected people in Wikidata
-* PageRank over Wikidata
-* etc.
+For examples of using KGTK, please see our [Tutorial Notebooks](https://github.com/usc-isi-i2/kgtk-notebooks ).
 
 ## Releases
 
 * See all [source code releases](https://github.com/usc-isi-i2/kgtk/releases)
-
-## Installation
-
-Please see our [installation document](/docs/install.md) for installation procedures.
 
 ## KGTK Text Search API
 

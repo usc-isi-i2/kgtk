@@ -32,7 +32,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         parser (argparse.ArgumentParser)
     """
     from kgtk.iff.kgtkifexists import KgtkIfExists
-    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
     from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
     
@@ -122,7 +122,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               type=optional_bool, nargs='?', const=True, default=False)
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser,
+                                    mode_options=True,
+                                    default_mode=KgtkReaderMode[parsed_shared_args._mode],
+                                    expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="input", expert=_expert, defaults=False)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="filter", expert=_expert, defaults=False)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
@@ -209,7 +212,7 @@ def run(input_file: KGTKFiles,
             print("--filter-keys=%s" % " ".join(filter_keys), file=error_file)
         print("--cache-input=%s" % str(cache_input), file=error_file)
         print("--preserve-order=%s" % str(preserve_order), file=error_file)
-        print("--presortedr=%s" % str(presorted), file=error_file)
+        print("--presorted=%s" % str(presorted), file=error_file)
         print("--field-separator='%s'" % repr(field_separator), file=error_file)
         print("--left-join=%s" % str(left_join), file=error_file)
         print("--right-join=%s" % str(right_join), file=error_file)

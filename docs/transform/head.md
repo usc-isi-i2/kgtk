@@ -23,7 +23,6 @@ option, this code currently implements the limit itself.
 
 ```
 usage: kgtk head [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [-n EDGE_LIMIT]
-                 [--output-format {csv,html,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,table,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}]
                  [-v [optional True|False]]
 
 This utility is analogous to the POSIX "head" command. 
@@ -38,11 +37,13 @@ Multiplier suffixes are not supported.
 
 Use this command to filter the output of any KGTK command: 
 
-kgtk xxx / head -N 20 
+kgtk xxx / head -n 20 
 
 Use it to limit the records in a file: 
 
 kgtk head -i file.tsv -o file.html
+
+This command defaults to --mode=NONE so it will work with TSV files that do not follow KGTK column naming conventions.
 
 Additional options are shown in expert help.
 kgtk --expert html --help
@@ -50,16 +51,14 @@ kgtk --expert html --help
 optional arguments:
   -h, --help            show this help message and exit
   -i INPUT_FILE, --input-file INPUT_FILE
-                        The KGTK file to convert to an HTML table. (May be
-                        omitted or '-' for stdin.)
+                        The KGTK input file. (May be omitted or '-' for
+                        stdin.)
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
-                        The GitHub markdown file to write. (May be omitted or
-                        '-' for stdout.)
+                        The KGTK output file. (May be omitted or '-' for
+                        stdout.)
   -n EDGE_LIMIT, --edges EDGE_LIMIT
                         The number of records to pass if positive
                         (default=10).
-  --output-format {csv,html,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,table,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}
-                        The file format (default=kgtk)
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).

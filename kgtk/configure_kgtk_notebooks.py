@@ -5,7 +5,19 @@ from pathlib import Path
 from typing import List
 from kgtk.files_config import files_config
 
-always_print_env_variables = {'EXAMPLES_DIR', 'USE_CASES_DIR', 'GRAPH', 'OUT', 'TEMP', 'STORE', 'kgtk', 'kypher'}
+always_print_env_variables = {
+    'EXAMPLES_DIR',
+    'USE_CASES_DIR',
+    'GRAPH',
+    'OUT',
+    'TEMP',
+    'STORE',
+    'kgtk',
+    'kypher',
+    'KGTK_GRAPH_CACHE',
+    'KGTK_OPTION_DEBUG',
+    'KGTK_LABEL_FILE'
+}
 
 
 class ConfigureKGTK(object):
@@ -35,8 +47,11 @@ class ConfigureKGTK(object):
         os.environ['EXAMPLES_DIR'] = self.examples_dir
         os.environ['USE_CASES_DIR'] = self.use_cases_dir
 
+        os.environ['KGTK_OPTION_DEBUG'] = "false"
+
         self.kgtk_environment_variables.add('EXAMPLES_DIR')
         self.kgtk_environment_variables.add('USE_CASES_DIR')
+        self.kgtk_environment_variables.add('KGTK_OPTION_DEBUG')
 
     def configure_kgtk(self,
                        input_graph_path: str = None,
@@ -44,6 +59,7 @@ class ConfigureKGTK(object):
                        project_name: str = "kgtk",
                        graph_cache_path: str = None,
                        json_config_file: str = None,
+                       additional_files: dict = None,
                        debug=False):
         """
         configures the environment for a jupyter notebook.
@@ -52,19 +68,26 @@ class ConfigureKGTK(object):
         :param output_path: path where the output and temp files will be created. By default, "isi-kgtk-tutorial-out" in
         user home
         :param project_name: output folder name, 'kgtk' by default
-        :param graph_cache_path: absolute path to the '.db' file. If not specified, create a new cache file in output path
+        :param graph_cache_path: absolute path to the '.db' file. If not specified, create a new cache file in output
+        path
         :param json_config_file: absolute path to json file which contains "file_key": "file_name" key-value pairs. By
         default, read a file from kgtk repo
         :return:
         """
 
-        self.graph_files = json.load(open(json_config_file)) \
-            if json_config_file is not None \
-            else files_config
+        self.graph_files = files_config
 
-        for key in self.graph_files:
-            os.environ[key] = f"{input_graph_path}/{self.graph_files[key]}"
-            self.kgtk_environment_variables.add(key)
+        if json_config_file is not None:
+            try:
+                _files_config = json.load(open(json_config_file))
+                self.graph_files.update(_files_config)
+                self.files.extend(list(_files_config))
+            except Exception as e:
+                print(e)
+
+        if additional_files is not None:
+            self.graph_files.update(additional_files)
+            self.files.extend(list(additional_files))
 
         # If the input graph path is not None, it is assumed it has the files required
         if input_graph_path is None:
@@ -74,6 +97,10 @@ class ConfigureKGTK(object):
 
         os.environ['GRAPH'] = input_graph_path
         self.kgtk_environment_variables.add('GRAPH')
+
+        for key in self.graph_files:
+            os.environ[key] = f"{input_graph_path}/{self.graph_files[key]}"
+            self.kgtk_environment_variables.add(key)
 
         if output_path is None:
             output_project_path = f"{self.user_home}/{self.default_folder}/{project_name}"
@@ -94,6 +121,9 @@ class ConfigureKGTK(object):
             graph_cache_path = f"{temp_path}/wikidata.sqlite3.db"
         os.environ['STORE'] = graph_cache_path
         self.kgtk_environment_variables.add('STORE')
+
+        os.environ['KGTK_GRAPH_CACHE'] = os.environ['STORE']
+        self.kgtk_environment_variables.add('KGTK_GRAPH_CACHE')
 
         kgtk = "kgtk --debug" if debug else "kgtk"
         os.environ['kgtk'] = kgtk
@@ -126,7 +156,6 @@ class ConfigureKGTK(object):
     def load_files_into_cache(self):
         """
         Loads files into graph cache. The keys in this list should be in json_config_file
-        :param file_list:
         :return:
         """
         kypher_command = f"{os.environ['kypher']}"

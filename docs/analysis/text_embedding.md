@@ -19,14 +19,16 @@ To generate the embeddings, the command first generates a sentence for each node
 
 An example sentence is “Saint David, patron saint of Wales is a human, Catholic priest, Catholic bishop, and has date of death, religion and canonization status”
 
-```
-subject        predicate        object
-Q1        text_embedding    “0.222, 0.333, ..”
-Q2        text_embedding    “0.444, 0.555, ..”
-```
+
+| subject  |  predicate  |  object  |
+| -- | -- | -- |
+|  Q1    |   text_embedding   | “0.222, 0.333, ..” |
+|  Q2    |   text_embedding   | “0.444, 0.555, ..” |
+
 
 ### Run
 You can call the functions directly with given args as 
+
 ```
 kgtk text-embedding \ 
     -input-file / -i <string> \ # * optional, path to the file
@@ -40,17 +42,18 @@ kgtk text-embedding \
     --output-data-format <string> # optional, default is `kgtk_format`
     --output-property <string> \ # optional, default is "text_embedding"
     --embedding-projector-metatada <list_of_string> \ # optional
-    --embedding-projector-path/ -o <string> # optional, default is the home directory of current user
+    --embedding-projector-path <string> # optional, default is the home directory of current user
     --black-list / -b <string> # optional,default is None
     --logging-level / -l <string> \ # optional, default is `info`
     --dimensional-reduction pca \ # optional, default is none
     --dimension 5 \ #optional, default is 2
     --parallel 4 # optional, default is 1
     --save-embedding-sentence # optional
+    --out-file/ -o <string> \ by default embeddings to console
 ```
 ##### Example 1:
 For easiest running, just give the input file and let it write output to `output_embeddings.csv` at current folder
-`kgtk text-embedding < input_file.csv > output_embeddings.csv`
+using `kgtk text-embedding -i input_file.csv -o output_embeddings.csv`
 ##### Example 2:
 Running with more specific parameters and then run TSNE to reduce output dimension:
 ```
@@ -181,10 +184,12 @@ This will have all the embedded vectors values for each Q nodes. This will be pr
 Note: There will only texet embedding related things outputed, please run other commands 
 
 If output as `kgtk_format`, the output file will looks like:
-```
-Q1  text_embedding  0.2,0.3,0.4,0.5 
-Q2  text_embedding  0.3,0.4,-0.5,-0.6
-...
+
+|  |  |  |
+| -- | -- | -- |
+| Q1 | text_embedding | 0.2,0.3,0.4,0.5 |
+| Q2 | text_embedding | 0.3,0.4,-0.5,-0.6 |
+
 ```
 The oupput will be a TSV file with 3 columns:
 First column is the node name.

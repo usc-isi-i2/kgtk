@@ -17,7 +17,7 @@ kgtk ${KGTK_FLAGS} \
      --pattern ";; novalue"  -o ${TEMPDIR}/claims.novalue.${UNSORTED_KGTK} \
      --pattern ";; somevalue"  -o ${TEMPDIR}/claims.somevalue.${UNSORTED_KGTK} \
      --reject-file ${TEMPDIR}/claims.${UNSORTED_KGTK} \
-    |& tee ${LOGDIR}/split-claims-missing-values.log
+    | tee ${LOGDIR}/split-claims-missing-values.log
 
 # ==============================================================================
 # Split out qualifier records with so-called missing values.  The qualifiers with the
@@ -58,4 +58,4 @@ kgtk ${KGTK_FLAGS} \
      --filter-keys id \
      --output-file ${TEMPDIR}/qualifiers.badvalueClaims.${UNSORTED_KGTK} \
      --reject-file ${TEMPDIR}/qualifiers.${UNSORTED_KGTK} \
-    |& tee ${LOGDIR}/split-qualifiers-missing-values.log
+    | tee ${LOGDIR}/split-qualifiers-missing-values.log

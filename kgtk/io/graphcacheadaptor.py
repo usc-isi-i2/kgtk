@@ -1,5 +1,9 @@
 """
 Connect to a graph cache using the Kypher API.
+
+Note: Sqlite3 may return tuples.  KTK code tends to assume that
+rows are lists (for example, to use `.copy()`). We will proactively
+conver the rows we're read into lists.
 """
 
 import attr
@@ -36,6 +40,7 @@ class GraphCacheAdaptor:
              index_mode: str = 'none',
              max_results: int = 10000,
              max_cache_size: int = 1000,
+             ignore_stale_graph_cache: bool = True,
              error_file: typing.TextIO = sys.stderr,
              verbose: bool = False,
              very_verbose: bool = False,
@@ -59,11 +64,47 @@ class GraphCacheAdaptor:
         if file_info is None:
             api.close()
             if verbose:
-                print("Graph cache %s: file %s not found." % (repr(str(graph_cache_path)), repr(str(file_path))), file=error_file, flush=True)
+                print("Graph cache %s: file %s not found in the cache." % (repr(str(graph_cache_path)), repr(str(file_path))), file=error_file, flush=True)
             return None
         if verbose:
-            print("Graph cache %s: file %s found." % (repr(str(graph_cache_path)), repr(str(file_path))), file=error_file, flush=True)
+            print("Graph cache %s: file %s found in the cache." % (repr(str(graph_cache_path)), repr(str(file_path))), file=error_file, flush=True)
                           
+        if ignore_stale_graph_cache:
+            if verbose:
+                print("Graph cache %s: file %s will be checked for stale data." % (repr(str(graph_cache_path)), repr(str(file_path))), file=error_file, flush=True)
+            if file_path.is_file():
+                is_stale: bool = False
+
+                cached_file_size = file_info.get("size", None)
+                if cached_file_size is None:
+                    is_stale = True
+                    if verbose:
+                        print("Graph cache %s: file %s is missing a cached file size." % (repr(str(graph_cache_path)), repr(str(file_path))), file=error_file, flush=True)
+
+                cached_file_modtime = file_info.get("modtime", None)
+                if cached_file_modtime is None:
+                    is_stale = True
+                    if verbose:
+                        print("Graph cache %s: file %s is missing a cached modification time." % (repr(str(graph_cache_path)), repr(str(file_path))), file=error_file, flush=True)
+
+                if cached_file_size is not None and cached_file_modtime is not None:
+                    if cached_file_size != file_path.stat().st_size:
+                        is_stale = True
+                        if verbose:
+                            print("Graph cache %s: file %s: cached file size is stale." % (repr(str(graph_cache_path)), repr(str(file_path))), file=error_file, flush=True)
+                    if cached_file_modtime != file_path.stat().st_mtime:
+                        is_stale = True
+                        if verbose:
+                            print("Graph cache %s: file %s: cached file modification time is stale." % (repr(str(graph_cache_path)), repr(str(file_path))), file=error_file, flush=True)
+                    if is_stale:
+                        api.close()
+                        if verbose:
+                            print("Graph cache %s: file %s: ignoring stale contents." % (repr(str(graph_cache_path)), repr(str(file_path))), file=error_file, flush=True)
+                        return None
+            else:
+                if verbose:
+                    print("Graph cache %s: file %s was not found outside the cache." % (repr(str(graph_cache_path)), repr(str(file_path))), file=error_file, flush=True)
+
         if "graph" not in file_info or file_info["graph"] is None:
             api.close()
             if verbose:
@@ -211,7 +252,7 @@ class GraphCacheAdaptor:
                 if row is None:
                     adapter_self.close()
                     raise StopIteration
-                return row
+                return list(row)
 
         return SimpleGraphCacheReader
         
@@ -301,7 +342,7 @@ class GraphCacheAdaptor:
 
                 while True:
                     if reader_self.buffer is not None and reader_self.buffer_idx < len(reader_self.buffer):
-                        row = reader_self.buffer[reader_self.buffer_idx]
+                        row = list(reader_self.buffer[reader_self.buffer_idx])
                         reader_self.buffer_idx += 1
                         return row
 
@@ -349,7 +390,7 @@ class GraphCacheAdaptor:
                             
                     while True:
                         if reader_self.buffer is not None and reader_self.buffer_idx < len(reader_self.buffer):
-                            row = reader_self.buffer[reader_self.buffer_idx]
+                            row = list(reader_self.buffer[reader_self.buffer_idx])
                             reader_self.buffer_idx += 1
                             return row
 
@@ -403,7 +444,7 @@ class GraphCacheAdaptor:
                             
                     while True:
                         if reader_self.buffer is not None and reader_self.buffer_idx < len(reader_self.buffer):
-                            row = reader_self.buffer[reader_self.buffer_idx]
+                            row = list(reader_self.buffer[reader_self.buffer_idx])
                             reader_self.buffer_idx += 1
 
                             if options.repair_and_validate_lines:

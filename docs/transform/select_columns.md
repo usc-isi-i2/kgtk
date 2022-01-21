@@ -1,4 +1,4 @@
-41;368;0c>## Overview
+## Overview
 
 `kgtk select-columns` selects a subsetfile columns while copying a KGTK file from input to output.
 You provide a list of column names in the order in which they should appear in the output file.
@@ -10,6 +10,7 @@ For more details, see [`kgtk reorder-columns --trim`](../reorder_columns).
 ```
 usage: kgtk reorder-columns [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] -c
                             COLUMN_NAME [COLUMN_NAME ...]
+                            [--as COLUMN_NAME [COLUMN_NAME ...]]
                             [--trim [True|False]] [-v [optional True|False]]
 
 This command reorders one or more columns in a KGTK file. 
@@ -33,10 +34,12 @@ optional arguments:
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
                         The KGTK output file. (May be omitted or '-' for
                         stdout.)
-  -c COLUMN_NAME [COLUMN_NAME ...], --columns COLUMN_NAME [COLUMN_NAME ...]
+  -c COLUMN_NAME [COLUMN_NAME ...], --columns COLUMN_NAME [COLUMN_NAME ...], --column COLUMN_NAME [COLUMN_NAME ...]
                         The list of reordered column names, optionally
                         containing '...' for column names not explicitly
                         mentioned.
+  --as COLUMN_NAME [COLUMN_NAME ...], --as-columns COLUMN_NAME [COLUMN_NAME ...], --as-column COLUMN_NAME [COLUMN_NAME ...]
+                        Replacement column names.
   --trim [True|False]   If true, omit unmentioned columns. (default=True).
 
   -v [optional True|False], --verbose [optional True|False]

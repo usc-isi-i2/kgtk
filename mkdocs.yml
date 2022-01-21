@@ -1,7 +1,9 @@
 site_name: KGTK documentation
 nav:
   - Home: index.md
-  - Getting started: install.md
+  - 'Getting Started':
+      - 'Basic KGTK Installation': install.md
+      - 'Installation Procedure Details': KGTK-Installation-Procedure-Details.md
   - KGTK data model: data_model.md
   - KGTK file specification: specification.md
   - KGTK environment variables: envars.md
@@ -17,6 +19,7 @@ nav:
   - 'Export commands':
       - 'export-gt': 'export/export_gt.md'
       - 'generate_wikidata_triples': 'export/generate_wikidata_triples.md'
+      - 'visualize-force-graph': 'export/visualize-force-graph.md'
   - 'Transformation commands':
       - 'add-id': 'transform/add_id.md'
       - 'add-labels': 'transform/add_labels.md'
@@ -42,6 +45,7 @@ nav:
       - 'normalize-edges': 'transform/normalize.md'
       - 'normalize-nodes': 'transform/normalize_nodes.md'
       - 'query': 'transform/query.md'
+      - 'sample': 'transform/sample.md'
       - 'remove-columns': 'transform/remove_columns.md'
       - 'rename-columns': 'transform/rename_columns.md'
       - 'reorder-columns': 'transform/reorder_columns.md'
@@ -60,6 +64,7 @@ nav:
       - 'validate': 'curate/validate.md'
       - 'validate-properties': 'curate/validate_properties.md'
   - 'Analysis commands':
+      - 'community-detection': 'analysis/community-detection.md'
       - 'connected-components': 'analysis/connected_components.md'
       - 'graph-embeddings': 'analysis/graph_embeddings.md'
       - 'graph-statistics': 'analysis/graph_statistics.md'
@@ -67,6 +72,7 @@ nav:
       - 'reachable-nodes': 'analysis/reachable_nodes.md'
       - 'text-embeddings': 'analysis/text_embedding.md'
   - Using pipes: pipes.md
+  - Configure KGTK Notebooks: configure-kgtk-notebooks-readme.md
 
 theme:
   name: material

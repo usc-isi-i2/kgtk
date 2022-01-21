@@ -31,6 +31,9 @@ class KGTKArgumentParser(ArgumentParser):
         self.add_default_argument_funcs[kwargs['dest']] = partial(self.add_argument, *args, **kwargs)
 
     def accept_shared_argument(self, dest):
+        # Shared arguments that have been accepted by the subcommand
+        # will be passed as keyword arguments to the subcommand
+        # in cli_entry.cli_entry_pipe(...).
         self.shared_arguments.add(dest)
 
     def accept_default_argument(self, dest):

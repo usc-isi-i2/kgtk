@@ -21,7 +21,7 @@ class NodeReader(KgtkReader):
 
     @classmethod
     def open_node_file(cls,
-                       file_path: typing.Optional[Path],
+                       file_path: typing.Optional[typing.Union[Path, str]],
                        who: str = "node input",
                        error_file: typing.TextIO = sys.stderr,
                        reject_file: typing.Optional[typing.TextIO] = None,
