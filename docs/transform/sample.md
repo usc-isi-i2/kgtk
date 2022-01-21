@@ -9,6 +9,10 @@ to each record (edge or node) in the input file independently.  The number of
 records in the output file might not be exactly the same as the fraction times
 the number of records in the input file.
 
+Alternatively, `--input-count N` and `--desired-count n` may be provided.
+The sampling probability will be computed. The number of output records may not
+exactly match the desired count.
+
 This command defaults to `--mode=NONE` since it doesn't attach special meaning
 to particular columns.
 
