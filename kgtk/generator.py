@@ -8,7 +8,7 @@ import typing
 from typing import List
 from etk.etk import ETK
 from etk.etk_module import ETKModule
-from kgtk.knowledge_graph import KGSchema
+from kgtk.knowledge_graph.schema import KGSchema
 from kgtk.wikidata import wiki_namespaces
 from kgtk.exceptions import KGTKException
 from kgtk.wikidata.entity import WDItem, WDProperty
