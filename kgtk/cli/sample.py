@@ -4,6 +4,10 @@ A probability option, `--probability frac`, determines the probability that
 an input record is passed to the standard output file. The probability ranges
 from 0.0 to 1.0, with 1 being the default.
 
+Alternatively, `--input-count N' and '--desired-count n' may be provided.
+The sampling probability will be computed. The number of output records may not
+exactly match the desired count.
+
 --mode=NONE is default.
 
 TODO: Need KgtkWriterOptions
@@ -34,6 +38,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     """
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
     from kgtk.io.kgtkwriter import KgtkWriter
+    from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     _expert: bool = parsed_shared_args._expert
@@ -60,7 +65,17 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         
     parser.add_argument("--seed", dest="seed", type=int,
                         help="The optional random number generator seed (default=None).")
-                        
+
+    parser.add_argument("--input-count", dest="input_count", type=int,
+                        help="The optional number of input records (default=None).")
+
+    parser.add_argument("--desired-count", dest="desired_count", type=int,
+                        help="The optional desired of output records (default=None).")
+
+    parser.add_argument("--exact", dest="exact", metavar="True|False",
+                        help="Ensure that exactly the desired sample size is extracted when --input-count and --desired-count are supplied. (default=%(default)s).",
+                        type=optional_bool, nargs='?', const=True, default=False)
+
     parser.add_argument(      "--output-format", dest="output_format", help=h("The file format (default=kgtk)"), type=str,
                               choices=KgtkWriter.OUTPUT_FORMAT_CHOICES)
 
@@ -77,6 +92,9 @@ def run(input_file: KGTKFiles,
 
         probability: float,
         seed: typing.Optional[int],
+        input_count: typing.Optional[int],
+        desired_count: typing.Optional[int],
+        exact: bool,
         output_format: str,
 
         errors_to_stdout: bool = False,
@@ -120,11 +138,38 @@ def run(input_file: KGTKFiles,
         if reject_file_path is not None:
             print("--reject-file=%s" % str(reject_file_path), file=error_file)
         print("--probability=%s" % str(probability), file=error_file, flush=True)
+        if input_count is not None:
+            print("--input-count=%d" % input_count, file=error_file, flush=True)
+        if desired_count is not None:
+            print("--desired-count=%d" % desired_count, file=error_file, flush=True)
+        print("--exact=%s" % str(exact), file=error_file, flush=True)
         if seed is not None:
             print("--seed=%d" % seed, file=error_file, flush=True)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
+
+    if input_count is not None and input_count <= 0:
+        raise KGTKException("The input count (%d) must be positive." % input_count)
+
+    if desired_count is not None and desired_count <= 0:
+        raise KGTKException("The desired count (%d) must be positive." % input_count)
+
+
+    # Use our own random number generator.  If the seed is not supplied, a
+    # system-provided random source will be used, or the clock time as a
+    # fallback.
+    rg: random.Random = random.Random(seed)
+
+    sample_set: typing.Set[int] = set()
+    if input_count is not None and desired_count is not None:
+        if desired_count > input_count:
+            probability = 1.0
+        else:
+            if exact:
+                sample_set = set(rg.sample(range(input_count), desired_count))
+            else:
+                probability = desired_count / input_count
 
     try:
         kr: KgtkReader = KgtkReader.open(input_file_path,
@@ -178,22 +223,23 @@ def run(input_file: KGTKFiles,
         output_count: int = 0
         reject_count: int = 0
 
-        # Use our own random number generator.  If the seed is not supplied, a
-        # system-provided random source will be used, or the clock time as a
-        # fallback.
-        rg: random.Random = random.Random(seed)
-
         row: typing.List[str]
         for row in kr:
-            input_count += 1
+            selected: bool
+            if exact:
+                selected = input_count in sample_set
+            else:
+                selected = probability > rg.random()
 
-            if probability > rg.random():
+            if selected:
                 kw.write(row)
                 output_count += 1
 
             elif rkw is not None:
                 rkw.write(row)
                 reject_count += 1
+
+            input_count += 1
 
         kr.close()
         kw.close()
