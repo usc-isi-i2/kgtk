@@ -4,7 +4,10 @@
 
 A probability option, `--probability frac`, determines the probability that
 an input record is passed to the standard output file. The probability ranges
-from 0.0 to 1.0, with 1 being the default.
+from 0.0 to 1.0, with 1 being the default.  The sampling probaility is applied
+to each record (edge or node) in the input file independently.  The number of
+records in the output file might not be exactly the same as the fraction times
+the number of records in the input file.
 
 This command defaults to `--mode=NONE` since it doesn't attach special meaning
 to particular columns.
