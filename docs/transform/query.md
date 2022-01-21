@@ -1739,14 +1739,26 @@ is often useful to specify dedicated graph caches via the
 `--graph-cache` option to keep file sizes manageable.  Note that all
 graphs queried in a single query must reside in the same graph cache.
 
-For good performance, cache files should be on a local SSD drive and
-not be mounted via a USB connection or network share.  When data gets
-deleted and reimported, freed up space in the cache file is reused,
-but unused data pages are not automatically returned to the file
-system and the size of the cache file does not shrink.  To actually
-free and return any unused space in the cache file to the file system,
-one can use the SQLite `vacuum` command (which might take a
-significant time to run depending on the size of the cache).  For
+For best performance, cache files should reside on a local, internal
+SSD drive and not be accessed via a USB connection or network share
+such as NFS or Samba.  Using a multi-SSD-disk array in RAID-0
+configuration can further improve disk access times and cache
+performance.  When internal disk space cannot be used or easily
+extended, using an external SSD drive with a fast USB-C connection is
+also an option, for example, to add budget disk space to an otherwise
+constrained laptop.  This will not be as fast as an internal disk but
+has worked quite well for some of our KGTK team members.  Finally, the
+database itself does not require much RAM, but having plenty of RAM
+available (say 30 GB or more) allows the OS to cache more data pages
+in memory, which makes repeat accesses faster and can greatly improve
+query performance.
+
+When data gets deleted and reimported, freed up space in the cache
+file is reused, but unused data pages are not automatically returned
+to the file system and the size of the cache file does not shrink.  To
+actually free and return any unused space in the cache file to the
+file system, one can use the SQLite `vacuum` command (which might take
+a significant time to run depending on the size of the cache).  For
 example:
 
 ```
