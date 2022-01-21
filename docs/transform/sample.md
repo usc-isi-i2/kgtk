@@ -11,7 +11,7 @@ the number of records in the input file.
 
 Alternatively, `--input-count N` and `--desired-count n` may be provided.
 The sampling probability will be computed. The number of output records may not
-exactly match the desired count.
+exactly match the desired countm unless `--exact` is specified.
 
 This command defaults to `--mode=NONE` since it doesn't attach special meaning
 to particular columns.
@@ -19,31 +19,18 @@ to particular columns.
 ## Usage
 
 ```
-usage: kgtk head [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [-n EDGE_LIMIT]
-                 [-v [optional True|False]]
+usage: kgtk sample [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
+                   [--reject-file REJECT_FILE] [--probability PROBABILITY]
+                   [--seed SEED] [--input-count INPUT_COUNT]
+                   [--desired-count DESIRED_COUNT] [--exact [True|False]]
+                   [-v [optional True|False]]
 
-This utility is analogous to the POSIX "head" command. 
-
-When "-n N" is positive, it will pass just the first N data edges of a KGTK input file to the KGTK output file. 
-
-When "-n N" is negative, it will pass all except the last N edges of the KGTK input file to the KGTK output file. 
-
-The header record, cotaining the column names, is always passed and is not included in N. 
-
-Multiplier suffixes are not supported. 
-
-Use this command to filter the output of any KGTK command: 
-
-kgtk xxx / head -n 20 
-
-Use it to limit the records in a file: 
-
-kgtk head -i file.tsv -o file.html
+This utility randomly samples a KGTK file, dividing it into an optput file and an optional reject file. The probability of an input record being passed to the output file is controlled by `--probability n`, where `n` ranges from 0 to 1. 
 
 This command defaults to --mode=NONE so it will work with TSV files that do not follow KGTK column naming conventions.
 
 Additional options are shown in expert help.
-kgtk --expert html --help
+kgtk --expert sample --help
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -53,9 +40,21 @@ optional arguments:
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
                         The KGTK output file. (May be omitted or '-' for
                         stdout.)
-  -n EDGE_LIMIT, --edges EDGE_LIMIT
-                        The number of records to pass if positive
-                        (default=10).
+  --reject-file REJECT_FILE
+                        The KGTK reject file for records that fail the filter.
+                        (Optional, use '-' for stdout.)
+  --probability PROBABILITY
+                        The probability of passing an input record to the
+                        output file (default=1).
+  --seed SEED           The optional random number generator seed
+                        (default=None).
+  --input-count INPUT_COUNT
+                        The optional number of input records (default=None).
+  --desired-count DESIRED_COUNT
+                        The optional desired of output records (default=None).
+  --exact [True|False]  Ensure that exactly the desired sample size is
+                        extracted when --input-count and --desired-count are
+                        supplied. (default=False).
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).
@@ -66,19 +65,12 @@ optional arguments:
 ### Sample 1 Record out of 10
 
 ```bash
-kgtk sample -i examples/docs/sample-example1.tsv --probability .1
+kgtk sample -i examples/docs/sample-example1.tsv \
+            --probability .1
 ```
 
 | node1 | label | node2 | id |
 | -- | -- | -- | -- |
-| red | property | True |  |
-| red | isa | rgbcolor |  |
-| red | maxoccurs | 1 |  |
-| green | property | True |  |
-| green | isa | rgbcolor |  |
-| green | maxoccurs | 1 |  |
-| blue | property | True |  |
-| blue | isa | rgbcolor |  |
 | blue | maxoccurs | 1 |  |
 | rgbcolor | datatype | True |  |
 
@@ -88,18 +80,52 @@ You can specify an integer seed to the random number generator to provide
 repeatable sampling.
 
 ```bash
-kgtk sample -i examples/docs/sample-example1.tsv --probability .1 --seed 123
+kgtk sample -i examples/docs/sample-example1.tsv \
+            --probability .1 --seed 123
 ```
 
 | node1 | label | node2 | id |
 | -- | -- | -- | -- |
 | red | property | True |  |
 | red | isa | rgbcolor |  |
-| red | maxoccurs | 1 |  |
+| green | maxoccurs | 1 |  |
+| rgbcolor | maxval | 1.0 |  |
+| rgbcolor | requires | green |  |
+| rgbcolor | isa | colorclass |  |
+| colorname | node1_type | symbol |  |
+| colorname | node2_values | green |  |
+
+### Sampling an Approximate Number of Records
+
+```bash
+kgtk sample -i examples/docs/sample-example1.tsv \
+            --input-count 47 --desired-count 5 \
+	    --seed 123
+```
+
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| red | property | True |  |
+| red | isa | rgbcolor |  |
+| green | maxoccurs | 1 |  |
+| rgbcolor | maxval | 1.0 |  |
+| rgbcolor | requires | green |  |
+| rgbcolor | isa | colorclass |  |
+| colorname | node1_type | symbol |  |
+| colorname | node2_values | green |  |
+
+### Sampling an ExactNumber of Records
+
+```bash
+kgtk sample -i examples/docs/sample-example1.tsv \
+            --input-count 47 --desired-count 5 --exact \
+	    --seed 123
+```
+
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
 | green | property | True |  |
-| green | isa | rgbcolor |  |
 | green | maxoccurs | 1 |  |
 | blue | property | True |  |
-| blue | isa | rgbcolor |  |
-| blue | maxoccurs | 1 |  |
-| rgbcolor | datatype | True |  |
+| rgbcolor | isa | colorclass |  |
+| colorname | node2_values | yellow |  |
