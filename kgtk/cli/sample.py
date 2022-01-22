@@ -245,7 +245,7 @@ def run(input_file: KGTKFiles,
                                   verbose=verbose,
                                   very_verbose=very_verbose)
 
-        def copy_sample_set()->typing.Tuple[int, int, int]:
+        def copy_sample_set() -> typing.Tuple[int, int, int]:
             input_count: int = 0
             output_count: int = 0
             reject_count: int = 0
@@ -263,7 +263,7 @@ def run(input_file: KGTKFiles,
                 input_count += 1
             return input_count, output_count, reject_count
 
-        def copy_probably()->typing.Tuple[int, int, int]:
+        def copy_probably() -> typing.Tuple[int, int, int]:
             input_count: int = 0
             output_count: int = 0
             reject_count: int = 0
@@ -281,7 +281,7 @@ def run(input_file: KGTKFiles,
                 input_count += 1
             return input_count, output_count, reject_count
 
-        def fill_priority_queue()->typing.Tuple[int, int, int]:
+        def fill_priority_queue() -> typing.Tuple[int, int, int]:
             input_count: int = 0
             queued_count: int = 0
             reject_count: int = 0
