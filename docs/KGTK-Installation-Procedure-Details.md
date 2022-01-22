@@ -15,7 +15,6 @@ conda activate kgtk-env
 conda install -c conda-forge graph-tool
 conda install -c conda-forge jupyterlab
 pip --no-cache install -U kgtk
-python -m spacy download en_core_web_sm
 
 cd /path/to/install/kgtk/tutorial
 git clone https://github.com/usc-isi-i2/kgtk-notebooks.git
