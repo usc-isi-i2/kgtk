@@ -34,7 +34,6 @@ jobs:
           pip install --upgrade pip
           pip install -e .
           pip install coveralls
-#          python -m spacy download en_core_web_sm
           conda install -c conda-forge graph-tool
 # 11-Oct-2021: Do not use rdflib 6.0.0 and later, at
 # the moment there's a fatal interaction, probably with ETK.
