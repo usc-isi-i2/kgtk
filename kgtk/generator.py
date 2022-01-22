@@ -13,6 +13,7 @@ from kgtk.wikidata import wiki_namespaces
 from kgtk.exceptions import KGTKException
 from kgtk.wikidata.entity import WDItem, WDProperty
 from kgtk.io.kgtkreader import KgtkReader
+from kgtk.knowledge_graph.document import Document
 
 from kgtk.wikidata.value import (
     Precision,
@@ -301,7 +302,7 @@ class TripleGenerator(Generator):
         kg_schema = KGSchema()
         kg_schema.add_schema("@prefix : <http://isi.edu/> .", "ttl")
         self.etk = ETK(kg_schema=kg_schema, modules=ETKModule)
-        self.doc = self.etk.create_document({}, doc_id=doc_id)
+        self.doc = Document({}, kg_schema, doc_id=doc_id)
         for k, v in wiki_namespaces.items():
             if k not in self.prefix_dict:
                 self.doc.kg.bind(k, v)
@@ -975,7 +976,8 @@ class JsonGenerator(Generator):
             # process object
             if is_qualifier_edge:
                 # update qualifier edge
-                if prop in self.misc_json_dict[self.to_append_statement[0]]["claims"][self.to_append_statement[1]][-1]["qualifiers"]:
+                if prop in self.misc_json_dict[self.to_append_statement[0]]["claims"][self.to_append_statement[1]][-1][
+                    "qualifiers"]:
                     self.misc_json_dict[self.to_append_statement[0]]["claims"][self.to_append_statement[1]][-1][
                         "qualifiers"][prop].append(object)
                 else:
