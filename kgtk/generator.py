@@ -6,8 +6,6 @@ import rfc3986
 import sys
 import typing
 from typing import List
-from etk.etk import ETK
-from etk.etk_module import ETKModule
 from kgtk.knowledge_graph.schema import KGSchema
 from kgtk.wikidata import wiki_namespaces
 from kgtk.exceptions import KGTKException
@@ -301,7 +299,6 @@ class TripleGenerator(Generator):
         """
         kg_schema = KGSchema()
         kg_schema.add_schema("@prefix : <http://isi.edu/> .", "ttl")
-        self.etk = ETK(kg_schema=kg_schema, modules=ETKModule)
         self.doc = Document({}, kg_schema, doc_id=doc_id)
         for k, v in wiki_namespaces.items():
             if k not in self.prefix_dict:
@@ -311,11 +308,10 @@ class TripleGenerator(Generator):
 
     def serialize(self):
         """
-        Seriealize the triples. Used a hack to avoid serializing the prefix again.
+        Serialize the triples. Used a hack to avoid serializing the prefix again.
         """
-        docs = self.etk.process_ems(self.doc)
         self.fp.write("\n\n".join(
-            docs[0].kg.serialize("ttl").split("\n\n")[1:]))
+            self.doc.kg.serialize("ttl").split("\n\n")[1:]))
         self.fp.flush()
         self.reset()
 
