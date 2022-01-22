@@ -2,11 +2,26 @@
 
 A probability option, `--probability frac`, determines the probability that
 an input record is passed to the standard output file. The probability ranges
-from 0.0 to 1.0, with 1 being the default.
+from 0.0 to 1.0, with 1 being the default.  The number of output records
+may not match the number of input records times the probability.
 
-Alternatively, `--input-count N' and '--desired-count n' may be provided.
-The sampling probability will be computed. The number of output records may not
-exactly match the desired count.
+The probability value must not be negative, and it must not be greater than 1.
+
+Alternatively, `--input-size N' and '--sample-size n' may be provided.  The
+sampling probability will be computed as n/N. The number of output records may not
+exactly match the desired count unless `--exact` is specified.  `--exact`
+consumes more memory on large input files.
+
+The input count, if specified, must be positive.  The desired count, if specified,
+must be positive.
+
+Finally, `--sample-size n` may be provided without `--input-size N`.  Exactly
+`n` records will be selected, unless the input file has fewer than `n` records.
+The selected records will be buffered in memory as the input file is processed,
+so a significant amount of memory may be needed if `n` is large.
+
+TODO: Optionally raise an exception if the sample size is greater than the
+input size (prespecified or the actual number of input records, as applicable).
 
 --mode=NONE is default.
 
@@ -66,14 +81,15 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument("--seed", dest="seed", type=int,
                         help="The optional random number generator seed (default=None).")
 
-    parser.add_argument("--input-count", dest="input_count", type=int,
+    parser.add_argument("--input-size", dest="input_size", type=int,
                         help="The optional number of input records (default=None).")
 
-    parser.add_argument("--desired-count", dest="desired_count", type=int,
-                        help="The optional desired of output records (default=None).")
+    parser.add_argument("--sample-size", dest="sample_size", type=int,
+                        help="The optional desired number of output records (default=None).")
 
     parser.add_argument("--exact", dest="exact", metavar="True|False",
-                        help="Ensure that exactly the desired sample size is extracted when --input-count and --desired-count are supplied. (default=%(default)s).",
+                        help="Ensure that exactly the desired sample size is extracted when " +
+                        "--input-size and --sample-size are supplied. (default=%(default)s).",
                         type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--output-format", dest="output_format", help=h("The file format (default=kgtk)"), type=str,
@@ -92,8 +108,8 @@ def run(input_file: KGTKFiles,
 
         probability: float,
         seed: typing.Optional[int],
-        input_count: typing.Optional[int],
-        desired_count: typing.Optional[int],
+        input_size: typing.Optional[int],
+        sample_size: typing.Optional[int],
         exact: bool,
         output_format: str,
 
@@ -108,6 +124,7 @@ def run(input_file: KGTKFiles,
     # import modules locally
     from collections import deque
     from pathlib import Path
+    from queue import PriorityQueue
     import random
     import sys
     import typing
@@ -138,10 +155,10 @@ def run(input_file: KGTKFiles,
         if reject_file_path is not None:
             print("--reject-file=%s" % str(reject_file_path), file=error_file)
         print("--probability=%s" % str(probability), file=error_file, flush=True)
-        if input_count is not None:
-            print("--input-count=%d" % input_count, file=error_file, flush=True)
-        if desired_count is not None:
-            print("--desired-count=%d" % desired_count, file=error_file, flush=True)
+        if input_size is not None:
+            print("--input-size=%d" % input_size, file=error_file, flush=True)
+        if sample_size is not None:
+            print("--sample-size=%d" % sample_size, file=error_file, flush=True)
         print("--exact=%s" % str(exact), file=error_file, flush=True)
         if seed is not None:
             print("--seed=%d" % seed, file=error_file, flush=True)
@@ -149,11 +166,17 @@ def run(input_file: KGTKFiles,
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
 
-    if input_count is not None and input_count <= 0:
-        raise KGTKException("The input count (%d) must be positive." % input_count)
+    if probability < 0.0:
+        raise KGTKException("The probability (%f) must not be negative." % probability)
 
-    if desired_count is not None and desired_count <= 0:
-        raise KGTKException("The desired count (%d) must be positive." % input_count)
+    if probability > 1.0:
+        raise KGTKException("The probability (%f) must not be greater than 1.0." % probability)
+
+    if input_size is not None and input_size <= 0:
+        raise KGTKException("The input count (%d) must be positive." % input_size)
+
+    if sample_size is not None and sample_size <= 0:
+        raise KGTKException("The desired count (%d) must be positive." % input_size)
 
 
     # Use our own random number generator.  If the seed is not supplied, a
@@ -161,15 +184,19 @@ def run(input_file: KGTKFiles,
     # fallback.
     rg: random.Random = random.Random(seed)
 
-    sample_set: typing.Set[int] = set()
-    if input_count is not None and desired_count is not None:
-        if desired_count > input_count:
-            probability = 1.0
+    sample_set: typing.Optional[typing.Set[int]] = None
+    priorityq: typing.Optional[PriorityQueue] = None  # TODO: can we provide a more complete type hint?
+    if sample_size is not None:
+        if input_size is None:
+            priorityq = PriorityQueue()
         else:
-            if exact:
-                sample_set = set(rg.sample(range(input_count), desired_count))
+            if sample_size > input_size:
+                probability = 1.0
             else:
-                probability = desired_count / input_count
+                if exact:
+                    sample_set = set(rg.sample(range(input_size), sample_size))
+                else:
+                    probability = sample_size / input_size
 
     try:
         kr: KgtkReader = KgtkReader.open(input_file_path,
@@ -219,27 +246,81 @@ def run(input_file: KGTKFiles,
                                   verbose=verbose,
                                   very_verbose=very_verbose)
 
-        input_count: int = 0
-        output_count: int = 0
-        reject_count: int = 0
+        def copy_sample_set() -> typing.Tuple[int, int, int]:
+            input_count: int = 0
+            output_count: int = 0
+            reject_count: int = 0
 
-        row: typing.List[str]
-        for row in kr:
-            selected: bool
-            if exact:
-                selected = input_count in sample_set
-            else:
-                selected = probability > rg.random()
+            row: typing.List[str]
+            for row in kr:
+                if input_count in sample_set:
+                    kw.write(row)
+                    output_count += 1
 
-            if selected:
+                elif rkw is not None:
+                    rkw.write(row)
+                    reject_count += 1
+
+                input_count += 1
+            return input_count, output_count, reject_count
+
+        def copy_probably() -> typing.Tuple[int, int, int]:
+            input_count: int = 0
+            output_count: int = 0
+            reject_count: int = 0
+
+            row: typing.List[str]
+            for row in kr:
+                if probability > rg.random():
+                    kw.write(row)
+                    output_count += 1
+
+                elif rkw is not None:
+                    rkw.write(row)
+                    reject_count += 1
+
+                input_count += 1
+            return input_count, output_count, reject_count
+
+        def fill_priority_queue() -> typing.Tuple[int, int, int]:
+            input_count: int = 0
+            queued_count: int = 0
+            reject_count: int = 0
+
+            row: typing.List[str]
+            for row in kr:
+                priority = rg.random()
+                priorityq.put((priority, row))
+                queued_count += 1
+
+                if queued_count > sample_size:
+                    priority, row = priorityq.get()
+                    queued_count -= 1
+                    if rkw is not None:
+                        rkw.write(row)
+                        reject_count += 1
+
+                input_count += 1
+            return input_count, queued_count, reject_count
+
+        def write_priority_queue(queued_count: int):
+
+            priority: int
+            row: typing.List[str]
+
+            while queued_count > 0:
+                queued_count -= 1
+                priority, row = priorityq.get()
                 kw.write(row)
-                output_count += 1
 
-            elif rkw is not None:
-                rkw.write(row)
-                reject_count += 1
-
-            input_count += 1
+        input_count: int
+        output_count: int
+        reject_count: int
+        if priorityq is not None:
+            input_count, output_count, reject_count = fill_priority_queue()
+            write_priority_queue(output_count)
+        else:
+            input_count, output_count, reject_count = copy_sample_set() if sample_set is not None else copy_probably()
 
         kr.close()
         kw.close()
@@ -254,4 +335,3 @@ def run(input_file: KGTKFiles,
         raise KGTKException("Exit requested")
     except Exception as e:
         raise KGTKException(str(e))
-

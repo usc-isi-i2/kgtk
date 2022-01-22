@@ -9,9 +9,20 @@ to each record (edge or node) in the input file independently.  The number of
 records in the output file might not be exactly the same as the fraction times
 the number of records in the input file.
 
-Alternatively, `--input-count N` and `--desired-count n` may be provided.
-The sampling probability will be computed. The number of output records may not
-exactly match the desired countm unless `--exact` is specified.
+The probability value must not be negative, and it must not be greater than 1.
+
+Alternatively, `--input-size N` and `--sample-size n` may be provided.
+The sampling probability will be computed as n/N. The number of output records may not
+exactly match the desired countm unless `--exact` is specified. `--exact`
+consumes more memory on large input files.
+
+The input count, if specified, must be positive.  The desired count, if specified,
+must be positive.
+
+Finally, `--sample-size n` may be provided without `--input-size N`.  Exactly
+`n` records will be selected, unless the input file has fewer than `n` records.
+The selected records will be buffered in memory as the input file is processed,
+so a significant amount of memory may be needed if `n` is large.
 
 This command defaults to `--mode=NONE` since it doesn't attach special meaning
 to particular columns.
@@ -21,8 +32,8 @@ to particular columns.
 ```
 usage: kgtk sample [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                    [--reject-file REJECT_FILE] [--probability PROBABILITY]
-                   [--seed SEED] [--input-count INPUT_COUNT]
-                   [--desired-count DESIRED_COUNT] [--exact [True|False]]
+                   [--seed SEED] [--input-size INPUT_SIZE]
+                   [--sample-size SAMPLE_SIZE] [--exact [True|False]]
                    [-v [optional True|False]]
 
 This utility randomly samples a KGTK file, dividing it into an optput file and an optional reject file. The probability of an input record being passed to the output file is controlled by `--probability n`, where `n` ranges from 0 to 1. 
@@ -48,12 +59,13 @@ optional arguments:
                         output file (default=1).
   --seed SEED           The optional random number generator seed
                         (default=None).
-  --input-count INPUT_COUNT
+  --input-size INPUT_SIZE
                         The optional number of input records (default=None).
-  --desired-count DESIRED_COUNT
-                        The optional desired of output records (default=None).
+  --sample-size SAMPLE_SIZE
+                        The optional desired number of output records
+                        (default=None).
   --exact [True|False]  Ensure that exactly the desired sample size is
-                        extracted when --input-count and --desired-count are
+                        extracted when --input-size and --sample-size are
                         supplied. (default=False).
 
   -v [optional True|False], --verbose [optional True|False]
@@ -62,25 +74,14 @@ optional arguments:
 
 ## Examples
 
-### Sample 1 Record out of 10
+All of the examples in this section specify an integer seed to the random
+number generator in order to provide repeatable sampling.  For production
+use, you may prefer to omit the seed.
 
-```bash
-kgtk sample -i examples/docs/sample-example1.tsv \
-            --probability .1
-```
 
-| node1 | label | node2 | id |
-| -- | -- | -- | -- |
-| green | isa | rgbcolor |  |
-| colorname | node2_values | green |  |
-| colorname | node2_values | blue |  |
-| sphere | property | True |  |
-| boxshape | datatype | True |  |
+### Sampling .1 Probability with a Fixed Seed
 
-### Sampling with a Fixed Seed
-
-You can specify an integer seed to the random number generator to provide
-repeatable sampling.
+Quickly sample one tenth of the input records.
 
 ```bash
 kgtk sample -i examples/docs/sample-example1.tsv \
@@ -98,11 +99,17 @@ kgtk sample -i examples/docs/sample-example1.tsv \
 | colorname | node1_type | symbol |  |
 | colorname | node2_values | green |  |
 
-### Sampling an Approximate Number of Records
+!!! note
+  Omit `--seed 123` to obtain a nonrepeatable sample.
+
+### Sampling an Approximate Number of Records Unbuffered
+
+Given the number of input records, quickly sample a specified number of output
+records.  The resulting sample might not be the exact size requested.
 
 ```bash
 kgtk sample -i examples/docs/sample-example1.tsv \
-            --input-count 47 --desired-count 5 \
+            --input-size 47 --sample-size 5 \
 	    --seed 123
 ```
 
@@ -117,11 +124,19 @@ kgtk sample -i examples/docs/sample-example1.tsv \
 | colorname | node1_type | symbol |  |
 | colorname | node2_values | green |  |
 
-### Sampling an ExactNumber of Records
+
+!!! note
+  Omit `--seed 123` to obtain a nonrepeatable sample.
+
+### Sampling an Exact Number of Records Unbuffered
+
+Given the number of input records, sample an exact number of output records.
+Additional time and memory is required to plan which records to include in the
+output sample.
 
 ```bash
 kgtk sample -i examples/docs/sample-example1.tsv \
-            --input-count 47 --desired-count 5 --exact \
+            --input-size 47 --sample-size 5 --exact \
 	    --seed 123
 ```
 
@@ -132,3 +147,36 @@ kgtk sample -i examples/docs/sample-example1.tsv \
 | blue | property | True |  |
 | rgbcolor | isa | colorclass |  |
 | colorname | node2_values | yellow |  |
+
+
+!!! note
+  Omit `--seed 123` to obtain a nonrepeatable sample.
+
+### Sampling an Exact Number of Records Buffered
+
+Sample a specified number of output records without knowing the number of
+input records.  The sampled records are buffered in memory until the input
+file has been read; a large amount of memory may be needed when the sample
+size is large.
+
+```bash
+kgtk sample -i examples/docs/sample-example1.tsv \
+            --sample-size 5 \
+	    --seed 123
+```
+
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| blue | maxoccurs | 1 |  |
+| roundshape | datatype | True |  |
+| green | isa | rgbcolor |  |
+| colorname | isa | colorclass |  |
+| colorname | node2_values | blue |  |
+
+
+!!! note
+    The `--exact` option is ignored when `--sample-size n` is specified and
+    `--input-size N` is not specified.
+
+!!! note
+  Omit `--seed 123` to obtain a nonrepeatable sample.
