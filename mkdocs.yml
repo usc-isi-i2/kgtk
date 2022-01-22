@@ -7,6 +7,7 @@ nav:
   - KGTK data model: data_model.md
   - KGTK file specification: specification.md
   - KGTK environment variables: envars.md
+  - KGTK graph cache: graph_cache.md
   - 'Import commands':
       - 'import-atomic': 'import/import_atomic.md'
       - 'import-conceptnet': 'import/import_conceptnet.md'
