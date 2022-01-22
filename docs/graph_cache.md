@@ -5,6 +5,9 @@ The Graph Cache was introduced with Kypher and the `kgtk query` command.
 The Graph Cache may also be used with other KGTK commands (specifically, ones
 that use KgtkReader to read KGTK input files).
 
+For more details on the Graph Cache, see the documentation for the
+[`kgtk query`](transform/query.md) command.
+
 ## Specifying the Location of the Graph Cache
 
 The `--graph-cache grpah-cache-path` option specifies the location of the
