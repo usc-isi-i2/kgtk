@@ -88,7 +88,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         help="The optional desired number of output records (default=None).")
 
     parser.add_argument("--exact", dest="exact", metavar="True|False",
-                        help="Ensure that exactly the desired sample size is extracted when --input-size and --sample-size are supplied. (default=%(default)s).",
+                        help="Ensure that exactly the desired sample size is extracted when " +
+                        "--input-size and --sample-size are supplied. (default=%(default)s).",
                         type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument(      "--output-format", dest="output_format", help=h("The file format (default=kgtk)"), type=str,
@@ -184,7 +185,7 @@ def run(input_file: KGTKFiles,
     rg: random.Random = random.Random(seed)
 
     sample_set: typing.Optional[typing.Set[int]] = None
-    priorityq: typing.Optional[PriorityQueue] = None
+    priorityq: typing.Optional[PriorityQueue] = None # TODO: can we provide a more complete type hint?
     if sample_size is not None:
         if input_size is None:
             priorityq = PriorityQueue()
