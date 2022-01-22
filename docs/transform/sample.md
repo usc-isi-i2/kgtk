@@ -2,27 +2,32 @@
 
 `kgtk sample` samples a KGTK file, dividing it into an output file and an optional reject file.
 
-A probability option, `--probability frac`, determines the probability that
-an input record is passed to the standard output file. The probability ranges
-from 0.0 to 1.0, with 1 being the default.  The sampling probaility is applied
-to each record (edge or node) in the input file independently.  The number of
-records in the output file might not be exactly the same as the fraction times
-the number of records in the input file.
+The simplest way to use this command is sample the input file by a fraction.
+`kgtk sample --probability frac` supplies the sampling probability that an
+input record will be passed to the primary output file. The probability value
+ranges from 0.0 to 1.0, with 1 being the default.  The sampling probability is
+applied to each record (edge or node) in the input file independently.  The
+number of records in the output file might not be exactly the same as the
+fraction times the number of records in the input file; occasionally, this
+size difference may be significant.
 
-The probability value must not be negative, and it must not be greater than 1.
+Another simple way to use this command is to specify the number of records to
+be included in the sample.  `kgtk sample --sample-size n` specifies a sample
+size of `n` (which must be positive).  The output file will contain a sample
+of `n` records unless the input file has fewer than `n` records.  Candidate
+records for the final sample will be buffered in memory as the input file is
+processed, thus a significant amount of time and memory may be needed if `n`
+is very large.
 
-Alternatively, `--input-size N` and `--sample-size n` may be provided.
-The sampling probability will be computed as n/N. The number of output records may not
-exactly match the desired countm unless `--exact` is specified. `--exact`
-consumes more memory on large input files.
+Alternatively, `--input-size N` and `--sample-size n` may be provided.  The
+sampling probability will be computed as `n/N`. The number of output records
+may not exactly match the sample size unless `--exact` is also
+specified. `--exact` required more time and memory to process, which might be
+significant on very large input files, but less time and memory than is
+required when `--input-size N` has not been specified.
 
-The input count, if specified, must be positive.  The desired count, if specified,
+The input size, if specified, must be positive.  The sample size, if specified,
 must be positive.
-
-Finally, `--sample-size n` may be provided without `--input-size N`.  Exactly
-`n` records will be selected, unless the input file has fewer than `n` records.
-The selected records will be buffered in memory as the input file is processed,
-so a significant amount of memory may be needed if `n` is large.
 
 This command defaults to `--mode=NONE` since it doesn't attach special meaning
 to particular columns.
