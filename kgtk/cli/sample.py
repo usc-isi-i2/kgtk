@@ -185,7 +185,7 @@ def run(input_file: KGTKFiles,
     rg: random.Random = random.Random(seed)
 
     sample_set: typing.Optional[typing.Set[int]] = None
-    priorityq: typing.Optional[PriorityQueue] = None # TODO: can we provide a more complete type hint?
+    priorityq: typing.Optional[PriorityQueue] = None  # TODO: can we provide a more complete type hint?
     if sample_size is not None:
         if input_size is None:
             priorityq = PriorityQueue()
