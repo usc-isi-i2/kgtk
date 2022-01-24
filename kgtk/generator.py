@@ -6,15 +6,14 @@ import rfc3986
 import sys
 import typing
 from typing import List
-from etk.etk import ETK
-from etk.etk_module import ETKModule
-from etk.knowledge_graph import KGSchema
-from etk.wikidata import wiki_namespaces
+from kgtk.knowledge_graph.schema import KGSchema
+from kgtk.wikidata import wiki_namespaces
 from kgtk.exceptions import KGTKException
-from etk.wikidata.entity import WDItem, WDProperty
+from kgtk.wikidata.entity import WDItem, WDProperty
 from kgtk.io.kgtkreader import KgtkReader
+from kgtk.knowledge_graph.document import Document
 
-from etk.wikidata.value import (
+from kgtk.wikidata.value import (
     Precision,
     Item,
     StringValue,
@@ -25,7 +24,7 @@ from etk.wikidata.value import (
     ExternalIdentifier,
     URLValue
 )
-from etk.knowledge_graph.node import LiteralType
+from kgtk.knowledge_graph.node import LiteralType
 
 BAD_CHARS = [":", "&", ",", " ",
              "(", ")", "\'", '\"', "/", "\\", "[", "]", ";", "|"]
@@ -50,7 +49,8 @@ class Generator:
             r"[12]\d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])")
         self.yyyy_pattern = re.compile(r"[12]\d{3}")
         self.quantity_pattern = re.compile(
-            r"([\+|\-]?[0-9]+\.?[0-9]*[e|E]?[\-]?[0-9]*)(?:\[([\+|\-]?[0-9]+\.?[0-9]*),([\+|\-]?[0-9]+\.?[0-9]*)\])?([U|Q](?:.*))?")
+            r"([\+|\-]?[0-9]+\.?[0-9]*[e|E]?[\-]?[0-9]*)(?:\[([\+|\
+            -]?[0-9]+\.?[0-9]*),([\+|\-]?[0-9]+\.?[0-9]*)\])?([U|Q](?:.*))?")
         self.warning = warning
         if self.warning:
             if self.log_path == '-':
@@ -300,8 +300,7 @@ class TripleGenerator(Generator):
         """
         kg_schema = KGSchema()
         kg_schema.add_schema("@prefix : <http://isi.edu/> .", "ttl")
-        self.etk = ETK(kg_schema=kg_schema, modules=ETKModule)
-        self.doc = self.etk.create_document({}, doc_id=doc_id)
+        self.doc = Document({}, kg_schema, doc_id=doc_id)
         for k, v in wiki_namespaces.items():
             if k not in self.prefix_dict:
                 self.doc.kg.bind(k, v)
@@ -310,11 +309,10 @@ class TripleGenerator(Generator):
 
     def serialize(self):
         """
-        Seriealize the triples. Used a hack to avoid serializing the prefix again.
+        Serialize the triples. Used a hack to avoid serializing the prefix again.
         """
-        docs = self.etk.process_ems(self.doc)
         self.fp.write("\n\n".join(
-            docs[0].kg.serialize("ttl").split("\n\n")[1:]))
+            self.doc.kg.serialize("ttl").split("\n\n")[1:]))
         self.fp.flush()
         self.reset()
 
@@ -629,8 +627,8 @@ class JsonGenerator(Generator):
         self.output_prefix: str = kwargs.pop("output_prefix")
         self.has_rank: bool = kwargs.pop("has_rank")
         self.error_action: str = kwargs.pop('error_action')
-        self.property_declaration_label: str = kwargs.pop("property_declaration_label") if "property_declaration_label" \
-                                                                                           in kwargs else "data_tyoe"
+        self.property_declaration_label: str = kwargs.pop("property_declaration_label") \
+            if "property_declaration_label" in kwargs else "data_tyoe"
         self.ignore_property_declarations_in_file: bool = kwargs.pop("ignore_property_declarations_in_file") \
             if "ignore_property_declarations_in_file" in kwargs else True
         self.filter_prop_file: bool = kwargs.pop("filter_prop_file") if "filter_prop_file" in kwargs else True
@@ -762,7 +760,7 @@ class JsonGenerator(Generator):
                     if self.warning:
                         self.warn_log.write(
                             "QUALIFIER edge at line [{}] associated with corrupted statement edge of id [{}] dropped.\n"
-                                .format(line_number, self.corrupted_statement_id))
+                            .format(line_number, self.corrupted_statement_id))
 
         # update info_json_dict
         if not is_qualifier_edge:
@@ -975,7 +973,8 @@ class JsonGenerator(Generator):
             # process object
             if is_qualifier_edge:
                 # update qualifier edge
-                if prop in self.misc_json_dict[self.to_append_statement[0]]["claims"][self.to_append_statement[1]][-1]["qualifiers"]:
+                if prop in self.misc_json_dict[self.to_append_statement[0]]["claims"] \
+                        [self.to_append_statement[1]][-1]["qualifiers"]:
                     self.misc_json_dict[self.to_append_statement[0]]["claims"][self.to_append_statement[1]][-1][
                         "qualifiers"][prop].append(object)
                 else:
