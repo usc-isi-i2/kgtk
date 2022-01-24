@@ -118,7 +118,8 @@ class __Type(type):
 
 class LiteralType(URI, metaclass=__Type):
     valid_time_pattern = re.compile(
-        r"[\-]?(\d{4})-((0[1-9])|(1[0-2]))-(0[1-9]|[12][0-9]|3[01])T(0[0-9]|1[0-9]|2[0-3]):(0[0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9]):(0[0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])")
+        r"[\-]?(\d{4})-((0[1-9])|(1[0-2]))-(0[1-9]|[12][0-9]|3[01])T(0[0-9]|1[0-9]|2[0-3])"
+        r":(0[0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9]):(0[0-9]|1[0-9]|2[0-9]|3[0-9]|4[0-9]|5[0-9])")
     valid_month_pattern = re.compile(r"[\-]?(\d{4})-((0[1-9])|(1[0-2]))-(00)T00:00:00")
     valid_year_decade_millennium_pattern = re.compile(r"[\-]?(\d{4})-(00)-(00)T00:00:00")
     valid_hundred_thousand_years_pattern = re.compile(r"[\-]?(\d{6,7})-(0[0|1])-(0[0|1])T00:00:00")
@@ -186,7 +187,7 @@ class LiteralType(URI, metaclass=__Type):
             # python 3.7
             datetime.fromisoformat(s)
             return True
-        except:
+        except Exception:
             pass
 
         valid_format = [
@@ -197,7 +198,7 @@ class LiteralType(URI, metaclass=__Type):
             for f in valid_format:
                 datetime.strptime(s, f)
                 return True
-        except:
+        except Exception:
             pass
 
         validity_list = [LiteralType.valid_time_pattern.match(s),

@@ -49,7 +49,8 @@ class Generator:
             r"[12]\d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])")
         self.yyyy_pattern = re.compile(r"[12]\d{3}")
         self.quantity_pattern = re.compile(
-            r"([\+|\-]?[0-9]+\.?[0-9]*[e|E]?[\-]?[0-9]*)(?:\[([\+|\-]?[0-9]+\.?[0-9]*),([\+|\-]?[0-9]+\.?[0-9]*)\])?([U|Q](?:.*))?")
+            r"([\+|\-]?[0-9]+\.?[0-9]*[e|E]?[\-]?[0-9]*)(?:\[([\+|\
+            -]?[0-9]+\.?[0-9]*),([\+|\-]?[0-9]+\.?[0-9]*)\])?([U|Q](?:.*))?")
         self.warning = warning
         if self.warning:
             if self.log_path == '-':
@@ -626,8 +627,8 @@ class JsonGenerator(Generator):
         self.output_prefix: str = kwargs.pop("output_prefix")
         self.has_rank: bool = kwargs.pop("has_rank")
         self.error_action: str = kwargs.pop('error_action')
-        self.property_declaration_label: str = kwargs.pop("property_declaration_label") if "property_declaration_label" \
-                                                                                           in kwargs else "data_tyoe"
+        self.property_declaration_label: str = kwargs.pop("property_declaration_label") \
+            if "property_declaration_label" in kwargs else "data_tyoe"
         self.ignore_property_declarations_in_file: bool = kwargs.pop("ignore_property_declarations_in_file") \
             if "ignore_property_declarations_in_file" in kwargs else True
         self.filter_prop_file: bool = kwargs.pop("filter_prop_file") if "filter_prop_file" in kwargs else True
@@ -759,7 +760,7 @@ class JsonGenerator(Generator):
                     if self.warning:
                         self.warn_log.write(
                             "QUALIFIER edge at line [{}] associated with corrupted statement edge of id [{}] dropped.\n"
-                                .format(line_number, self.corrupted_statement_id))
+                            .format(line_number, self.corrupted_statement_id))
 
         # update info_json_dict
         if not is_qualifier_edge:
@@ -972,8 +973,8 @@ class JsonGenerator(Generator):
             # process object
             if is_qualifier_edge:
                 # update qualifier edge
-                if prop in self.misc_json_dict[self.to_append_statement[0]]["claims"][self.to_append_statement[1]][-1][
-                    "qualifiers"]:
+                if prop in self.misc_json_dict[self.to_append_statement[0]]["claims"] \
+                        [self.to_append_statement[1]][-1]["qualifiers"]:
                     self.misc_json_dict[self.to_append_statement[0]]["claims"][self.to_append_statement[1]][-1][
                         "qualifiers"][prop].append(object)
                 else:

@@ -30,7 +30,8 @@ class TruthyUpdater:
             self.endpoint.update(query)
 
     def insert_truthy_rank(self, np_list):
-        values = ' '.join('( wd:%(node)s p:%(p)s ps:%(p)s psn:%(p)s wdt:%(p)s wdtn:%(p)s )' % {'node': n, 'p': p} for n, p in np_list)
+        values = ' '.join('( wd:%(node)s p:%(p)s ps:%(p)s psn:%(p)s wdt:%(p)s wdtn:%(p)s )' % {'node': n, 'p': p}
+                          for n, p in np_list)
         query = '''
         INSERT {
           ?statement a wikibase:BestRank .

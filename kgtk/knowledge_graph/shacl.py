@@ -1,11 +1,10 @@
 from pyshacl import validate
-from typing import List, Dict, Union
+from typing import Dict, Union
 from kgtk.knowledge_graph.graph import Graph
 from kgtk.knowledge_graph.node import URI, BNode, Literal, LiteralType
 from kgtk.knowledge_graph.subject import Subject
-from rdflib import RDF, RDFS, OWL, Namespace, XSD
+from rdflib import RDF, RDFS, Namespace, XSD
 import rdflib
-
 
 SH = Namespace('http://www.w3.org/ns/shacl#')
 
@@ -189,7 +188,8 @@ class SHACLOntoConverter:
         (:a :b :c) ===
         [ rdf:first :a ; rdf:rest [ rdf:first :b ; rdf:rest [ rdf:first :c ; rdf:rest rdf:nil]]]
         """
-        if not list_: return URI('rdf:nil')
+        if not list_:
+            return URI('rdf:nil')
         head = Subject(BNode())
         head.add_property(URI('rdf:first'), list_[0])
         head.add_property(URI('rdf:rest'), self._add_list(list_[1:]))

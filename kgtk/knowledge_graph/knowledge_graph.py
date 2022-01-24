@@ -12,6 +12,7 @@ class KnowledgeGraph(Graph):
     This class is a knowledge graph object, provides API for user to construct their kg.
     Add field and value to the kg object, analysis on provenance
     """
+
     def __init__(self, schema: KGSchema, doc):
         super().__init__()
         self.origin_doc = doc
@@ -19,7 +20,7 @@ class KnowledgeGraph(Graph):
         self._fork_namespace_manager()
 
     @deprecated()
-    def add_value(self, field_name: str, value: object=None) -> None:
+    def add_value(self, field_name: str, value: object = None) -> None:
         """
         Add a value to knowledge graph.
         Input can either be a value or a json_path. If the input is json_path, the helper function _add_doc_value is
