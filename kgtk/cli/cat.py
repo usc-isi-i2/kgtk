@@ -69,6 +69,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help=h("When true, do not write a header to the output file (default=%(default)s)."),
                               type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument(      '--pure-python', dest='pure_python', metavar="True|False",
+                        help="When True, use Python code. (default=%(default)s)",
+                        type=optional_bool, nargs='?', const=True, default=False)
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser,
                                     mode_options=True,
@@ -85,6 +89,7 @@ def run(input_files: KGTKFiles,
         new_column_names: typing.Optional[typing.List[str]],
 
         no_output_header: bool = False,
+        pure_python: bool = False,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -129,6 +134,7 @@ def run(input_files: KGTKFiles,
         if new_column_names is not None:
             print("--new-columns %s" % " ".join(new_column_names), file=error_file, flush=True)
         print("--no-output-header %s" % str(no_output_header), file=error_file, flush=True)
+        print("--pure-python %s" % str(pure_python), file=error_file, flush=True)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
@@ -154,6 +160,7 @@ def run(input_files: KGTKFiles,
                               old_column_names=old_column_names,
                               new_column_names=new_column_names,
                               no_output_header=no_output_header,
+                              pure_python=pure_python,
                               reader_options=reader_options,
                               value_options=value_options,
                               error_file=error_file,

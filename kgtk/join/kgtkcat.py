@@ -41,6 +41,7 @@ class KgtkCat():
                 default=None)
 
     no_output_header: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    pure_python: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     # TODO: find working validators:
     reader_options: typing.Optional[KgtkReaderOptions] = attr.ib(default=None)
