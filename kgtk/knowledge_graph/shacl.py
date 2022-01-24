@@ -133,7 +133,7 @@ class SHACLOntoConverter:
         """):
             """
             [ a sh:NodeShape ;
-              sh:targetClass ?s ; 
+              sh:targetClass ?s ;
               sh:property [ sh:path p ; sh:class class ;] ;]
             """
             node_subject = self._class_shape(c)

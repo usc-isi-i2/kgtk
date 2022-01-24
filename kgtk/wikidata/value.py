@@ -82,7 +82,7 @@ class TimeValue(DataValue):
         # if not self.value.startswith("+"):
         #     self.full_value.add_property(URI('wikibase:timeValue'), self.value)
         # else:
-        #     self.full_value.add_property(URI('wikibase:timeValue'), self.value[1:]) 
+        #     self.full_value.add_property(URI('wikibase:timeValue'), self.value[1:])
 
     def _v_name(self):
         time = self.value.value.replace(':', '').replace(' ', '-')
