@@ -195,7 +195,7 @@ class KgtkCat():
                 print("Opening the output file: %s" % str(self.output_path), file=self.error_file, flush=True)
 
 
-                ew: KgtkWriter = KgtkWriter.open(kmc.column_names,
+        ew: KgtkWriter = KgtkWriter.open(kmc.column_names,
                                          self.output_path,
                                          require_all_columns=False,
                                          prohibit_extra_columns=True,
