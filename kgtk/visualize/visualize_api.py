@@ -460,9 +460,11 @@ class KgtkVisualize:
                                             self.node_color_column]]) else self.node_color_default
                             else:
                                 node_color = 2
-                                if row[kr_node.column_name_map[self.node_color_column]] not in color_set:
-                                    color_set[row[kr_node.column_name_map[self.node_color_column]]] = count
-                                    count += 1
+                                if row[kr_node.column_name_map[self.node_color_column]] not in node_color_map \
+                                        and len(node_color_map) < 10:
+                                    node_color_map[row[kr_node.column_name_map[self.node_color_column]]] \
+                                        = len(node_color_map)
+
                                 # temp['color'] = min(color_set[row[kr_node.column_name_map[self.node_color_column]]],
                                 #                     9) if not pd.isna(
                                 #     row[kr_node.column_name_map[self.node_color_column]]) else self.node_color_default
@@ -470,7 +472,6 @@ class KgtkVisualize:
                                 # TODO these are the only 2 options in the node graph, we'll fix it properly
                                 temp['color'] = node_color_map.get(row[kr_node.column_name_map[self.node_color_column]],
                                                                    self.node_color_default)
-
                     if self.node_size_column is not None:
                         if self.node_size_mapping == 'fixed':
                             temp['size'] = row[kr_node.column_name_map[self.node_size_column]] if not pd.isna(
