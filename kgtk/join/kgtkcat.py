@@ -82,6 +82,7 @@ class KgtkCat():
 
         use_system_copy: bool = not self.pure_python
         if self.output_format is not None and self.output_format != KgtkWriter.OUTPUT_FORMAT_KGTK:
+            # TODO: OK if the input and output formats are both CSV with headers.
             use_system_copy = False
         initial_column_names: typing.Optional[typing.List[str]] = None
 
@@ -146,6 +147,18 @@ class KgtkCat():
 
             # Can we still use the system copy?
             if not kr.use_fast_path:
+                use_system_copy = False
+            if kr.options.force_column_names is not None:
+                use_system_copy = False
+            if kr.options.supply_missing_column_names:
+                use_system_copy = False
+            if kr.options.no_input_header:
+                use_system_copy = False
+            if kr.options.number_of_columns is not None:
+                use_system_copy = False
+            if kr.options.require_column_names is not None:
+                use_system_copy = False
+            if kr.options.no_additional_columns:
                 use_system_copy = False
             if not kr.rewindable:
                 use_system_copy = False
