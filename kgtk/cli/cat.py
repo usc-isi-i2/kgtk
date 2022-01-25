@@ -79,8 +79,14 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(      '--bzip2-command', dest='bzip2_command', type=str, default="bzip2",
                         help=h("The bzip2 command or its substitute. (default=%(default)s)"))
 
+    parser.add_argument(      '--cat-command', dest='cat_command', type=str, default="cat",
+                        help=h("The cat command or its substitute. (default=%(default)s)"))
+
     parser.add_argument(      '--gzip-command', dest='gzip_command', type=str, default="gzip",
                         help=h("The gzip command or its substitute. (default=%(default)s)"))
+
+    parser.add_argument(      '--tail-command', dest='tail_command', type=str, default="tail",
+                        help=h("The tail command or its substitute. (default=%(default)s)"))
 
     parser.add_argument(      '--xz-command', dest='xz_command', type=str, default="xz",
                         help=h("The xz command or its substitute. (default=%(default)s)"))
@@ -105,7 +111,9 @@ def run(input_files: KGTKFiles,
 
         bash_command: str = "bash",
         bzip2_command: str = "bzip2",
+        cat_command: str = "cat",
         gzip_command: str = "gzip",
+        tail_command: str = "tail",
         xz_command: str = "xz",
 
         errors_to_stdout: bool = False,
@@ -154,7 +162,9 @@ def run(input_files: KGTKFiles,
         print("--pure-python %s" % str(pure_python), file=error_file, flush=True)
         print("--bash-commahd %s" % str(bash_command), file=error_file, flush=True)
         print("--bzip2-commahd %s" % str(bzip2_command), file=error_file, flush=True)
+        print("--cat-commahd %s" % str(cat_command), file=error_file, flush=True)
         print("--gzip-commahd %s" % str(gzip_command), file=error_file, flush=True)
+        print("--tail-commahd %s" % str(tail_command), file=error_file, flush=True)
         print("--xz-commahd %s" % str(xz_command), file=error_file, flush=True)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
@@ -184,7 +194,9 @@ def run(input_files: KGTKFiles,
                               pure_python=pure_python,
                               bash_command=bash_command,
                               bzip2_command=bzip2_command,
-                              gzip_command=bzip_command,
+                              cat_command=cat_command,
+                              gzip_command=gzip_command,
+                              tail_command=tail_command,
                               xz_command=xz_command,
                               reader_options=reader_options,
                               value_options=value_options,

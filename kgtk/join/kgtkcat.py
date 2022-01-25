@@ -43,10 +43,12 @@ class KgtkCat():
     no_output_header: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     pure_python: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
-    bash_command: str = attr.ib(validator=attr.validators.instance_of(bool), default="bash")
-    bzip2_command: str = attr.ib(validator=attr.validators.instance_of(bool), default="bzip2")
-    gzip_command: str = attr.ib(validator=attr.validators.instance_of(bool), default="gzip")
-    xz_command: str = attr.ib(validator=attr.validators.instance_of(bool), default="xz")
+    bash_command: str = attr.ib(validator=attr.validators.instance_of(str), default="bash")
+    bzip2_command: str = attr.ib(validator=attr.validators.instance_of(str), default="bzip2")
+    cat_command: str = attr.ib(validator=attr.validators.instance_of(str), default="cat")
+    gzip_command: str = attr.ib(validator=attr.validators.instance_of(str), default="gzip")
+    tail_command: str = attr.ib(validator=attr.validators.instance_of(str), default="tail")
+    xz_command: str = attr.ib(validator=attr.validators.instance_of(str), default="xz")
     
     # TODO: find working validators:
     reader_options: typing.Optional[KgtkReaderOptions] = attr.ib(default=None)
@@ -173,7 +175,7 @@ class KgtkCat():
             copied_column_names: typing.List[str] = initial_column_names
             if self.output_column_names is not None:
                 copied_column_names = self.output_column_names
-            if do_system_copy(krs, copied_column_names):
+            if self.do_system_copy(krs, copied_column_names):
                 return
 
         output_mode: KgtkWriter.Mode = KgtkWriter.Mode.NONE
@@ -189,7 +191,8 @@ class KgtkCat():
             if self.verbose:
                 print("Opening the output file: %s" % str(self.output_path), file=self.error_file, flush=True)
 
-        ew: KgtkWriter = KgtkWriter.open(kmc.column_names,
+
+                ew: KgtkWriter = KgtkWriter.open(kmc.column_names,
                                          self.output_path,
                                          require_all_columns=False,
                                          prohibit_extra_columns=True,
@@ -244,16 +247,64 @@ class KgtkCat():
                        krs: typing.List[KgtkReader],
                        column_names: typing.List[str]) -> bool:
 
-
-        if True:
-            return False
+        # TODO: Check the input and output file paths to ensure there aren't
+        # any questionable metacharacters.  If we see something we don't
+        # trust, return False and do things the slow way.
 
         # Close the open files.
-        ew.close()
         for kr2 in krs:
             kr2.close()
 
+        cmd: str = "("
+
+        idx: int
+        input_file_path: str
+        for idx, input_file_path in enumerate(self.input_file_paths):
+            input_suffix: str = input_file_path.suffix.lower()
+            if idx == 0:
+                if input_suffix in [".gz", ".z"]:
+                    cmd += " " + self.gzip_command + " --decompress --stdout " + str(input_file_path)
+                elif input_suffix in  [".bz2", ".bz"]:
+                    cmd += " " + self.bzip2_command + " --decompress --stdout " + str(input_file_path)
+                elif input_suffix in  [".xz", ".lzma"]:
+                    cmd += " " + self.xz_command + " --decompress --stdout " + str(input_file_path)
+                else:
+                    cmd += " " + self.cat_command + " " + str(input_file_path)
+
+            else:
+                cmd += " && "
+                if input_suffix in [".gz", ".z"]:
+                    cmd += (self.gzip_command + " --decompress --stdout " + str(input_file_path)
+                            + " | " + self.tail_command + " -n +2")
+                elif input_suffix in  [".bz2", ".bz"]:
+                    cmd += (self.bzip2_command + " --decompress --stdout " + str(input_file_path)
+                            + " | " + self.tail_command + " -n +2")
+                elif input_suffix in  [".xz", ".lzma"]:
+                    cmd += (self.xz_command + " --decompress --stdout " + str(input_file_path)
+                            + " | " + self.tail_command + " -n +2")
+                else:
+                    cmd += self.tail_command + " -n +2 " + str(input_file_path)
+
+        cmd += " )"
+        if self.output_path is not None and str(self.output_path) != "-":
+            output_suffix: str = self.output_path.suffix.lower()
+            if input_suffix in [".gz", ".z"]:
+                cmd += " | " + self.gzip_command 
+            elif input_suffix in  [".bz2", ".bz"]:
+                cmd += " | " + self.bzip2_command
+            elif input_suffix in  [".xz", ".lzma"]:
+                cmd += " | " +  self.xz_command
+
+            cmd += " "
+            if not str(self.output_path).startswith(">"):
+                cmd += ">"
+            cmd += str(self.output_path)
+
+        if self.verbose:
+            print("system command: %s" % repr(cmd), file=self.error_file, flush=True)
+
         return True
+
         
 def main():
     """
