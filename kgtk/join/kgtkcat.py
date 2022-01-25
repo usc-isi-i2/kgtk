@@ -81,6 +81,8 @@ class KgtkCat():
             print("Opening the %d input files." % len(self.input_file_paths), file=self.error_file, flush=True)
 
         use_system_copy: bool = not self.pure_python
+        if self.output_format is not None and self.output_format != KgtkWriter.OUTPUT_FORMAT_KGTK:
+            use_system_copy = False
         initial_column_names: typing.Optional[typing.List[str]] = None
 
         saw_stdin: bool = False
