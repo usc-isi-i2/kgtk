@@ -1103,6 +1103,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                 print("%s: reading file %s" % (who, str(file_path)), file=error_file, flush=True)
             return ClosableIterTextIOWrapper(open(file_path, "r"))
 
+        # TODO: remove the gzip_in_parallel code.
         if options.gzip_in_parallel:
             gzip_thread: GunzipProcess = GunzipProcess(input_file, Queue(options.gzip_queue_size))
             gzip_thread.start()
