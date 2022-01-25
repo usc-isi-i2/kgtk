@@ -71,6 +71,9 @@ class KgtkCat():
         if self.verbose:
             print("Opening the %d input files." % len(self.input_file_paths), file=self.error_file, flush=True)
 
+        use_system_copy: bool = not self.pure_python
+        initial_column_names: typing.Optional[typing.List[str]] = None
+
         saw_stdin: bool = False
         input_file_path: Path
         for idx, input_file_path in enumerate(self.input_file_paths):
@@ -130,6 +133,18 @@ class KgtkCat():
             if self.very_verbose:
                 print(" ".join(new_column_names), file=self.error_file, flush=True)
 
+            # Can we still use the system copy?
+            if not kr.use_fast_path:
+                use_system_copy = False
+            if not kr.rewindable:
+                use_system_copy = False
+            if initial_column_names is None:
+                initial_column_names = kr.column_names.copy()
+            else:
+                # TODO: Account for coumn name aliases.
+                if initial_column_names != kr.column_names:
+                    use_system_copy = False
+
         if self.verbose or self.very_verbose:
             print("There are %d merged columns." % len(kmc.column_names), file=self.error_file, flush=True)
         if self.very_verbose:
@@ -145,6 +160,16 @@ class KgtkCat():
                 for kr2 in krs:
                     kr2.close()
                 raise ValueError("There are %d merged columns, but %d output column names." % (len(kmc.column_names), len(self.output_column_names)))
+
+        if use_system_copy:
+            # TODO: restructure this code for better readability.
+            if self.verbose:
+                print("Using the system copy code.", file=self.error_file, flush=True)
+            copied_column_names: typing.List[str] = initial_column_names
+            if self.output_column_names is not None:
+                copied_column_names = self.output_column_names
+            if do_system_copy(krs, copied_column_names):
+                return
 
         output_mode: KgtkWriter.Mode = KgtkWriter.Mode.NONE
         if is_edge_file:
@@ -209,6 +234,21 @@ class KgtkCat():
         ew.close()
         for kr2 in krs:
             kr2.close()
+
+    def do_system_copy(self,
+                       krs: typing.List[KgtkReader],
+                       column_names: typing.List[str]) -> bool:
+
+
+        if True:
+            return False
+
+        # Close the open files.
+        ew.close()
+        for kr2 in krs:
+            kr2.close()
+
+        return True
         
 def main():
     """
