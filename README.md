@@ -43,7 +43,6 @@ conda activate kgtk-env
 conda install -c conda-forge graph-tool
 conda install -c conda-forge jupyterlab
 pip --no-cache install -U kgtk
-python -m spacy download en_core_web_sm
 ```
 
 Please see our [installation document](/docs/install.md) for more details.  If
