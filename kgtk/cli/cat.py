@@ -98,6 +98,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                                     expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
+def custom_progress()->bool:
+    return True # We want to start a custom progress monitor.
+
 def run(input_files: KGTKFiles,
         output_file: KGTKFiles,
         output_format: typing.Optional[str],

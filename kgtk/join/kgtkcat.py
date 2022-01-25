@@ -9,9 +9,11 @@ from argparse import ArgumentParser
 import attr
 import os
 from pathlib import Path
+import sh # type: ignore
 import sys
 import typing
 
+from kgtk.cli_entry import progress_startup
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.join.kgtkmergecolumns import KgtkMergeColumns
@@ -177,6 +179,7 @@ class KgtkCat():
                 copied_column_names = self.output_column_names
             if self.do_system_copy(krs, copied_column_names):
                 return
+        progress_startup()
 
         output_mode: KgtkWriter.Mode = KgtkWriter.Mode.NONE
         if is_edge_file:
@@ -302,6 +305,18 @@ class KgtkCat():
 
         if self.verbose:
             print("system command: %s" % repr(cmd), file=self.error_file, flush=True)
+
+        sh_bash = sh.Command(self.bash_command)
+        cmd_proc = sh_bash("-c", cmd, _out=sys.stdout, _err=sys.stderr,
+                           bg=True, _bg_exc=False, _internal_bufsize=1)
+
+        if self.verbose:
+            print("\nRunning the cat script (pid=%d)." % cmd_proc.pid, file=self.error_file, flush=True)
+        progress_startup(pid=cmd_proc.pid)
+        
+        if self.verbose:
+            print("\nWaiting for the cat command to complete.\n", file=self.error_file, flush=True)
+        cmd_proc.wait()
 
         return True
 
