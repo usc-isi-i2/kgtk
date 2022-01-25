@@ -73,6 +73,18 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         help="When True, use Python code. (default=%(default)s)",
                         type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument(      '--bash-command', dest='bash_command', type=str, default="bash",
+                        help=h("The bash command or its substitute. (default=%(default)s)"))
+
+    parser.add_argument(      '--bzip2-command', dest='bzip2_command', type=str, default="bzip2",
+                        help=h("The bzip2 command or its substitute. (default=%(default)s)"))
+
+    parser.add_argument(      '--gzip-command', dest='gzip_command', type=str, default="gzip",
+                        help=h("The gzip command or its substitute. (default=%(default)s)"))
+
+    parser.add_argument(      '--xz-command', dest='xz_command', type=str, default="xz",
+                        help=h("The xz command or its substitute. (default=%(default)s)"))
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser,
                                     mode_options=True,
@@ -90,6 +102,11 @@ def run(input_files: KGTKFiles,
 
         no_output_header: bool = False,
         pure_python: bool = False,
+
+        bash_command: str = "bash",
+        bzip2_command: str = "bzip2",
+        gzip_command: str = "gzip",
+        xz_command: str = "xz",
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -135,6 +152,10 @@ def run(input_files: KGTKFiles,
             print("--new-columns %s" % " ".join(new_column_names), file=error_file, flush=True)
         print("--no-output-header %s" % str(no_output_header), file=error_file, flush=True)
         print("--pure-python %s" % str(pure_python), file=error_file, flush=True)
+        print("--bash-commahd %s" % str(bash_command), file=error_file, flush=True)
+        print("--bzip2-commahd %s" % str(bzip2_command), file=error_file, flush=True)
+        print("--gzip-commahd %s" % str(gzip_command), file=error_file, flush=True)
+        print("--xz-commahd %s" % str(xz_command), file=error_file, flush=True)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
@@ -161,6 +182,10 @@ def run(input_files: KGTKFiles,
                               new_column_names=new_column_names,
                               no_output_header=no_output_header,
                               pure_python=pure_python,
+                              bash_command=bash_command,
+                              bzip2_command=bzip2_command,
+                              gzip_command=bzip_command,
+                              xz_command=xz_command,
                               reader_options=reader_options,
                               value_options=value_options,
                               error_file=error_file,

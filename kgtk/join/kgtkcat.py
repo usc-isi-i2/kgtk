@@ -43,6 +43,11 @@ class KgtkCat():
     no_output_header: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     pure_python: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
+    bash_command: str = attr.ib(validator=attr.validators.instance_of(bool), default="bash")
+    bzip2_command: str = attr.ib(validator=attr.validators.instance_of(bool), default="bzip2")
+    gzip_command: str = attr.ib(validator=attr.validators.instance_of(bool), default="gzip")
+    xz_command: str = attr.ib(validator=attr.validators.instance_of(bool), default="xz")
+    
     # TODO: find working validators:
     reader_options: typing.Optional[KgtkReaderOptions] = attr.ib(default=None)
     # value_options: typing.Optional[KgtkValueOptions] = attr.ib(attr.validators.optional(attr.validators.instance_of(KgtkValueOptions)), default=None)
