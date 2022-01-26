@@ -198,7 +198,7 @@ class KgtkCat():
         if use_system_copy:
             # TODO: restructure this code for better readability.
             if self.verbose:
-                print("Using the system copy code.", file=self.error_file, flush=True)
+                print("Using the system commands for fast copies.", file=self.error_file, flush=True)
             copied_column_names: typing.List[str] = initial_column_names
             if self.output_column_names is not None:
                 copied_column_names = self.output_column_names
@@ -279,6 +279,23 @@ class KgtkCat():
         # any questionable metacharacters.  If we see something we don't
         # trust, return False and do things the slow way.
 
+        # Sum the the sizes of the input files.  Skip the fast copy if
+        # the total size is too small.
+        total_input_file_size: int = 0
+        input_file_path: str
+        for input_file_path in self.input_file_paths:
+            total_input_file_size += input_file_path.stat().st_size
+        if total_input_file_size < self.fast_copy_min_size:
+            if self.verbose:
+                print("The total file size (%d) is less than the minimum for fast copies (%d)." % (total_input_file_size,
+                                                                                                   self.fast_copy_min_size),
+                      file=self.error_file, flush=True)
+            return False  # Take the slow path.
+        if self.verbose:
+            print("The total file size (%d) meets the minimum for fast copies (%d)." % (total_input_file_size,
+                                                                                        self.fast_copy_min_size),
+                  file=self.error_file, flush=True)
+
         # Close the open files.
         for kr2 in krs:
             kr2.close()
@@ -286,7 +303,6 @@ class KgtkCat():
         cmd: str = "("
 
         idx: int
-        input_file_path: str
         for idx, input_file_path in enumerate(self.input_file_paths):
             input_suffix: str = input_file_path.suffix.lower()
             if idx == 0:

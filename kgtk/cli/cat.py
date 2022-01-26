@@ -158,10 +158,10 @@ def run(input_files: KGTKFiles,
 
     # Show the final option structures for debugging and documentation.
     if show_options:
-        print("--input-files %s" % " ".join((str(input_file_path) for input_file_path in input_file_paths)), file=error_file, flush=True)
-        print("--output-file=%s" % str(output_file_path), file=error_file, flush=True)
+        print("--input-files %s" % " ".join((repr(str(input_file_path)) for input_file_path in input_file_paths)), file=error_file, flush=True)
+        print("--output-file %s" % repr(str(output_file_path)), file=error_file, flush=True)
         if output_format is not None:
-            print("--output-format=%s" % output_format, file=error_file, flush=True)
+            print("--output-format %s" % repr(output_format), file=error_file, flush=True)
         if output_column_names is not None:
             print("--output-columns %s" % " ".join(output_column_names), file=error_file, flush=True)
         if old_column_names is not None:
@@ -170,13 +170,13 @@ def run(input_files: KGTKFiles,
             print("--new-columns %s" % " ".join(new_column_names), file=error_file, flush=True)
         print("--no-output-header %s" % str(no_output_header), file=error_file, flush=True)
         print("--pure-python %s" % str(pure_python), file=error_file, flush=True)
-        print("--fast-copy-min-size %d" % str(fast_copy_min_size), file=error_file, flush=True)
-        print("--bash-commahd %s" % str(bash_command), file=error_file, flush=True)
-        print("--bzip2-commahd %s" % str(bzip2_command), file=error_file, flush=True)
-        print("--cat-commahd %s" % str(cat_command), file=error_file, flush=True)
-        print("--gzip-commahd %s" % str(gzip_command), file=error_file, flush=True)
-        print("--tail-commahd %s" % str(tail_command), file=error_file, flush=True)
-        print("--xz-commahd %s" % str(xz_command), file=error_file, flush=True)
+        print("--fast-copy-min-size %d" % fast_copy_min_size, file=error_file, flush=True)
+        print("--bash-commahd %s" % repr(bash_command), file=error_file, flush=True)
+        print("--bzip2-commahd %s" % repr(bzip2_command), file=error_file, flush=True)
+        print("--cat-commahd %s" % repr(cat_command), file=error_file, flush=True)
+        print("--gzip-commahd %s" % repr(gzip_command), file=error_file, flush=True)
+        print("--tail-commahd %s" % repr(tail_command), file=error_file, flush=True)
+        print("--xz-commahd %s" % repr(xz_command), file=error_file, flush=True)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
