@@ -1051,14 +1051,14 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
         else:
             # TODO: throw a better exception.
-                raise ValueError("%s: Unexpected compression_type '%s'" % (who, compression_type))
+            raise ValueError("%s: Unexpected compression_type '%s'" % (who, compression_type))
 
     @classmethod
     def _openfile(cls,
                   file_path: typing.Optional[Path],
                   options: KgtkReaderOptions, 
                   error_file: typing.TextIO,
-                  verbose: bool)->typing.Tuple[ClosableIter[str], bool]:
+                  verbose: bool) -> typing.Tuple[ClosableIter[str], bool]:
         who: str = cls.__name__
         if file_path is None or str(file_path) == "-":
             if options.compression_type is not None and len(options.compression_type) > 0:

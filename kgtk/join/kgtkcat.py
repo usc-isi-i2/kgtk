@@ -9,7 +9,7 @@ from argparse import ArgumentParser
 import attr
 import os
 from pathlib import Path
-import sh # type: ignore
+import sh  # type: ignore
 import sys
 import typing
 
@@ -51,7 +51,7 @@ class KgtkCat():
     gzip_command: str = attr.ib(validator=attr.validators.instance_of(str), default="gzip")
     tail_command: str = attr.ib(validator=attr.validators.instance_of(str), default="tail")
     xz_command: str = attr.ib(validator=attr.validators.instance_of(str), default="xz")
-    
+
     # TODO: find working validators:
     reader_options: typing.Optional[KgtkReaderOptions] = attr.ib(default=None)
     # value_options: typing.Optional[KgtkValueOptions] = attr.ib(attr.validators.optional(attr.validators.instance_of(KgtkValueOptions)), default=None)
@@ -282,9 +282,9 @@ class KgtkCat():
             if idx == 0:
                 if input_suffix in [".gz", ".z"]:
                     cmd += " " + self.gzip_command + " --decompress --stdout " + str(input_file_path)
-                elif input_suffix in  [".bz2", ".bz"]:
+                elif input_suffix in [".bz2", ".bz"]:
                     cmd += " " + self.bzip2_command + " --decompress --stdout " + str(input_file_path)
-                elif input_suffix in  [".xz", ".lzma"]:
+                elif input_suffix in [".xz", ".lzma"]:
                     cmd += " " + self.xz_command + " --decompress --stdout " + str(input_file_path)
                 else:
                     cmd += " " + self.cat_command + " " + str(input_file_path)
@@ -294,10 +294,10 @@ class KgtkCat():
                 if input_suffix in [".gz", ".z"]:
                     cmd += (self.gzip_command + " --decompress --stdout " + str(input_file_path)
                             + " | " + self.tail_command + " -n +2")
-                elif input_suffix in  [".bz2", ".bz"]:
+                elif input_suffix in [".bz2", ".bz"]:
                     cmd += (self.bzip2_command + " --decompress --stdout " + str(input_file_path)
                             + " | " + self.tail_command + " -n +2")
-                elif input_suffix in  [".xz", ".lzma"]:
+                elif input_suffix in [".xz", ".lzma"]:
                     cmd += (self.xz_command + " --decompress --stdout " + str(input_file_path)
                             + " | " + self.tail_command + " -n +2")
                 else:
@@ -308,9 +308,9 @@ class KgtkCat():
             output_suffix: str = self.output_path.suffix.lower()
             if input_suffix in [".gz", ".z"]:
                 cmd += " | " + self.gzip_command 
-            elif input_suffix in  [".bz2", ".bz"]:
+            elif input_suffix in [".bz2", ".bz"]:
                 cmd += " | " + self.bzip2_command
-            elif input_suffix in  [".xz", ".lzma"]:
+            elif input_suffix in [".xz", ".lzma"]:
                 cmd += " | " +  self.xz_command
 
             cmd += " "
@@ -328,7 +328,7 @@ class KgtkCat():
         if self.verbose:
             print("\nRunning the cat script (pid=%d)." % cmd_proc.pid, file=self.error_file, flush=True)
         progress_startup(pid=cmd_proc.pid)
-        
+
         if self.verbose:
             print("\nWaiting for the cat command to complete.\n", file=self.error_file, flush=True)
         cmd_proc.wait()
