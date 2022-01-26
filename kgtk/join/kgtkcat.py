@@ -29,7 +29,7 @@ class KgtkCat():
     DEFAULT_GZIP_COMMAND: str = "gzip"
     DEFAULT_TAIL_COMMAND: str = "tail"
     DEFAULT_XZ_COMMAND: str = "xz"
-    
+
     input_file_paths: typing.List[Path] = attr.ib()
     output_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
 
@@ -287,13 +287,15 @@ class KgtkCat():
             total_input_file_size += input_file_path.stat().st_size
         if total_input_file_size < self.fast_copy_min_size:
             if self.verbose:
-                print("The total file size (%d) is less than the minimum for fast copies (%d)." % (total_input_file_size,
-                                                                                                   self.fast_copy_min_size),
+                print(("The total file size (%d) is less than the minimum "
+                       + "for fast copies (%d).") % (total_input_file_size,
+                                                     self.fast_copy_min_size),
                       file=self.error_file, flush=True)
             return False  # Take the slow path.
         if self.verbose:
-            print("The total file size (%d) meets the minimum for fast copies (%d)." % (total_input_file_size,
-                                                                                        self.fast_copy_min_size),
+            print(("The total file size (%d) meets the minimum "
+                   + "for fast copies (%d).") % (total_input_file_size,
+                                                 self.fast_copy_min_size),
                   file=self.error_file, flush=True)
 
         # Close the open files.

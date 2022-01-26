@@ -74,7 +74,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         help="When True, use Python code. (default=%(default)s)",
                         type=optional_bool, nargs='?', const=True, default=KgtkCat.DEFAULT_PURE_PYTHON)
 
-    parser.add_argument('--fast-copy-min-size', dest='fast_copy_min_size', type=int, default=KgtkCat.DEFAULT_FAST_COPY_MIN_SIZE,
+    parser.add_argument('--fast-copy-min-size', dest='fast_copy_min_size', type=int,
+                        default=KgtkCat.DEFAULT_FAST_COPY_MIN_SIZE,
                         help='The minium number of bytes before using OS tools for fast copy (default=%(default)d).')
 
     parser.add_argument('--bash-command', dest='bash_command', type=str, default=KgtkCat.DEFAULT_BASH_COMMAND,
@@ -158,7 +159,8 @@ def run(input_files: KGTKFiles,
 
     # Show the final option structures for debugging and documentation.
     if show_options:
-        print("--input-files %s" % " ".join((repr(str(input_file_path)) for input_file_path in input_file_paths)), file=error_file, flush=True)
+        print("--input-files %s" % " ".join((repr(str(input_file_path)) for input_file_path in input_file_paths)),
+              file=error_file, flush=True)
         print("--output-file %s" % repr(str(output_file_path)), file=error_file, flush=True)
         if output_format is not None:
             print("--output-format %s" % repr(output_format), file=error_file, flush=True)
