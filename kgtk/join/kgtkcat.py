@@ -21,6 +21,15 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 @attr.s(slots=True, frozen=True)
 class KgtkCat():
+    DEFAULT_PURE_PYTHON: bool = False
+    DEFAULT_FAST_COPY_MIN_SIZE: int = 10000
+    DEFAULT_BASH_COMMAND: str = "bash"
+    DEFAULT_BZIP2_COMMAND: str = "bzip2"
+    DEFAULT_CAT_COMMAND: str = "cat"
+    DEFAULT_GZIP_COMMAND: str = "gzip"
+    DEFAULT_TAIL_COMMAND: str = "tail"
+    DEFAULT_XZ_COMMAND: str = "xz"
+
     input_file_paths: typing.List[Path] = attr.ib()
     output_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
 
@@ -43,14 +52,15 @@ class KgtkCat():
                 default=None)
 
     no_output_header: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
-    pure_python: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    pure_python: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_PURE_PYTHON)
+    fast_copy_min_size: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_FAST_COPY_MIN_SIZE)
 
-    bash_command: str = attr.ib(validator=attr.validators.instance_of(str), default="bash")
-    bzip2_command: str = attr.ib(validator=attr.validators.instance_of(str), default="bzip2")
-    cat_command: str = attr.ib(validator=attr.validators.instance_of(str), default="cat")
-    gzip_command: str = attr.ib(validator=attr.validators.instance_of(str), default="gzip")
-    tail_command: str = attr.ib(validator=attr.validators.instance_of(str), default="tail")
-    xz_command: str = attr.ib(validator=attr.validators.instance_of(str), default="xz")
+    bash_command: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_BASH_COMMAND)
+    bzip2_command: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_BZIP2_COMMAND)
+    cat_command: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_CAT_COMMAND)
+    gzip_command: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_GZIP_COMMAND)
+    tail_command: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_TAIL_COMMAND)
+    xz_command: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_XZ_COMMAND)
 
     # TODO: find working validators:
     reader_options: typing.Optional[KgtkReaderOptions] = attr.ib(default=None)
@@ -188,7 +198,7 @@ class KgtkCat():
         if use_system_copy:
             # TODO: restructure this code for better readability.
             if self.verbose:
-                print("Using the system copy code.", file=self.error_file, flush=True)
+                print("Using the system commands for fast copies.", file=self.error_file, flush=True)
             copied_column_names: typing.List[str] = initial_column_names
             if self.output_column_names is not None:
                 copied_column_names = self.output_column_names
@@ -269,6 +279,25 @@ class KgtkCat():
         # any questionable metacharacters.  If we see something we don't
         # trust, return False and do things the slow way.
 
+        # Sum the the sizes of the input files.  Skip the fast copy if
+        # the total size is too small.
+        total_input_file_size: int = 0
+        input_file_path: str
+        for input_file_path in self.input_file_paths:
+            total_input_file_size += input_file_path.stat().st_size
+        if total_input_file_size < self.fast_copy_min_size:
+            if self.verbose:
+                print(("The total file size (%d) is less than the minimum "
+                       + "for fast copies (%d).") % (total_input_file_size,
+                                                     self.fast_copy_min_size),
+                      file=self.error_file, flush=True)
+            return False  # Take the slow path.
+        if self.verbose:
+            print(("The total file size (%d) meets the minimum "
+                   + "for fast copies (%d).") % (total_input_file_size,
+                                                 self.fast_copy_min_size),
+                  file=self.error_file, flush=True)
+
         # Close the open files.
         for kr2 in krs:
             kr2.close()
@@ -276,7 +305,6 @@ class KgtkCat():
         cmd: str = "("
 
         idx: int
-        input_file_path: str
         for idx, input_file_path in enumerate(self.input_file_paths):
             input_suffix: str = input_file_path.suffix.lower()
             if idx == 0:
