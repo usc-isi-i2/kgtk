@@ -21,6 +21,15 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 @attr.s(slots=True, frozen=True)
 class KgtkCat():
+    DEFAULT_PURE_PYTHON: bool = False
+    DEFAULT_FAST_COPY_MIN_SIZE: int = 10000
+    DEFAULT_BASH_COMMAND: str = "bash"
+    DEFAULT_BZIP2_COMMAND: str = "bzip2"
+    DEFAULT_CAT_COMMAND: str = "cat"
+    DEFAULT_GZIP_COMMAND: str = "gzip"
+    DEFAULT_TAIL_COMMAND: str = "tail"
+    DEFAULT_XZ_COMMAND: str = "xz"
+    
     input_file_paths: typing.List[Path] = attr.ib()
     output_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
 
@@ -43,14 +52,15 @@ class KgtkCat():
                 default=None)
 
     no_output_header: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
-    pure_python: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    pure_python: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_PURE_PYTHON)
+    fast_copy_min_size: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_FAST_COPY_MIN_SIZE)
 
-    bash_command: str = attr.ib(validator=attr.validators.instance_of(str), default="bash")
-    bzip2_command: str = attr.ib(validator=attr.validators.instance_of(str), default="bzip2")
-    cat_command: str = attr.ib(validator=attr.validators.instance_of(str), default="cat")
-    gzip_command: str = attr.ib(validator=attr.validators.instance_of(str), default="gzip")
-    tail_command: str = attr.ib(validator=attr.validators.instance_of(str), default="tail")
-    xz_command: str = attr.ib(validator=attr.validators.instance_of(str), default="xz")
+    bash_command: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_BASH_COMMAND)
+    bzip2_command: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_BZIP2_COMMAND)
+    cat_command: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_CAT_COMMAND)
+    gzip_command: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_GZIP_COMMAND)
+    tail_command: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_TAIL_COMMAND)
+    xz_command: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_XZ_COMMAND)
 
     # TODO: find working validators:
     reader_options: typing.Optional[KgtkReaderOptions] = attr.ib(default=None)
