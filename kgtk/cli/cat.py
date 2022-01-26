@@ -78,7 +78,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument('--bzip2-command', dest='bzip2_command', type=str, default="bzip2",
                         help=h("The bzip2 command or its substitute. (default=%(default)s)"))
-    
+
     parser.add_argument('--cat-command', dest='cat_command', type=str, default="cat",
                         help=h("The cat command or its substitute. (default=%(default)s)"))
 
