@@ -483,10 +483,10 @@ class KgtkVisualize:
                         else:
                             if self.node_size_scale == 'linear':
                                 size_value = self.node_size_minimum + (
-                                        float(row[kr_node.column_name_map[self.node_size_column]])
-                                                     - min(node_size_list)) * (
-                                                     self.node_size_maximum - self.node_size_minimum) / (
-                                                     max(node_size_list) - min(node_size_list))
+                                        float(row[kr_node.column_name_map[self.node_size_column]]) -
+                                        min(node_size_list)) * (
+                                        self.node_size_maximum - self.node_size_minimum) / (
+                                        max(node_size_list) - min(node_size_list))
                                 temp['size'] = float(size_value) if not pd.isna(
                                     row[kr_node.column_name_map[self.node_size_column]]) else self.node_size_default
                             elif self.node_size_scale == 'log':
