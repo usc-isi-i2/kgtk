@@ -49,47 +49,47 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                           positional=True)
     parser.add_output_file()
 
-    parser.add_argument(      "--output-format", dest="output_format", help="The file format (default=kgtk)", type=str,
-                              choices=KgtkWriter.OUTPUT_FORMAT_CHOICES)
+    parser.add_argument("--output-format", dest="output_format", help="The file format (default=kgtk)", type=str,
+                        choices=KgtkWriter.OUTPUT_FORMAT_CHOICES)
 
-    parser.add_argument(      "--output-columns", dest="output_column_names",
-                              metavar="NEW_COLUMN_NAME",
-                              help=h("The list of new column names when renaming all columns."),
-                              type=str, nargs='+')
-    parser.add_argument(      "--old-columns", dest="old_column_names",
-                              metavar="OLD_COLUMN_NAME",
-                              help=h("The list of old column names for selective renaming."),
-                              type=str, nargs='+')
-    parser.add_argument(      "--new-columns", dest="new_column_names",
-                              metavar="NEW_COLUMN_NAME",
-                              help=h("The list of new column names for selective renaming."),
-                              type=str, nargs='+')
+    parser.add_argument("--output-columns", dest="output_column_names",
+                        metavar="NEW_COLUMN_NAME",
+                        help=h("The list of new column names when renaming all columns."),
+                        type=str, nargs='+')
+    parser.add_argument("--old-columns", dest="old_column_names",
+                        metavar="OLD_COLUMN_NAME",
+                        help=h("The list of old column names for selective renaming."),
+                        type=str, nargs='+')
+    parser.add_argument("--new-columns", dest="new_column_names",
+                        metavar="NEW_COLUMN_NAME",
+                        help=h("The list of new column names for selective renaming."),
+                        type=str, nargs='+')
 
-    parser.add_argument(      "--no-output-header", dest="no_output_header", metavar="True|False",
-                              help=h("When true, do not write a header to the output file (default=%(default)s)."),
-                              type=optional_bool, nargs='?', const=True, default=False)
+    parser.add_argument("--no-output-header", dest="no_output_header", metavar="True|False",
+                        help=h("When true, do not write a header to the output file (default=%(default)s)."),
+                        type=optional_bool, nargs='?', const=True, default=False)
 
-    parser.add_argument(      '--pure-python', dest='pure_python', metavar="True|False",
-                              help="When True, use Python code. (default=%(default)s)",
-                              type=optional_bool, nargs='?', const=True, default=False)
+    parser.add_argument('--pure-python', dest='pure_python', metavar="True|False",
+                        help="When True, use Python code. (default=%(default)s)",
+                        type=optional_bool, nargs='?', const=True, default=False)
 
-    parser.add_argument(      '--bash-command', dest='bash_command', type=str, default="bash",
-                              help=h("The bash command or its substitute. (default=%(default)s)"))
+    parser.add_argument('--bash-command', dest='bash_command', type=str, default="bash",
+                        help=h("The bash command or its substitute. (default=%(default)s)"))
 
-    parser.add_argument(      '--bzip2-command', dest='bzip2_command', type=str, default="bzip2",
-                              help=h("The bzip2 command or its substitute. (default=%(default)s)"))
+    parser.add_argument('--bzip2-command', dest='bzip2_command', type=str, default="bzip2",
+                        help=h("The bzip2 command or its substitute. (default=%(default)s)"))
     
-    parser.add_argument(      '--cat-command', dest='cat_command', type=str, default="cat",
-                              help=h("The cat command or its substitute. (default=%(default)s)"))
+    parser.add_argument('--cat-command', dest='cat_command', type=str, default="cat",
+                        help=h("The cat command or its substitute. (default=%(default)s)"))
 
-    parser.add_argument(      '--gzip-command', dest='gzip_command', type=str, default="gzip",
-                              help=h("The gzip command or its substitute. (default=%(default)s)"))
+    parser.add_argument('--gzip-command', dest='gzip_command', type=str, default="gzip",
+                        help=h("The gzip command or its substitute. (default=%(default)s)"))
 
-    parser.add_argument(      '--tail-command', dest='tail_command', type=str, default="tail",
-                              help=h("The tail command or its substitute. (default=%(default)s)"))
+    parser.add_argument('--tail-command', dest='tail_command', type=str, default="tail",
+                        help=h("The tail command or its substitute. (default=%(default)s)"))
 
-    parser.add_argument(      '--xz-command', dest='xz_command', type=str, default="xz",
-                              help=h("The xz command or its substitute. (default=%(default)s)"))
+    parser.add_argument('--xz-command', dest='xz_command', type=str, default="xz",
+                        help=h("The xz command or its substitute. (default=%(default)s)"))
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser,

@@ -307,11 +307,11 @@ class KgtkCat():
         if self.output_path is not None and str(self.output_path) != "-":
             output_suffix: str = self.output_path.suffix.lower()
             if input_suffix in [".gz", ".z"]:
-                cmd += " | " + self.gzip_command 
+                cmd += " | " + self.gzip_command
             elif input_suffix in [".bz2", ".bz"]:
                 cmd += " | " + self.bzip2_command
             elif input_suffix in [".xz", ".lzma"]:
-                cmd += " | " +  self.xz_command
+                cmd += " | " + self.xz_command
 
             cmd += " "
             if not str(self.output_path).startswith(">"):
