@@ -1,4 +1,4 @@
-## Overview
+41;370;0c>## Overview
 
 The cat command combines (concatenates) one or more KGTK files, optionally
 decompressing input files and compressing the output file, while managing the
@@ -730,7 +730,7 @@ kgtk cat --implied-label=founded -i examples/docs/cat-two-columns.tsv
     The `--implied-label=VALUE` option is implemented by KgtkReader, and
     can be used with most KGTK subcommands.
 
-### Expert Example: Supressing the Output Header
+### Expert Topic: Supressing the Output Header
 
 Sometimes it is desired to produce a TSV file without an output header.
 
@@ -763,7 +763,7 @@ for missing the header line.
 
 
 
-### Expert Example: Reading Files without Header Records
+### Expert Topic: Reading Files without Header Records
 
 Sometimes you may wish to read a TSV file that does not contain a
 header record.
@@ -796,3 +796,216 @@ The result will be the following file in KGTK format:
 | lionheart | born | ^1157-09-08T00:00 |
 | year0001 | starts | ^0001-01-01T00:00 |
 | year9999 | ends | ^9999-12-31T11:59:59 |
+
+### Expert Topic: Requiring Certain Columns
+
+Sometimes you may wish to require that an input file contains certain
+named columns that are essential to your analysis.
+
+```
+kgtk cat -i examples/docs/cat-edges-with-totals.tsv
+```
+
+| node1 | label | node2 | node1;total |
+| -- | -- | -- | -- |
+| P10 | p585-count | 73 | 3879 |
+| P1000 | p585-count | 16 | 266 |
+| P101 | p585-count | 5 | 157519 |
+| P1018 | p585-count | 2 | 177 |
+| P102 | p585-count | 295 | 414726 |
+| P1025 | p585-count | 26 | 693 |
+| P1026 | p585-count | 40 | 6930 |
+| P1027 | p585-count | 14 | 10008 |
+| P1028 | p585-count | 1131 | 4035 |
+| P1029 | p585-count | 4 | 2643 |
+| P1035 | p585-count | 4 | 366 |
+| P1037 | p585-count | 60 | 9317 |
+| P1040 | p585-count | 1 | 45073 |
+| P1050 | p585-count | 246 | 226380 |
+
+Supposw you require that the `node1;total` column be present:
+
+```
+kgtk cat -i examples/docs/cat-edges-with-totals.tsv \
+         --require-column-names  'node1;total'
+```
+
+This will succeed:
+
+| node1 | label | node2 | node1;total |
+| -- | -- | -- | -- |
+| P10 | p585-count | 73 | 3879 |
+| P1000 | p585-count | 16 | 266 |
+| P101 | p585-count | 5 | 157519 |
+| P1018 | p585-count | 2 | 177 |
+| P102 | p585-count | 295 | 414726 |
+| P1025 | p585-count | 26 | 693 |
+| P1026 | p585-count | 40 | 6930 |
+| P1027 | p585-count | 14 | 10008 |
+| P1028 | p585-count | 1131 | 4035 |
+| P1029 | p585-count | 4 | 2643 |
+| P1035 | p585-count | 4 | 366 |
+| P1037 | p585-count | 60 | 9317 |
+| P1040 | p585-count | 1 | 45073 |
+| P1050 | p585-count | 246 | 226380 |
+
+Suppose you also require that an 'average' column be present, but it is missing:
+
+```
+kgtk cat -i examples/docs/cat-edges-with-totals.tsv \
+         --require-column-names  'node1;total' average
+```
+
+This will result in an error message:
+
+    In input 1 header 'node1	label	node2	node1;total': The following required columns were missing: ['average']
+    Exit requested
+
+### Expert Topic: Prohibiting Additional Columns
+
+Sometimes you may want to prohibit additional columns.  There are several
+special cases to consider:
+
+ * Prohibiting additional columns for a standard KGTK node file.
+ * Prohibiting additional columns for a standard KGTK edge file.
+ * Requiring certain additional columns and prohibiting others.
+
+Suppose that you have a standard KGTK edge file and you wish to
+prohibit any additional columns.
+
+Consider a standard KGTK node file without additional columns:
+
+```
+kgtk cat -i examples/docs/cat-nodes.tsv \
+         --no-additional-columns
+```
+
+This command will succeed:
+
+| id |
+| -- |
+| P10 |
+| P100 |
+| P1000 |
+
+A KGTK node file with unexpected additional columns will fail:
+
+```
+kgtk cat -i examples/docs/cat-nodes-and-titles.tsv \
+         --no-additional-columns
+```
+
+    In input 1 header 'id	titel': The following additional columns are unexpected: ['titel']
+    Exit requested
+
+
+
+Consider a standard KGTK edge file without additional columns:
+
+```
+kgtk cat -i examples/docs/cat-edges.tsv \
+         --no-additional-columns
+```
+
+This command will succeed:
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| P10 | p585-count | 73 |
+| P1000 | p585-count | 16 |
+| P101 | p585-count | 5 |
+| P1018 | p585-count | 2 |
+| P102 | p585-count | 295 |
+| P1025 | p585-count | 26 |
+| P1026 | p585-count | 40 |
+| P1027 | p585-count | 14 |
+| P1028 | p585-count | 1131 |
+| P1029 | p585-count | 4 |
+| P1035 | p585-count | 4 |
+| P1037 | p585-count | 60 |
+| P1040 | p585-count | 1 |
+| P1050 | p585-count | 246 |
+
+Note: The `node1`, `label`, and `node2` columns (or their aliases) are allowed.
+The `id` column is also allowed, although it is not required.
+
+Consider a KGTK edge file with an undesired additional column:
+
+```
+kgtk cat -i examples/docs/cat-edges-with-totals.tsv \
+         --no-additional-columns
+```
+
+This will fail with the following error message:
+
+    In input 1 header 'node1	label	node2	node1;total': The following additional columns are unexpected: ['node1;total']
+    Exit requested
+
+If we want to accept the `node1;total` additional column, but prohibit
+others, we can do so by explicitly listing the required columns.  All
+required columns (e.g., `node1`, `label, `and node2`) must be listed:
+
+```
+kgtk cat -i examples/docs/cat-edges-with-totals.tsv \
+         --require-column-names node1 label node2 'node1;total' \
+         --no-additional-columns
+```
+
+This will succeed:
+
+| node1 | label | node2 | node1;total |
+| -- | -- | -- | -- |
+| P10 | p585-count | 73 | 3879 |
+| P1000 | p585-count | 16 | 266 |
+| P101 | p585-count | 5 | 157519 |
+| P1018 | p585-count | 2 | 177 |
+| P102 | p585-count | 295 | 414726 |
+| P1025 | p585-count | 26 | 693 |
+| P1026 | p585-count | 40 | 6930 |
+| P1027 | p585-count | 14 | 10008 |
+| P1028 | p585-count | 1131 | 4035 |
+| P1029 | p585-count | 4 | 2643 |
+| P1035 | p585-count | 4 | 366 |
+| P1037 | p585-count | 60 | 9317 |
+| P1040 | p585-count | 1 | 45073 |
+| P1050 | p585-count | 246 | 226380 |
+
+An unexpected additional column will fail:
+
+```
+kgtk cat -i examples/docs/cat-edges-with-totals-and-averages.tsv \
+         --require-column-names node1 label node2 'node1;total' \
+         --no-additional-columns
+```
+
+    In input 1 header 'node1	label	node2	node1;total	average': The following additional columns are unexpected: ['average']
+    Exit requested
+
+We can add the `average` column to the list of required column names
+and accept that file:
+
+```
+kgtk cat -i examples/docs/cat-edges-with-totals-and-averages.tsv \
+         --require-column-names node1 label node2 'node1;total' average \
+         --no-additional-columns
+```
+
+| node1 | label | node2 | node1;total | average |
+| -- | -- | -- | -- | -- |
+| P10 | p585-count | 73 | 3879 | 53.136986301369866 |
+| P1000 | p585-count | 16 | 266 | 16.625 |
+| P101 | p585-count | 5 | 157519 | 31503.8 |
+| P1018 | p585-count | 2 | 177 | 88.5 |
+| P102 | p585-count | 295 | 414726 | 1405.8508474576272 |
+| P1025 | p585-count | 26 | 693 | 26.653846153846153 |
+| P1026 | p585-count | 40 | 6930 | 173.25 |
+| P1027 | p585-count | 14 | 10008 | 714.8571428571429 |
+| P1028 | p585-count | 1131 | 4035 | 3.5676392572944295 |
+| P1029 | p585-count | 4 | 2643 | 660.75 |
+| P1035 | p585-count | 4 | 366 | 91.5 |
+| P1037 | p585-count | 60 | 9317 | 155.28333333333333 |
+| P1040 | p585-count | 1 | 45073 | 45073.0 |
+| P1050 | p585-count | 246 | 226380 | 920.2439024390244 |
+
+!!! note
+    At the present time there is no option to list optional additional columns.

@@ -33,7 +33,8 @@ class TestEmbedding(unittest.TestCase):
             row1, row2 = temprow1[1], temprow2[1]
             self.assertEqual(row1["node"], row2["node"])
             self.assertEqual(row1["property"], row2["property"])
-            self.assertEqual(row1["value"], row2["value"])
+            self.assertTrue(len(row2["value"]) != 0)
+            self.assertEqual(len(row1["value"].split(",")), len(row2["value"].split(",")))
 
 if __name__ == '__main__':
     a = TestEmbedding()

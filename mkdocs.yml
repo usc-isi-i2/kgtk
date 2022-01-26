@@ -7,6 +7,7 @@ nav:
   - KGTK data model: data_model.md
   - KGTK file specification: specification.md
   - KGTK environment variables: envars.md
+  - KGTK graph cache: graph_cache.md
   - 'Import commands':
       - 'import-atomic': 'import/import_atomic.md'
       - 'import-conceptnet': 'import/import_conceptnet.md'
@@ -45,6 +46,7 @@ nav:
       - 'normalize-edges': 'transform/normalize.md'
       - 'normalize-nodes': 'transform/normalize_nodes.md'
       - 'query': 'transform/query.md'
+      - 'sample': 'transform/sample.md'
       - 'remove-columns': 'transform/remove_columns.md'
       - 'rename-columns': 'transform/rename_columns.md'
       - 'reorder-columns': 'transform/reorder_columns.md'

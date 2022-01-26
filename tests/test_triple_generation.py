@@ -102,10 +102,13 @@ class TestTripleGeneration(unittest.TestCase):
                                     input_file=qnode_tsv_file, error_action='log')
         generator.process()
 
-        f1 = open('data/Q57160439_not_truthy.ttl')
-        f2 = open('data/Q57160439_not_truthy_tmp.ttl')
 
-        self.assertEqual(f1.readlines(), f2.readlines())
+        with open('data/Q57160439_not_truthy.ttl') as f1:
+            f1_lines = f1.readlines()
+        with open('data/Q57160439_not_truthy_tmp.ttl')as f2:
+            f2_lines = f2.readlines()
+
+        self.assertEqual(f1_lines, f2_lines)
         f1.close()
         f2.close()
 

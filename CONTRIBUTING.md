@@ -20,3 +20,5 @@ on the `main` branch.
 * Add/Update unit tests for the new changes.
 * Update the documentation, if there are such changes, in the consequent file under the `docs` folder.
 * Add a link to a new documentation file in the `mkdocs.yml` file, otherwise it will not show up in https://kgtk.readthedocs.io/en/latest/
+* Please use the [KGTKReader](https://github.com/usc-isi-i2/kgtk/blob/master/kgtk/io/kgtkreader.py) class to read in a KGTK file.
+* Please use the [KGTKWriter](https://github.com/usc-isi-i2/kgtk/blob/master/kgtk/io/kgtkwriter.py) class to write to a KGTK file.

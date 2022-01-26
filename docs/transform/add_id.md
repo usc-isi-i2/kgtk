@@ -9,6 +9,7 @@ New IDs may be generated using one of the following ID generation styles.
 
 | ID Style | Description |
 | -------- | ----------- |
+| compact-prefix| Concatenate a prefix value (from `--id-prefix`) with an incrementing counter with leading zeros per `--id-prefix-num-width`) using a large base (radix) to generate more compact ID strings. |
 | empty | Sets the ID column to the empty value (clears it). |
 | node1-label-node2 | Concatenates the node1, label, and node2 column values. |
 | node1-label-node2-id | Concatenates the node1, label, and node2 column values, then concatenate any existing non-blank ID value. |
@@ -33,7 +34,7 @@ usage: kgtk add-id [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                    [--new-id-column-name COLUMN_NAME]
                    [--overwrite-id [optional true|false]]
                    [--verify-id-unique [optional true|false]]
-                   [--id-style {node1-label-node2,node1-label-num,node1-label-node2-num,node1-label-node2-id,empty,prefix###,wikidata,wikidata-with-claim-id}]
+                   [--id-style {compact-prefix,empty,node1-label-node2,node1-label-num,node1-label-node2-num,node1-label-node2-id,prefix###,wikidata,wikidata-with-claim-id}]
                    [--id-prefix PREFIX] [--initial-id INTEGER]
                    [--id-prefix-num-width INTEGER]
                    [--id-concat-num-width INTEGER]
@@ -74,7 +75,7 @@ optional arguments:
                         of IDs. When --verify-id-unique is omitted, it
                         defaults to False. When --verify-id-unique is supplied
                         without an argument, it is True.
-  --id-style {node1-label-node2,node1-label-num,node1-label-node2-num,node1-label-node2-id,empty,prefix###,wikidata,wikidata-with-claim-id}
+  --id-style {compact-prefix,empty,node1-label-node2,node1-label-num,node1-label-node2-num,node1-label-node2-id,prefix###,wikidata,wikidata-with-claim-id}
                         The ID generation style. (default=prefix###).
   --id-prefix PREFIX    The prefix for a prefix### ID. (default=E).
   --initial-id INTEGER  The initial numeric value for a prefix### ID.
@@ -148,6 +149,29 @@ The output will be the following table in KGTK format:
 | steve | zipcode | 45601 | home | 1 | E10 |
 | steve | zipcode | 45601 | work | 2 | E11 |
 | steve | zipcode | 45601 | cabin |  | E12 |
+
+### Add an ID column using the `compact-prefix` ID style
+
+```bash
+kgtk add-id -i examples/docs/add-id-file1.tsv --id-style compact-prefix
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | location | years | id |
+| -- | -- | -- | -- | -- | -- |
+| john | zipcode | 12345 | home | 10 | E1 |
+| john | zipcode | 12346 |  |  | E2 |
+| peter | zipcode | 12040 | home |  | E3 |
+| peter | zipcode | 12040 | cabin |  | E4 |
+| peter | zipcode | 12040 | work | 5 | E5 |
+| peter | zipcode | 12040 |  | 6 | E6 |
+| steve | zipcode | 45601 |  | 3 | E7 |
+| steve | zipcode | 45601 |  | 4 | E8 |
+| steve | zipcode | 45601 |  | 5 | E9 |
+| steve | zipcode | 45601 | home | 1 | Eb |
+| steve | zipcode | 45601 | work | 2 | Ec |
+| steve | zipcode | 45601 | cabin |  | Ed |
 
 ### Add an ID column using the `node1-label-node2` ID style
 

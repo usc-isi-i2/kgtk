@@ -9,9 +9,11 @@ from argparse import ArgumentParser
 import attr
 import os
 from pathlib import Path
+import sh  # type: ignore
 import sys
 import typing
 
+from kgtk.cli_entry import progress_startup
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.join.kgtkmergecolumns import KgtkMergeColumns
@@ -41,6 +43,14 @@ class KgtkCat():
                 default=None)
 
     no_output_header: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    pure_python: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
+    bash_command: str = attr.ib(validator=attr.validators.instance_of(str), default="bash")
+    bzip2_command: str = attr.ib(validator=attr.validators.instance_of(str), default="bzip2")
+    cat_command: str = attr.ib(validator=attr.validators.instance_of(str), default="cat")
+    gzip_command: str = attr.ib(validator=attr.validators.instance_of(str), default="gzip")
+    tail_command: str = attr.ib(validator=attr.validators.instance_of(str), default="tail")
+    xz_command: str = attr.ib(validator=attr.validators.instance_of(str), default="xz")
 
     # TODO: find working validators:
     reader_options: typing.Optional[KgtkReaderOptions] = attr.ib(default=None)
@@ -69,6 +79,12 @@ class KgtkCat():
 
         if self.verbose:
             print("Opening the %d input files." % len(self.input_file_paths), file=self.error_file, flush=True)
+
+        use_system_copy: bool = not self.pure_python
+        if self.output_format is not None and self.output_format != KgtkWriter.OUTPUT_FORMAT_KGTK:
+            # TODO: OK if the input and output formats are both CSV with headers.
+            use_system_copy = False
+        initial_column_names: typing.Optional[typing.List[str]] = None
 
         saw_stdin: bool = False
         input_file_path: Path
@@ -129,6 +145,30 @@ class KgtkCat():
             if self.very_verbose:
                 print(" ".join(new_column_names), file=self.error_file, flush=True)
 
+            # Can we still use the system copy?
+            if not kr.use_fast_path:
+                use_system_copy = False
+            if kr.options.force_column_names is not None:
+                use_system_copy = False
+            if kr.options.supply_missing_column_names:
+                use_system_copy = False
+            if kr.options.no_input_header:
+                use_system_copy = False
+            if kr.options.number_of_columns is not None:
+                use_system_copy = False
+            if kr.options.require_column_names is not None:
+                use_system_copy = False
+            if kr.options.no_additional_columns:
+                use_system_copy = False
+            if not kr.rewindable:
+                use_system_copy = False
+            if initial_column_names is None:
+                initial_column_names = kr.column_names.copy()
+            else:
+                # TODO: Account for coumn name aliases.
+                if initial_column_names != kr.column_names:
+                    use_system_copy = False
+
         if self.verbose or self.very_verbose:
             print("There are %d merged columns." % len(kmc.column_names), file=self.error_file, flush=True)
         if self.very_verbose:
@@ -145,6 +185,17 @@ class KgtkCat():
                     kr2.close()
                 raise ValueError("There are %d merged columns, but %d output column names." % (len(kmc.column_names), len(self.output_column_names)))
 
+        if use_system_copy:
+            # TODO: restructure this code for better readability.
+            if self.verbose:
+                print("Using the system copy code.", file=self.error_file, flush=True)
+            copied_column_names: typing.List[str] = initial_column_names
+            if self.output_column_names is not None:
+                copied_column_names = self.output_column_names
+            if self.do_system_copy(krs, copied_column_names):
+                return
+        progress_startup()
+
         output_mode: KgtkWriter.Mode = KgtkWriter.Mode.NONE
         if is_edge_file:
             output_mode = KgtkWriter.Mode.EDGE
@@ -157,6 +208,7 @@ class KgtkCat():
         else:
             if self.verbose:
                 print("Opening the output file: %s" % str(self.output_path), file=self.error_file, flush=True)
+
 
         ew: KgtkWriter = KgtkWriter.open(kmc.column_names,
                                          self.output_path,
@@ -208,6 +260,81 @@ class KgtkCat():
         ew.close()
         for kr2 in krs:
             kr2.close()
+
+    def do_system_copy(self,
+                       krs: typing.List[KgtkReader],
+                       column_names: typing.List[str]) -> bool:
+
+        # TODO: Check the input and output file paths to ensure there aren't
+        # any questionable metacharacters.  If we see something we don't
+        # trust, return False and do things the slow way.
+
+        # Close the open files.
+        for kr2 in krs:
+            kr2.close()
+
+        cmd: str = "("
+
+        idx: int
+        input_file_path: str
+        for idx, input_file_path in enumerate(self.input_file_paths):
+            input_suffix: str = input_file_path.suffix.lower()
+            if idx == 0:
+                if input_suffix in [".gz", ".z"]:
+                    cmd += " " + self.gzip_command + " --decompress --stdout " + str(input_file_path)
+                elif input_suffix in [".bz2", ".bz"]:
+                    cmd += " " + self.bzip2_command + " --decompress --stdout " + str(input_file_path)
+                elif input_suffix in [".xz", ".lzma"]:
+                    cmd += " " + self.xz_command + " --decompress --stdout " + str(input_file_path)
+                else:
+                    cmd += " " + self.cat_command + " " + str(input_file_path)
+
+            else:
+                cmd += " && "
+                if input_suffix in [".gz", ".z"]:
+                    cmd += (self.gzip_command + " --decompress --stdout " + str(input_file_path)
+                            + " | " + self.tail_command + " -n +2")
+                elif input_suffix in [".bz2", ".bz"]:
+                    cmd += (self.bzip2_command + " --decompress --stdout " + str(input_file_path)
+                            + " | " + self.tail_command + " -n +2")
+                elif input_suffix in [".xz", ".lzma"]:
+                    cmd += (self.xz_command + " --decompress --stdout " + str(input_file_path)
+                            + " | " + self.tail_command + " -n +2")
+                else:
+                    cmd += self.tail_command + " -n +2 " + str(input_file_path)
+
+        cmd += " )"
+        if self.output_path is not None and str(self.output_path) != "-":
+            output_suffix: str = self.output_path.suffix.lower()
+            if input_suffix in [".gz", ".z"]:
+                cmd += " | " + self.gzip_command
+            elif input_suffix in [".bz2", ".bz"]:
+                cmd += " | " + self.bzip2_command
+            elif input_suffix in [".xz", ".lzma"]:
+                cmd += " | " + self.xz_command
+
+            cmd += " "
+            if not str(self.output_path).startswith(">"):
+                cmd += ">"
+            cmd += str(self.output_path)
+
+        if self.verbose:
+            print("system command: %s" % repr(cmd), file=self.error_file, flush=True)
+
+        sh_bash = sh.Command(self.bash_command)
+        cmd_proc = sh_bash("-c", cmd, _out=sys.stdout, _err=sys.stderr,
+                           bg=True, _bg_exc=False, _internal_bufsize=1)
+
+        if self.verbose:
+            print("\nRunning the cat script (pid=%d)." % cmd_proc.pid, file=self.error_file, flush=True)
+        progress_startup(pid=cmd_proc.pid)
+
+        if self.verbose:
+            print("\nWaiting for the cat command to complete.\n", file=self.error_file, flush=True)
+        cmd_proc.wait()
+
+        return True
+
         
 def main():
     """

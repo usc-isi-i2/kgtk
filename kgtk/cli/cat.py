@@ -49,25 +49,47 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                           positional=True)
     parser.add_output_file()
 
-    parser.add_argument(      "--output-format", dest="output_format", help="The file format (default=kgtk)", type=str,
-                              choices=KgtkWriter.OUTPUT_FORMAT_CHOICES)
+    parser.add_argument("--output-format", dest="output_format", help="The file format (default=kgtk)", type=str,
+                        choices=KgtkWriter.OUTPUT_FORMAT_CHOICES)
 
-    parser.add_argument(      "--output-columns", dest="output_column_names",
-                              metavar="NEW_COLUMN_NAME",
-                              help=h("The list of new column names when renaming all columns."),
-                              type=str, nargs='+')
-    parser.add_argument(      "--old-columns", dest="old_column_names",
-                              metavar="OLD_COLUMN_NAME",
-                              help=h("The list of old column names for selective renaming."),
-                              type=str, nargs='+')
-    parser.add_argument(      "--new-columns", dest="new_column_names",
-                              metavar="NEW_COLUMN_NAME",
-                              help=h("The list of new column names for selective renaming."),
-                              type=str, nargs='+')
+    parser.add_argument("--output-columns", dest="output_column_names",
+                        metavar="NEW_COLUMN_NAME",
+                        help=h("The list of new column names when renaming all columns."),
+                        type=str, nargs='+')
+    parser.add_argument("--old-columns", dest="old_column_names",
+                        metavar="OLD_COLUMN_NAME",
+                        help=h("The list of old column names for selective renaming."),
+                        type=str, nargs='+')
+    parser.add_argument("--new-columns", dest="new_column_names",
+                        metavar="NEW_COLUMN_NAME",
+                        help=h("The list of new column names for selective renaming."),
+                        type=str, nargs='+')
 
-    parser.add_argument(      "--no-output-header", dest="no_output_header", metavar="True|False",
-                              help=h("When true, do not write a header to the output file (default=%(default)s)."),
-                              type=optional_bool, nargs='?', const=True, default=False)
+    parser.add_argument("--no-output-header", dest="no_output_header", metavar="True|False",
+                        help=h("When true, do not write a header to the output file (default=%(default)s)."),
+                        type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument('--pure-python', dest='pure_python', metavar="True|False",
+                        help="When True, use Python code. (default=%(default)s)",
+                        type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument('--bash-command', dest='bash_command', type=str, default="bash",
+                        help=h("The bash command or its substitute. (default=%(default)s)"))
+
+    parser.add_argument('--bzip2-command', dest='bzip2_command', type=str, default="bzip2",
+                        help=h("The bzip2 command or its substitute. (default=%(default)s)"))
+
+    parser.add_argument('--cat-command', dest='cat_command', type=str, default="cat",
+                        help=h("The cat command or its substitute. (default=%(default)s)"))
+
+    parser.add_argument('--gzip-command', dest='gzip_command', type=str, default="gzip",
+                        help=h("The gzip command or its substitute. (default=%(default)s)"))
+
+    parser.add_argument('--tail-command', dest='tail_command', type=str, default="tail",
+                        help=h("The tail command or its substitute. (default=%(default)s)"))
+
+    parser.add_argument('--xz-command', dest='xz_command', type=str, default="xz",
+                        help=h("The xz command or its substitute. (default=%(default)s)"))
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser,
@@ -75,6 +97,11 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                                     default_mode=KgtkReaderMode[parsed_shared_args._mode],
                                     expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
+
+
+def custom_progress() -> bool:
+    return True  # We want to start a custom progress monitor.
+
 
 def run(input_files: KGTKFiles,
         output_file: KGTKFiles,
@@ -85,6 +112,14 @@ def run(input_files: KGTKFiles,
         new_column_names: typing.Optional[typing.List[str]],
 
         no_output_header: bool = False,
+        pure_python: bool = False,
+
+        bash_command: str = "bash",
+        bzip2_command: str = "bzip2",
+        cat_command: str = "cat",
+        gzip_command: str = "gzip",
+        tail_command: str = "tail",
+        xz_command: str = "xz",
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -129,6 +164,13 @@ def run(input_files: KGTKFiles,
         if new_column_names is not None:
             print("--new-columns %s" % " ".join(new_column_names), file=error_file, flush=True)
         print("--no-output-header %s" % str(no_output_header), file=error_file, flush=True)
+        print("--pure-python %s" % str(pure_python), file=error_file, flush=True)
+        print("--bash-commahd %s" % str(bash_command), file=error_file, flush=True)
+        print("--bzip2-commahd %s" % str(bzip2_command), file=error_file, flush=True)
+        print("--cat-commahd %s" % str(cat_command), file=error_file, flush=True)
+        print("--gzip-commahd %s" % str(gzip_command), file=error_file, flush=True)
+        print("--tail-commahd %s" % str(tail_command), file=error_file, flush=True)
+        print("--xz-commahd %s" % str(xz_command), file=error_file, flush=True)
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
@@ -154,6 +196,13 @@ def run(input_files: KGTKFiles,
                               old_column_names=old_column_names,
                               new_column_names=new_column_names,
                               no_output_header=no_output_header,
+                              pure_python=pure_python,
+                              bash_command=bash_command,
+                              bzip2_command=bzip2_command,
+                              cat_command=cat_command,
+                              gzip_command=gzip_command,
+                              tail_command=tail_command,
+                              xz_command=xz_command,
                               reader_options=reader_options,
                               value_options=value_options,
                               error_file=error_file,
