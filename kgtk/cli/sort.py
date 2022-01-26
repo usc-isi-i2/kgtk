@@ -23,7 +23,7 @@ Python's expensive I/O path.
 5) The data processing pipeline then waits to read sort options
    from a second pipe.
 
-6) The Python control process reads the header line from the dirst pipe
+6) The Python control process reads the header line from the first pipe.
 
 7) The Python control process feeds the header line to KgtkReader.
 

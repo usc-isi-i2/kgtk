@@ -33,7 +33,10 @@ class KgtkMergeColumns:
     old_column_name_lists: typing.List[typing.List[str]] = attr.ib(factory=list)
     new_column_name_lists: typing.List[typing.List[str]] = attr.ib(factory=list)
 
-    def merge(self, column_names: typing.List[str], prefix: typing.Optional[str]=None):
+    def merge(self,
+              column_names: typing.List[str],
+              prefix: typing.Optional[str] = None
+              ) -> typing.List[str]:
         """Add column names into the merged column name list, respecting predefined
         column names with aliases.
 
