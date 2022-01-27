@@ -73,7 +73,7 @@ class EmbeddingVector:
             self._logger.error("Attempted task on all available GPUs")
             raise error
         else:
-            self.model = SentenceTransformer(self.model_name, device = ('cuda:' + str(self.selected_gpu_device_index)))
+            self.model = SentenceTransformer(self.model_name, device=('cuda:' + str(self.selected_gpu_device_index)))
             self._logger.debug(f"Reattempting task on GPU device: {('cuda:' + str(self.selected_gpu_device_index))}")
 
     def get_sentences_embedding(self, sentences: typing.List[str], qnodes: typing.List[str]):
@@ -96,11 +96,11 @@ class EmbeddingVector:
                     sentence_embeddings.extend(each_embedding)
                     self.redis_server.set(query_cache_key, str(each_embedding[0].tolist()))
         else:
-            while True: 
+            while True:
                 # Re-attempt executing the model on a different GPU until all GPU's have been tried
                 try:
                     sentence_embeddings = self.model.encode(sentences, show_progress_bar=True)
-                    break # If there is no error, this will break the loop and return the results
+                    break  # If there is no error, this will break the loop and return the results
                 except RuntimeError as e:
                     self.retry_next_gpu(e)
         return sentence_embeddings
@@ -332,6 +332,61 @@ class EmbeddingVector:
                 k = k.replace("c_", "")
                 self.candidates[k] = v
 
+    def process_sentences_kgtk(self,
+                               input_file_path: Path,
+                               output_file_path: Path,
+                               error_file: typing.TextIO = sys.stderr,
+                               reader_options: typing.Optional[KgtkReaderOptions] = None,
+                               value_options: typing.Optional[KgtkValueOptions] = None,
+                               verbose: bool = False,
+                               batch_size: int = None
+                               ):
+        kr: KgtkReader = KgtkReader.open(input_file_path,
+                                         error_file=error_file,
+                                         options=reader_options,
+                                         value_options=value_options,
+                                         verbose=verbose,
+                                         )
+        if kr.node1_column_idx < 0:
+            raise KGTKException("Missing column: node1 or alias")
+        if kr.label_column_idx < 0:
+            raise KGTKException("Missing column: label or alias")
+        if kr.node2_column_idx < 0:
+            raise KGTKException("Missing column: node2 or alias")
+
+        self._logger.debug("node1 column index = {}".format(kr.node1_column_idx))
+        self._logger.debug("label column index = {}".format(kr.label_column_idx))
+        self._logger.debug("node2 column index = {}".format(kr.node2_column_idx))
+
+        column_names = ['node1', 'label', 'node2']
+        kw: KgtkWriter = KgtkWriter.open(column_names,
+                                         output_file_path,
+                                         require_all_columns=False,
+                                         error_file=self.error_file
+                                         )
+
+        sentences = []
+        qnodes = []
+
+        for row in kr:
+            if batch_size is not None and len(sentences) == batch_size:
+                vectors = self.get_sentences_embedding(sentences, qnodes)
+                for qnode, vector in zip(qnodes, vectors):
+                    kw.write([qnode, 'text_embedding', ",".join(map(str, vector))])
+                sentences = []
+                qnodes = []
+            else:
+                qnodes.append(row[kr.node1_column_idx])
+                sentences.append(row[kr.node2_column_idx])
+
+        if len(qnodes) > 0 and len(sentences) > 0:
+            vectors = self.get_sentences_embedding(sentences, qnodes)
+            for qnode, vector in zip(qnodes, vectors):
+                kw.write([qnode, 'text_embedding', ",".join(map(str, vector))])
+
+        kr.close()
+        kw.close()
+
     def read_input(self,
                    input_file_path: Path,
                    target_properties: dict,
@@ -498,7 +553,8 @@ class EmbeddingVector:
                     # if we get property_values, it should be saved to isa-properties part
                     if "property_values" in roles:
                         # for property values part, changed to be "{property} {value}"
-                        node_value_combine = self.get_real_label_name(node_property) + " " + self.get_real_label_name(node_value)
+                        node_value_combine = self.get_real_label_name(node_property) + " " + self.get_real_label_name(
+                            node_value)
                         if each_node_attributes is None:
                             raise ValueError("each_node_attributes is missing")
                         if not isinstance(each_node_attributes["has_properties_values"], list):
@@ -565,7 +621,7 @@ class EmbeddingVector:
         current_process_node_id = node_id
         return current_process_node_id, each_node_attributes
 
-    def get_real_label_name(self, node: str)->str:
+    def get_real_label_name(self, node: str) -> str:
         if node in self.node_labels:
             return self.node_labels[node].replace('"', "")
         else:
@@ -601,7 +657,8 @@ class EmbeddingVector:
             # remove last ", "
             concated_sentence += temp_str[:-2]
         if "has_properties_values" in attribute_dict and len(attribute_dict["has_properties_values"]) > 0:
-            temp_list: typing.List[str] = [self.get_real_label_name(each) for each in attribute_dict["has_properties_values"]]
+            temp_list: typing.List[str] = [self.get_real_label_name(each) for each in
+                                           attribute_dict["has_properties_values"]]
             if concated_sentence != "":
                 if not have_isa_properties:
                     concated_sentence += " "
@@ -686,17 +743,17 @@ class EmbeddingVector:
         if output_format == "kgtk_format":
             output_mode = KgtkWriter.Mode.NONE
             ew: KgtkWriter = KgtkWriter.open(self.column_names,
-                                        output_file,
-                                        require_all_columns=False,
-                                        prohibit_extra_columns=True,
-                                        fill_missing_columns=True,
-                                        mode=output_mode,
-                                        output_format='kgtk',
-                                        output_column_names=self.column_names,
-                                        no_header=False,
-                                        error_file=self.error_file,
-                                        verbose=True,
-                                        very_verbose=False)
+                                             output_file,
+                                             require_all_columns=False,
+                                             prohibit_extra_columns=True,
+                                             fill_missing_columns=True,
+                                             mode=output_mode,
+                                             output_format='kgtk',
+                                             output_column_names=self.column_names,
+                                             no_header=False,
+                                             error_file=self.error_file,
+                                             verbose=True,
+                                             very_verbose=False)
             all_nodes = list(self.vectors_map.keys())
             ten_percent_len = math.ceil(len(vectors) / 10)
             for i, each_vector in enumerate(vectors):
@@ -716,17 +773,17 @@ class EmbeddingVector:
         elif output_format == "tsv_format":
             output_mode = KgtkWriter.Mode.NONE
             ew: KgtkWriter = KgtkWriter.open(None,
-                                        output_file,
-                                        require_all_columns=False,
-                                        prohibit_extra_columns=True,
-                                        fill_missing_columns=True,
-                                        mode=output_mode,
-                                        output_format='tsv',
-                                        output_column_names=None,
-                                        no_header=True,
-                                        error_file=self.error_file,
-                                        verbose=True,
-                                        very_verbose=False)
+                                             output_file,
+                                             require_all_columns=False,
+                                             prohibit_extra_columns=True,
+                                             fill_missing_columns=True,
+                                             mode=output_mode,
+                                             output_format='tsv',
+                                             output_column_names=None,
+                                             no_header=True,
+                                             error_file=self.error_file,
+                                             verbose=True,
+                                             very_verbose=False)
             for each_vector in vectors:
                 embedding = []
                 for each_dimension in each_vector[:-1]:

@@ -8,7 +8,7 @@
 #
 # TODO: Convert EmbeddingVector to use KgtkFormat and KgtkWriter.
 #
-from argparse import Namespace, SUPPRESS
+from argparse import Namespace
 import typing
 from kgtk.exceptions import KGTKException
 from kgtk.cli_argparse import KGTKArgumentParser
@@ -66,7 +66,7 @@ def load_property_labels_file(input_files: typing.List[str],
             print("Cannot determine which column is node2 in %s" % each_file, file=error_file, flush=True)
         if fail:
             raise KGTKException("Cannot identify a required column in %s" % each_file)
-    
+
         row: typing.List[str]
         for row in kr:
             if len(label_filter) > 0:
@@ -179,6 +179,7 @@ def main(**kwargs):
         query_server = kwargs.get("query_server")
         save_embedding_sentence = kwargs.get("save_embedding_sentence", False)
         output_file = kwargs.get("output_file", "")
+        compute_vectors_only = kwargs.get("compute_vectors_only", False)
 
         # Select where to send error messages, defaulting to stderr.
         error_file: typing.TextIO = sys.stdout if kwargs.get("errors_to_stdout") else sys.stderr
@@ -227,7 +228,8 @@ def main(**kwargs):
         else:
             black_list_set = set()
         if property_labels_files:
-            property_labels_dict = load_property_labels_file(property_labels_files, error_file, reader_options, value_options,
+            property_labels_dict = load_property_labels_file(property_labels_files, error_file, reader_options,
+                                                             value_options,
                                                              label_filter=property_labels_filter, verbose=verbose)
             _logger.info("Totally {} property labels loaded.".format(len(property_labels_dict)))
         else:
@@ -246,21 +248,27 @@ def main(**kwargs):
             _logger.info("Running {} model on {}".format(each_model_name, str(input_file_path)))
             process = EmbeddingVector(each_model_name, query_server=query_server, cache_config=cache_config,
                                       parallel_count=parallel_count)
-            process.read_input(input_file_path=input_file_path,
-                               skip_nodes_set=black_list_set,
-                               input_format=data_format,
-                               target_properties=sentence_properties,
-                               property_labels_dict=property_labels_dict,
-                               error_file=error_file,
-                               reader_options=reader_options,
-                               value_options=value_options,
-                               verbose=verbose)
-            process.get_vectors()
+            if compute_vectors_only:
+                process.process_sentences_kgtk(input_file_path=input_file_path,
+                                               output_file_path=output_file,
+                                               )
+            else:
+                process.read_input(input_file_path=input_file_path,
+                                   skip_nodes_set=black_list_set,
+                                   input_format=data_format,
+                                   target_properties=sentence_properties,
+                                   property_labels_dict=property_labels_dict,
+                                   error_file=error_file,
+                                   reader_options=reader_options,
+                                   value_options=value_options,
+                                   verbose=verbose)
+                process.get_vectors()
 
-            process.plot_result(output_properties=output_properties,
-                                input_format=data_format, output_uri=output_uri,
-                                dimensional_reduction=dimensional_reduction, dimension_val=dimension_val,
-                                output_format=output_format, save_embedding_sentence=save_embedding_sentence, output_file=output_file)
+                process.plot_result(output_properties=output_properties,
+                                    input_format=data_format, output_uri=output_uri,
+                                    dimensional_reduction=dimensional_reduction, dimension_val=dimension_val,
+                                    output_format=output_format, save_embedding_sentence=save_embedding_sentence,
+                                    output_file=output_file)
             # process.evaluate_result()
             _logger.info("*" * 20 + "finished" + "*" * 20)
     except Exception as e:
@@ -294,14 +302,16 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     #                     help="input path", )
     parser.add_argument('-f', '--input-data-format', action='store', dest='data_format',
                         choices=("test_format", "kgtk_format"), default="kgtk_format",
-                        help="the input file format, could either be `test_format` or `kgtk_format`, default is `kgtk_format`", )
+                        help="the input file format, could either be `test_format` or `kgtk_format`, "
+                             "default is `kgtk_format`", )
     parser.add_argument('-p', '--property-labels-file', action='store', nargs='+',
                         dest='property_labels_file_uri', help="the path to the property labels file.", )
 
     # This should probably default to "--label-properties" if not specified.
     parser.add_argument('--property-labels-filter', action='store', nargs='+',
                         dest='property_labels_filter', default=["label"],
-                        help="The label columns value(s) of the edges to process in the property labels file. Default is [\"label\"].")
+                        help="The label columns value(s) of the edges to process in the property labels file. "
+                             "Default is [\"label\"].")
 
     # properties (only valid for kgtk format input/output data)
     parser.add_argument('--label-properties', action='store', nargs='+',
@@ -314,12 +324,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         This argument is only valid for input in kgtk format.""")
     parser.add_argument('--isa-properties', action='store', nargs='+',
                         dest='isa_properties', default=["P31"],
-                        help="""The names of the edges for `isa` properties, Default is ["P31"] (the `instance of` node in 
-                        wikidata).""")
+                        help="""The names of the edges for `isa` properties, Default is ["P31"] (the `instance of` 
+                        node in wikidata).""")
     parser.add_argument('--has-properties', action='store', nargs='+',
                         dest='has_properties', default=[],
-                        help="""The names of the edges for `has` properties, Default is ["all"] (will automatically append all 
-                        properties found for each node).""")
+                        help="""The names of the edges for `has` properties, Default is ["all"] (will automatically 
+                        append all properties found for each node).""")
     parser.add_argument('--property-value', action='store', nargs='+',
                         dest='property_values', default=[],
                         help="""For those edges found in `has` properties, the nodes specified here will display with 
@@ -329,7 +339,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         help="""Read the properties for --property-value option from an KGTK edge file""")
     parser.add_argument('--output-property', action='store',
                         dest='output_properties', default="text_embedding",
-                        help="""The output property name used to record the embedding. Default is `output_properties`. \n
+                        help="""The output property name used to record the embedding. Default is `output_properties`.
                         This argument is only valid for output in kgtk format.""")
     # output
     parser.add_argument('--save-embedding-sentence', action='store_true', dest='save_embedding_sentence',
@@ -340,30 +350,34 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         help="output path for the text embedding file, by default it will be printed in console")
     parser.add_argument('--output-data-format', action='store', dest='output_data_format',
                         default="kgtk_format", choices=("tsv_format", "kgtk_format"),
-                        help="output format, can either be `tsv_format` or `kgtk_format`. \nIf choose `tsv_format`, the output "
-                             "will be a tsv file, with each row contains only the vector representation of a node. Each "
-                             "dimension is separated by a tab")
+                        help="output format, can either be `tsv_format` or `kgtk_format`. \n"
+                             "If choose `tsv_format`, the output will be a tsv file, with each row contains only the "
+                             "vector representation of a node. Each dimension is separated by a tab")
     parser.add_argument('--embedding-projector-metadata', action='store', nargs='+',
                         dest='metadata_properties', default=[],
-                        help="""list of properties used to construct a metadata file for use in the Google Embedding Projector: 
-                        http://projector.tensorflow.org. \n Default: the label and description of each node.""")
+                        help="""list of properties used to construct a metadata file for use in the 
+                        Google Embedding Projector: http://projector.tensorflow.org. \n 
+                        Default: the label and description of each node.""")
 
     # black list file
     parser.add_argument('-b', '--black-list', nargs='+', action='store', dest='black_list_files',
                         default=[],
                         help="the black list file, contains the Q nodes which should not consider as candidates.")
 
+    parser.add_argument('--compute-vectors-only', action='store_true', dest='compute_vectors_only',
+                        help="If set, the input file has one row per Qnode which contains the text sentence for the "
+                             "qnode. Compute the vectors only.", default=False)
+
     # dimensional reduction relate
     parser.add_argument("--dimensional-reduction", nargs='?', action='store',
                         default="none", dest="dimensional_reduction", choices=("pca", "tsne", "none"),
-                        help='whether to run dimensional reduction algorithm or not after the embedding, default is None (not '
-                             'run). '
+                        help='whether to run dimensional reduction algorithm or not after the embedding, '
+                             'default is None (not run). '
                         )
     parser.add_argument("--dimension", type=int, nargs='?', action='store',
                         default=2, dest="dimension_val",
-                        help='How many dimension should remained after reductions, only valid when set to run dimensional '
-                             'reduction, default value is 2 '
-                        )
+                        help='How many dimension should remained after reductions, only valid when set to run'
+                             ' dimensional reduction, default value is 2 ')
 
     parser.add_argument("--parallel", nargs='?', action='store',
                         default="1", dest="parallel_count",
@@ -393,6 +407,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                                     default_mode=KgtkReaderMode[parsed_shared_args._mode],
                                     expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=False)
+
 
 def run(**kwargs):
     main(**kwargs)
