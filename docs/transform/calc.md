@@ -43,13 +43,14 @@ cleared if an error occurs processing the input date-and-time value.
 usage: kgtk calc [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                  [-c [COLUMN_NAME [COLUMN_NAME ...]]]
                  [--into COLUMN_NAME [COLUMN_NAME ...]] --do
-                 {abs,and,average,capitalize,casefold,copy,div,eq,fromisoformat,ge,gt,is,is_in,is_not,join,lower,le,len,lt,max,min,minus,nand,ne,negate,nor,not,or,percentage,replace,reverse_div,reverse_minus,set,string_lang,string_lang_suffix,string_suffix,string_text,substring,substitute,sum,swapcase,title,upper,xor}
+                 {abs,and,average,capitalize,casefold,copy,date_date,date_date_iso,date_day,date_month,date_year,div,eq,fromisoformat,ge,gt,is_date,is_in,is_lqstring,is_not,is,is_string,join,lower,le,len,list_sum,lt,max,min,minus,nand,ne,negate,nor,not,number,or,percentage,replace,reverse_div,reverse_minus,set,string_lang,string_lang_suffix,string_suffix,string_text,substring,substitute,sum,swapcase,title,upper,xor}
                  [--values [VALUES [VALUES ...]]]
                  [--with-values [WITH_VALUES [WITH_VALUES ...]]]
                  [--limit LIMIT] [--format FORMAT_STRING]
                  [--overwrite [True|False]] [--to-string [True|False]]
                  [--group-by [COLUMN_NAME [COLUMN_NAME ...]]]
                  [--presorted [True|False]] [--filter [True|False]]
+                 [--fast [True|False]] [--as-int [True|False]]
                  [-v [optional True|False]]
 
 This command performs calculations on one or more columns in a KGTK file. 
@@ -73,7 +74,7 @@ optional arguments:
   --into COLUMN_NAME [COLUMN_NAME ...]
                         The name of the column to receive the result of the
                         calculation.
-  --do {abs,and,average,capitalize,casefold,copy,div,eq,fromisoformat,ge,gt,is,is_in,is_not,join,lower,le,len,lt,max,min,minus,nand,ne,negate,nor,not,or,percentage,replace,reverse_div,reverse_minus,set,string_lang,string_lang_suffix,string_suffix,string_text,substring,substitute,sum,swapcase,title,upper,xor}
+  --do {abs,and,average,capitalize,casefold,copy,date_date,date_date_iso,date_day,date_month,date_year,div,eq,fromisoformat,ge,gt,is_date,is_in,is_lqstring,is_not,is,is_string,join,lower,le,len,list_sum,lt,max,min,minus,nand,ne,negate,nor,not,number,or,percentage,replace,reverse_div,reverse_minus,set,string_lang,string_lang_suffix,string_suffix,string_text,substring,substitute,sum,swapcase,title,upper,xor}
                         The name of the operation.
   --values [VALUES [VALUES ...]]
                         An optional list of values
@@ -92,8 +93,10 @@ optional arguments:
                         If true, ensure that the result is a string. If false,
                         the result might be a symbol or some other type. --to-
                         string=True may be used with the following operations:
-                        ['string_lang', 'string_lang_suffix', 'string_suffix',
-                        'substring'] (default=False).
+                        ['date_date', 'date_date_iso', 'date_day',
+                        'date_month', 'date_year', 'number', 'string_lang',
+                        'string_lang_suffix', 'string_suffix', 'substring']
+                        (default=False).
   --group-by [COLUMN_NAME [COLUMN_NAME ...]]
                         The list of group-by column names, optionally
                         containing '..' for column ranges and '...' for column
@@ -105,10 +108,16 @@ optional arguments:
                         If true, the input file is presorted for --group-by.
                         (default=False).
   --filter [True|False]
-                        When --filter=True, and a boolean operation is
-                        specified, records for which the result is False will
-                        not be written to the output stream. Also, --into is
-                        optional when --filter is provided. (default=False).
+                        When --filter=True, and an operation is specified with
+                        a boolean result, records for which the result is
+                        False will not be written to the output stream. Also,
+                        --into is optional when --filter is provided.
+                        (default=False).
+  --fast [True|False]   When --fast=True, use a faster implementation which
+                        might not be general. (default=False).
+  --as-int [True|False]
+                        When True, compute numbers as integers. When False,
+                        compute numbers as floats. (default=False).
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).
@@ -627,6 +636,36 @@ The output will be the following table in KGTK format:
 | P1037 | count | 60 | 9317 |
 | P1040 | count | 1 | 45073 |
 | P1050 | count | 246 | 226380 |
+
+### Set a value into an existing columnwithout overwriting.
+
+Suppose you want to set a value into a column, but not overwrite any
+existing values in that column.
+
+Consider the following file:
+
+```bash
+kgtk cat -i examples/docs/calc-file3.tsv
+```
+
+| node1 | label | node2 | calories |
+| -- | -- | -- | -- |
+| apple | isa | fruit | 95 |
+| pear | isa | fruit | 102 |
+| orange | isa | fruit |  |
+
+Here is a quick way to fill in the missing value:
+
+```bash
+kgtk calc -i examples/docs/calc-file3.tsv \
+          --do set --value 45 --into calories \
+	  --overwrite false
+```
+| node1 | label | node2 | calories |
+| -- | -- | -- | -- |
+| apple | isa | fruit | 95 |
+| pear | isa | fruit | 102 |
+| orange | isa | fruit | 45 |
 
 ### Set a value into a new column.
 
