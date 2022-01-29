@@ -1,0 +1,4 @@
+node1	label	node2		
+john	observed	^2020-05-02T00:00	fever	cough
+john	observed	^2020-05-00T00:00	normal	normal
+john	observed	^2020-05-02T24:00	normal	cough

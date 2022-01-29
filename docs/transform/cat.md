@@ -159,6 +159,8 @@ selection extensions, e.g. `.kgtk.gz`, `.csv.gz`, `.json.bz2`.
 ```bash
 usage: kgtk cat [-h] [-i INPUT_FILE [INPUT_FILE ...]] [-o OUTPUT_FILE]
                 [--output-format {csv,html,html-compact,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,table,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}]
+                [--pure-python [True|False]]
+                [--fast-copy-min-size FAST_COPY_MIN_SIZE]
                 [-v [optional True|False]]
 
 Concatenate two or more KGTK files, merging the columns appropriately. All files must be KGTK edge files or all files must be KGTK node files (unless overridden with --mode=NONE). 
@@ -175,6 +177,11 @@ optional arguments:
                         stdout.)
   --output-format {csv,html,html-compact,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,table,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}
                         The file format (default=kgtk)
+  --pure-python [True|False]
+                        When True, use Python code. (default=False)
+  --fast-copy-min-size FAST_COPY_MIN_SIZE
+                        The minium number of bytes before using OS tools for
+                        fast copy (default=10000).
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).
@@ -763,7 +770,7 @@ for missing the header line.
 
 
 
-### Expert Topic: Reading Files without Header Records
+### Expert Topic: Reading Files without Header Records: Supply Column Names
 
 Sometimes you may wish to read a TSV file that does not contain a
 header record.
@@ -796,6 +803,58 @@ The result will be the following file in KGTK format:
 | lionheart | born | ^1157-09-08T00:00 |
 | year0001 | starts | ^0001-01-01T00:00 |
 | year9999 | ends | ^9999-12-31T11:59:59 |
+
+### Expert Topic: Reading Files without Header Records: Automatic Column Names
+
+Another approach to reading a file without a header record is to have KGTK
+assign column names, which it will do beginning with COL1, COL2, etc.  It is
+necessary to tell KGTK how many columns are in the file.  It is also necessary
+to say `--mode=NONE`, since the generated column names do not match the definition
+of a KGTK edge file or node file.
+
+```
+kgtk cat -i examples/docs/cat-file-without-header.tsv \
+         --no-input-header \
+         --supply-missing-column-names \
+	 --number-of-columns 3 \
+	 --mode=NONE
+```
+
+| COL1 | COL2 | COL3 |
+| -- | -- | -- |
+| john | woke | ^2020-05-02T00:00 |
+| john | woke | ^2020-05-00T00:00 |
+| john | slept | ^2020-05-02T24:00 |
+| lionheart | born | ^1157-09-08T00:00 |
+| year0001 | starts | ^0001-01-01T00:00 |
+| year9999 | ends | ^9999-12-31T11:59:59 |
+
+### Expert Topic: Reading Files without Header Records: Empty Column Names
+
+Assume that you have a TSV file with the right number of columns in the
+header record, but one or more missing column names.
+
+```
+kgtk cat -i examples/docs/cat-file-with-empty-column-names.tsv
+```
+
+    In input 1 header 'node1	label	node2		': Column 3 has an empty name in the file header
+    Exit requested
+
+
+You can ask the system to replace the empty column names with COLn:
+
+```
+kgtk cat -i examples/docs/cat-file-with-empty-column-names.tsv \
+         --supply-missing-column-names
+```
+
+| node1 | label | node2 | COL4 | COL5 |
+| -- | -- | -- | -- | -- |
+| john | observed | ^2020-05-02T00:00 | fever | cough |
+| john | observed | ^2020-05-00T00:00 | normal | normal |
+| john | observed | ^2020-05-02T24:00 | normal | cough |
+
 
 ### Expert Topic: Requiring Certain Columns
 
@@ -1009,3 +1068,63 @@ kgtk cat -i examples/docs/cat-edges-with-totals-and-averages.tsv \
 
 !!! note
     At the present time there is no option to list optional additional columns.
+
+### Expert Topic: Requiring a Certain Number of Columns
+
+Another way to ensure that a KGTK edge  file has only
+[ `node1`, `label`, `node2`] columns is to require that the
+file have 3 columns.  More generally, you can require that
+a file have a certain number of columns without having to name
+all the columns individually.
+
+```
+kgtk cat -i examples/docs/cat-edges.tsv \
+         --number-of-columns 3
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| P10 | p585-count | 73 |
+| P1000 | p585-count | 16 |
+| P101 | p585-count | 5 |
+| P1018 | p585-count | 2 |
+| P102 | p585-count | 295 |
+| P1025 | p585-count | 26 |
+| P1026 | p585-count | 40 |
+| P1027 | p585-count | 14 |
+| P1028 | p585-count | 1131 |
+| P1029 | p585-count | 4 |
+| P1035 | p585-count | 4 |
+| P1037 | p585-count | 60 |
+| P1040 | p585-count | 1 |
+| P1050 | p585-count | 246 |
+
+```
+kgtk cat -i examples/docs/cat-edges-with-totals.tsv \
+         --number-of-columns 3
+```
+
+    In input 1 header 'node1	label	node2	node1;total': Expected 3 columns, got 4 in the header
+    Exit requested
+
+```
+kgtk cat -i examples/docs/cat-edges-with-totals.tsv \
+         --number-of-columns 4
+```
+
+| node1 | label | node2 | node1;total |
+| -- | -- | -- | -- |
+| P10 | p585-count | 73 | 3879 |
+| P1000 | p585-count | 16 | 266 |
+| P101 | p585-count | 5 | 157519 |
+| P1018 | p585-count | 2 | 177 |
+| P102 | p585-count | 295 | 414726 |
+| P1025 | p585-count | 26 | 693 |
+| P1026 | p585-count | 40 | 6930 |
+| P1027 | p585-count | 14 | 10008 |
+| P1028 | p585-count | 1131 | 4035 |
+| P1029 | p585-count | 4 | 2643 |
+| P1035 | p585-count | 4 | 366 |
+| P1037 | p585-count | 60 | 9317 |
+| P1040 | p585-count | 1 | 45073 |
+| P1050 | p585-count | 246 | 226380 |
