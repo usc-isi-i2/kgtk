@@ -154,6 +154,21 @@ selection extensions, e.g. `.kgtk.gz`, `.csv.gz`, `.json.bz2`.
     files (filesnames that begin with `>`, followed by a file descriptor number)
     will not be compressed.  This behavior may change at a later date.
 
+## Fast Copies
+
+When certain conditions are met, `kgtk cat` will use Unix system utilities to perform
+decompression. concatenation, and compression.  The major constraints are:
+
+ * The input files must have the same column header names (allowing for aliases)
+   and order.
+ * The input files must come from the filesystem, not standard input or a file
+   descriptor number.
+ * The input files must meet a minimum total size.
+ * Various checking options must not be turned on.
+ * The files must contain column names headers that are not
+   overidden bu command line options.
+   
+
 ## Usage
 
 ```bash
@@ -1128,3 +1143,141 @@ kgtk cat -i examples/docs/cat-edges-with-totals.tsv \
 | P1037 | p585-count | 60 | 9317 |
 | P1040 | p585-count | 1 | 45073 |
 | P1050 | p585-count | 246 | 226380 |
+
+### Expert Topic: Pure Python Copies
+
+The fast copy option can be disabled by specifying `--pure-python`.
+
+```
+kgtk cat -i examples/docs/cat-edges.tsv \
+         -i examples/docs/cat-edges.tsv \
+         --pure-python
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| P10 | p585-count | 73 |
+| P1000 | p585-count | 16 |
+| P101 | p585-count | 5 |
+| P1018 | p585-count | 2 |
+| P102 | p585-count | 295 |
+| P1025 | p585-count | 26 |
+| P1026 | p585-count | 40 |
+| P1027 | p585-count | 14 |
+| P1028 | p585-count | 1131 |
+| P1029 | p585-count | 4 |
+| P1035 | p585-count | 4 |
+| P1037 | p585-count | 60 |
+| P1040 | p585-count | 1 |
+| P1050 | p585-count | 246 |
+| P10 | p585-count | 73 |
+| P1000 | p585-count | 16 |
+| P101 | p585-count | 5 |
+| P1018 | p585-count | 2 |
+| P102 | p585-count | 295 |
+| P1025 | p585-count | 26 |
+| P1026 | p585-count | 40 |
+| P1027 | p585-count | 14 |
+| P1028 | p585-count | 1131 |
+| P1029 | p585-count | 4 |
+| P1035 | p585-count | 4 |
+| P1037 | p585-count | 60 |
+| P1040 | p585-count | 1 |
+| P1050 | p585-count | 246 |
+
+### Expert Topic: Changing the Fast Copy Minimum Size Throshold
+
+Normally, `kgtk cat` will use the fast copy path with system commands only
+when the total sizes of the input files pass a threshhold.  This is because
+that are overheads on starting the system utilities as subprocesses, and for
+very small files it may be faster to perform all processing directly in
+Python.
+
+The threshold may be changed.  For example, if you wanted the code to use
+the fast copy path regardless of the size of the input files, use:
+
+```
+kgtk cat -i examples/docs/cat-edges.tsv \
+         -i examples/docs/cat-edges.tsv \
+         --fast-copy-min-size 0
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| P10 | p585-count | 73 |
+| P1000 | p585-count | 16 |
+| P101 | p585-count | 5 |
+| P1018 | p585-count | 2 |
+| P102 | p585-count | 295 |
+| P1025 | p585-count | 26 |
+| P1026 | p585-count | 40 |
+| P1027 | p585-count | 14 |
+| P1028 | p585-count | 1131 |
+| P1029 | p585-count | 4 |
+| P1035 | p585-count | 4 |
+| P1037 | p585-count | 60 |
+| P1040 | p585-count | 1 |
+| P1050 | p585-count | 246 |
+| P10 | p585-count | 73 |
+| P1000 | p585-count | 16 |
+| P101 | p585-count | 5 |
+| P1018 | p585-count | 2 |
+| P102 | p585-count | 295 |
+| P1025 | p585-count | 26 |
+| P1026 | p585-count | 40 |
+| P1027 | p585-count | 14 |
+| P1028 | p585-count | 1131 |
+| P1029 | p585-count | 4 |
+| P1035 | p585-count | 4 |
+| P1037 | p585-count | 60 |
+| P1040 | p585-count | 1 |
+| P1050 | p585-count | 246 |
+
+
+### Expert Topic: Overriding System Commands
+
+The names of the system commands used by the fast copy path may
+be overridden on the command line.
+
+```
+kgtk cat -i examples/docs/cat-edges.tsv \
+         -i examples/docs/cat-edges.tsv \
+         --bash-command /usr/bin/bash \
+	 --bzip2-command /usr/bin/bzip2 \
+	 --cat-command /usr/bin/cat \
+	 --gzip-command /usr/bin/gzip \
+	 --tail-command /usr/bin/tail \
+	 --xz-command /usr/bin/xz
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| P10 | p585-count | 73 |
+| P1000 | p585-count | 16 |
+| P101 | p585-count | 5 |
+| P1018 | p585-count | 2 |
+| P102 | p585-count | 295 |
+| P1025 | p585-count | 26 |
+| P1026 | p585-count | 40 |
+| P1027 | p585-count | 14 |
+| P1028 | p585-count | 1131 |
+| P1029 | p585-count | 4 |
+| P1035 | p585-count | 4 |
+| P1037 | p585-count | 60 |
+| P1040 | p585-count | 1 |
+| P1050 | p585-count | 246 |
+| P10 | p585-count | 73 |
+| P1000 | p585-count | 16 |
+| P101 | p585-count | 5 |
+| P1018 | p585-count | 2 |
+| P102 | p585-count | 295 |
+| P1025 | p585-count | 26 |
+| P1026 | p585-count | 40 |
+| P1027 | p585-count | 14 |
+| P1028 | p585-count | 1131 |
+| P1029 | p585-count | 4 |
+| P1035 | p585-count | 4 |
+| P1037 | p585-count | 60 |
+| P1040 | p585-count | 1 |
+| P1050 | p585-count | 246 |
+

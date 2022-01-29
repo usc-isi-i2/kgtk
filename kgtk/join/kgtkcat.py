@@ -167,8 +167,10 @@ class KgtkCat():
             if kr.options.number_of_columns is not None:
                 use_system_copy = False
             if kr.options.require_column_names is not None:
+                # This constraint could be removed.
                 use_system_copy = False
             if kr.options.no_additional_columns:
+                # This constraint could be removed.
                 use_system_copy = False
             if not kr.rewindable:
                 use_system_copy = False
