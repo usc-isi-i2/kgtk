@@ -29,9 +29,10 @@ node_color_map = {
     'many_subclasses': 1
 }
 
+
 def is_float(num):
     try:
-        num = float(num)
+        num_temp = float(num)
     except ValueError:
         return False
     return True
@@ -241,7 +242,8 @@ class KgtkVisualize:
                                           row[kr.column_name_map[self.edge_color_column]]) or str(
                                           row[kr.column_name_map[self.edge_color_column]]) else self.edge_color_default,
                                       'width_orig': width_orig})
-                elif self.edge_color_column is not None and ('@' not in row[l2] or not self.auto_remove_wikidata_language_tag):
+                elif self.edge_color_column is not None \
+                        and ('@' not in row[l2] or not self.auto_remove_wikidata_language_tag):
                     if self.edge_color_style == 'fixed':
                         temp_edge = ({'source': row[n1], 'target': row[n2], 'label': row[l2],
                                       'color': row[kr.column_name_map[self.edge_color_column]] if not pd.isna(
