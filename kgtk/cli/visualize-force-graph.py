@@ -191,6 +191,20 @@ def add_arguments_extended(parser: KGTKArgumentParser,
                         help="Specify color gradient scale" +
                         " for edge d3-scale-chromatic")
 
+    parser.add_argument('--tooltip-template', dest='tooltip_template',
+                        type=str, default=None,
+                        help="Specify template for tooltip" +
+                             "eg: name:{col1} <br/>, age: {col2}")
+
+    parser.add_argument('--auto-remove-wikidata-language-tag', dest='auto_remove_wikidata_language_tag',
+                        type=bool, default=True,
+                        help="Specify whether auto remove language tag")
+
+    parser.add_argument('--unique-literal', dest='unique_literal',
+                        type=bool, default=False,
+                        help="Specify whether treat each literal as different node")
+
+
     KgtkIdBuilderOptions.add_arguments(parser,
                                        expert=True)  # Show all the options.
     KgtkReader.add_debug_arguments(parser, expert=_expert)
@@ -238,6 +252,9 @@ def run(input_file: KGTKFiles,
         edge_categorical_scale: str = 'd3.schemeCategory10',
         node_gradient_scale: str = 'd3.interpolateRdBu',
         edge_gradient_scale: str = 'd3.interpolateRdBu',
+        tooltip_template: str = None,
+        auto_remove_wikidata_language_tag: bool = True,
+        unique_literal: bool = False,
 
         **kwargs  # Whatever KgtkFileOptions and KgtkValueOptions want.
         ) -> int:
@@ -283,6 +300,9 @@ def run(input_file: KGTKFiles,
                         edge_categorical_scale=edge_categorical_scale,
                         node_gradient_scale=node_gradient_scale,
                         edge_gradient_scale=edge_gradient_scale,
+                        tooltip_template=tooltip_template,
+                        auto_remove_wikidata_language_tag=auto_remove_wikidata_language_tag,
+                        unique_literal=unique_literal,
                         kwargs=kwargs
                 )
     kv.execute()
