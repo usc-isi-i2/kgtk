@@ -21,6 +21,15 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 @attr.s(slots=True, frozen=True)
 class KgtkCat():
+    DEFAULT_PURE_PYTHON: bool = False
+    DEFAULT_FAST_COPY_MIN_SIZE: int = 10000
+    DEFAULT_BASH_COMMAND: str = "bash"
+    DEFAULT_BZIP2_COMMAND: str = "bzip2"
+    DEFAULT_CAT_COMMAND: str = "cat"
+    DEFAULT_GZIP_COMMAND: str = "gzip"
+    DEFAULT_TAIL_COMMAND: str = "tail"
+    DEFAULT_XZ_COMMAND: str = "xz"
+
     input_file_paths: typing.List[Path] = attr.ib()
     output_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
 
@@ -43,14 +52,15 @@ class KgtkCat():
                 default=None)
 
     no_output_header: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
-    pure_python: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    pure_python: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_PURE_PYTHON)
+    fast_copy_min_size: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_FAST_COPY_MIN_SIZE)
 
-    bash_command: str = attr.ib(validator=attr.validators.instance_of(str), default="bash")
-    bzip2_command: str = attr.ib(validator=attr.validators.instance_of(str), default="bzip2")
-    cat_command: str = attr.ib(validator=attr.validators.instance_of(str), default="cat")
-    gzip_command: str = attr.ib(validator=attr.validators.instance_of(str), default="gzip")
-    tail_command: str = attr.ib(validator=attr.validators.instance_of(str), default="tail")
-    xz_command: str = attr.ib(validator=attr.validators.instance_of(str), default="xz")
+    bash_command: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_BASH_COMMAND)
+    bzip2_command: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_BZIP2_COMMAND)
+    cat_command: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_CAT_COMMAND)
+    gzip_command: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_GZIP_COMMAND)
+    tail_command: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_TAIL_COMMAND)
+    xz_command: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_XZ_COMMAND)
 
     # TODO: find working validators:
     reader_options: typing.Optional[KgtkReaderOptions] = attr.ib(default=None)
@@ -157,8 +167,10 @@ class KgtkCat():
             if kr.options.number_of_columns is not None:
                 use_system_copy = False
             if kr.options.require_column_names is not None:
+                # This constraint could be removed.
                 use_system_copy = False
             if kr.options.no_additional_columns:
+                # This constraint could be removed.
                 use_system_copy = False
             if not kr.rewindable:
                 use_system_copy = False
@@ -188,7 +200,7 @@ class KgtkCat():
         if use_system_copy:
             # TODO: restructure this code for better readability.
             if self.verbose:
-                print("Using the system copy code.", file=self.error_file, flush=True)
+                print("Using the system commands for fast copies.", file=self.error_file, flush=True)
             copied_column_names: typing.List[str] = initial_column_names
             if self.output_column_names is not None:
                 copied_column_names = self.output_column_names
@@ -261,13 +273,48 @@ class KgtkCat():
         for kr2 in krs:
             kr2.close()
 
+    def safe_filename(self, file_path: Path) -> str:
+        """Convert a path into a quoted and escaped filename that is safe for bash."""
+        filename: str = str(file_path)
+        if filename.startswith('-') and filename != '-':
+            # Prevent filenames that begin with dash from being treated as
+            # command options.  Strictly speaking, this is not a bash problem
+            # per se.
+            filename = './' + filename
+        return "'" + filename.replace("'", "'\\''") + "'"
+
     def do_system_copy(self,
                        krs: typing.List[KgtkReader],
                        column_names: typing.List[str]) -> bool:
 
-        # TODO: Check the input and output file paths to ensure there aren't
-        # any questionable metacharacters.  If we see something we don't
-        # trust, return False and do things the slow way.
+        # TODO: Support numbered FDs as input files.
+        input_file_path: str
+        for input_file_path in self.input_file_paths:
+            filename: str = str(input_file_path)
+            if filename.startswith("<"):
+                if verbose:
+                    print(("Cannot use numbered FDs with system tools yet (%s)."
+                           % repr(filename)),
+                          file=self.error_file, flush=True)
+                return False
+
+        # Sum the the sizes of the input files.  Skip the fast copy if
+        # the total size is too small.
+        total_input_file_size: int = 0
+        for input_file_path in self.input_file_paths:
+            total_input_file_size += input_file_path.stat().st_size
+        if total_input_file_size < self.fast_copy_min_size:
+            if self.verbose:
+                print(("The total file size (%d) is less than the minimum "
+                       + "for fast copies (%d).") % (total_input_file_size,
+                                                     self.fast_copy_min_size),
+                      file=self.error_file, flush=True)
+            return False  # Take the slow path.
+        if self.verbose:
+            print(("The total file size (%d) meets the minimum "
+                   + "for fast copies (%d).") % (total_input_file_size,
+                                                 self.fast_copy_min_size),
+                  file=self.error_file, flush=True)
 
         # Close the open files.
         for kr2 in krs:
@@ -276,32 +323,36 @@ class KgtkCat():
         cmd: str = "("
 
         idx: int
-        input_file_path: str
         for idx, input_file_path in enumerate(self.input_file_paths):
             input_suffix: str = input_file_path.suffix.lower()
             if idx == 0:
                 if input_suffix in [".gz", ".z"]:
-                    cmd += " " + self.gzip_command + " --decompress --stdout " + str(input_file_path)
+                    cmd += " " + self.gzip_command + " --decompress --stdout "
                 elif input_suffix in [".bz2", ".bz"]:
-                    cmd += " " + self.bzip2_command + " --decompress --stdout " + str(input_file_path)
+                    cmd += " " + self.bzip2_command + " --decompress --stdout "
                 elif input_suffix in [".xz", ".lzma"]:
-                    cmd += " " + self.xz_command + " --decompress --stdout " + str(input_file_path)
+                    cmd += " " + self.xz_command + " --decompress --stdout "
                 else:
-                    cmd += " " + self.cat_command + " " + str(input_file_path)
+                    cmd += " " + self.cat_command + " "
+
+                cmd += self.safe_filename(input_file_path)
 
             else:
                 cmd += " && "
                 if input_suffix in [".gz", ".z"]:
-                    cmd += (self.gzip_command + " --decompress --stdout " + str(input_file_path)
+                    cmd += (self.gzip_command + " --decompress --stdout "
+                            + self.safe_filename(input_file_path)
                             + " | " + self.tail_command + " -n +2")
                 elif input_suffix in [".bz2", ".bz"]:
-                    cmd += (self.bzip2_command + " --decompress --stdout " + str(input_file_path)
+                    cmd += (self.bzip2_command + " --decompress --stdout "
+                            + self.safe_filename(input_file_path)
                             + " | " + self.tail_command + " -n +2")
                 elif input_suffix in [".xz", ".lzma"]:
-                    cmd += (self.xz_command + " --decompress --stdout " + str(input_file_path)
+                    cmd += (self.xz_command + " --decompress --stdout "
+                            + self.safe_filename(input_file_path)
                             + " | " + self.tail_command + " -n +2")
                 else:
-                    cmd += self.tail_command + " -n +2 " + str(input_file_path)
+                    cmd += self.tail_command + " -n +2 " + self.safe_filename(input_file_path)
 
         cmd += " )"
         if self.output_path is not None and str(self.output_path) != "-":
@@ -314,9 +365,10 @@ class KgtkCat():
                 cmd += " | " + self.xz_command
 
             cmd += " "
-            if not str(self.output_path).startswith(">"):
-                cmd += ">"
-            cmd += str(self.output_path)
+            if str(self.output_path).startswith(">"):
+                cmd += str(self.output_path)
+            else:
+                cmd += '>' + self.safe_filename(self.output_path)
 
         if self.verbose:
             print("system command: %s" % repr(cmd), file=self.error_file, flush=True)

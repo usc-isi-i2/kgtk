@@ -26,7 +26,7 @@ DEFAULT_ISA_PROPERTIES: typing.List[str] = ["P21", "P31", "P39", "P106", "P279"]
 DEFAULT_HAS_PROPERTIES: typing.List[str] = []
 DEFAULT_PROPERTY_VALUES: typing.List[str] = ["P17"]
 DEFAULT_SENTENCE_LABEL: str = "sentence"
-DEFAULT_LANGUAGE_PROPERTIES: str = "en"
+DEFAULT_LANGUAGE: str = "en"
 
 OUTPUT_COLUMNS: typing.List[str] = ["node1", "label", "node2"]
 
@@ -61,7 +61,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         help="The description properties. (default=%s)" % repr(DEFAULT_DESCRIPTION_PROPERTIES))
 
     parser.add_argument("--language", dest="language", nargs="*",
-                        help="The label and description language. (default=%s)" % repr(DEFAULT_LANGUAGE_PROPERTIES))
+                        help="The label and description language. (default=%s)" % repr(DEFAULT_LANGUAGE))
 
     parser.add_argument("--isa-properties", dest="isa_properties", nargs="*",
                         help="The isa properties. (default=%s)" % repr(DEFAULT_ISA_PROPERTIES))
@@ -159,6 +159,9 @@ def run(input_file: KGTKFiles,
 
     if property_values is None:
         property_values = DEFAULT_PROPERTY_VALUES
+
+    if language is None:
+        language = DEFAULT_LANGUAGE
 
     # Show the final option structures for debugging and documentation.
     if show_options:
