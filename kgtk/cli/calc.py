@@ -517,6 +517,9 @@ def run(input_file: KGTKFiles,
 
         return sources
   
+    kr: typing.Optional[KgtkReader] = None
+    kw: typing.Optional[KgtkWriter] = None
+    
     try:
 
         if verbose:
@@ -2352,16 +2355,16 @@ def run(input_file: KGTKFiles,
 
         if verbose:
             print("Opening the output file %s" % str(output_kgtk_file), file=error_file, flush=True)
-        kw: KgtkWriter = KgtkWriter.open(output_column_names,
-                                         output_kgtk_file,
-                                         require_all_columns=True,
-                                         prohibit_extra_columns=True,
-                                         fill_missing_columns=False,
-                                         gzip_in_parallel=False,
-                                         mode=KgtkWriter.Mode[kr.mode.name],
-                                         output_format=output_format,
-                                         verbose=verbose,
-                                         very_verbose=very_verbose,
+        kw = KgtkWriter.open(output_column_names,
+                             output_kgtk_file,
+                             require_all_columns=True,
+                             prohibit_extra_columns=True,
+                             fill_missing_columns=False,
+                             gzip_in_parallel=False,
+                             mode=KgtkWriter.Mode[kr.mode.name],
+                             output_format=output_format,
+                             verbose=verbose,
+                             very_verbose=very_verbose,
         )
 
         input_data_lines: int = 0
@@ -2427,14 +2430,20 @@ def run(input_file: KGTKFiles,
         if verbose:
             print("Read %d data lines from file %s" % (input_data_lines, input_kgtk_file), file=error_file, flush=True)
 
-        kw.close()
-        kr.close()
-
         return 0
 
     except SystemExit as e:
         raise KGTKException("Exit requested")
+
     except KGTKException as e:
         raise
+
     except Exception as e:
         raise KGTKException(str(e))
+
+    finally:
+        if kr is not None:
+            kr.close()
+
+        if kw is not None:
+            kw.close()
