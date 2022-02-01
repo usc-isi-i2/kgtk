@@ -94,6 +94,9 @@ def run(input_file: KGTKFiles,
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
 
+    kr: typing.Optional[KgtkReader] = None
+    ew: typing.Optional[KgtkWriter] = None
+
     try:
 
         # First create the KgtkReader.  It provides parameters used by the ID
@@ -102,34 +105,30 @@ def run(input_file: KGTKFiles,
         # the KgtkWriter.  Last, process the data stream.
 
         # Open the input file.
-        kr: KgtkReader =  KgtkReader.open(input_kgtk_file,
-                                          error_file=error_file,
-                                          options=reader_options,
-                                          value_options=value_options,
-                                          verbose=verbose,
-                                          very_verbose=very_verbose,
+        kr = KgtkReader.open(input_kgtk_file,
+                             error_file=error_file,
+                             options=reader_options,
+                             value_options=value_options,
+                             verbose=verbose,
+                             very_verbose=very_verbose,
         )
         
         # Create the ID builder.
         idb: KgtkIdBuilder = KgtkIdBuilder.new(kr, idbuilder_options)
 
         # Open the output file.
-        ew: KgtkWriter = KgtkWriter.open(idb.column_names,
-                                         output_kgtk_file,
-                                         mode=KgtkWriter.Mode[kr.mode.name],
-                                         require_all_columns=True,
-                                         prohibit_extra_columns=True,
-                                         fill_missing_columns=False,
-                                         gzip_in_parallel=False,
-                                         verbose=verbose,
-                                         very_verbose=very_verbose)
+        ew = KgtkWriter.open(idb.column_names,
+                             output_kgtk_file,
+                             mode=KgtkWriter.Mode[kr.mode.name],
+                             require_all_columns=True,
+                             prohibit_extra_columns=True,
+                             fill_missing_columns=False,
+                             gzip_in_parallel=False,
+                             verbose=verbose,
+                             very_verbose=very_verbose)
 
         # Process the input file, building IDs.
         idb.process(kr, ew)
-
-        # Clean up.
-        ew.close()
-        kr.close()
 
         return 0
 
@@ -137,4 +136,11 @@ def run(input_file: KGTKFiles,
         raise KGTKException("Exit requested")
     except Exception as e:
         raise KGTKException(str(e))
+
+    finally:
+        # Clean up.
+        if ew is not None:
+            ew.close()
+        if kr is not None:
+            kr.close()
 
