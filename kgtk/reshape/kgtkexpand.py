@@ -142,6 +142,7 @@ class KgtkExpand(KgtkFormat):
             print("Read %d records, wrote %d records." % (input_line_count, output_line_count), file=self.error_file, flush=True)
         
         ew.close()
+        kr.close()
 
 def main():
     """
