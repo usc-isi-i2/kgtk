@@ -785,6 +785,8 @@ class ExportWikidata(KgtkFormat):
 
         outfile.write("\n]\n")
         outfile.close()
+        er.close()
+        qr.close()
 
 def main():
     """
