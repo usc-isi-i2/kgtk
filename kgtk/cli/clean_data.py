@@ -137,6 +137,7 @@ def run(input_file: KGTKFiles,
         kw.close()
         if reject_kgtk_file is not None:
             reject_kgtk_file.close()
+        kr.close()
 
         if verbose:
             print("Copied %d clean data lines" % line_count, file=error_file, flush=True)
