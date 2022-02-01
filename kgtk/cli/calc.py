@@ -2428,6 +2428,7 @@ def run(input_file: KGTKFiles,
             print("Read %d data lines from file %s" % (input_data_lines, input_kgtk_file), file=error_file, flush=True)
 
         kw.close()
+        kr.close()
 
         return 0
 
@@ -2437,4 +2438,3 @@ def run(input_file: KGTKFiles,
         raise
     except Exception as e:
         raise KGTKException(str(e))
-
