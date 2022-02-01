@@ -189,3 +189,4 @@ class ConnectedComponents(KgtkFormat):
                 ew.write([name, 'connected_component', cluster_id])
 
         ew.close()
+        input_kr.close()
