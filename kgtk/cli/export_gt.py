@@ -1,8 +1,6 @@
 """
 Export a KGTK file to Graph-tool format.
 
-Note:  the log file wasn't coverted to the new filename parsingAPI.
-
 Note:  The input file is read twice: once for the header, and once for the
 data.  Thus, stdin cannot be used as the input file.
 
@@ -109,6 +107,7 @@ def run(input_file: KGTKFiles,
             raise KGTKException("Exiting due to missing columns.")
 
         G2 = load_graph_from_kgtk(kr, directed=not undirected, ecols=(sub, obj), verbose=verbose, out=error_file)
+        kr.close()
 
         if node_file is not None:
             kr_node: KgtkReader = KgtkReader.open(node_file,
@@ -134,6 +133,8 @@ def run(input_file: KGTKFiles,
             for col in kr_node.column_name_map:
                 if col != 'id':
                     G2.vertex_properties[col] = vprop_dict[col]
+
+            kr_node.close()
 
 
         if verbose:
