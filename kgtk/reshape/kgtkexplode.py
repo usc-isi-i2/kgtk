@@ -189,6 +189,7 @@ class KgtkExplode(KgtkFormat):
             print("Read %d records, wrote %d records." % (input_line_count, output_line_count), file=self.error_file, flush=True)
         
         ew.close()
+        kr.close()
 
     def explode(self, value: KgtkValue, row: typing.List[str], explosion: typing.Mapping[str, int], new_column_count: int)->typing.List[str]:
         newrow: typing.List[str] = row.copy()
