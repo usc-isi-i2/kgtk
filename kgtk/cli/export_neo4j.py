@@ -263,7 +263,11 @@ def add_arguments(parser):
 	parser.add_argument('-qe', '--qualifier_file_encoding', type=str, dest='qualifier_file_encoding', help="Encoding of the qualifier file, eg.: UTF-8", default="")
 
 
-def run(statement_file_path: str, qualifier_file_path: str, output_directory: str, statement_file_encoding: str, qualifier_file_encoding: str):
+def run(statement_file_path: str,
+        qualifier_file_path: str,
+        output_directory: str,
+        statement_file_encoding: str,
+        qualifier_file_encoding: str):
 	try:
 		graph = create_graph(statement_file_path, qualifier_file_path, statement_file_encoding, qualifier_file_encoding)
 		graph.serialize(output_directory)
