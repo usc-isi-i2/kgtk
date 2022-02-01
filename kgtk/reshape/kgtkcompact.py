@@ -316,6 +316,7 @@ class KgtkCompact(KgtkFormat):
                 key_idx_list.append(kr.id_column_idx)
 
             else:
+                kr.close()
                 raise ValueError("The input file is neither an edge nor a node file.  Key columns must be supplied.")
 
         else:
@@ -479,6 +480,7 @@ class KgtkCompact(KgtkFormat):
         ew.close()
         if lew is not None:
             lew.close()
+        kr.close()
 
 def main():
     """
