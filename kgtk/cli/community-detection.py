@@ -90,6 +90,9 @@ def run(input_file: KGTKFiles,
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
 
+    kr: typing.Optional[KgtkReader] = None
+    kw: typing.Optional[KgtkWriter] = None
+
     # Show the final option structures for debugging and documentation.
     try:
 
@@ -99,12 +102,12 @@ def run(input_file: KGTKFiles,
         # the KgtkWriter.  Last, process the data stream.
 
         # Open the input file.
-        kr: KgtkReader = KgtkReader.open(input_kgtk_file,
-                                          error_file=error_file,
-                                          options=reader_options,
-                                          value_options=value_options,
-                                          verbose=verbose,
-                                          very_verbose=very_verbose,
+        kr = KgtkReader.open(input_kgtk_file,
+                             error_file=error_file,
+                             options=reader_options,
+                             value_options=value_options,
+                             verbose=verbose,
+                             very_verbose=very_verbose,
         )
 
         g = Graph(directed=False)
@@ -136,11 +139,11 @@ def run(input_file: KGTKFiles,
             for i in range(0, len(nodes)):
                 arr.append('cluster_' + str(state.get_blocks()[i]))
 
-            kw: KgtkWriter = KgtkWriter.open(["node1", "label", "node2"],
-                                                 output_kgtk_file,
-                                                 verbose=verbose,
-                                                 very_verbose=very_verbose,
-                                     )
+            kw = KgtkWriter.open(["node1", "label", "node2"],
+                                 output_kgtk_file,
+                                 verbose=verbose,
+                                 very_verbose=very_verbose,
+                                 )
 
             for i in range(0, len(nodes)):
                 kw.write([nodes[i], 'in', arr[i]])
@@ -164,11 +167,11 @@ def run(input_file: KGTKFiles,
                     arr[i].pop()
                 arr[i] = 'cluster_' + '_'.join(arr[i])
 
-            kw: KgtkWriter = KgtkWriter.open(["node1", "label", "node2"],
-                                                 output_kgtk_file,
-                                                 verbose=verbose,
-                                                 very_verbose=very_verbose,
-                                     )
+            kw = KgtkWriter.open(["node1", "label", "node2"],
+                                 output_kgtk_file,
+                                 verbose=verbose,
+                                 very_verbose=very_verbose,
+                                 )
             for i in range(0, len(nodes)):
                 kw.write([nodes[i], 'in', arr[i]])
         elif method == 'mcmc':
@@ -199,22 +202,25 @@ def run(input_file: KGTKFiles,
             pv = list(pmode.get_marginal(g))
             m = list(pmode.get_max(g))
 
-            kw: KgtkWriter =\
-            KgtkWriter.open(["node1", "label", "node2", 'node2;prob'],
-                                                 output_kgtk_file,
-                                                 verbose=verbose,
-                                                 very_verbose=very_verbose,
-                                     )
+            kw = KgtkWriter.open(["node1", "label", "node2", 'node2;prob'],
+                                 output_kgtk_file,
+                                 verbose=verbose,
+                                 very_verbose=very_verbose,
+                                 )
 
             for i in range(0, len(nodes)):
                 kw.write([nodes[i], 'in',
                          'cluster_' + str(m[i]), str(pv[i][m[i]]/sum(pv[i]))])
 
-        kr.close()
-        kw.close()
         return 0
 
     except SystemExit as e:
         raise KGTKException("Exit requested")
     except Exception as e:
         raise KGTKException(str(e))
+
+    finally:
+        if kw is not None:
+            kw.close()
+        if kr is not None:
+            kr.close()

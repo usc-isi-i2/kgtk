@@ -271,216 +271,224 @@ class KgtkCompact(KgtkFormat):
 
     def process(self):
 
-        # Open the input file.
-        if self.verbose:
-            if self.input_file_path is not None:
-                print("Opening the input file: %s" % self.input_file_path, file=self.error_file, flush=True)
+        kr: typing.Optional[KgtkReader] = None
+        ew: typing.Optional[KgtkWriter] = None
+        lew: typing.Optional[KgtkWriter] = None
+
+        try:
+
+            # Open the input file.
+            if self.verbose:
+                if self.input_file_path is not None:
+                    print("Opening the input file: %s" % self.input_file_path, file=self.error_file, flush=True)
+                else:
+                    print("Reading the input data from stdin", file=self.error_file, flush=True)
+
+            kr = KgtkReader.open(self.input_file_path,
+                                 error_file=self.error_file,
+                                 options=self.reader_options,
+                                 value_options = self.value_options,
+                                 verbose=self.verbose,
+                                 very_verbose=self.very_verbose,
+                                 )
+            self.id_column_idx = kr.id_column_idx
+
+            # If requested, create the ID column builder.
+            # Assemble the list of output column names.
+            output_column_names: typing.List[str]
+            idb: typing.Optional[KgtkIdBuilder] = None
+            if self.build_id:
+                if self.idbuilder_options is None:
+                    raise ValueError("ID build requested but ID builder options are missing")
+                idb = KgtkIdBuilder.new(kr, self.idbuilder_options)
+                output_column_names = idb.column_names
             else:
-                print("Reading the input data from stdin", file=self.error_file, flush=True)
+                output_column_names = kr.column_names
 
-        kr: KgtkReader =  KgtkReader.open(self.input_file_path,
-                                          error_file=self.error_file,
-                                          options=self.reader_options,
-                                          value_options = self.value_options,
-                                          verbose=self.verbose,
-                                          very_verbose=self.very_verbose,
-        )
-        self.id_column_idx = kr.id_column_idx
+            # Build the list of key column edges:
+            key_idx_list: typing.List[int] = [ ]
 
-        # If requested, create the ID column builder.
-        # Assemble the list of output column names.
-        output_column_names: typing.List[str]
-        idb: typing.Optional[KgtkIdBuilder] = None
-        if self.build_id:
-            if self.idbuilder_options is None:
-                raise ValueError("ID build requested but ID builder options are missing")
-            idb = KgtkIdBuilder.new(kr, self.idbuilder_options)
-            output_column_names = idb.column_names
-        else:
-            output_column_names = kr.column_names
+            if len(self.key_column_names) == 0:
+                if kr.is_edge_file:
+                    # Add the KGTK edge file required columns.
+                    key_idx_list.append(kr.node1_column_idx)
+                    key_idx_list.append(kr.label_column_idx)
+                    key_idx_list.append(kr.node2_column_idx)
+                    if not self.compact_id and kr.id_column_idx >= 0:
+                        key_idx_list.append(kr.id_column_idx)
 
-        # Build the list of key column edges:
-        key_idx_list: typing.List[int] = [ ]
-
-        if len(self.key_column_names) == 0:
-            if kr.is_edge_file:
-                # Add the KGTK edge file required columns.
-                key_idx_list.append(kr.node1_column_idx)
-                key_idx_list.append(kr.label_column_idx)
-                key_idx_list.append(kr.node2_column_idx)
-                if not self.compact_id and kr.id_column_idx >= 0:
+                elif kr.is_node_file:
+                    # Add the KGTK node file required column:
                     key_idx_list.append(kr.id_column_idx)
 
-            elif kr.is_node_file:
-                # Add the KGTK node file required column:
-                key_idx_list.append(kr.id_column_idx)
+                else:
+                    kr.close()
+                    raise ValueError("The input file is neither an edge nor a node file.  Key columns must be supplied.")
 
             else:
-                kr.close()
-                raise ValueError("The input file is neither an edge nor a node file.  Key columns must be supplied.")
-
-        else:
-            # Append columns to the list of key column indices,
-            # silently removing duplicates, but complaining about unknown names.
-            #
-            # TODO: warn about duplicates?
-            column_name: str
-            for column_name in self.key_column_names:
-                if column_name not in kr.column_name_map:
-                    raise ValueError("Column %s is not in the input file" % (repr(column_name)))
-                key_idx: int = kr.column_name_map[column_name]
-                if key_idx not in key_idx_list:
-                    key_idx_list.append(key_idx)
-
-        if self.verbose:
-            print("key indexes: %s" % " ".join([str(idx) for idx in key_idx_list]), file=self.error_file, flush=True)
-
-        self.keep_first_idx_list.clear()
-        if len(self.keep_first_names) > 0:
-            keep_first_name: str
-            for keep_first_name in self.keep_first_names:
-                if keep_first_name not in kr.column_name_map:
-                    raise ValueError("Keep first column %s is not in the input file" % (repr(keep_first_name)))
-                keep_first_idx: int = kr.column_name_map[keep_first_name]
-                if keep_first_idx in key_idx_list:
-                    raise ValueError("Keep first column %s may not be a key column" % (repr(keep_first_name)))
-                self.keep_first_idx_list.append(keep_first_idx)
-            if self.verbose:
-                print("keep first indexes: %s" % " ".join([str(idx) for idx in self.keep_first_idx_list]), file=self.error_file, flush=True)
-
-        if self.deduplicate:
-            if  self.compact_id and kr.id_column_idx >= 0 and kr.id_column_idx not in self.keep_first_idx_list:
-                self.keep_first_idx_list.append(kr.id_column_idx)
-
-            # Any columns that aren't in the keep_first list and aren't
-            # already in key_idx_list will be appended to key_idx_list:
-            idx: int
-            for idx in range(kr.column_count):
-                if idx not in self.keep_first_idx_list and idx not in key_idx_list:
-                    key_idx_list.append(idx)
+                # Append columns to the list of key column indices,
+                # silently removing duplicates, but complaining about unknown names.
+                #
+                # TODO: warn about duplicates?
+                column_name: str
+                for column_name in self.key_column_names:
+                    if column_name not in kr.column_name_map:
+                        raise ValueError("Column %s is not in the input file" % (repr(column_name)))
+                    key_idx: int = kr.column_name_map[column_name]
+                    if key_idx not in key_idx_list:
+                        key_idx_list.append(key_idx)
 
             if self.verbose:
-                print("revised key indexes: %s" % " ".join([str(idx) for idx in key_idx_list]), file=self.error_file, flush=True)
+                print("key indexes: %s" % " ".join([str(idx) for idx in key_idx_list]), file=self.error_file, flush=True)
 
-            
-        if self.verbose:
-            key_idx_list_str: typing.List[str] = [ ]
-            for key_idx in key_idx_list:
-                key_idx_list_str.append(str(key_idx))
-            print("key indexes: %s" % " ".join(key_idx_list_str), file=self.error_file, flush=True)
+            self.keep_first_idx_list.clear()
+            if len(self.keep_first_names) > 0:
+                keep_first_name: str
+                for keep_first_name in self.keep_first_names:
+                    if keep_first_name not in kr.column_name_map:
+                        raise ValueError("Keep first column %s is not in the input file" % (repr(keep_first_name)))
+                    keep_first_idx: int = kr.column_name_map[keep_first_name]
+                    if keep_first_idx in key_idx_list:
+                        raise ValueError("Keep first column %s may not be a key column" % (repr(keep_first_name)))
+                    self.keep_first_idx_list.append(keep_first_idx)
+                if self.verbose:
+                    print("keep first indexes: %s" % " ".join([str(idx) for idx in self.keep_first_idx_list]), file=self.error_file, flush=True)
 
-        # Open the output file.
-        ew: KgtkWriter = KgtkWriter.open(output_column_names,
-                                         self.output_file_path,
-                                         mode=kr.mode,
-                                         require_all_columns=False,
-                                         prohibit_extra_columns=True,
-                                         fill_missing_columns=True,
-                                         use_mgzip=self.reader_options.use_mgzip, # Hack!
-                                         mgzip_threads=self.reader_options.mgzip_threads, # Hack!
-                                         gzip_in_parallel=False,
-                                         verbose=self.verbose,
-                                         very_verbose=self.very_verbose)        
+            if self.deduplicate:
+                if  self.compact_id and kr.id_column_idx >= 0 and kr.id_column_idx not in self.keep_first_idx_list:
+                    self.keep_first_idx_list.append(kr.id_column_idx)
 
-        # Open the optional list output file.
-        lew: typing.Optional[KgtkWriter] = None
-        if self.list_output_file_path is not None:
-            lew = KgtkWriter.open(output_column_names,
-                                  self.list_output_file_path,
-                                  mode=kr.mode,
-                                  require_all_columns=False,
-                                  prohibit_extra_columns=True,
-                                  fill_missing_columns=True,
-                                  use_mgzip=self.reader_options.use_mgzip, # Hack!
-                                  mgzip_threads=self.reader_options.mgzip_threads, # Hack!
-                                  gzip_in_parallel=False,
-                                  verbose=self.verbose,
-                                  very_verbose=self.very_verbose)        
+                # Any columns that aren't in the keep_first list and aren't
+                # already in key_idx_list will be appended to key_idx_list:
+                idx: int
+                for idx in range(kr.column_count):
+                    if idx not in self.keep_first_idx_list and idx not in key_idx_list:
+                        key_idx_list.append(idx)
 
-        input_line_count: int = 0
-        row: typing.List[str] = [ ]
-        input_key: str
-        prev_input_key: typing.Optional[str] = None
-        going_up: typing.Optional[bool] = None
-        if self.sorted_input:
+                if self.verbose:
+                    print("revised key indexes: %s" % " ".join([str(idx) for idx in key_idx_list]), file=self.error_file, flush=True)
+
+
             if self.verbose:
-                print("Reading the input data from %s" % self.input_file_path, file=self.error_file, flush=True)
-            for row in kr:
-                input_line_count += 1
-                input_key = self.build_key(row, key_idx_list)
-                if self.verify_sort:
-                    if prev_input_key is None:
-                        prev_input_key = input_key
-                    else:
-                        if going_up is None:
-                            if prev_input_key < input_key:
-                                going_up = True
-                                prev_input_key = input_key
-                            elif prev_input_key > input_key:
-                                going_up = False
-                                prev_input_key = input_key
-                            else:
-                                pass # No change in input key
-                        elif going_up:
-                            if prev_input_key < input_key:
-                                prev_input_key = input_key
-                            elif prev_input_key > input_key:
-                                raise ValueError("Line %d sort violation going up: prev='%s' curr='%s'" % (input_line_count,
-                                                                                                           prev_input_key.replace(self.field_separator, KgtkFormat.LIST_SEPARATOR),
-                                                                                                           input_key.replace(self.field_separator, KgtkFormat.LIST_SEPARATOR)))
-                            else:
-                                pass # No change in input_key
+                key_idx_list_str: typing.List[str] = [ ]
+                for key_idx in key_idx_list:
+                    key_idx_list_str.append(str(key_idx))
+                print("key indexes: %s" % " ".join(key_idx_list_str), file=self.error_file, flush=True)
+
+            # Open the output file.
+            ew = KgtkWriter.open(output_column_names,
+                                 self.output_file_path,
+                                 mode=kr.mode,
+                                 require_all_columns=False,
+                                 prohibit_extra_columns=True,
+                                 fill_missing_columns=True,
+                                 use_mgzip=self.reader_options.use_mgzip, # Hack!
+                                 mgzip_threads=self.reader_options.mgzip_threads, # Hack!
+                                 gzip_in_parallel=False,
+                                 verbose=self.verbose,
+                                 very_verbose=self.very_verbose)        
+
+            # Open the optional list output file.
+            if self.list_output_file_path is not None:
+                lew = KgtkWriter.open(output_column_names,
+                                      self.list_output_file_path,
+                                      mode=kr.mode,
+                                      require_all_columns=False,
+                                      prohibit_extra_columns=True,
+                                      fill_missing_columns=True,
+                                      use_mgzip=self.reader_options.use_mgzip, # Hack!
+                                      mgzip_threads=self.reader_options.mgzip_threads, # Hack!
+                                      gzip_in_parallel=False,
+                                      verbose=self.verbose,
+                                      very_verbose=self.very_verbose)        
+
+            input_line_count: int = 0
+            row: typing.List[str] = [ ]
+            input_key: str
+            prev_input_key: typing.Optional[str] = None
+            going_up: typing.Optional[bool] = None
+            if self.sorted_input:
+                if self.verbose:
+                    print("Reading the input data from %s" % self.input_file_path, file=self.error_file, flush=True)
+                for row in kr:
+                    input_line_count += 1
+                    input_key = self.build_key(row, key_idx_list)
+                    if self.verify_sort:
+                        if prev_input_key is None:
+                            prev_input_key = input_key
                         else:
-                            if prev_input_key > input_key:
-                                prev_input_key = input_key
-                            elif prev_input_key < input_key:
-                                raise ValueError("Line %d sort violation going down: prev='%s' curr='%s'" % (input_line_count,
-                                                                                                             prev_input_key.replace(self.field_separator, KgtkFormat.LIST_SEPARATOR),
-                                                                                                             input_key.replace(self.field_separator, KgtkFormat.LIST_SEPARATOR)))
+                            if going_up is None:
+                                if prev_input_key < input_key:
+                                    going_up = True
+                                    prev_input_key = input_key
+                                elif prev_input_key > input_key:
+                                    going_up = False
+                                    prev_input_key = input_key
+                                else:
+                                    pass # No change in input key
+                            elif going_up:
+                                if prev_input_key < input_key:
+                                    prev_input_key = input_key
+                                elif prev_input_key > input_key:
+                                    raise ValueError("Line %d sort violation going up: prev='%s' curr='%s'" % (input_line_count,
+                                                                                                               prev_input_key.replace(self.field_separator, KgtkFormat.LIST_SEPARATOR),
+                                                                                                               input_key.replace(self.field_separator, KgtkFormat.LIST_SEPARATOR)))
+                                else:
+                                    pass # No change in input_key
                             else:
-                                pass # No change in input_key
-                            
-                self.process_row(input_key, row, input_line_count, idb, ew, lew)
-            
-        else:
-            if self.verbose:
-                print("Sorting the input data from %s" % self.input_file_path, file=self.error_file, flush=True)
-            # Map key values to lists of input and output data.
-            input_map: typing.MutableMapping[str, typing.List[typing.List[str]]] = { }
+                                if prev_input_key > input_key:
+                                    prev_input_key = input_key
+                                elif prev_input_key < input_key:
+                                    raise ValueError("Line %d sort violation going down: prev='%s' curr='%s'" % (input_line_count,
+                                                                                                                 prev_input_key.replace(self.field_separator, KgtkFormat.LIST_SEPARATOR),
+                                                                                                                 input_key.replace(self.field_separator, KgtkFormat.LIST_SEPARATOR)))
+                                else:
+                                    pass # No change in input_key
 
-            for row in kr:
-                input_line_count += 1
-                input_key = self.build_key(row, key_idx_list)
-                if input_key in input_map:
-                    # Append the row to an existing list for that key.
-                    input_map[input_key].append(row)
-                else:
-                    # Create a new list of rows for this key.
-                    input_map[input_key] = [ row ]
-
-            if self.verbose:
-                print("Processing the sorted input data", file=self.error_file, flush=True)
-            
-            for input_key in sorted(input_map.keys()):
-                for row in input_map[input_key]:
                     self.process_row(input_key, row, input_line_count, idb, ew, lew)
 
-        # Flush the final row, if any.  We pass the last row read for
-        # feedback, such as an ID uniqueness violation.
-        self.process_row("", row, input_line_count, idb, ew, lew, flush=True)
-        
-        if self.verbose:
-            print("Read %d records, excluded %d records, wrote %d records." % (input_line_count,
-                                                                               self.excluded_row_count,
-                                                                               self.output_line_count),
-                  file=self.error_file, flush=True)
+            else:
+                if self.verbose:
+                    print("Sorting the input data from %s" % self.input_file_path, file=self.error_file, flush=True)
+                # Map key values to lists of input and output data.
+                input_map: typing.MutableMapping[str, typing.List[typing.List[str]]] = { }
+
+                for row in kr:
+                    input_line_count += 1
+                    input_key = self.build_key(row, key_idx_list)
+                    if input_key in input_map:
+                        # Append the row to an existing list for that key.
+                        input_map[input_key].append(row)
+                    else:
+                        # Create a new list of rows for this key.
+                        input_map[input_key] = [ row ]
+
+                if self.verbose:
+                    print("Processing the sorted input data", file=self.error_file, flush=True)
+
+                for input_key in sorted(input_map.keys()):
+                    for row in input_map[input_key]:
+                        self.process_row(input_key, row, input_line_count, idb, ew, lew)
+
+            # Flush the final row, if any.  We pass the last row read for
+            # feedback, such as an ID uniqueness violation.
+            self.process_row("", row, input_line_count, idb, ew, lew, flush=True)
+
+            if self.verbose:
+                print("Read %d records, excluded %d records, wrote %d records." % (input_line_count,
+                                                                                   self.excluded_row_count,
+                                                                                   self.output_line_count),
+                      file=self.error_file, flush=True)
+                if lew is not None:
+                    print("Wrote %d list ouput records." % (self.list_output_line_count), file=self.error_file, flush=True)
+
+        finally:
+            if ew is not None:
+                ew.close()
             if lew is not None:
-                print("Wrote %d list ouput records." % (self.list_output_line_count), file=self.error_file, flush=True)
-        
-        ew.close()
-        if lew is not None:
-            lew.close()
-        kr.close()
+                lew.close()
+            if kr is not None:
+                kr.close()
 
 def main():
     """
