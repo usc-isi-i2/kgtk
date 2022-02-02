@@ -102,93 +102,103 @@ def run(input_file: KGTKFiles,
     from gzip import GzipFile
     print("Processing.", file=sys.stderr, flush=True)
 
-    # Open the input file first to make it easier to monitor with "pv".
-    input_f: typing.Union[GzipFile, typing.IO[typing.Any]]
-    if str(in_path) == "-":
-        print('Processing wikidata from standard input', file=sys.stderr, flush=True)
-        # It is not well documented, but this is how you read binary data
-        # from stdin in Python 3.
-        input_f = sys.stdin.buffer
+    input_f: typing.Union[GzipFile, typing.IO[typing.Any], None] = None
+    output_f: typing.Union[GzipFile, typing.IO[typing.Any], None] = None
 
-    else:
-        print('Processing wikidata file %s' % str(in_path), file=sys.stderr, flush=True)
-        input_f = open(in_path, mode='rb')
-            
-        if str(in_path).endswith(".bz2"):
-            import bz2
-            print('Decompressing (bz2)', file=sys.stderr, flush=True)
-            # TODO: Optionally use a system decompression program.
-            input_f = bz2.open(input_f)
+    try:
 
-        elif str(in_path).endswith(".gz"):
-            # TODO: Optionally use a system decompression program.
-            if use_mgzip_for_input:
-                import mgzip
-                print('Decompressing (mgzip)', file=sys.stderr, flush=True)
-                input_f = mgzip.open(input_f, thread=mgzip_threads_for_input)
-            else:
-                import gzip
-                print('Decompressing (gzip)', file=sys.stderr, flush=True)
-                input_f = gzip.open(input_f)
+        # Open the input file first to make it easier to monitor with "pv".
+        if str(in_path) == "-":
+            print('Processing wikidata from standard input', file=sys.stderr, flush=True)
+            # It is not well documented, but this is how you read binary data
+            # from stdin in Python 3.
+            input_f = sys.stdin.buffer
 
-    # Open the input file first to make it easier to monitor with "pv".
-    output_f: typing.Union[GzipFile, typing.IO[typing.Any]]
-    if str(out_path) == "-":
-        print('Sending wikidata JSON to standatd output', file=sys.stderr, flush=True)
-        # It is not well documented, but this is how you write binary data
-        # from stdin in Python 3.
-        output_f = sys.stdout.buffer
+        else:
+            print('Processing wikidata file %s' % str(in_path), file=sys.stderr, flush=True)
+            input_f = open(in_path, mode='rb')
 
-    else:
-        print('Writing wikidata file %s' % str(out_path), file=sys.stderr, flush=True)
-        output_f = open(out_path, mode='wb')
-            
-        if str(out_path).endswith(".bz2"):
-            import bz2
-            print('Compressing (bz2)', file=sys.stderr, flush=True)
-            # TODO: Optionally use a system decompression program.
-            output_f = bz2.open(output_f, "wb")
+            if str(in_path).endswith(".bz2"):
+                import bz2
+                print('Decompressing (bz2)', file=sys.stderr, flush=True)
+                # TODO: Optionally use a system decompression program.
+                input_f = bz2.open(input_f)
 
-        elif str(out_path).endswith(".gz"):
-            # TODO: Optionally use a compression program.
-            if use_mgzip_for_output:
-                import mgzip
-                print('Compressing (mgzip)', file=sys.stderr, flush=True)
-                output_f = mgzip.open(output_f, "wb", thread=mgzip_threads_for_output)
-            else:
-                import gzip
-                print('Compressing (gzip)', file=sys.stderr, flush=True)
-                output_f = gzip.open(output_f, "wb")
-
-    entity_id_set: typing.Set[str] = set(entity_ids)
-
-    output_count: int = 0
-    input_count: int
-    line: bytes
-    for input_count, line in enumerate(input_f):
-        if input_limit and input_count >= input_limit:
-            break
-        clean_line = line.strip()
-        if clean_line.endswith(b","):
-            clean_line = clean_line[:-1]
-        if len(clean_line) > 1:
-            obj = json.loads(clean_line)
-            entity = obj["id"]
-            if entity in entity_id_set:
-                if output_count == 0:
-                    output_f.write(b"[\n")
+            elif str(in_path).endswith(".gz"):
+                # TODO: Optionally use a system decompression program.
+                if use_mgzip_for_input:
+                    import mgzip
+                    print('Decompressing (mgzip)', file=sys.stderr, flush=True)
+                    input_f = mgzip.open(input_f, thread=mgzip_threads_for_input)
                 else:
-                    output_f.write(b",\n")
-                output_f.write(clean_line)
-                output_count += 1
-                if output_limit is not None and output_count >= output_limit:
-                    break
-            
-    print('Done processing {}'.format(str(in_path)), file=sys.stderr, flush=True)
-    input_f.close()
+                    import gzip
+                    print('Decompressing (gzip)', file=sys.stderr, flush=True)
+                    input_f = gzip.open(input_f)
 
-    if output_count > 0:
-        output_f.write(b"\n]\n")
-    output_f.close()
-   
-    print('Wrote {} records'.format(output_count), file=sys.stderr, flush=True)
+        # Open the input file first to make it easier to monitor with "pv".
+        if str(out_path) == "-":
+            print('Sending wikidata JSON to standatd output', file=sys.stderr, flush=True)
+            # It is not well documented, but this is how you write binary data
+            # to stdout in Python 3.
+            output_f = sys.stdout.buffer
+
+        else:
+            print('Writing wikidata file %s' % str(out_path), file=sys.stderr, flush=True)
+            output_f = open(out_path, mode='wb')
+
+            if str(out_path).endswith(".bz2"):
+                import bz2
+                print('Compressing (bz2)', file=sys.stderr, flush=True)
+                # TODO: Optionally use a system decompression program.
+                output_f = bz2.open(output_f, "wb")
+
+            elif str(out_path).endswith(".gz"):
+                # TODO: Optionally use a compression program.
+                if use_mgzip_for_output:
+                    import mgzip
+                    print('Compressing (mgzip)', file=sys.stderr, flush=True)
+                    output_f = mgzip.open(output_f, "wb", thread=mgzip_threads_for_output)
+                else:
+                    import gzip
+                    print('Compressing (gzip)', file=sys.stderr, flush=True)
+                    output_f = gzip.open(output_f, "wb")
+
+        entity_id_set: typing.Set[str] = set(entity_ids)
+
+        output_count: int = 0
+        input_count: int
+        line: bytes
+        for input_count, line in enumerate(input_f):
+            if input_limit and input_count >= input_limit:
+                break
+            clean_line = line.strip()
+            if clean_line.endswith(b","):
+                clean_line = clean_line[:-1]
+            if len(clean_line) > 1:
+                obj = json.loads(clean_line)
+                entity = obj["id"]
+                if entity in entity_id_set:
+                    if output_count == 0:
+                        output_f.write(b"[\n")
+                    else:
+                        output_f.write(b",\n")
+                    output_f.write(clean_line)
+                    output_count += 1
+                    if output_limit is not None and output_count >= output_limit:
+                        break
+
+        print('Done processing {}'.format(str(in_path)), file=sys.stderr, flush=True)
+
+        if output_count > 0:
+            output_f.write(b"\n]\n")
+
+        print('Wrote {} records'.format(output_count), file=sys.stderr, flush=True)
+
+    finally:
+        if output_f is not None:
+            output_f.close()
+
+        if input_f is not None:
+            input_f.close()
+
+        
