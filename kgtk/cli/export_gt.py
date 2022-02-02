@@ -73,6 +73,9 @@ def run(input_file: KGTKFiles,
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
+    kr: typing.Optional[KgtkReader] = None
+    kr_node: typing.Optional[KgtkReader] = None
+
     try:
         # Select where to send error messages, defaulting to stderr.
         error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
@@ -86,13 +89,13 @@ def run(input_file: KGTKFiles,
 
         if verbose:
             print('loading the KGTK input file...\n', file=error_file, flush=True)
-        kr: KgtkReader = KgtkReader.open(input_kgtk_file,
-                                         error_file=error_file,
-                                         options=reader_options,
-                                         value_options=value_options,
-                                         verbose=verbose,
-                                         very_verbose=very_verbose,
-                                         )
+        kr = KgtkReader.open(input_kgtk_file,
+                             error_file=error_file,
+                             options=reader_options,
+                             value_options=value_options,
+                             verbose=verbose,
+                             very_verbose=very_verbose,
+                             )
         sub: int = kr.get_node1_column_index()
         if sub < 0:
             print("Missing node1 (subject) column.", file=error_file, flush=True)
@@ -103,20 +106,20 @@ def run(input_file: KGTKFiles,
         if obj < 0:
             print("Missing node2 (object) column", file=error_file, flush=True)
         if sub < 0 or pred < 0 or obj < 0:
-            kr.close()
             raise KGTKException("Exiting due to missing columns.")
 
         G2 = load_graph_from_kgtk(kr, directed=not undirected, ecols=(sub, obj), verbose=verbose, out=error_file)
         kr.close()
+        kr = None
 
         if node_file is not None:
-            kr_node: KgtkReader = KgtkReader.open(node_file,
-                                                  error_file=error_file,
-                                                  options=reader_options,
-                                                  value_options=value_options,
-                                                  verbose=verbose,
-                                                  very_verbose=very_verbose,
-                                                  )
+            kr_node = KgtkReader.open(node_file,
+                                      error_file=error_file,
+                                      options=reader_options,
+                                      value_options=value_options,
+                                      verbose=verbose,
+                                      very_verbose=very_verbose,
+                                      )
             d = {}
             for i in range(0, len(list(G2.vp['name']))):
                 d[G2.vp['name'][i]] = i
@@ -135,6 +138,7 @@ def run(input_file: KGTKFiles,
                     G2.vertex_properties[col] = vprop_dict[col]
 
             kr_node.close()
+            kr_node = None
 
 
         if verbose:
@@ -151,3 +155,9 @@ def run(input_file: KGTKFiles,
                 print('Done saving the graph.', file=error_file, flush=True)
     except Exception as e:
         raise KGTKException('Error: ' + str(e))
+
+    finally:
+        if kr is not None:
+            kr.close()
+        if kr_node is not None:
+            kr_node.close()
