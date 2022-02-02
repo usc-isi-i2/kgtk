@@ -5,15 +5,8 @@ Generate graph embedding based on Pytorch BigGraph library
 
 from argparse import Namespace
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
-from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
-from kgtk.io.kgtkwriter import KgtkWriter
-from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 import attr
-import typing
 from kgtk.kgtkformat import KgtkFormat
-from pathlib import Path
-import sys
-import logging
 import os
 
 # remove the Issue: Initializing libiomp5.dylib, but found libiomp5.dylib already initialized.
@@ -22,6 +15,14 @@ os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 @attr.s(slots=True, frozen=False)
 class KgtkCreateTmpTsv(KgtkFormat):
+    from pathlib import Path
+    import sys
+    import typing
+    
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkwriter import KgtkWriter
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
+
     input_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
     output_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
 
@@ -33,52 +34,61 @@ class KgtkCreateTmpTsv(KgtkFormat):
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     def process(self):
-        # Open the input file.
-        if self.verbose:
-            print("Opening the input file: %s" % str(self.input_file_path), file=self.error_file, flush=True)
+        kr: typing.Optional[Kgtkreader] = None
+        kw: typing.Optional[KgtkWriter] = None
 
-        kr: KgtkReader = KgtkReader.open(self.input_file_path,
-                                         error_file=self.error_file,
-                                         options=self.reader_options,
-                                         value_options=self.value_options,
-                                         verbose=self.verbose,
-                                         very_verbose=self.very_verbose,
-                                         )
+        try:
+            # Open the input file.
+            if self.verbose:
+                print("Opening the input file: %s" % str(self.input_file_path), file=self.error_file, flush=True)
 
-        if self.verbose:
-            print("Opening the output file: %s" % str(self.output_file_path), file=self.error_file, flush=True)
+            kr = KgtkReader.open(self.input_file_path,
+                                 error_file=self.error_file,
+                                 options=self.reader_options,
+                                 value_options=self.value_options,
+                                 verbose=self.verbose,
+                                 very_verbose=self.very_verbose,
+                                 )
 
-        # Open the output file.
-        kw: KgtkWriter = KgtkWriter.open(kr.column_names,
-                                         self.output_file_path,
-                                         mode=KgtkWriter.Mode[kr.mode.name],
-                                         require_all_columns=False,
-                                         prohibit_extra_columns=True,
-                                         fill_missing_columns=False,
-                                         gzip_in_parallel=False,
-                                         verbose=self.verbose,
-                                         very_verbose=self.very_verbose)
-        # here kw has one line already where PBG doesn't need it,
+            if self.verbose:
+                print("Opening the output file: %s" % str(self.output_file_path), file=self.error_file, flush=True)
 
-        input_line_count: int = 0
-        if self.verbose:
-            print("Processing the input records.", file=self.error_file, flush=True)
+            # Open the output file.
+            kw = KgtkWriter.open(kr.column_names,
+                                 self.output_file_path,
+                                 mode=KgtkWriter.Mode[kr.mode.name],
+                                 require_all_columns=False,
+                                 prohibit_extra_columns=True,
+                                 fill_missing_columns=False,
+                                 gzip_in_parallel=False,
+                                 verbose=self.verbose,
+                                 very_verbose=self.very_verbose)
+            # here kw has one line already where PBG doesn't need it,
 
-        # node1 relation node2
-        node1_index = kr.get_node1_column_index()
-        node2_index = kr.get_node2_column_index()
-        relation_index = kr.get_label_column_index()
+            input_line_count: int = 0
+            if self.verbose:
+                print("Processing the input records.", file=self.error_file, flush=True)
 
-        row: typing.List[str]
+            # node1 relation node2
+            node1_index: int = kr.get_node1_column_index()
+            node2_index: int = kr.get_node2_column_index()
+            relation_index: int = kr.get_label_column_index()
 
-        for row in kr:
-            input_line_count += 1
-            kw.write([row[node1_index], row[relation_index], row[node2_index]])
+            row: typing.List[str]
 
-        if self.verbose:
-            print("Processed %d records." % input_line_count, file=self.error_file, flush=True)
+            for row in kr:
+                input_line_count += 1
+                kw.write([row[node1_index], row[relation_index], row[node2_index]])
 
-        kw.close()
+            if self.verbose:
+                print("Processed %d records." % input_line_count, file=self.error_file, flush=True)
+
+        finally:
+            if kw is not None:
+                kw.close()
+
+            if kr is not None:
+                kr.close()
 
 
 def get_config(**kwargs):
@@ -236,6 +246,7 @@ def config_preprocess(raw_config):
     learning_rate: 0.01
     operator:complex_diagonal
     '''
+    import sys
 
     algorithm_operator = {"complex": "complex_diagonal",
                           "distmult": "diagonal",
@@ -287,36 +298,39 @@ def config_preprocess(raw_config):
 
 # convert wv format to kgtk format ..
 def generate_kgtk_output(entities_output, output_kgtk_file, output_no_header, verbose, very_verbose, error_file):
+    import logging
     # Open the output file.
-    kw: KgtkWriter = KgtkWriter.open(
-        ['node1', 'label', 'node2'],
-        output_kgtk_file,
-        mode=KgtkWriter.Mode.AUTO,
-        require_all_columns=False,
-        prohibit_extra_columns=False,
-        fill_missing_columns=False,
-        gzip_in_parallel=False,
-        no_header=output_no_header,
-        verbose=verbose,
-        very_verbose=very_verbose)
+    kw: KgtkWriter = KgtkWriter.open(['node1', 'label', 'node2'],
+                                     output_kgtk_file,
+                                     mode=KgtkWriter.Mode.AUTO,
+                                     require_all_columns=False,
+                                     prohibit_extra_columns=False,
+                                     fill_missing_columns=False,
+                                     gzip_in_parallel=False,
+                                     no_header=output_no_header,
+                                     verbose=verbose,
+                                     very_verbose=very_verbose)
 
-    input_line_count: int = 0
-    if verbose:
-        logging.info("Processing the input records.", file=error_file, flush=True)
+    try:
 
-    MODULE_NAME = 'graph_embeddings'  # __name__.split('.')[-1]
-    with open(entities_output) as wv_file:
-        for line in wv_file:
-            vals = line.strip().split('\t')
-            entity_name = vals[0]
-            entity_vev = ','.join(vals[1:])
-            input_line_count += 1
-            kw.write([entity_name, MODULE_NAME, entity_vev])
+        input_line_count: int = 0
+        if verbose:
+            logging.info("Processing the input records.", file=error_file, flush=True)
 
-    if verbose:
-        logging.info("Processed %d records." % (input_line_count), file=error_file, flush=True)
+        MODULE_NAME = 'graph_embeddings'  # __name__.split('.')[-1]
+        with open(entities_output) as wv_file:
+            for line in wv_file:
+                vals = line.strip().split('\t')
+                entity_name = vals[0]
+                entity_vev = ','.join(vals[1:])
+                input_line_count += 1
+                kw.write([entity_name, MODULE_NAME, entity_vev])
 
-    kw.close()
+        if verbose:
+            logging.info("Processed %d records." % (input_line_count), file=error_file, flush=True)
+
+    finally:
+        kw.close()
 
 
 def generate_w2v_output(entities_output, output_kgtk_file, kwargs):
