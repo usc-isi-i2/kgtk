@@ -143,18 +143,21 @@ def run(input_file: KGTKFiles,
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
 
+    kr: typing.Optional[KgtkReader] = None
+    kw: typing.Optional[KgtkWriter] = None
+
     # Prepare to catch SystemExit and Exception.
     try:
         
         # Open the primary input file:
         if verbose:
             print("Opening the input file %s" % str(input_kgtk_file), file=error_file, flush=True)
-        kr: KgtkReader = KgtkReader.open(input_kgtk_file,
-                                         options=reader_options,
-                                         value_options = value_options,
-                                         error_file=error_file,
-                                         verbose=verbose,
-                                         very_verbose=very_verbose,
+        kr = KgtkReader.open(input_kgtk_file,
+                             options=reader_options,
+                             value_options = value_options,
+                             error_file=error_file,
+                             verbose=verbose,
+                             very_verbose=very_verbose,
         )
 
         # We have two execution paths, depending on count_records:
@@ -178,10 +181,10 @@ def run(input_file: KGTKFiles,
             # Open a KgtkWriter file for the primary output file:
             if verbose:
                 print("Opening the output file %s" % str(output_kgtk_file), file=error_file, flush=True)
-            kw: KgtkWriter = KgtkWriter.open(["node1", "label", "node2" ],
-                                             output_kgtk_file,
-                                             verbose=verbose,
-                                             very_verbose=very_verbose,
+            kw = KgtkWriter.open(["node1", "label", "node2" ],
+                                 output_kgtk_file,
+                                 verbose=verbose,
+                                 very_verbose=very_verbose,
                                  )
             # Count the number of non-empty cells for each column:
             record_counts: typing.List[int] = [ 0 for idx in range(kr.column_count) ]
@@ -200,11 +203,16 @@ def run(input_file: KGTKFiles,
             # Close the primary output file.
             kw.close()            
 
-        # Close the primary input file.
-        kr.close()
         return 0
 
     except SystemExit as e:
         raise KGTKException("Exit requested")
     except Exception as e:
         raise KGTKException(str(e))
+
+    finally:
+        # Close the KGTK files:
+        if kr is not None:
+            kr.close()
+        if kw is not None:
+            kw.close()

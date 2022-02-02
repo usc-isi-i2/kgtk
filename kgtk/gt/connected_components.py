@@ -130,63 +130,70 @@ class ConnectedComponents(KgtkFormat):
         return renamed_clusters
 
     def process(self):
-        input_kr: KgtkReader = KgtkReader.open(self.input_file_path,
-                                               error_file=self.error_file,
-                                               who="input",
-                                               options=self.input_reader_options,
-                                               value_options=self.value_options,
-                                               verbose=self.verbose,
-                                               very_verbose=self.very_verbose,
-                                               )
+        input_kr: typing.Optional[KgtkReader] = None
+        ew: typing.Optional[KgtkWriter] = None
 
-        input_key_columns: typing.List[int] = self.get_key_columns(input_kr, "input")
-        label_col_idx = input_key_columns[1]
-        label = input_kr.column_names[label_col_idx]
+        try:
+            input_kr = KgtkReader.open(self.input_file_path,
+                                       error_file=self.error_file,
+                                       who="input",
+                                       options=self.input_reader_options,
+                                       value_options=self.value_options,
+                                       verbose=self.verbose,
+                                       very_verbose=self.very_verbose,
+                                       )
 
-        g = load_graph_from_kgtk(input_kr, directed=not self.undirected)
+            input_key_columns: typing.List[int] = self.get_key_columns(input_kr, "input")
+            label_col_idx = input_key_columns[1]
+            label = input_kr.column_names[label_col_idx]
 
-        es = []
-        header = ['node1', 'label', 'node2']
-        if self.properties:
-            properties = self.properties.split(',')
-            for e in properties:
-                es += (find_edge(g, g.edge_properties[label], e))
-            g.clear_edges()
-            g.add_edge_list(list(set(es)))
-        comp, hist = label_components(g, directed=self.strong)
+            g = load_graph_from_kgtk(input_kr, directed=not self.undirected)
 
-        ew: KgtkWriter = KgtkWriter.open(header,
-                                         self.output_file_path,
-                                         mode=input_kr.mode,
-                                         require_all_columns=False,
-                                         prohibit_extra_columns=True,
-                                         fill_missing_columns=True,
-                                         gzip_in_parallel=False,
-                                         verbose=self.verbose,
-                                         very_verbose=self.very_verbose)
+            es = []
+            header = ['node1', 'label', 'node2']
+            if self.properties:
+                properties = self.properties.split(',')
+                for e in properties:
+                    es += (find_edge(g, g.edge_properties[label], e))
+                g.clear_edges()
+                g.add_edge_list(list(set(es)))
+            comp, hist = label_components(g, directed=self.strong)
 
-        clusters: typing.MutableMapping[str, typing.List[str]] = dict()
-        cluster_id: str
-        name: str
+            ew = KgtkWriter.open(header,
+                                 self.output_file_path,
+                                 mode=input_kr.mode,
+                                 require_all_columns=False,
+                                 prohibit_extra_columns=True,
+                                 fill_missing_columns=True,
+                                 gzip_in_parallel=False,
+                                 verbose=self.verbose,
+                                 very_verbose=self.very_verbose)
 
-        v: int
-        for v, c in enumerate(comp):
-            name = g.vertex_properties['name'][v]
-            cluster_id = str(c)
-            if cluster_id not in clusters:
-                clusters[cluster_id] = [ name ]
-            else:
-                clusters[cluster_id].append(name)
+            clusters: typing.MutableMapping[str, typing.List[str]] = dict()
+            cluster_id: str
+            name: str
 
-        trimmed_clusters: typing.MutableMapping[str, typing.List[str]] = dict()
-        for cluster_id in clusters.keys():
-            if len(clusters[cluster_id]) >= self.minimum_cluster_size:
-                trimmed_clusters[cluster_id] = clusters[cluster_id]
-        
-        named_clusters: typing.MutableMapping[str, typing.List[str]] = self.name_clusters(trimmed_clusters)
-        for cluster_id in sorted(named_clusters.keys()):
-            for name in sorted(named_clusters[cluster_id]):
-                ew.write([name, 'connected_component', cluster_id])
+            v: int
+            for v, c in enumerate(comp):
+                name = g.vertex_properties['name'][v]
+                cluster_id = str(c)
+                if cluster_id not in clusters:
+                    clusters[cluster_id] = [ name ]
+                else:
+                    clusters[cluster_id].append(name)
 
-        ew.close()
-        input_kr.close()
+            trimmed_clusters: typing.MutableMapping[str, typing.List[str]] = dict()
+            for cluster_id in clusters.keys():
+                if len(clusters[cluster_id]) >= self.minimum_cluster_size:
+                    trimmed_clusters[cluster_id] = clusters[cluster_id]
+
+            named_clusters: typing.MutableMapping[str, typing.List[str]] = self.name_clusters(trimmed_clusters)
+            for cluster_id in sorted(named_clusters.keys()):
+                for name in sorted(named_clusters[cluster_id]):
+                    ew.write([name, 'connected_component', cluster_id])
+
+        finally:
+            if ew is not None:
+                ew.close()
+            if input_kr is not None:
+                input_kr.close()
