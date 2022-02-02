@@ -90,11 +90,10 @@ def run(input_file: KGTKFiles,
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
 
-    kr: typing.Optional[KgtkReader] = None
-    kw: typing.Optional[KgtkWriter] = None
+    kw: KgtkWriter
 
-    # Show the final option structures for debugging and documentation.
     try:
+        # Show the final option structures for debugging and documentation.
 
         # First create the KgtkReader.  It provides parameters used by the ID
         # column builder. Next, create the ID column builder, which provides a
@@ -102,30 +101,33 @@ def run(input_file: KGTKFiles,
         # the KgtkWriter.  Last, process the data stream.
 
         # Open the input file.
-        kr = KgtkReader.open(input_kgtk_file,
-                             error_file=error_file,
-                             options=reader_options,
-                             value_options=value_options,
-                             verbose=verbose,
-                             very_verbose=very_verbose,
-        )
+        kr: KgtkReader = KgtkReader.open(input_kgtk_file,
+                                         error_file=error_file,
+                                         options=reader_options,
+                                         value_options=value_options,
+                                         verbose=verbose,
+                                         very_verbose=very_verbose,
+                                         )
 
-        g = Graph(directed=False)
+        try:
+            g = Graph(directed=False)
 
-        d = {}
-        count = 0
-        nodes = []
-        edges = []
-        for row in kr:
-            if row[kr.node1_column_idx] not in d:
-                d[row[kr.node1_column_idx]] = count
-                count = count + 1
-                nodes.append(row[kr.node1_column_idx])
-            if row[kr.node2_column_idx] not in d:
-                d[row[kr.node2_column_idx]] = count
-                count = count + 1
-                nodes.append(row[kr.node2_column_idx])
-            edges.append((row[kr.node1_column_idx], row[kr.node2_column_idx]))
+            d: typing.MutableMapping[str, int] = {}
+            count: int = 0
+            nodes: typing.List[str] = []
+            edges: typing.List[typing.Tuple[str, str]] = []
+            for row in kr:
+                if row[kr.node1_column_idx] not in d:
+                    d[row[kr.node1_column_idx]] = count
+                    count = count + 1
+                    nodes.append(row[kr.node1_column_idx])
+                if row[kr.node2_column_idx] not in d:
+                    d[row[kr.node2_column_idx]] = count
+                    count = count + 1
+                    nodes.append(row[kr.node2_column_idx])
+                edges.append((row[kr.node1_column_idx], row[kr.node2_column_idx]))
+        finally:
+            kr.close()
 
         vlist = g.add_vertex(len(d))
 
@@ -145,8 +147,11 @@ def run(input_file: KGTKFiles,
                                  very_verbose=very_verbose,
                                  )
 
-            for i in range(0, len(nodes)):
-                kw.write([nodes[i], 'in', arr[i]])
+            try:
+                for i in range(0, len(nodes)):
+                    kw.write([nodes[i], 'in', arr[i]])
+            finally:
+                kw.close()
 
         elif method == 'nested':
             state = minimize_nested_blockmodel_dl(g)
@@ -172,8 +177,12 @@ def run(input_file: KGTKFiles,
                                  verbose=verbose,
                                  very_verbose=very_verbose,
                                  )
-            for i in range(0, len(nodes)):
-                kw.write([nodes[i], 'in', arr[i]])
+            try:
+                for i in range(0, len(nodes)):
+                    kw.write([nodes[i], 'in', arr[i]])
+            finally:
+                kw.close()
+
         elif method == 'mcmc':
             state = minimize_blockmodel_dl(g)
             graph_tool.inference.mcmc.\
@@ -208,9 +217,12 @@ def run(input_file: KGTKFiles,
                                  very_verbose=very_verbose,
                                  )
 
-            for i in range(0, len(nodes)):
-                kw.write([nodes[i], 'in',
-                         'cluster_' + str(m[i]), str(pv[i][m[i]]/sum(pv[i]))])
+            try:
+                for i in range(0, len(nodes)):
+                    kw.write([nodes[i], 'in',
+                             'cluster_' + str(m[i]), str(pv[i][m[i]]/sum(pv[i]))])
+            finally:
+                kw.close()
 
         return 0
 
@@ -218,9 +230,3 @@ def run(input_file: KGTKFiles,
         raise KGTKException("Exit requested")
     except Exception as e:
         raise KGTKException(str(e))
-
-    finally:
-        if kw is not None:
-            kw.close()
-        if kr is not None:
-            kr.close()
