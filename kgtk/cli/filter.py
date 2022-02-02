@@ -1061,108 +1061,110 @@ def run(input_file: KGTKFiles,
             print("Reject counts: subject=%d, predicate=%d, object=%d." % (subj_filter_reject_count, pred_filter_reject_count, obj_filter_reject_count), file=error_file, flush=True)
 
     def process_plain()->int:
-
-        subj_filters: typing.List[typing.Set[str]] = [ ]
-        pred_filters: typing.List[typing.Set[str]] = [ ]
-        obj_filters: typing.List[typing.Set[str]] = [ ]
-
-        subj_filter: typing.Set[str]
-        pred_filter: typing.Set[str]
-        obj_filter: typing.Set[str]
-
-
-        nfilters: int = 0
-        pattern_list: typing.List[str]
-        pattern: str
-        for pattern_list in patterns:
-            for pattern in pattern_list:
-                subpatterns: typing.List[str] = pattern.split(pattern_separator)
-                if len(subpatterns) != 3:
-                    print("Error: The pattern must have three sections separated by %s (two %s total)." % (repr(pattern_separator), repr(pattern_separator)),
-                          file=error_file, flush=True)
-                    raise KGTKException("Bad pattern")
-            
-                subj_filter = prepare_filter(subpatterns[0])
-                pred_filter = prepare_filter(subpatterns[1])
-                obj_filter = prepare_filter(subpatterns[2])
-
-                if len(subj_filter) == 0 and len(pred_filter) == 0 and len(obj_filter) == 0:
-                    if verbose:
-                        print("Warning: the filter %s is empty." % repr(pattern), file=error_file, flush=True)
-                else:
-                    subj_filters.append(subj_filter)
-                    pred_filters.append(pred_filter)
-                    obj_filters.append(obj_filter)
-                    nfilters += 1
-
-        if nfilters == 0:
-            raise KGTKException("No filters found.")
-
-        if nfilters != len(output_kgtk_files):
-            if verbose:
-                print("output files: %s" % " ".join([str(x) for x in output_kgtk_files]), file=error_file, flush=True)
-            raise KGTKException("There were %d filters and %d output files." % (nfilters, len(output_kgtk_files)))
-
-        if verbose:
-            print("Opening the input file: %s" % str(input_kgtk_file), file=error_file, flush=True)
-        kr: KgtkReader = KgtkReader.open(input_kgtk_file,
-                                         options=reader_options,
-                                         value_options = value_options,
-                                         error_file=error_file,
-                                         verbose=verbose,
-                                         very_verbose=very_verbose,
-        )
-
-        subj_idx: int = kr.get_node1_column_index(subj_col)
-        pred_idx: int = kr.get_label_column_index(pred_col)
-        obj_idx: int = kr.get_node2_column_index(obj_col)
-
-        # Complain about a missing column only when it is needed by the pattern.
-        trouble: bool = False
-        if subj_idx < 0 and len(set.union(*subj_filters)) > 0:
-            trouble = True
-            print("Error: Cannot find the subject column '%s'." % kr.get_node1_canonical_name(subj_col), file=error_file, flush=True)
-        if pred_idx < 0 and len(set.union(*pred_filters)) > 0:
-            trouble = True
-            print("Error: Cannot find the predicate column '%s'." % kr.get_label_canonical_name(pred_col), file=error_file, flush=True)
-        if obj_idx < 0 and len(set.union(*obj_filters)) > 0:
-            trouble = True
-            print("Error: Cannot find the object column '%s'." % kr.get_node2_canonical_name(obj_col), file=error_file, flush=True)
-        if trouble:
-            # Clean up:
-            kr.close()
-            raise KGTKException("Missing columns.")
-
-        kw: KgtkWriter
+        kr: typing.Optional[KgtkReader] = None
         kws: typing.List[KgtkWriter] = [ ]
-        output_kgtk_file: Path
-        for output_kgtk_file in output_kgtk_files:
-            if verbose:
-                print("Opening the output file: %s" % str(output_kgtk_file), file=error_file, flush=True)
-            kw = KgtkWriter.open(kr.column_names,
-                                 output_kgtk_file,
-                                 mode=KgtkWriter.Mode[kr.mode.name],
-                                 use_mgzip=reader_options.use_mgzip, # Hack!
-                                 mgzip_threads=reader_options.mgzip_threads, # Hack!
-                                 error_file=error_file,
-                                 verbose=verbose,
-                                 very_verbose=very_verbose)
-            kws.append(kw)
-
+        kw: KgtkWriter
         rw: typing.Optional[KgtkWriter] = None
-        if reject_kgtk_file is not None:
-            if verbose:
-                print("Opening the reject file: %s" % str(reject_kgtk_file), file=error_file, flush=True)
-            rw = KgtkWriter.open(kr.column_names,
-                                 reject_kgtk_file,
-                                 mode=KgtkWriter.Mode[kr.mode.name],
-                                 use_mgzip=reader_options.use_mgzip, # Hack!
-                                 mgzip_threads=reader_options.mgzip_threads, # Hack!
-                                 error_file=error_file,
-                                 verbose=verbose,
-                                 very_verbose=very_verbose)
 
         try:
+
+            subj_filters: typing.List[typing.Set[str]] = [ ]
+            pred_filters: typing.List[typing.Set[str]] = [ ]
+            obj_filters: typing.List[typing.Set[str]] = [ ]
+
+            subj_filter: typing.Set[str]
+            pred_filter: typing.Set[str]
+            obj_filter: typing.Set[str]
+
+
+            nfilters: int = 0
+            pattern_list: typing.List[str]
+            pattern: str
+            for pattern_list in patterns:
+                for pattern in pattern_list:
+                    subpatterns: typing.List[str] = pattern.split(pattern_separator)
+                    if len(subpatterns) != 3:
+                        print("Error: The pattern must have three sections separated by %s (two %s total)." % (repr(pattern_separator), repr(pattern_separator)),
+                              file=error_file, flush=True)
+                        raise KGTKException("Bad pattern")
+
+                    subj_filter = prepare_filter(subpatterns[0])
+                    pred_filter = prepare_filter(subpatterns[1])
+                    obj_filter = prepare_filter(subpatterns[2])
+
+                    if len(subj_filter) == 0 and len(pred_filter) == 0 and len(obj_filter) == 0:
+                        if verbose:
+                            print("Warning: the filter %s is empty." % repr(pattern), file=error_file, flush=True)
+                    else:
+                        subj_filters.append(subj_filter)
+                        pred_filters.append(pred_filter)
+                        obj_filters.append(obj_filter)
+                        nfilters += 1
+
+            if nfilters == 0:
+                raise KGTKException("No filters found.")
+
+            if nfilters != len(output_kgtk_files):
+                if verbose:
+                    print("output files: %s" % " ".join([str(x) for x in output_kgtk_files]), file=error_file, flush=True)
+                raise KGTKException("There were %d filters and %d output files." % (nfilters, len(output_kgtk_files)))
+
+            if verbose:
+                print("Opening the input file: %s" % str(input_kgtk_file), file=error_file, flush=True)
+            kr = KgtkReader.open(input_kgtk_file,
+                                 options=reader_options,
+                                 value_options = value_options,
+                                 error_file=error_file,
+                                 verbose=verbose,
+                                 very_verbose=very_verbose,
+                                 )
+
+            subj_idx: int = kr.get_node1_column_index(subj_col)
+            pred_idx: int = kr.get_label_column_index(pred_col)
+            obj_idx: int = kr.get_node2_column_index(obj_col)
+
+            # Complain about a missing column only when it is needed by the pattern.
+            trouble: bool = False
+            if subj_idx < 0 and len(set.union(*subj_filters)) > 0:
+                trouble = True
+                print("Error: Cannot find the subject column '%s'." % kr.get_node1_canonical_name(subj_col), file=error_file, flush=True)
+            if pred_idx < 0 and len(set.union(*pred_filters)) > 0:
+                trouble = True
+                print("Error: Cannot find the predicate column '%s'." % kr.get_label_canonical_name(pred_col), file=error_file, flush=True)
+            if obj_idx < 0 and len(set.union(*obj_filters)) > 0:
+                trouble = True
+                print("Error: Cannot find the object column '%s'." % kr.get_node2_canonical_name(obj_col), file=error_file, flush=True)
+            if trouble:
+                # Clean up:
+                kr.close()
+                raise KGTKException("Missing columns.")
+
+            output_kgtk_file: Path
+            for output_kgtk_file in output_kgtk_files:
+                if verbose:
+                    print("Opening the output file: %s" % str(output_kgtk_file), file=error_file, flush=True)
+                kw = KgtkWriter.open(kr.column_names,
+                                     output_kgtk_file,
+                                     mode=KgtkWriter.Mode[kr.mode.name],
+                                     use_mgzip=reader_options.use_mgzip, # Hack!
+                                     mgzip_threads=reader_options.mgzip_threads, # Hack!
+                                     error_file=error_file,
+                                     verbose=verbose,
+                                     very_verbose=very_verbose)
+                kws.append(kw)
+
+            if reject_kgtk_file is not None:
+                if verbose:
+                    print("Opening the reject file: %s" % str(reject_kgtk_file), file=error_file, flush=True)
+                rw = KgtkWriter.open(kr.column_names,
+                                     reject_kgtk_file,
+                                     mode=KgtkWriter.Mode[kr.mode.name],
+                                     use_mgzip=reader_options.use_mgzip, # Hack!
+                                     mgzip_threads=reader_options.mgzip_threads, # Hack!
+                                     error_file=error_file,
+                                     verbose=verbose,
+                                     very_verbose=very_verbose)
+
             if fancy:
                 # TODO: add additional optimized cases.
                 multiple_general_fancy_filter(kr, kws, rw, subj_idx, subj_filters, pred_idx, pred_filters, obj_idx, obj_filters)
@@ -1223,6 +1225,8 @@ def run(input_file: KGTKFiles,
                 else:
                     multiple_general_filter(kr, kws, rw, subj_idx, subj_filters, pred_idx, pred_filters, obj_idx, obj_filters)
 
+            return 0
+
         finally:
             if verbose:
                 print("Closing output files.", file=error_file, flush=True)
@@ -1233,7 +1237,8 @@ def run(input_file: KGTKFiles,
             if verbose:
                 print("All output files have been closed.", file=error_file, flush=True)
 
-        return 0
+            if kr is not None:
+                kr.close()
 
     def multiple_general_regex_fullmatch(kr: KgtkReader,
                                          kws: typing.List[KgtkWriter],
@@ -1503,117 +1508,119 @@ def run(input_file: KGTKFiles,
             print("Reject counts: subject=%d, predicate=%d, object=%d." % (subj_filter_reject_count, pred_filter_reject_count, obj_filter_reject_count), file=error_file, flush=True)
 
     def process_regex()->int:
-        subj_regexes: typing.List[typing.Optional[typing.Pattern]] = [ ]
-        pred_regexes: typing.List[typing.Optional[typing.Pattern]] = [ ]
-        obj_regexes: typing.List[typing.Optional[typing.Pattern]] = [ ]
-
-        subj_regex: typing.Optional[typing.Pattern]
-        pred_regex: typing.Optional[typing.Pattern]
-        obj_regex: typing.Optional[typing.Pattern]
-
-        subj_needed: bool = False
-        pred_needed: bool = False
-        obj_needed: bool = False
-
-        nfilters: int = 0
-        pattern_list: typing.List[str]
-        pattern: str
-        for pattern_list in patterns:
-            for pattern in pattern_list:
-                subpatterns: typing.List[str] = pattern.split(pattern_separator)
-                if len(subpatterns) != 3:
-                    print("Error: The pattern must have three sections separated by %s (two %s total)." % (repr(pattern_separator), repr(pattern_separator)),
-                          file=error_file, flush=True)
-                    raise KGTKException("Bad pattern")
-            
-                subj_regex = prepare_regex(subpatterns[0])
-                pred_regex = prepare_regex(subpatterns[1])
-                obj_regex = prepare_regex(subpatterns[2])
-
-                if subj_regex is None and pred_regex is None and obj_regex is None:
-                    if verbose:
-                        print("Warning: the filter %s is empty." % repr(pattern), file=error_file, flush=True)
-                else:
-                    subj_regexes.append(subj_regex)
-                    pred_regexes.append(pred_regex)
-                    obj_regexes.append(obj_regex)
-                    nfilters += 1
-
-                    if subj_regex is not None:
-                        subj_needed = True
-                    if pred_regex is not None:
-                        pred_needed = True
-                    if obj_regex is not None:
-                        obj_needed = True
-
-        if nfilters == 0:
-            raise KGTKException("No filters found.")
-
-        if nfilters != len(output_kgtk_files):
-            if verbose:
-                print("output files: %s" % " ".join([str(x) for x in output_kgtk_files]), file=error_file, flush=True)
-            raise KGTKException("There were %d filters and %d output files." % (nfilters, len(output_kgtk_files)))
-
-        if verbose:
-            print("Opening the input file: %s" % str(input_kgtk_file), file=error_file, flush=True)
-        kr: KgtkReader = KgtkReader.open(input_kgtk_file,
-                                         options=reader_options,
-                                         value_options = value_options,
-                                         error_file=error_file,
-                                         verbose=verbose,
-                                         very_verbose=very_verbose,
-        )
-
-        subj_idx: int = kr.get_node1_column_index(subj_col)
-        pred_idx: int = kr.get_label_column_index(pred_col)
-        obj_idx: int = kr.get_node2_column_index(obj_col)
-
-        # Complain about a missing column only when it is needed by the pattern.
-        trouble: bool = False
-        if subj_idx < 0 and subj_needed:
-            trouble = True
-            print("Error: Cannot find the subject column '%s'." % kr.get_node1_canonical_name(subj_col), file=error_file, flush=True)
-        if pred_idx < 0 and pred_needed:
-            trouble = True
-            print("Error: Cannot find the predicate column '%s'." % kr.get_label_canonical_name(pred_col), file=error_file, flush=True)
-        if obj_idx < 0 and obj_needed:
-            trouble = True
-            print("Error: Cannot find the object column '%s'." % kr.get_node2_canonical_name(obj_col), file=error_file, flush=True)
-        if trouble:
-            # Clean up:
-            kr.close()
-            raise KGTKException("Missing columns.")
-
-        kw: KgtkWriter
+        kr: typing.Optional[KgtkReader] = None
         kws: typing.List[KgtkWriter] = [ ]
-        output_kgtk_file: Path
-        for output_kgtk_file in output_kgtk_files:
-            if verbose:
-                print("Opening the output file: %s" % str(output_kgtk_file), file=error_file, flush=True)
-            kw = KgtkWriter.open(kr.column_names,
-                                 output_kgtk_file,
-                                 mode=KgtkWriter.Mode[kr.mode.name],
-                                 use_mgzip=reader_options.use_mgzip, # Hack!
-                                 mgzip_threads=reader_options.mgzip_threads, # Hack!
-                                 error_file=error_file,
-                                 verbose=verbose,
-                                 very_verbose=very_verbose)
-            kws.append(kw)
-
+        kw: KgtkWriter
         rw: typing.Optional[KgtkWriter] = None
-        if reject_kgtk_file is not None:
-            if verbose:
-                print("Opening the reject file: %s" % str(reject_kgtk_file), file=error_file, flush=True)
-            rw = KgtkWriter.open(kr.column_names,
-                                 reject_kgtk_file,
-                                 mode=KgtkWriter.Mode[kr.mode.name],
-                                 use_mgzip=reader_options.use_mgzip, # Hack!
-                                 mgzip_threads=reader_options.mgzip_threads, # Hack!
-                                 error_file=error_file,
-                                 verbose=verbose,
-                                 very_verbose=very_verbose)
 
         try:
+            subj_regexes: typing.List[typing.Optional[typing.Pattern]] = [ ]
+            pred_regexes: typing.List[typing.Optional[typing.Pattern]] = [ ]
+            obj_regexes: typing.List[typing.Optional[typing.Pattern]] = [ ]
+
+            subj_regex: typing.Optional[typing.Pattern]
+            pred_regex: typing.Optional[typing.Pattern]
+            obj_regex: typing.Optional[typing.Pattern]
+
+            subj_needed: bool = False
+            pred_needed: bool = False
+            obj_needed: bool = False
+
+            nfilters: int = 0
+            pattern_list: typing.List[str]
+            pattern: str
+            for pattern_list in patterns:
+                for pattern in pattern_list:
+                    subpatterns: typing.List[str] = pattern.split(pattern_separator)
+                    if len(subpatterns) != 3:
+                        print("Error: The pattern must have three sections separated by %s (two %s total)." % (repr(pattern_separator), repr(pattern_separator)),
+                              file=error_file, flush=True)
+                        raise KGTKException("Bad pattern")
+
+                    subj_regex = prepare_regex(subpatterns[0])
+                    pred_regex = prepare_regex(subpatterns[1])
+                    obj_regex = prepare_regex(subpatterns[2])
+
+                    if subj_regex is None and pred_regex is None and obj_regex is None:
+                        if verbose:
+                            print("Warning: the filter %s is empty." % repr(pattern), file=error_file, flush=True)
+                    else:
+                        subj_regexes.append(subj_regex)
+                        pred_regexes.append(pred_regex)
+                        obj_regexes.append(obj_regex)
+                        nfilters += 1
+
+                        if subj_regex is not None:
+                            subj_needed = True
+                        if pred_regex is not None:
+                            pred_needed = True
+                        if obj_regex is not None:
+                            obj_needed = True
+
+            if nfilters == 0:
+                raise KGTKException("No filters found.")
+
+            if nfilters != len(output_kgtk_files):
+                if verbose:
+                    print("output files: %s" % " ".join([str(x) for x in output_kgtk_files]), file=error_file, flush=True)
+                raise KGTKException("There were %d filters and %d output files." % (nfilters, len(output_kgtk_files)))
+
+            if verbose:
+                print("Opening the input file: %s" % str(input_kgtk_file), file=error_file, flush=True)
+            kr = KgtkReader.open(input_kgtk_file,
+                                 options=reader_options,
+                                 value_options = value_options,
+                                 error_file=error_file,
+                                 verbose=verbose,
+                                 very_verbose=very_verbose,
+                                 )
+
+            subj_idx: int = kr.get_node1_column_index(subj_col)
+            pred_idx: int = kr.get_label_column_index(pred_col)
+            obj_idx: int = kr.get_node2_column_index(obj_col)
+
+            # Complain about a missing column only when it is needed by the pattern.
+            trouble: bool = False
+            if subj_idx < 0 and subj_needed:
+                trouble = True
+                print("Error: Cannot find the subject column '%s'." % kr.get_node1_canonical_name(subj_col), file=error_file, flush=True)
+            if pred_idx < 0 and pred_needed:
+                trouble = True
+                print("Error: Cannot find the predicate column '%s'." % kr.get_label_canonical_name(pred_col), file=error_file, flush=True)
+            if obj_idx < 0 and obj_needed:
+                trouble = True
+                print("Error: Cannot find the object column '%s'." % kr.get_node2_canonical_name(obj_col), file=error_file, flush=True)
+            if trouble:
+                # Clean up:
+                kr.close()
+                raise KGTKException("Missing columns.")
+
+            output_kgtk_file: Path
+            for output_kgtk_file in output_kgtk_files:
+                if verbose:
+                    print("Opening the output file: %s" % str(output_kgtk_file), file=error_file, flush=True)
+                kw = KgtkWriter.open(kr.column_names,
+                                     output_kgtk_file,
+                                     mode=KgtkWriter.Mode[kr.mode.name],
+                                     use_mgzip=reader_options.use_mgzip, # Hack!
+                                     mgzip_threads=reader_options.mgzip_threads, # Hack!
+                                     error_file=error_file,
+                                     verbose=verbose,
+                                     very_verbose=very_verbose)
+                kws.append(kw)
+
+            if reject_kgtk_file is not None:
+                if verbose:
+                    print("Opening the reject file: %s" % str(reject_kgtk_file), file=error_file, flush=True)
+                rw = KgtkWriter.open(kr.column_names,
+                                     reject_kgtk_file,
+                                     mode=KgtkWriter.Mode[kr.mode.name],
+                                     use_mgzip=reader_options.use_mgzip, # Hack!
+                                     mgzip_threads=reader_options.mgzip_threads, # Hack!
+                                     error_file=error_file,
+                                     verbose=verbose,
+                                     very_verbose=very_verbose)
+
             if match_type == "fullmatch":
                 multiple_general_regex_fullmatch(kr, kws, rw, subj_idx, subj_regexes, pred_idx, pred_regexes, obj_idx, obj_regexes)
             elif match_type == "match":
@@ -1622,6 +1629,8 @@ def run(input_file: KGTKFiles,
                 multiple_general_regex_search(kr, kws, rw, subj_idx, subj_regexes, pred_idx, pred_regexes, obj_idx, obj_regexes)
             else:
                 raise KGTKException("Unknown match type %s" % repr(match_type))
+
+            return 0
 
         finally:
             if verbose:
@@ -1633,7 +1642,9 @@ def run(input_file: KGTKFiles,
             if verbose:
                 print("All output files have been closed.", file=error_file, flush=True)
 
-        return 0
+            if kr is not None:
+                kr.close()
+
 
     try:
         if regex:
