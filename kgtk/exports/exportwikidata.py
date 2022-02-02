@@ -730,63 +730,76 @@ class ExportWikidata(KgtkFormat):
 
     def process(self):
 
-        if self.verbose:
-            print("Opening output file %s" % str(self.output_file_path), file=self.error_file, flush=True)
-        outfile: typing.TextIO = open(self.output_file_path, "wt")
-        outfile.write("[")
+        nr: typing.Optional[KgtkReader] = None
+        er: typing.Optional[KgtkReader] = None
+        qr: typing.Optional[KgtkReader] = None
+        outfile: typing.Optional[typing.TextIO] = None
+        
+        try:
+            if self.verbose:
+                print("Opening output file %s" % str(self.output_file_path), file=self.error_file, flush=True)
+            outfile = open(self.output_file_path, "wt")
+            outfile.write("[")
 
-        if self.verbose:
-            print("Opening the node file: %s" % str(self.node_file_path), file=self.error_file, flush=True)
-        nr: KgtkReader = KgtkReader.open(self.node_file_path,
-                                         error_file=self.error_file,
-                                         options=self.reader_options,
-                                         value_options = self.value_options,
-                                         verbose=self.verbose,
-                                         very_verbose=self.very_verbose,
-        )
+            if self.verbose:
+                print("Opening the node file: %s" % str(self.node_file_path), file=self.error_file, flush=True)
+            nr: KgtkReader = KgtkReader.open(self.node_file_path,
+                                             error_file=self.error_file,
+                                             options=self.reader_options,
+                                             value_options = self.value_options,
+                                             verbose=self.verbose,
+                                             very_verbose=self.very_verbose,
+            )
 
-        if self.verbose:
-            print("Opening the edge file: %s" % str(self.edge_file_path), file=self.error_file, flush=True)
-        er: KgtkReader = KgtkReader.open(self.edge_file_path,
-                                         error_file=self.error_file,
-                                         options=self.reader_options,
-                                         value_options = self.value_options,
-                                         verbose=self.verbose,
-                                         very_verbose=self.very_verbose,
-        )
-        egr: GroupedReader = GroupedReader(reader=er)
+            if self.verbose:
+                print("Opening the edge file: %s" % str(self.edge_file_path), file=self.error_file, flush=True)
+            er: KgtkReader = KgtkReader.open(self.edge_file_path,
+                                             error_file=self.error_file,
+                                             options=self.reader_options,
+                                             value_options = self.value_options,
+                                             verbose=self.verbose,
+                                             very_verbose=self.very_verbose,
+            )
+            egr: GroupedReader = GroupedReader(reader=er)
 
-        if self.verbose:
-            print("Opening the qualifier file: %s" % str(self.qualifier_file_path), file=self.error_file, flush=True)
-        qr: KgtkReader = KgtkReader.open(self.qualifier_file_path,
-                                         error_file=self.error_file,
-                                         options=self.reader_options,
-                                         value_options = self.value_options,
-                                         verbose=self.verbose,
-                                         very_verbose=self.very_verbose,
-        )
-        qgr: GroupedReader = GroupedReader(reader=qr)
+            if self.verbose:
+                print("Opening the qualifier file: %s" % str(self.qualifier_file_path), file=self.error_file, flush=True)
+            qr: KgtkReader = KgtkReader.open(self.qualifier_file_path,
+                                             error_file=self.error_file,
+                                             options=self.reader_options,
+                                             value_options = self.value_options,
+                                             verbose=self.verbose,
+                                             very_verbose=self.very_verbose,
+            )
+            qgr: GroupedReader = GroupedReader(reader=qr)
 
-        self.get_required_columns(nr, er, qr)
+            self.get_required_columns(nr, er, qr)
 
-        qnode_count: int = 0
-        first: bool = True
-        qnode_info: typing.List[str]
-        for qnode_info in nr:
-            result: typing.Mapping[str, typing.Any] = self.process_qnode(qnode_info,
-                                                                         egr=egr,
-                                                                         qgr=qgr)
-            if first:
-                first = False
-                outfile.write("\n")
-            else:
-                outfile.write(",\n")
-            outfile.write(json.dumps(result, indent=None, separators=(',', ':'), sort_keys=True))
+            qnode_count: int = 0
+            first: bool = True
+            qnode_info: typing.List[str]
+            for qnode_info in nr:
+                result: typing.Mapping[str, typing.Any] = self.process_qnode(qnode_info,
+                                                                             egr=egr,
+                                                                             qgr=qgr)
+                if first:
+                    first = False
+                    outfile.write("\n")
+                else:
+                    outfile.write(",\n")
+                outfile.write(json.dumps(result, indent=None, separators=(',', ':'), sort_keys=True))
 
-        outfile.write("\n]\n")
-        outfile.close()
-        er.close()
-        qr.close()
+            outfile.write("\n]\n")
+
+        finally:
+            if outfile is not None:
+                outfile.close()
+            if nr is not None:
+                nr.close()
+            if er is not None:
+                er.close()
+            if qr is not None:
+                qr.close()
 
 def main():
     """
