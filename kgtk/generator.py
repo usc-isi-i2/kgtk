@@ -685,34 +685,42 @@ class JsonGenerator(Generator):
 
         self.node1_idx = self.kr.get_node1_column_index()
         if self.node1_idx < 0:
+            self.kr.close()
             raise KGTKException("The input file [{}] does not have a node1 column or its alias."
-                                .format(str(self.input_file)))
+                                    .format(str(self.input_file)))
+
         self.node2_idx = self.kr.get_node2_column_index()
         if self.node2_idx < 0:
+            self.kr.close()
             raise KGTKException("The input file [{}] does not have a node2 column or its alias."
                                 .format(str(self.input_file)))
+
         self.label_idx = self.kr.get_label_column_index()
         if self.label_idx < 0:
+            self.kr.close()
             raise KGTKException("The input file [{}] does not have a label column or its alias."
                                 .format(str(self.input_file)))
+
         self.id_idx = self.kr.get_id_column_index()
         if self.id_idx < 0:
+            self.kr.close()
             raise KGTKException("The input file [{}] does not have an id column or its alias."
-                                .format(str(self.input_file)))
+                                    .format(str(self.input_file)))
 
         if hasattr(self, 'has_rank') and self.has_rank:
             rank_index = self.kr.get_node1_column_index('rank')
             self.rank_idx = rank_index
 
     def process(self):
-        line_num: int
-        row: typing.List[str]
-        for line_num, row in enumerate(self.kr):
-            self.entry_point(line_num + 1, row)
-
-        if self.verbose:
-            print("Closing the input file, %d lines read." % (line_num + 1), file=sys.stderr, flush=True)
-        self.kr.close()
+        try:
+            line_num: int
+            row: typing.List[str]
+            for line_num, row in enumerate(self.kr):
+                self.entry_point(line_num + 1, row)
+        finally:
+            if self.verbose:
+                print("Closing the input file, %d lines read." % (line_num + 1), file=sys.stderr, flush=True)
+            self.kr.close()
 
         self.finalize()
 
