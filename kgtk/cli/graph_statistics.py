@@ -203,25 +203,26 @@ def run(input_file: KGTKFiles,
                                          verbose=verbose,
                                          very_verbose=very_verbose,
                                          )
-        sub: int = kr.get_node1_column_index()
-        if sub < 0:
-            print("Missing node1 (subject) column.", file=error_file, flush=True)
-        pred: int = kr.get_label_column_index()
-        if pred < 0:
-            print("Missing label (predicate) column.", file=error_file, flush=True)
-        obj: int = kr.get_node2_column_index()
-        if obj < 0:
-            print("Missing node2 (object) column", file=error_file, flush=True)
-        if sub < 0 or pred < 0 or obj < 0:
+        try:
+            sub: int = kr.get_node1_column_index()
+            if sub < 0:
+                print("Missing node1 (subject) column.", file=error_file, flush=True)
+            pred: int = kr.get_label_column_index()
+            if pred < 0:
+                print("Missing label (predicate) column.", file=error_file, flush=True)
+            obj: int = kr.get_node2_column_index()
+            if obj < 0:
+                print("Missing node2 (object) column", file=error_file, flush=True)
+            if sub < 0 or pred < 0 or obj < 0:
+                raise KGTKException("Exiting due to missing columns.")
+
+            predicate: str = kr.column_names[pred]
+
+            G2 = load_graph_from_kgtk(kr, directed=not undirected, ecols=(sub, obj), verbose=verbose, out=error_file)
+            if verbose:
+                print('graph loaded! It has %d nodes and %d edges.' % (G2.num_vertices(), G2.num_edges()), file=error_file, flush=True)
+        finally:
             kr.close()
-            raise KGTKException("Exiting due to missing columns.")
-
-        predicate: str = kr.column_names[pred]
-
-        G2 = load_graph_from_kgtk(kr, directed=not undirected, ecols=(sub, obj), verbose=verbose, out=error_file)
-        if verbose:
-            print('graph loaded! It has %d nodes and %d edges.' % (G2.num_vertices(), G2.num_edges()), file=error_file, flush=True)
-        kr.close()
 
         if compute_pagerank:
             if verbose:
@@ -246,43 +247,45 @@ def run(input_file: KGTKFiles,
                                      verbose=verbose,
                                      very_verbose=very_verbose)
 
-        if not output_statistics_only:
-            if verbose:
-                print('Copying the input edges to the output.', file=error_file, flush=True)
-            id_count = 0
-            for e in G2.edges():
-                sid, oid = e
-                lbl = G2.ep[predicate][e]
-                kw.write([G2.vp[id_col][sid], lbl, G2.vp[id_col][oid], '{}-{}-{}'.format(G2.vp[id_col][sid], lbl, id_count)])
-                id_count += 1
-
-        if output_degrees or output_pagerank or output_hits:
-            if verbose:
-                print('Outputting vertex degrees and/or properties.', file=error_file, flush=True)
-            id_count = 0
-            for v in G2.vertices():
-                v_id = G2.vp[id_col][v]
-                if output_degrees:
-                    kw.write([v_id, vertex_in_degree, str(v.in_degree()), '{}-{}-{}'.format(v_id, vertex_in_degree, id_count)])
-                    id_count += 1
-                    kw.write([v_id, vertex_out_degree, str(v.out_degree()), '{}-{}-{}'.format(v_id, vertex_out_degree, id_count)])
+        try:
+            if not output_statistics_only:
+                if verbose:
+                    print('Copying the input edges to the output.', file=error_file, flush=True)
+                id_count = 0
+                for e in G2.edges():
+                    sid, oid = e
+                    lbl = G2.ep[predicate][e]
+                    kw.write([G2.vp[id_col][sid], lbl, G2.vp[id_col][oid], '{}-{}-{}'.format(G2.vp[id_col][sid], lbl, id_count)])
                     id_count += 1
 
-                if output_pagerank:
-                    if vertex_pagerank in G2.vp:
-                        kw.write([v_id, vertex_pagerank, str(G2.vp[vertex_pagerank][v]), '{}-{}-{}'.format(v_id, vertex_pagerank, id_count)])
+            if output_degrees or output_pagerank or output_hits:
+                if verbose:
+                    print('Outputting vertex degrees and/or properties.', file=error_file, flush=True)
+                id_count = 0
+                for v in G2.vertices():
+                    v_id = G2.vp[id_col][v]
+                    if output_degrees:
+                        kw.write([v_id, vertex_in_degree, str(v.in_degree()), '{}-{}-{}'.format(v_id, vertex_in_degree, id_count)])
+                        id_count += 1
+                        kw.write([v_id, vertex_out_degree, str(v.out_degree()), '{}-{}-{}'.format(v_id, vertex_out_degree, id_count)])
                         id_count += 1
 
-                if output_hits:
-                    if vertex_auth in G2.vp:
-                        kw.write([v_id, vertex_auth, str(G2.vp[vertex_auth][v]), '{}-{}-{}'.format(v_id, vertex_auth, id_count)])
-                        id_count += 1
-                    if vertex_hubs in G2.vp:
-                        kw.write([v_id, vertex_hubs, str(G2.vp[vertex_hubs][v]), '{}-{}-{}'.format(v_id, vertex_hubs, id_count)])
-                        id_count += 1
+                    if output_pagerank:
+                        if vertex_pagerank in G2.vp:
+                            kw.write([v_id, vertex_pagerank, str(G2.vp[vertex_pagerank][v]), '{}-{}-{}'.format(v_id, vertex_pagerank, id_count)])
+                            id_count += 1
+
+                    if output_hits:
+                        if vertex_auth in G2.vp:
+                            kw.write([v_id, vertex_auth, str(G2.vp[vertex_auth][v]), '{}-{}-{}'.format(v_id, vertex_auth, id_count)])
+                            id_count += 1
+                        if vertex_hubs in G2.vp:
+                            kw.write([v_id, vertex_hubs, str(G2.vp[vertex_hubs][v]), '{}-{}-{}'.format(v_id, vertex_hubs, id_count)])
+                            id_count += 1
 
 
-        kw.close()
+        finally:
+            kw.close()
 
         if verbose:
             print('Writing the summary file.', file=error_file, flush=True)
