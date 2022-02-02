@@ -111,22 +111,25 @@ def run(input_file: KGTKFiles,
         else:
             print("Writing reject data to '%s'" % str(reject_kgtk_file_path), file=error_file, flush=True)
 
+    kr: typing.Optional[KgtkReader] = None
+    kw: typing.Optional[KgtkWriter] = None
     reject_kgtk_file: typing.Optional[typing.TextIO] = None
-    if reject_kgtk_file_path is not None:
-        reject_kgtk_file = open(reject_kgtk_file_path, mode="wt")
 
     try:
-        kr: KgtkReader = KgtkReader.open(input_kgtk_file_path,
-                                         error_file=error_file,
-                                         reject_file=reject_kgtk_file,
-                                         options=reader_options,
-                                         value_options=value_options,
-                                         verbose=verbose,
-                                         very_verbose=very_verbose)
+        if reject_kgtk_file_path is not None:
+            reject_kgtk_file = open(reject_kgtk_file_path, mode="wt")
 
-        kw: KgtkWriter = KgtkWriter.open(kr.column_names,
-                                         output_kgtk_file_path,
-                                         verbose=verbose, very_verbose=very_verbose)
+        kr = KgtkReader.open(input_kgtk_file_path,
+                             error_file=error_file,
+                             reject_file=reject_kgtk_file,
+                             options=reader_options,
+                             value_options=value_options,
+                             verbose=verbose,
+                             very_verbose=very_verbose)
+
+        kw = KgtkWriter.open(kr.column_names,
+                             output_kgtk_file_path,
+                             verbose=verbose, very_verbose=very_verbose)
         
         line_count: int = 0
         row: typing.List[str]
@@ -134,15 +137,20 @@ def run(input_file: KGTKFiles,
             kw.write(row)
             line_count += 1
 
-        kw.close()
-        if reject_kgtk_file is not None:
-            reject_kgtk_file.close()
-        kr.close()
-
         if verbose:
             print("Copied %d clean data lines" % line_count, file=error_file, flush=True)
         return 0
 
     except Exception as e:
         raise KGTKException(e)
+
+    finally:
+        if kw is not None:
+            kw.close()
+            
+        if kr is not None:
+            kr.close()
+
+        if reject_kgtk_file is not None:
+            reject_kgtk_file.close()
 
