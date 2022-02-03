@@ -80,14 +80,16 @@ def run(input_file: KGTKFiles, relation, source, output_file: KGTKFiles):
                                          #very_verbose=self.very_verbose
                                          )
 
-        with open(filename, 'r') as f:
-            reader = csv.reader(f, delimiter=' ', quotechar='"')
-            #sys.stdout.write(header_to_edge(out_columns))
-            for row in reader:
-                ew.write(row_to_edge(row[0], relation, row[1], source, out_columns))
+        try:
+            with open(filename, 'r') as f:
+                reader = csv.reader(f, delimiter=' ', quotechar='"')
+                #sys.stdout.write(header_to_edge(out_columns))
+                for row in reader:
+                    ew.write(row_to_edge(row[0], relation, row[1], source, out_columns))
 
-        # Clean up.
-        ew.close()
+        finally:
+            # Clean up.
+            ew.close()
 
     except Exception as e:
         kgtk_exception_auto_handler(e)
