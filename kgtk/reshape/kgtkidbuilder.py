@@ -30,11 +30,11 @@ class KgtkIdBuilderOptions(KgtkFormat):
 
     STYLES: typing.List[str] = [
         COMPACT_PREFIXED_STYLE,
+        EMPTY_STYLE,
         CONCAT_NLN_STYLE,
         CONCAT_NL_NUM_STYLE,
         CONCAT_NLN_NUM_STYLE,
         CONCAT_WITH_OLD_ID_STYLE,
-        EMPTY_STYLE,
         PREFIXED_STYLE,
         WIKIDATA_STYLE,
         WIKIDATA_WITH_CLAIM_ID_STYLE,

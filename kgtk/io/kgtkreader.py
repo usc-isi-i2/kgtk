@@ -616,6 +616,9 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
     # Use the fast reading path?
     use_fast_path: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
+    # Can we rewind this input file?
+    rewindable: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
     # Reject file
     reject_file: typing.Optional[typing.TextIO] = attr.ib(default=None)
     reject_line_count: int = attr.ib(validator=attr.validators.instance_of(int), default=0)
@@ -721,6 +724,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                 print("Using KGTK_GRAPH_CACHE=%s" % repr(graph_cache), file=error_file, flush=True)
 
         source: ClosableIter[str]
+        rewindable: bool
         header: str
         column_name: str
         column_names: typing.List[str]
@@ -753,6 +757,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                     print("KgtkReader: Using the graph cache.", file=error_file, flush=True)
                     
                 source = ClosableIterTextIOWrapper(sys.stdin) # This is a dummy definition.
+                rewindable = True
                 column_names = gca.column_names.copy()
                 header = KgtkFormat.COLUMN_SEPARATOR.join(column_names)
 
@@ -769,7 +774,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
 
         if not use_graph_cache:
-            source = cls._openfile(file_path, options=options, error_file=error_file, verbose=verbose)
+            source, rewindable = cls._openfile(file_path, options=options, error_file=error_file, verbose=verbose)
 
             # Read the kgtk file header and split it into column names.  We get the
             # header back, too, for use in debugging and error messages.
@@ -994,6 +999,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                    is_edge_file=is_edge_file,
                    is_node_file=is_node_file,
                    use_fast_path=use_fast_path,
+                   rewindable=rewindable,
                    verbose=verbose,
                    very_verbose=very_verbose,
         )
@@ -1045,36 +1051,37 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
         else:
             # TODO: throw a better exception.
-                raise ValueError("%s: Unexpected compression_type '%s'" % (who, compression_type))
+            raise ValueError("%s: Unexpected compression_type '%s'" % (who, compression_type))
 
     @classmethod
     def _openfile(cls,
                   file_path: typing.Optional[Path],
                   options: KgtkReaderOptions, 
                   error_file: typing.TextIO,
-                  verbose: bool)->ClosableIter[str]:
+                  verbose: bool) -> typing.Tuple[ClosableIter[str], bool]:
         who: str = cls.__name__
         if file_path is None or str(file_path) == "-":
             if options.compression_type is not None and len(options.compression_type) > 0:
-                return ClosableIterTextIOWrapper(cls._open_compressed_file(options.compression_type,
-                                                                           "-",
-                                                                           sys.stdin,
-                                                                           who,
-                                                                           options.use_mgzip,
-                                                                           options.mgzip_threads,
-                                                                           error_file,
-                                                                           verbose))
+                return (ClosableIterTextIOWrapper(cls._open_compressed_file(options.compression_type,
+                                                                            "-",
+                                                                            sys.stdin,
+                                                                            who,
+                                                                            options.use_mgzip,
+                                                                            options.mgzip_threads,
+                                                                            error_file,
+                                                                            verbose)),
+                        False)
             else:
                 if verbose:
                     print("%s: reading stdin" % who, file=error_file, flush=True)
-                return ClosableIterTextIOWrapper(sys.stdin)
+                return (ClosableIterTextIOWrapper(sys.stdin), False)
 
         if str(file_path).startswith("<"):
             # Note: compression is not currently supported for fd input files.
             fd: int = int(str(file_path)[1:])
             if verbose:
                 print("%s: reading file descriptor %d" % (who, fd), file=error_file, flush=True)
-            return ClosableIterTextIOWrapper(open(fd, "r"))
+            return (ClosableIterTextIOWrapper(open(fd, "r")), False)
 
         if verbose:
             print("%s: File_path.suffix: %s" % (who, file_path.suffix), file=error_file, flush=True)
@@ -1101,14 +1108,15 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         else:
             if verbose:
                 print("%s: reading file %s" % (who, str(file_path)), file=error_file, flush=True)
-            return ClosableIterTextIOWrapper(open(file_path, "r"))
+            return (ClosableIterTextIOWrapper(open(file_path, "r")), True)
 
+        # TODO: remove the gzip_in_parallel code.
         if options.gzip_in_parallel:
             gzip_thread: GunzipProcess = GunzipProcess(input_file, Queue(options.gzip_queue_size))
             gzip_thread.start()
-            return gzip_thread
+            return (gzip_thread, True)
         else:
-            return ClosableIterTextIOWrapper(input_file)
+            return (ClosableIterTextIOWrapper(input_file), True)
             
 
     @classmethod

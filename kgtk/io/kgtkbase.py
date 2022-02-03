@@ -120,7 +120,7 @@ class KgtkBase(KgtkFormat):
         column_idx: int
         column_name: str
         for column_idx, column_name in enumerate(column_names):
-            if supply_missing_column_names and column_name is None or len(column_name) == 0:
+            if supply_missing_column_names and (column_name is None or len(column_name) == 0):
                 column_name = 'COL' + str(column_idx + 1)
                 column_names[column_idx] = column_name
             gripes: typing.List[str] = cls.check_column_name(column_name, header_line, error_action, error_file,

@@ -28,6 +28,7 @@ def run(output_file: KGTKFiles):
     import json
     import nltk
     nltk.download("wordnet")
+    nltk.download('omw-1.4')
     from nltk.corpus import wordnet as wn
     from kgtk.kgtkformat import KgtkFormat
     from kgtk.io.kgtkwriter import KgtkWriter

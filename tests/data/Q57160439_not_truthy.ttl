@@ -24,7 +24,6 @@
 
 wd:Q57160439 a wikibase:Item ;
     rdfs:label "A quantitative test to estimate neutralizing antibodies to the hepatitis C virus: cytofluorimetric assessment of envelope glycoprotein 2 binding to target cells"@en ;
-    schema:name "A quantitative test to estimate neutralizing antibodies to the hepatitis C virus: cytofluorimetric assessment of envelope glycoprotein 2 binding to target cells"@en ;
     skos:prefLabel "A quantitative test to estimate neutralizing antibodies to the hepatitis C virus: cytofluorimetric assessment of envelope glycoprotein 2 binding to target cells"@en ;
     p:P1433 wds:Q57160439-Q57160439-P1433-1 ;
     p:P1476 wds:Q57160439-Q57160439-P1476-1 ;
@@ -49,7 +48,8 @@ wd:Q57160439 a wikibase:Item ;
     p:P433 wds:Q57160439-Q57160439-P433-1 ;
     p:P478 wds:Q57160439-Q57160439-P478-1 ;
     p:P577 wds:Q57160439-Q57160439-P577-1 ;
-    p:P921 wds:Q57160439-Q57160439-P921-1 .
+    p:P921 wds:Q57160439-Q57160439-P921-1 ;
+    schema:name "A quantitative test to estimate neutralizing antibodies to the hepatitis C virus: cytofluorimetric assessment of envelope glycoprotein 2 binding to target cells"@en .
 
 wd:Q1146531 a wikibase:Item .
 
