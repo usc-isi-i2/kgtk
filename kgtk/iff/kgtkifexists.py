@@ -747,209 +747,216 @@ class KgtkIfExists(KgtkFormat):
         if self.show_version or self.verbose:
             print("KgtkIfEfexists version: %s" % UPDATE_VERSION, file=self.error_file, flush=True)
 
-        # Open the input files once.
-        if self.verbose:
-            if self.input_file_path is not None:
-                print("Opening the input file: %s" % self.input_file_path, file=self.error_file, flush=True)
-            else:
-                print("Reading the input data from stdin", file=self.error_file, flush=True)
-
-        input_kr: KgtkReader =  KgtkReader.open(self.input_file_path,
-                                                error_file=self.error_file,
-                                                who="input",
-                                                options=self.input_reader_options,
-                                                value_options = self.value_options,
-                                                verbose=self.verbose,
-                                                very_verbose=self.very_verbose,
-        )
-
-        if self.verbose:
-            print("Opening the filter input file: %s" % self.filter_file_path, file=self.error_file, flush=True)
-        filter_kr: KgtkReader = KgtkReader.open(self.filter_file_path,
-                                                who="filter",
-                                                error_file=self.error_file,
-                                                options=self.filter_reader_options,
-                                                value_options=self.value_options,
-                                                verbose=self.verbose,
-                                                very_verbose=self.very_verbose,
-        )
-
-        input_key_columns: typing.List[int] = self.get_key_columns(self.input_keys, input_kr, filter_kr, "input")
-        if self.verbose:
-            print("Input  key columns: %s" % " ".join((input_kr.column_names[idx] for idx in input_key_columns)), file=self.error_file, flush=True)
-        filter_key_columns: typing.List[int] = self.get_key_columns(self.filter_keys, filter_kr, input_kr, "filter")
-        if self.verbose:
-            print("Filter key columns: %s" % " ".join((filter_kr.column_names[idx] for idx in filter_key_columns)), file=self.error_file, flush=True)
-
-        if len(input_key_columns) != len(filter_key_columns):
-            print("There are %d input key columns but %d filter key columns.  Exiting." % (len(input_key_columns), len(filter_key_columns)),
-                  file=self.error_file, flush=True)
-            return
-
-        right_column_names: typing.Optional[typing.List[str]] = None
-        joined_column_names: typing.Optional[typing.List[str]] = None
-        if self.join_file_path is not None or self.join_output:
-            if (input_kr.is_edge_file and filter_kr.is_node_file) or (input_kr.is_node_file and filter_kr.is_edge_file):
-                raise ValueError("Cannot join an edge file to a node file.")
-
-            kmc: KgtkMergeColumns = KgtkMergeColumns()
-            kmc.merge(input_kr.column_names, prefix=self.input_prefix)
-            right_column_names = kmc.merge(filter_kr.column_names, prefix=self.filter_prefix)
-            joined_column_names = kmc.column_names
-
-            if self.verbose:
-                print("       input  columns: %s" % " ".join(input_kr.column_names), file=self.error_file, flush=True)
-                print("       filter columns: %s" % " ".join(filter_kr.column_names), file=self.error_file, flush=True)
-                print("mapped filter columns: %s" % " ".join(right_column_names), file=self.error_file, flush=True)
-                print("       joined columns: %s" % " ".join(joined_column_names), file=self.error_file, flush=True)
-
-        join_shuffle_list: typing.Optional[typing.List[int]] = None
-
+        input_kr: typing.Optional[KgtkReader] = None
+        filter_kr: typing.Optional[KgtkReader] = None
         ew: typing.Optional[KgtkWriter] = None
-        if self.output_file_path is not None:
-            if self.verbose:
-                print("Opening the output file: %s" % self.output_file_path, file=self.error_file, flush=True)
-
-            ew_column_names: typing.List[str]
-            if self.join_output and joined_column_names is not None:
-                ew_column_names = joined_column_names
-            else:
-                ew_column_names = input_kr.column_names
-
-            ew = KgtkWriter.open(ew_column_names,
-                                 self.output_file_path,
-                                 mode=KgtkWriter.Mode[input_kr.mode.name],
-                                 require_all_columns=False,
-                                 prohibit_extra_columns=True,
-                                 fill_missing_columns=True,
-                                 use_mgzip=self.input_reader_options.use_mgzip, # Hack!
-                                 mgzip_threads=self.input_reader_options.mgzip_threads, # Hack!
-                                 gzip_in_parallel=False,
-                                 verbose=self.verbose,
-                                 very_verbose=self.very_verbose)
-            if self.join_output and right_column_names is not None:
-                join_shuffle_list = ew.build_shuffle_list(right_column_names)        
-
-            
         rew: typing.Optional[KgtkWriter] = None
-        if self.reject_file_path is not None:
-            if self.verbose:
-                print("Opening the reject file: %s" % self.reject_file_path, file=self.error_file, flush=True)
-            rew = KgtkWriter.open(input_kr.column_names,
-                                  self.reject_file_path,
-                                  mode=KgtkWriter.Mode[input_kr.mode.name],
-                                  require_all_columns=False,
-                                  prohibit_extra_columns=True,
-                                  fill_missing_columns=True,
-                                  use_mgzip=self.input_reader_options.use_mgzip, # Hack!
-                                  mgzip_threads=self.input_reader_options.mgzip_threads, # Hack!
-                                  gzip_in_parallel=False,
-                                  verbose=self.verbose,
-                                  very_verbose=self.very_verbose)
-            
         mfew: typing.Optional[KgtkWriter] = None
-        if self.matched_filter_file_path is not None:
-            if self.verbose:
-                print("Opening the matched filter file: %s" % self.matched_filter_file_path, file=self.error_file, flush=True)
-            mfew = KgtkWriter.open(filter_kr.column_names,
-                                   self.matched_filter_file_path,
-                                   mode=KgtkWriter.Mode[filter_kr.mode.name],
-                                   require_all_columns=False,
-                                   prohibit_extra_columns=True,
-                                   fill_missing_columns=True,
-                                   use_mgzip=self.input_reader_options.use_mgzip, # Hack!
-                                   mgzip_threads=self.input_reader_options.mgzip_threads, # Hack!
-                                   gzip_in_parallel=False,
-                                   verbose=self.verbose,
-                                   very_verbose=self.very_verbose)
-            
         ufew: typing.Optional[KgtkWriter] = None
-        if self.unmatched_filter_file_path is not None:
-            if self.verbose:
-                print("Opening the unmatched filter file: %s" % self.unmatched_filter_file_path, file=self.error_file, flush=True)
-            ufew = KgtkWriter.open(filter_kr.column_names,
-                                   self.unmatched_filter_file_path,
-                                   mode=KgtkWriter.Mode[filter_kr.mode.name],
-                                   require_all_columns=False,
-                                   prohibit_extra_columns=True,
-                                   fill_missing_columns=True,
-                                   use_mgzip=self.input_reader_options.use_mgzip, # Hack! 
-                                   mgzip_threads=self.input_reader_options.mgzip_threads, # Hack!
-                                   gzip_in_parallel=False,
-                                   verbose=self.verbose,
-                                   very_verbose=self.very_verbose)
-            
         jw: typing.Optional[KgtkWriter] = None
-        if self.join_file_path is not None and not self.join_output and joined_column_names is not None:
-            jw = KgtkWriter.open(joined_column_names,
-                                 self.join_file_path,
-                                 mode=KgtkWriter.Mode[input_kr.mode.name],
-                                 require_all_columns=False,
-                                 prohibit_extra_columns=True,
-                                 fill_missing_columns=True,
-                                 use_mgzip=self.input_reader_options.use_mgzip, # Hack!
-                                 mgzip_threads=self.input_reader_options.mgzip_threads, # Hack!
-                                 gzip_in_parallel=False,
-                                 verbose=self.verbose,
-                                 very_verbose=self.very_verbose)
-            if right_column_names is not None:
-                join_shuffle_list = jw.build_shuffle_list(right_column_names)
-            
-        if self.presorted:
-            self.process_presorted_files(input_kr=input_kr,
-                                         filter_kr=filter_kr,
-                                         input_key_columns=input_key_columns,
-                                         filter_key_columns=filter_key_columns,
-                                         ew=ew,
-                                         rew=rew,
-                                         mfew=mfew,
-                                         ufew=ufew,
-                                         jw=jw,
-                                         join_shuffle_list=join_shuffle_list)
-            
-        elif self.cache_input:
-            if self.preserve_order:
-                self.process_cacheing_input_preserving_order(input_kr=input_kr,
-                                                             filter_kr=filter_kr,
-                                                             input_key_columns=input_key_columns,
-                                                             filter_key_columns=filter_key_columns,
-                                                             ew=ew,
-                                                             rew=rew,
-                                                             mfew=mfew,
-                                                             ufew=ufew,
-                                                             jw=jw,
-                                                             join_shuffle_list=join_shuffle_list)
-            else:
-                self.process_cacheing_input(input_kr=input_kr,
-                                            filter_kr=filter_kr,
-                                            input_key_columns=input_key_columns,
-                                            filter_key_columns=filter_key_columns,
-                                            ew=ew,
-                                            rew=rew,
-                                            mfew=mfew,
-                                            ufew=ufew,
-                                            jw=jw,
-                                            join_shuffle_list=join_shuffle_list)
-        else:
-            self.process_cacheing_filter(input_kr=input_kr,
-                                         filter_kr=filter_kr,
-                                         input_key_columns=input_key_columns,
-                                         filter_key_columns=filter_key_columns,
-                                         ew=ew,
-                                         rew=rew,
-                                         mfew=mfew,
-                                         ufew=ufew,
-                                         jw=jw,
-                                         join_shuffle_list=join_shuffle_list)
+        try:
+            # Open the input files once.
+            if self.verbose:
+                if self.input_file_path is not None:
+                    print("Opening the input file: %s" % self.input_file_path, file=self.error_file, flush=True)
+                else:
+                    print("Reading the input data from stdin", file=self.error_file, flush=True)
 
-        if ew is not None:
-            ew.close()
-        if rew is not None:
-            rew.close()
-        if mfew is not None:
-            mfew.close()
-        if ufew is not None:
-            ufew.close()
+            input_kr = KgtkReader.open(self.input_file_path,
+                                       error_file=self.error_file,
+                                       who="input",
+                                       options=self.input_reader_options,
+                                       value_options = self.value_options,
+                                       verbose=self.verbose,
+                                       very_verbose=self.very_verbose,
+                                       )
+
+            if self.verbose:
+                print("Opening the filter input file: %s" % self.filter_file_path, file=self.error_file, flush=True)
+            filter_kr = KgtkReader.open(self.filter_file_path,
+                                        who="filter",
+                                        error_file=self.error_file,
+                                        options=self.filter_reader_options,
+                                        value_options=self.value_options,
+                                        verbose=self.verbose,
+                                        very_verbose=self.very_verbose,
+                                        )
+
+            input_key_columns: typing.List[int] = self.get_key_columns(self.input_keys, input_kr, filter_kr, "input")
+            if self.verbose:
+                print("Input  key columns: %s" % " ".join((input_kr.column_names[idx] for idx in input_key_columns)), file=self.error_file, flush=True)
+            filter_key_columns: typing.List[int] = self.get_key_columns(self.filter_keys, filter_kr, input_kr, "filter")
+            if self.verbose:
+                print("Filter key columns: %s" % " ".join((filter_kr.column_names[idx] for idx in filter_key_columns)), file=self.error_file, flush=True)
+
+            if len(input_key_columns) != len(filter_key_columns):
+                print("There are %d input key columns but %d filter key columns.  Exiting." % (len(input_key_columns), len(filter_key_columns)),
+                      file=self.error_file, flush=True)
+                return
+
+            right_column_names: typing.Optional[typing.List[str]] = None
+            joined_column_names: typing.Optional[typing.List[str]] = None
+            if self.join_file_path is not None or self.join_output:
+                if (input_kr.is_edge_file and filter_kr.is_node_file) or (input_kr.is_node_file and filter_kr.is_edge_file):
+                    raise ValueError("Cannot join an edge file to a node file.")
+
+                kmc: KgtkMergeColumns = KgtkMergeColumns()
+                kmc.merge(input_kr.column_names, prefix=self.input_prefix)
+                right_column_names = kmc.merge(filter_kr.column_names, prefix=self.filter_prefix)
+                joined_column_names = kmc.column_names
+
+                if self.verbose:
+                    print("       input  columns: %s" % " ".join(input_kr.column_names), file=self.error_file, flush=True)
+                    print("       filter columns: %s" % " ".join(filter_kr.column_names), file=self.error_file, flush=True)
+                    print("mapped filter columns: %s" % " ".join(right_column_names), file=self.error_file, flush=True)
+                    print("       joined columns: %s" % " ".join(joined_column_names), file=self.error_file, flush=True)
+
+            join_shuffle_list: typing.Optional[typing.List[int]] = None
+
+            if self.output_file_path is not None:
+                if self.verbose:
+                    print("Opening the output file: %s" % self.output_file_path, file=self.error_file, flush=True)
+
+                ew_column_names: typing.List[str]
+                if self.join_output and joined_column_names is not None:
+                    ew_column_names = joined_column_names
+                else:
+                    ew_column_names = input_kr.column_names
+
+                ew = KgtkWriter.open(ew_column_names,
+                                     self.output_file_path,
+                                     mode=KgtkWriter.Mode[input_kr.mode.name],
+                                     require_all_columns=False,
+                                     prohibit_extra_columns=True,
+                                     fill_missing_columns=True,
+                                     use_mgzip=self.input_reader_options.use_mgzip, # Hack!
+                                     mgzip_threads=self.input_reader_options.mgzip_threads, # Hack!
+                                     gzip_in_parallel=False,
+                                     verbose=self.verbose,
+                                     very_verbose=self.very_verbose)
+                if self.join_output and right_column_names is not None:
+                    join_shuffle_list = ew.build_shuffle_list(right_column_names)        
+
+            if self.reject_file_path is not None:
+                if self.verbose:
+                    print("Opening the reject file: %s" % self.reject_file_path, file=self.error_file, flush=True)
+                rew = KgtkWriter.open(input_kr.column_names,
+                                      self.reject_file_path,
+                                      mode=KgtkWriter.Mode[input_kr.mode.name],
+                                      require_all_columns=False,
+                                      prohibit_extra_columns=True,
+                                      fill_missing_columns=True,
+                                      use_mgzip=self.input_reader_options.use_mgzip, # Hack!
+                                      mgzip_threads=self.input_reader_options.mgzip_threads, # Hack!
+                                      gzip_in_parallel=False,
+                                      verbose=self.verbose,
+                                      very_verbose=self.very_verbose)
+
+            if self.matched_filter_file_path is not None:
+                if self.verbose:
+                    print("Opening the matched filter file: %s" % self.matched_filter_file_path, file=self.error_file, flush=True)
+                mfew = KgtkWriter.open(filter_kr.column_names,
+                                       self.matched_filter_file_path,
+                                       mode=KgtkWriter.Mode[filter_kr.mode.name],
+                                       require_all_columns=False,
+                                       prohibit_extra_columns=True,
+                                       fill_missing_columns=True,
+                                       use_mgzip=self.input_reader_options.use_mgzip, # Hack!
+                                       mgzip_threads=self.input_reader_options.mgzip_threads, # Hack!
+                                       gzip_in_parallel=False,
+                                       verbose=self.verbose,
+                                       very_verbose=self.very_verbose)
+
+            if self.unmatched_filter_file_path is not None:
+                if self.verbose:
+                    print("Opening the unmatched filter file: %s" % self.unmatched_filter_file_path, file=self.error_file, flush=True)
+                ufew = KgtkWriter.open(filter_kr.column_names,
+                                       self.unmatched_filter_file_path,
+                                       mode=KgtkWriter.Mode[filter_kr.mode.name],
+                                       require_all_columns=False,
+                                       prohibit_extra_columns=True,
+                                       fill_missing_columns=True,
+                                       use_mgzip=self.input_reader_options.use_mgzip, # Hack! 
+                                       mgzip_threads=self.input_reader_options.mgzip_threads, # Hack!
+                                       gzip_in_parallel=False,
+                                       verbose=self.verbose,
+                                       very_verbose=self.very_verbose)
+
+            if self.join_file_path is not None and not self.join_output and joined_column_names is not None:
+                jw = KgtkWriter.open(joined_column_names,
+                                     self.join_file_path,
+                                     mode=KgtkWriter.Mode[input_kr.mode.name],
+                                     require_all_columns=False,
+                                     prohibit_extra_columns=True,
+                                     fill_missing_columns=True,
+                                     use_mgzip=self.input_reader_options.use_mgzip, # Hack!
+                                     mgzip_threads=self.input_reader_options.mgzip_threads, # Hack!
+                                     gzip_in_parallel=False,
+                                     verbose=self.verbose,
+                                     very_verbose=self.very_verbose)
+                if right_column_names is not None:
+                    join_shuffle_list = jw.build_shuffle_list(right_column_names)
+
+            if self.presorted:
+                self.process_presorted_files(input_kr=input_kr,
+                                             filter_kr=filter_kr,
+                                             input_key_columns=input_key_columns,
+                                             filter_key_columns=filter_key_columns,
+                                             ew=ew,
+                                             rew=rew,
+                                             mfew=mfew,
+                                             ufew=ufew,
+                                             jw=jw,
+                                             join_shuffle_list=join_shuffle_list)
+
+            elif self.cache_input:
+                if self.preserve_order:
+                    self.process_cacheing_input_preserving_order(input_kr=input_kr,
+                                                                 filter_kr=filter_kr,
+                                                                 input_key_columns=input_key_columns,
+                                                                 filter_key_columns=filter_key_columns,
+                                                                 ew=ew,
+                                                                 rew=rew,
+                                                                 mfew=mfew,
+                                                                 ufew=ufew,
+                                                                 jw=jw,
+                                                                 join_shuffle_list=join_shuffle_list)
+                else:
+                    self.process_cacheing_input(input_kr=input_kr,
+                                                filter_kr=filter_kr,
+                                                input_key_columns=input_key_columns,
+                                                filter_key_columns=filter_key_columns,
+                                                ew=ew,
+                                                rew=rew,
+                                                mfew=mfew,
+                                                ufew=ufew,
+                                                jw=jw,
+                                                join_shuffle_list=join_shuffle_list)
+            else:
+                self.process_cacheing_filter(input_kr=input_kr,
+                                             filter_kr=filter_kr,
+                                             input_key_columns=input_key_columns,
+                                             filter_key_columns=filter_key_columns,
+                                             ew=ew,
+                                             rew=rew,
+                                             mfew=mfew,
+                                             ufew=ufew,
+                                             jw=jw,
+                                             join_shuffle_list=join_shuffle_list)
+
+        finally:
+            if ew is not None:
+                ew.close()
+            if rew is not None:
+                rew.close()
+            if mfew is not None:
+                mfew.close()
+            if ufew is not None:
+                ufew.close()
+            if input_kr is not None:
+                input_kr.close()
+            if filter_kr is not None:
+                filter_kr.close()
 
 def main():
     """
