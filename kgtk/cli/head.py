@@ -125,14 +125,17 @@ def run(input_file: KGTKFiles,
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
 
+    kr: typing.Optional[KgtkReader] = None
+    kw: typing.Optional[KgtkWriter] = None
+
     try:
-        kr: KgtkReader = KgtkReader.open(input_file_path,
-                                         options=reader_options,
-                                         value_options = value_options,
-                                         error_file=error_file,
-                                         verbose=verbose,
-                                         very_verbose=very_verbose,
-                                         )
+        kr = KgtkReader.open(input_file_path,
+                             options=reader_options,
+                             value_options = value_options,
+                             error_file=error_file,
+                             verbose=verbose,
+                             very_verbose=very_verbose,
+                             )
 
         output_mode: KgtkWriter.Mode = KgtkWriter.Mode.NONE
         if kr.is_edge_file:
@@ -149,17 +152,17 @@ def run(input_file: KGTKFiles,
             if verbose:
                 print("Opening the output file: %s" % str(output_file_path), file=error_file, flush=True)
 
-        kw: KgtkWriter = KgtkWriter.open(kr.column_names,
-                                         output_file_path,
-                                         use_mgzip=reader_options.use_mgzip, # Hack!
-                                         mgzip_threads=reader_options.mgzip_threads, # Hack!
-                                         gzip_in_parallel=False,
-                                         mode=output_mode,
-                                         output_format=output_format,
-                                         error_file=error_file,
-                                         verbose=verbose,
-                                         very_verbose=very_verbose)
-
+        kw = KgtkWriter.open(kr.column_names,
+                             output_file_path,
+                             use_mgzip=reader_options.use_mgzip, # Hack!
+                             mgzip_threads=reader_options.mgzip_threads, # Hack!
+                             gzip_in_parallel=False,
+                             mode=output_mode,
+                             output_format=output_format,
+                             error_file=error_file,
+                             verbose=verbose,
+                             very_verbose=very_verbose)
+        
         edge_count: int = 0
         row: typing.List[str]
         if edge_limit > 0:
@@ -176,7 +179,6 @@ def run(input_file: KGTKFiles,
                     edge_count += 1
                     kw.write(edge_buffer.popleft())
 
-        kw.close()
 
         if verbose:
             print("Copied %d edges." % edge_count, file=error_file, flush=True)
@@ -186,3 +188,9 @@ def run(input_file: KGTKFiles,
     except Exception as e:
         raise KGTKException(str(e))
 
+    finally:
+        if kw is not None:
+            kw.close()
+
+        if kr is not None:
+            kr.close()
