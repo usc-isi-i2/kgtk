@@ -76,6 +76,8 @@ def run(input_file: KGTKFiles, english_only, output_file: KGTKFiles, weights_fil
         edge_list=[edge[col] for col in cols]
         return edge_list
 
+    ew: typing.Optional[KgtkWriter] = None
+    eq_aux: typing.Optional[KgtkWriter] = None
     try:
         filename: Path = KGTKArgumentParser.get_input_file(input_file)
 
@@ -83,29 +85,29 @@ def run(input_file: KGTKFiles, english_only, output_file: KGTKFiles, weights_fil
         out_columns=['node1', 'relation', 'node2', 'node1;label', 'node2;label','relation;label', 'relation;dimension', 'source', 'sentence']
 
         output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
-        ew: KgtkWriter = KgtkWriter.open(out_columns,
-                                         output_kgtk_file,
-                                         #mode=input_kr.mode,
-                                         require_all_columns=False,
-                                         prohibit_extra_columns=True,
-                                         fill_missing_columns=True,
-                                         gzip_in_parallel=False,
-                                         #verbose=self.verbose,
-                                         #very_verbose=self.very_verbose
-                                         )
+        ew = KgtkWriter.open(out_columns,
+                             output_kgtk_file,
+                             #mode=input_kr.mode,
+                             require_all_columns=False,
+                             prohibit_extra_columns=True,
+                             fill_missing_columns=True,
+                             gzip_in_parallel=False,
+                             #verbose=self.verbose,
+                             #very_verbose=self.very_verbose
+                             )
 
         if weights_file:
             info_kgtk_file: Path = KGTKArgumentParser.get_output_file(weights_file)
-            ew_aux: KgtkWriter = KgtkWriter.open(out_columns[:3],
-                                             info_kgtk_file,
-                                             #mode=input_kr.mode,
-                                             require_all_columns=False,
-                                             prohibit_extra_columns=True,
-                                             fill_missing_columns=True,
-                                             gzip_in_parallel=False,
-                                             #verbose=self.verbose,
-                                             #very_verbose=self.very_verbose
-                                             )
+            ew_auxr = KgtkWriter.open(out_columns[:3],
+                                      info_kgtk_file,
+                                      #mode=input_kr.mode,
+                                      require_all_columns=False,
+                                      prohibit_extra_columns=True,
+                                      fill_missing_columns=True,
+                                      gzip_in_parallel=False,
+                                      #verbose=self.verbose,
+                                      #very_verbose=self.very_verbose
+                                      )
 
         with open(filename, 'r') as f:
             reader = csv.reader(f, delimiter='\t', quotechar='"')
@@ -115,10 +117,14 @@ def run(input_file: KGTKFiles, english_only, output_file: KGTKFiles, weights_fil
                     if weights_file and 'weight' in json.loads(row[-1]).keys():
                         ew_aux.write(make_weight_edge(row))
 
-        # Clean up
-        ew.close()
-        if weights_file:
-            ew_aux.close()
-
     except Exception as e:
         kgtk_exception_auto_handler(e)
+
+    finally:
+        # Close any open files.
+        if ew is not None:
+            ew.close()
+
+        if ew_aux is not None:
+            ew_aux.close()
+
