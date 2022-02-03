@@ -80,92 +80,96 @@ class KgtkIfEmpty(KgtkFormat):
             else:
                 print("Reading the input data from stdin", file=self.error_file, flush=True)
 
-        kr: KgtkReader =  KgtkReader.open(self.input_file_path,
-                                          error_file=self.error_file,
-                                          options=self.reader_options,
-                                          value_options = self.value_options,
-                                          verbose=self.verbose,
-                                          very_verbose=self.very_verbose,
-        )
-
-        filter_idx_list: typing.List[int] = [ ]
-        column_name: str
-        for column_name in self.filter_column_names:
-            if column_name not in kr.column_name_map:
-                raise ValueError("Column %s is not in the input file" % (column_name))
-            filter_idx_list.append(kr.column_name_map[column_name])
-            
-
         ew: typing.Optional[KgtkWriter] = None
         rew: typing.Optional[KgtkWriter] = None
-        if not self.only_count:
-            if self.verbose:
-                print("Opening the output file: %s" % self.output_file_path, file=self.error_file, flush=True)
-            ew = KgtkWriter.open(kr.column_names,
-                                 self.output_file_path,
-                                 mode=kr.mode,
-                                 require_all_columns=False,
-                                 prohibit_extra_columns=True,
-                                 fill_missing_columns=True,
-                                 use_mgzip=self.reader_options.use_mgzip, # Hack!
-                                 mgzip_threads=self.reader_options.mgzip_threads, # Hack!
-                                 gzip_in_parallel=False,
-                                 verbose=self.verbose,
-                                 very_verbose=self.very_verbose)        
-            
-            if self.reject_file_path is not None:
+
+        kr: KgtkReader = KgtkReader.open(self.input_file_path,
+                                         error_file=self.error_file,
+                                         options=self.reader_options,
+                                         value_options = self.value_options,
+                                         verbose=self.verbose,
+                                         very_verbose=self.very_verbose,
+                                         )
+
+        try:
+            filter_idx_list: typing.List[int] = [ ]
+            column_name: str
+            for column_name in self.filter_column_names:
+                if column_name not in kr.column_name_map:
+                    raise ValueError("Column %s is not in the input file" % (column_name))
+                filter_idx_list.append(kr.column_name_map[column_name])
+
+
+            if not self.only_count:
                 if self.verbose:
-                    print("Opening the reject file: %s" % self.reject_file_path, file=self.error_file, flush=True)
-                rew = KgtkWriter.open(kr.column_names,
-                                      self.reject_file_path,
-                                      mode=KgtkWriter.Mode[kr.mode.name],
-                                      require_all_columns=False,
-                                      prohibit_extra_columns=True,
-                                      fill_missing_columns=True,
-                                      use_mgzip=self.reader_options.use_mgzip, # Hack!
-                                      mgzip_threads=self.reader_options.mgzip_threads, # Hack!
-                                      gzip_in_parallel=False,
-                                      verbose=self.verbose,
-                                      very_verbose=self.very_verbose)
-            
-        if self.verbose:
-            print("Filtering records from %s" % self.input_file_path, file=self.error_file, flush=True)
-        input_line_count: int = 0
-        output_line_count: int = 0;
-        reject_line_count: int = 0;
+                    print("Opening the output file: %s" % self.output_file_path, file=self.error_file, flush=True)
+                ew = KgtkWriter.open(kr.column_names,
+                                     self.output_file_path,
+                                     mode=kr.mode,
+                                     require_all_columns=False,
+                                     prohibit_extra_columns=True,
+                                     fill_missing_columns=True,
+                                     use_mgzip=self.reader_options.use_mgzip, # Hack!
+                                     mgzip_threads=self.reader_options.mgzip_threads, # Hack!
+                                     gzip_in_parallel=False,
+                                     verbose=self.verbose,
+                                     very_verbose=self.very_verbose)        
 
-        row: typing.list[str]
-        for row in kr:
-            input_line_count += 1
-            if self.filter(row, filter_idx_list):
-                if not self.only_count:
-                    ew.write(row)
-                output_line_count += 1
-            else:
-                if not self.only_count and rew is not None:
-                    rew.write(row)
-                reject_line_count += 1
+                if self.reject_file_path is not None:
+                    if self.verbose:
+                        print("Opening the reject file: %s" % self.reject_file_path, file=self.error_file, flush=True)
+                    rew = KgtkWriter.open(kr.column_names,
+                                          self.reject_file_path,
+                                          mode=KgtkWriter.Mode[kr.mode.name],
+                                          require_all_columns=False,
+                                          prohibit_extra_columns=True,
+                                          fill_missing_columns=True,
+                                          use_mgzip=self.reader_options.use_mgzip, # Hack!
+                                          mgzip_threads=self.reader_options.mgzip_threads, # Hack!
+                                          gzip_in_parallel=False,
+                                          verbose=self.verbose,
+                                          very_verbose=self.very_verbose)
 
-
-        if self.only_count:
-            print("Read %d records, %d records passed the filter, %d rejected." % (input_line_count,
-                                                                                   output_line_count,
-                                                                                   reject_line_count),
-                  file=self.error_file, flush=True)
-        else:
             if self.verbose:
-                if rew is not None:
-                    print("Read %d records, wrote %d records, rejected %d records." % (input_line_count,
+                print("Filtering records from %s" % self.input_file_path, file=self.error_file, flush=True)
+            input_line_count: int = 0
+            output_line_count: int = 0;
+            reject_line_count: int = 0;
+
+            row: typing.list[str]
+            for row in kr:
+                input_line_count += 1
+                if self.filter(row, filter_idx_list):
+                    if not self.only_count:
+                        ew.write(row)
+                    output_line_count += 1
+                else:
+                    if not self.only_count and rew is not None:
+                        rew.write(row)
+                    reject_line_count += 1
+
+
+            if self.only_count:
+                print("Read %d records, %d records passed the filter, %d rejected." % (input_line_count,
                                                                                        output_line_count,
                                                                                        reject_line_count),
-                          file=self.error_file, flush=True)
-                else:
-                    print("Read %d records, wrote %d records." % (input_line_count, output_line_count), file=self.error_file, flush=True)
-                    
-        
-            ew.close()
+                      file=self.error_file, flush=True)
+            else:
+                if self.verbose:
+                    if rew is not None:
+                        print("Read %d records, wrote %d records, rejected %d records." % (input_line_count,
+                                                                                           output_line_count,
+                                                                                           reject_line_count),
+                              file=self.error_file, flush=True)
+                    else:
+                        print("Read %d records, wrote %d records." % (input_line_count, output_line_count), file=self.error_file, flush=True)
+
+        finally:
+            if ew is not None:
+                ew.close()
             if rew is not None:
                 rew.close()
+            kr.close()
 
 def main():
     """
