@@ -537,166 +537,174 @@ class KgtkImplode(KgtkFormat):
         if KgtkValueFields.DATA_TYPE_FIELD_NAME not in selected_field_names:
             raise ValueError("The data type field '%s' has not been selected." % KgtkValueFields.DATA_TYPE_FIELD_NAME)
 
-        # Open the input file.
-        if self.verbose:
-            print("Opening the input file: %s" % self.input_file_path, file=self.error_file, flush=True)
-
-        kr: KgtkReader =  KgtkReader.open(self.input_file_path,
-                                          error_file=self.error_file,
-                                          options=self.reader_options,
-                                          value_options = self.value_options,
-                                          verbose=self.verbose,
-                                          very_verbose=self.very_verbose,
-        )
-
-        output_column_names = kr.column_names.copy()
-        new_column: bool # True ==> adding the imploded column, False ==> using an existing column
-        column_idx: int # The index of the imploded column (new or old).
-        if self.column_name in kr.column_name_map:
-            column_idx = kr.column_name_map[self.column_name]
-            new_column = False
-            if not self.overwrite_column:
-                raise ValueError("Imploded column '%s' (idx %d) already exists and overwrite not allowed." % (self.column_name, column_idx))
-            if self.verbose:
-                print("Overwriting existing imploded column '%s' (idx %d)." % (self.column_name, column_idx), file=self.error_file, flush=True)
-        else:
-            column_idx = len(output_column_names)
-            new_column = True
-            output_column_names.append(self.column_name)
-            if self.verbose:
-                print("Imploded column '%s' will be created (idx %d)." % (self.column_name, column_idx), file=self.error_file, flush=True)
-
-        if self.verbose:
-            print("Build the map of field names to exploded columns", file=self.error_file, flush=True)
-        implosion: typing.MutableMapping[str, int] = { }
-        missing_columns: typing.List[str] = [ ]
-        for field_name in selected_field_names:
-            if field_name in self.without_fields:
-                if self.verbose:
-                    print("We can do without field '%s'." % field_name, file=self.error_file, flush=True)
-                implosion[field_name] = -1
-                continue
-            exploded_name: str = self.prefix + field_name
-            if self.verbose:
-                print("Field '%s' becomes '%s'" % (field_name, exploded_name), file=self.error_file, flush=True)
-            if exploded_name in implosion:
-                raise ValueError("Field name '%s' is duplicated in the field list.")
-            if exploded_name in kr.column_names:
-                exploded_idx = kr.column_name_map[exploded_name]
-                implosion[field_name] = exploded_idx
-                if self.verbose:
-                    print("Field '%s' is in column '%s' (idx=%d)" % (field_name, exploded_name, exploded_idx),
-                              file=self.error_file, flush=True)
-            else:
-                if self.verbose:
-                    print("Field '%s' exploded column '%s' not found." % (field_name, exploded_name), file=self.error_file, flush=True)
-                missing_columns.append(exploded_name)
-        if len(missing_columns) > 0:
-            raise ValueError("Missing columns: %s" % " ".join(missing_columns))
-                
-        data_type_idx = implosion[KgtkValueFields.DATA_TYPE_FIELD_NAME]
-
-        # If requested, create the ID column builder.
-        # Assemble the list of output column names.
-        idb: typing.Optional[KgtkIdBuilder] = None
-        if self.build_id:
-            if self.idbuilder_options is None:
-                raise ValueError("ID build requested but ID builder options are missing")
-            idb = KgtkIdBuilder.from_column_names(output_column_names, self.idbuilder_options)
-            id_output_column_names = idb.column_names.copy()
-        else:
-            id_output_column_names = output_column_names.copy()
-
-        trimmed_output_column_names: typing.List[str]
-        if self.remove_prefixed_columns and len(self.prefix) > 0:
-            trimmed_output_column_names = [ ]
-            if self.verbose:
-                print("Removing columns with names that start with '%s'." % self.prefix, file=self.error_file, flush=True)
-            column_name: str
-            for column_name in id_output_column_names:
-                if column_name.startswith(self.prefix):
-                    if self.verbose:
-                        print("Removing column '%s." % column_name, file=self.error_file, flush=True)
-                else:
-                    trimmed_output_column_names.append(column_name)
-        else:
-            trimmed_output_column_names = id_output_column_names
-
-        shuffle_list: typing.List[int] = [ ] # Easier to init than deal with typing.Optional.
+        kr: typing.Optional[KgtkReader] = None
         ew: typing.Optional[KgtkWriter] = None
-        if self.output_file_path is not None:
-            if self.verbose:
-                print("Opening output file %s" % str(self.output_file_path), file=self.error_file, flush=True)
-            # Open the output file.
-            ew: KgtkWriter = KgtkWriter.open(trimmed_output_column_names,
-                                             self.output_file_path,
-                                             mode=kr.mode,
-                                             require_all_columns=False,
-                                             prohibit_extra_columns=True,
-                                             fill_missing_columns=False,
-                                             gzip_in_parallel=False,
-                                             verbose=self.verbose,
-                                             very_verbose=self.very_verbose)
-            shuffle_list = ew.build_shuffle_list(id_output_column_names)
-
-
         rw: typing.Optional[KgtkWriter] = None
-        if self.reject_file_path is not None:
+
+        try:
+            # Open the input file.
             if self.verbose:
-                print("Opening reject file %s" % str(self.reject_file_path), file=self.error_file, flush=True)
-            # Open the reject file.
-            rw: KgtkWriter = KgtkWriter.open(kr.column_names,
-                                             self.reject_file_path,
-                                             mode=kr.mode,
-                                             require_all_columns=False,
-                                             prohibit_extra_columns=True,
-                                             fill_missing_columns=False,
-                                             gzip_in_parallel=False,
-                                             verbose=self.verbose,
-                                             very_verbose=self.very_verbose)        
-        
-        if self.verbose:
-            print("Imploding records from %s" % self.input_file_path, file=self.error_file, flush=True)
-        input_line_count: int = 0
-        imploded_value_count: int = 0
-        invalid_value_count: int = 0
-        
-        existing_column_idx: int = -1 if new_column else column_idx
+                print("Opening the input file: %s" % self.input_file_path, file=self.error_file, flush=True)
 
-        row: typing.List[str]
-        for row in kr:
-            input_line_count += 1
+            kr = KgtkReader.open(self.input_file_path,
+                                 error_file=self.error_file,
+                                 options=self.reader_options,
+                                 value_options = self.value_options,
+                                 verbose=self.verbose,
+                                 very_verbose=self.very_verbose,
+                                 )
 
-            value: str
-            valid: bool
-            value, valid = self.implode(input_line_count, row, implosion, data_type_idx, existing_column_idx)
-            if valid:
-                imploded_value_count += 1
+            output_column_names = kr.column_names.copy()
+            new_column: bool # True ==> adding the imploded column, False ==> using an existing column
+            column_idx: int # The index of the imploded column (new or old).
+            if self.column_name in kr.column_name_map:
+                column_idx = kr.column_name_map[self.column_name]
+                new_column = False
+                if not self.overwrite_column:
+                    raise ValueError("Imploded column '%s' (idx %d) already exists and overwrite not allowed." % (self.column_name, column_idx))
+                if self.verbose:
+                    print("Overwriting existing imploded column '%s' (idx %d)." % (self.column_name, column_idx), file=self.error_file, flush=True)
             else:
-                invalid_value_count += 1
-                
-            if rw is not None and not valid:
-                # Reject the row before implosion.
-                rw.write(row)
-            elif ew is not None:
-                output_row: typing.List[str] = row.copy()
-                if new_column:
-                    output_row.append(value)
+                column_idx = len(output_column_names)
+                new_column = True
+                output_column_names.append(self.column_name)
+                if self.verbose:
+                    print("Imploded column '%s' will be created (idx %d)." % (self.column_name, column_idx), file=self.error_file, flush=True)
+
+            if self.verbose:
+                print("Build the map of field names to exploded columns", file=self.error_file, flush=True)
+            implosion: typing.MutableMapping[str, int] = { }
+            missing_columns: typing.List[str] = [ ]
+            for field_name in selected_field_names:
+                if field_name in self.without_fields:
+                    if self.verbose:
+                        print("We can do without field '%s'." % field_name, file=self.error_file, flush=True)
+                    implosion[field_name] = -1
+                    continue
+                exploded_name: str = self.prefix + field_name
+                if self.verbose:
+                    print("Field '%s' becomes '%s'" % (field_name, exploded_name), file=self.error_file, flush=True)
+                if exploded_name in implosion:
+                    raise ValueError("Field name '%s' is duplicated in the field list.")
+                if exploded_name in kr.column_names:
+                    exploded_idx = kr.column_name_map[exploded_name]
+                    implosion[field_name] = exploded_idx
+                    if self.verbose:
+                        print("Field '%s' is in column '%s' (idx=%d)" % (field_name, exploded_name, exploded_idx),
+                                  file=self.error_file, flush=True)
                 else:
-                    output_row[column_idx] = value
-                if idb is not None:
-                    output_row = idb.build(output_row, input_line_count)
-                ew.write(output_row, shuffle_list=shuffle_list)
-                
-        if self.verbose:
-            print("Processed %d records, imploded %d values, %d invalid values." % (input_line_count, imploded_value_count, invalid_value_count),
-                  file=self.error_file, flush=True)
-        
-        if ew is not None:
-            ew.close()
+                    if self.verbose:
+                        print("Field '%s' exploded column '%s' not found." % (field_name, exploded_name), file=self.error_file, flush=True)
+                    missing_columns.append(exploded_name)
+            if len(missing_columns) > 0:
+                raise ValueError("Missing columns: %s" % " ".join(missing_columns))
+
+            data_type_idx = implosion[KgtkValueFields.DATA_TYPE_FIELD_NAME]
+
+            # If requested, create the ID column builder.
+            # Assemble the list of output column names.
+            idb: typing.Optional[KgtkIdBuilder] = None
+            if self.build_id:
+                if self.idbuilder_options is None:
+                    raise ValueError("ID build requested but ID builder options are missing")
+                idb = KgtkIdBuilder.from_column_names(output_column_names, self.idbuilder_options)
+                id_output_column_names = idb.column_names.copy()
+            else:
+                id_output_column_names = output_column_names.copy()
+
+            trimmed_output_column_names: typing.List[str]
+            if self.remove_prefixed_columns and len(self.prefix) > 0:
+                trimmed_output_column_names = [ ]
+                if self.verbose:
+                    print("Removing columns with names that start with '%s'." % self.prefix, file=self.error_file, flush=True)
+                column_name: str
+                for column_name in id_output_column_names:
+                    if column_name.startswith(self.prefix):
+                        if self.verbose:
+                            print("Removing column '%s." % column_name, file=self.error_file, flush=True)
+                    else:
+                        trimmed_output_column_names.append(column_name)
+            else:
+                trimmed_output_column_names = id_output_column_names
+
+            shuffle_list: typing.List[int] = [ ] # Easier to init than deal with typing.Optional.
+            if self.output_file_path is not None:
+                if self.verbose:
+                    print("Opening output file %s" % str(self.output_file_path), file=self.error_file, flush=True)
+                # Open the output file.
+                ew = KgtkWriter.open(trimmed_output_column_names,
+                                     self.output_file_path,
+                                     mode=kr.mode,
+                                     require_all_columns=False,
+                                     prohibit_extra_columns=True,
+                                     fill_missing_columns=False,
+                                     gzip_in_parallel=False,
+                                     verbose=self.verbose,
+                                     very_verbose=self.very_verbose)
+                shuffle_list = ew.build_shuffle_list(id_output_column_names)
+
+
+            if self.reject_file_path is not None:
+                if self.verbose:
+                    print("Opening reject file %s" % str(self.reject_file_path), file=self.error_file, flush=True)
+                # Open the reject file.
+                rw = KgtkWriter.open(kr.column_names,
+                                     self.reject_file_path,
+                                     mode=kr.mode,
+                                     require_all_columns=False,
+                                     prohibit_extra_columns=True,
+                                     fill_missing_columns=False,
+                                     gzip_in_parallel=False,
+                                     verbose=self.verbose,
+                                     very_verbose=self.very_verbose)        
+
+            if self.verbose:
+                print("Imploding records from %s" % self.input_file_path, file=self.error_file, flush=True)
+            input_line_count: int = 0
+            imploded_value_count: int = 0
+            invalid_value_count: int = 0
+
+            existing_column_idx: int = -1 if new_column else column_idx
+
+            row: typing.List[str]
+            for row in kr:
+                input_line_count += 1
+
+                value: str
+                valid: bool
+                value, valid = self.implode(input_line_count, row, implosion, data_type_idx, existing_column_idx)
+                if valid:
+                    imploded_value_count += 1
+                else:
+                    invalid_value_count += 1
+
+                if rw is not None and not valid:
+                    # Reject the row before implosion.
+                    rw.write(row)
+                elif ew is not None:
+                    output_row: typing.List[str] = row.copy()
+                    if new_column:
+                        output_row.append(value)
+                    else:
+                        output_row[column_idx] = value
+                    if idb is not None:
+                        output_row = idb.build(output_row, input_line_count)
+                    ew.write(output_row, shuffle_list=shuffle_list)
+
+            if self.verbose:
+                print("Processed %d records, imploded %d values, %d invalid values." % (input_line_count, imploded_value_count, invalid_value_count),
+                      file=self.error_file, flush=True)
+
+
+        finally:
+            if ew is not None:
+                ew.close()
             
-        if rw is not None:
-            rw.close()
+            if rw is not None:
+                rw.close()
+
+            if kr is not None:
+                kr.close()
             
 def main():
     """
