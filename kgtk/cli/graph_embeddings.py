@@ -19,8 +19,7 @@ class KgtkCreateTmpTsv(KgtkFormat):
     import sys
     import typing
     
-    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
-    from kgtk.io.kgtkwriter import KgtkWriter
+    from kgtk.io.kgtkreader import KgtkReaderOptions
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     input_file_path: Path = attr.ib(validator=attr.validators.instance_of(Path))
@@ -34,7 +33,10 @@ class KgtkCreateTmpTsv(KgtkFormat):
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     def process(self):
-        kr: typing.Optional[Kgtkreader] = None
+        from kgtk.io.kgtkreader import KgtkReader
+        from kgtk.io.kgtkwriter import KgtkWriter
+        
+        kr: typing.Optional[KgtkReader] = None
         kw: typing.Optional[KgtkWriter] = None
 
         try:
@@ -149,6 +151,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         parser (argparse.ArgumentParser)
     """
     # import modules locally
+    from pathlib import Path
+
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
     from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
@@ -299,6 +303,7 @@ def config_preprocess(raw_config):
 # convert wv format to kgtk format ..
 def generate_kgtk_output(entities_output, output_kgtk_file, output_no_header, verbose, very_verbose, error_file):
     import logging
+    from kgtk.io.kgtkwriter import KgtkWriter
     # Open the output file.
     kw: KgtkWriter = KgtkWriter.open(['node1', 'label', 'node2'],
                                      output_kgtk_file,
@@ -371,6 +376,8 @@ def run(input_file: KGTKFiles,
     from torchbiggraph.train import train
     from torchbiggraph.util import SubprocessInitializer, setup_logging
     from kgtk.graph_embeddings.export_to_tsv import make_tsv
+    from kgtk.io.kgtkreader import KgtkReaderOptions
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
     # from torchbiggraph.converters.export_to_tsv import make_tsv
 
     try:

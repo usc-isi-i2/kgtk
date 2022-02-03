@@ -85,6 +85,12 @@ def run(input_file: KGTKFiles, output_file: KGTKFiles):
 
         out_columns=['node1', 'relation', 'node2', 'node1;label', 'node2;label','relation;label', 'relation;dimension', 'source', 'sentence']
 
+        df = pd.read_csv(filename,index_col=0)
+        df.iloc[:,:9] = df.iloc[:,:9].apply(lambda col: col.apply(json.loads))
+
+        df.drop(df.columns[len(df.columns)-1], axis=1, inplace=True)
+        df.drop(df.columns[len(df.columns)-1], axis=1, inplace=True)
+
         output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
         ew: KgtkWriter = KgtkWriter.open(out_columns,
                                          output_kgtk_file,
@@ -98,35 +104,32 @@ def run(input_file: KGTKFiles, output_file: KGTKFiles):
                                          )
 
 
-        df = pd.read_csv(filename,index_col=0)
-        df.iloc[:,:9] = df.iloc[:,:9].apply(lambda col: col.apply(json.loads))
+        try:
+            for event, row in df.iterrows():
+                event_label=produce_node_labels(event)
 
-        df.drop(df.columns[len(df.columns)-1], axis=1, inplace=True)
-        df.drop(df.columns[len(df.columns)-1], axis=1, inplace=True)
+                first_event_label=KgtkFormat.unstringify(event_label.split('|')[0] if '|' in event_label else event_label)
+                n1=make_node(first_event_label)
+                for c in df.columns:
+                    for v in row[c]:
+                        if v=='none': continue
+                        value_label=produce_node_labels(v)
+                        first_value_label=KgtkFormat.unstringify(value_label.split('|')[0] if '|' in value_label else value_label)
+                        n2=make_node(first_value_label)
 
-        for event, row in df.iterrows():
-            event_label=produce_node_labels(event)
+                        rel_label=produce_rel_label(c)
 
-            first_event_label=KgtkFormat.unstringify(event_label.split('|')[0] if '|' in event_label else event_label)
-            n1=make_node(first_event_label)
-            for c in df.columns:
-                for v in row[c]:
-                    if v=='none': continue
-                    value_label=produce_node_labels(v)
-                    first_value_label=KgtkFormat.unstringify(value_label.split('|')[0] if '|' in value_label else value_label)
-                    n2=make_node(first_value_label)
+                        sentence=''
 
-                    rel_label=produce_rel_label(c)
+                        relation=make_node(c)
 
-                    sentence=''
+                        this_row=[n1, relation, n2, event_label, value_label, rel_label, '', KgtkFormat.stringify('AT'), sentence]
+                        ew.write(this_row)
 
-                    relation=make_node(c)
 
-                    this_row=[n1, relation, n2, event_label, value_label, rel_label, '', KgtkFormat.stringify('AT'), sentence]
-                    ew.write(this_row)
-
-        # Clean up.
-        ew.close()
+        finally:
+            # Clean up.
+            ew.close()
 
     except Exception as e:
         raise KGTKException('Error: ' + str(e))
