@@ -16,31 +16,51 @@ optional arguments:
 Importing FrameNet can be done as follows (no inputs should be provided, as FrameNet is read through the NLTK package):
 
 ```
-kgtk import-framenet
+kgtk import-framenet / head -n 10
 ```
 
-Example output (first and last 10 lines):
+Example output (first 10 lines):
 
-| node1                   | relation           | node2                         | node1;label            | node2;label            | relation;label      | relation;dimension | source | sentence |
-| ----------------------- | ------------------ | ----------------------------- | ---------------------- | ---------------------- | ------------------- | ------------------ | ------ | -------- |
-| fn:intentionally_affect | fn:IsInheritedBy   | fn:abandonment                | "intentionally affect" | "abandonment"          | "Is Inherited By"   |                    | "FN"   |          |
-| fn:abandonment          | fn:InheritsFrom    | fn:intentionally_affect       | "abandonment"          | "intentionally affect" | "Inherits From"     |                    | "FN"   |          |
-| fn:abandonment          | fn:HasLexicalUnit  | fn:lu:abandonment:abandon     | "abandonment"          | "abandon"              | "Has Lexical Unit"  |                    | "FN"   |          |
-| fn:abandonment          | fn:HasLexicalUnit  | fn:lu:abandonment:leave       | "abandonment"          | "leave"                | "Has Lexical Unit"  |                    | "FN"   |          |
-| fn:abandonment          | fn:HasLexicalUnit  | fn:lu:abandonment:abandonment | "abandonment"          | "abandonment"          | "Has Lexical Unit"  |                    | "FN"   |          |
-| fn:abandonment          | fn:HasLexicalUnit  | fn:lu:abandonment:abandoned   | "abandonment"          | "abandoned"            | "Has Lexical Unit"  |                    | "FN"   |          |
-| fn:abandonment          | fn:HasLexicalUnit  | fn:lu:abandonment:forget      | "abandonment"          | "forget"               | "Has Lexical Unit"  |                    | "FN"   |          |
-| fn:abandonment          | fn:HasFrameElement | fn:fe:agent                   | "abandonment"          | "agent"                | "Has Frame Element" |                    | "FN"   |          |
-| fn:abandonment          | fn:HasFrameElement | fn:fe:theme                   | "abandonment"          | "theme"                | "Has Frame Element" |                    | "FN"   |          |
-| ...                     |                    |                               |                        |                        |                     |                    |        |          |
-| fn:st:manner            | fn:st:SuperType    | fn:st:attribute               | "manner"               | "attribute"            | "Super Type"        |                    | "FN"   |          |
-| fn:working_a_post       | fn:HasFrameElement | fn:fe:manner                  | "working a post"       | "manner"               | "Has Frame Element" |                    | "FN"   |          |
-| fn:working_a_post       | fn:HasFrameElement | fn:fe:frequency               | "working a post"       | "frequency"            | "Has Frame Element" |                    | "FN"   |          |
-| fn:working_a_post       | fn:HasFrameElement | fn:fe:period_of_iterations    | "working a post"       | "period of iterations" | "Has Frame Element" |                    | "FN"   |          |
-| fn:working_a_post       | fn:HasFrameElement | fn:fe:result                  | "working a post"       | "result"               | "Has Frame Element" |                    | "FN"   |          |
-| fn:working_a_post       | fn:HasFrameElement | fn:fe:particular_iteration    | "working a post"       | "particular iteration" | "Has Frame Element" |                    | "FN"   |          |
-| fn:working_a_post       | fn:HasFrameElement | fn:fe:explanation             | "working a post"       | "explanation"          | "Has Frame Element" |                    | "FN"   |          |
-| fn:working_a_post       | fn:HasFrameElement | fn:fe:event_description       | "working a post"       | "event description"    | "Has Frame Element" |                    | "FN"   |          |
-| fn:working_a_post       | fn:HasFrameElement | fn:fe:post                    | "working a post"       | "post"                 | "Has Frame Element" |                    | "FN"   |          |
-| fn:working_a_post       | fn:HasFrameElement | fn:fe:salient_entity          | "working a post"       | "salient entity"       | "Has Frame Element" |                    | "FN"   |          |
+| node1 | relation | node2 | node1;label | node2;label | relation;label | relation;dimension | source | sentence |
+| -- | -- | -- | -- | -- | -- | -- | -- | -- |
+| fn:abandonment | /r/IsA | fn:intentionally_affect | "abandonment" | "intentionally affect" | "/r/is a" |  | "FN" |  |
+| fn:abandonment | fn:HasLexicalUnit | fn:lu:abandonment:abandon | "abandonment" | "abandon" | "has lexical unit" |  | "FN" |  |
+| fn:abandonment | fn:HasLexicalUnit | fn:lu:abandonment:leave | "abandonment" | "leave" | "has lexical unit" |  | "FN" |  |
+| fn:abandonment | fn:HasLexicalUnit | fn:lu:abandonment:abandonment | "abandonment" | "abandonment" | "has lexical unit" |  | "FN" |  |
+| fn:abandonment | fn:HasLexicalUnit | fn:lu:abandonment:abandoned | "abandonment" | "abandoned" | "has lexical unit" |  | "FN" |  |
+| fn:abandonment | fn:HasLexicalUnit | fn:lu:abandonment:forget | "abandonment" | "forget" | "has lexical unit" |  | "FN" |  |
+| fn:abandonment | /r/HasA | fn:fe:agent | "abandonment" | "agent" | "/r/has a" |  | "FN" |  |
+| fn:abandonment | /r/HasA | fn:fe:theme | "abandonment" | "theme" | "/r/has a" |  | "FN" |  |
+| fn:abandonment | /r/HasA | fn:fe:place | "abandonment" | "place" | "/r/has a" |  | "FN" |  |
+| fn:abandonment | /r/HasA | fn:fe:time | "abandonment" | "time" | "/r/has a" |  | "FN" |  |
 
+The following feedback messages are generated:
+
+    [nltk_data] Downloading package framenet_v17 to
+    [nltk_data]     /home/rogers/nltk_data...
+    [nltk_data]   Package framenet_v17 is already up-to-date!
+
+```
+kgtk import-framenet / tail -n 10
+```
+
+Example output (tail 10 lines):
+
+| node1 | relation | node2 | node1;label | node2;label | relation;label | relation;dimension | source | sentence |
+| -- | -- | -- | -- | -- | -- | -- | -- | -- |
+| fn:word_relations | fn:HasLexicalUnit | fn:lu:word_relations:contrary | "word relations" | "contrary" | "has lexical unit" |  | "FN" |  |
+| fn:word_relations | fn:HasLexicalUnit | fn:lu:word_relations:hyponym | "word relations" | "hyponym" | "has lexical unit" |  | "FN" |  |
+| fn:word_relations | fn:HasLexicalUnit | fn:lu:word_relations:hypernym | "word relations" | "hypernym" | "has lexical unit" |  | "FN" |  |
+| fn:word_relations | fn:HasLexicalUnit | fn:lu:word_relations:synonymous | "word relations" | "synonymous" | "has lexical unit" |  | "FN" |  |
+| fn:word_relations | fn:HasLexicalUnit | fn:lu:word_relations:meronym | "word relations" | "meronym" | "has lexical unit" |  | "FN" |  |
+| fn:word_relations | fn:HasLexicalUnit | fn:lu:word_relations:holonym | "word relations" | "holonym" | "has lexical unit" |  | "FN" |  |
+| fn:word_relations | fn:HasLexicalUnit | fn:lu:word_relations:homophone | "word relations" | "homophone" | "has lexical unit" |  | "FN" |  |
+| fn:word_relations | fn:HasLexicalUnit | fn:lu:word_relations:homograph | "word relations" | "homograph" | "has lexical unit" |  | "FN" |  |
+| fn:word_relations | fn:HasLexicalUnit | fn:lu:word_relations:collocate | "word relations" | "collocate" | "has lexical unit" |  | "FN" |  |
+| fn:word_relations | fn:HasLexicalUnit | fn:lu:word_relations:collocate | "word relations" | "collocate" | "has lexical unit" |  | "FN" |  |
+
+The following feedback messages are generated:
+
+    [nltk_data] Downloading package framenet_v17 to
+    [nltk_data]     /home/rogers/nltk_data...
+    [nltk_data]   Package framenet_v17 is already up-to-date!

@@ -77,7 +77,7 @@ def run(input_file: KGTKFiles, english_only, output_file: KGTKFiles, weights_fil
         return edge_list
 
     ew: typing.Optional[KgtkWriter] = None
-    eq_aux: typing.Optional[KgtkWriter] = None
+    ew_aux: typing.Optional[KgtkWriter] = None
     try:
         filename: Path = KGTKArgumentParser.get_input_file(input_file)
 

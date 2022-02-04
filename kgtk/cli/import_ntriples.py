@@ -3,7 +3,7 @@
 TODO: Need KgtkWriterOptions
 """
 
-from argparse import _MutuallyExclusiveGroup, Namespace, SUPPRESS
+from argparse import Namespace, SUPPRESS
 import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles

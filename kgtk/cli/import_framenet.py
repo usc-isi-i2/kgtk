@@ -193,6 +193,7 @@ def run(output_file: KGTKFiles):
 
     try:
         edges=load_framenet()
+        df_ = pd.DataFrame(map(edge2KGTK, edges))
         out_columns=['node1', 'relation', 'node2', 'node1;label', 'node2;label','relation;label', 'relation;dimension', 'source', 'sentence']
 
         output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
@@ -206,12 +207,17 @@ def run(output_file: KGTKFiles):
                                          #verbose=self.verbose,
                                          #very_verbose=self.very_verbose
                                          )
-        df_ = pd.DataFrame(map(edge2KGTK, edges))
+        try:
+            for i, row in df_.iterrows():
+                ew.write(row)
 
-        for i, row in df_.iterrows():
-            ew.write(row)
+        finally:
+            ew.close()
 
-        ew.close()
+            # The following hack appears to be necessary to work around a bug somewhere;
+            # without this we get an ugly 'Exception ignored...' msg when we quit with head or a pager:
+            import os
+            sys.stdout = os.fdopen(1)
 
     except Exception as e:
-            kgtk_exception_auto_handler(e)
+        kgtk_exception_auto_handler(e)

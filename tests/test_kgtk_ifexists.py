@@ -42,6 +42,7 @@ class TestKGTKFilter(unittest.TestCase):
 
         f = open(f'{self.temp_dir}/Q47158.tsv')
         lines = f.readlines()
+        self.assertEqual(len(lines), 119)
         # strip off the \n
         self.assertEqual(lines[1].strip(), "Q47158-P1014-1	Q47158	P1014	300391257	normal")
         self.assertEqual(lines[len(lines) - 1].replace('\n', ''),
@@ -56,6 +57,7 @@ class TestKGTKFilter(unittest.TestCase):
 
         f = open(f'{self.temp_dir}/Q47158.tsv')
         lines = f.readlines()
+        self.assertEqual(len(lines), 119)
         # strip off the \n
         self.assertEqual(lines[1].strip(), "Q47158-P1014-1	Q47158	P1014	300391257	normal")
         self.assertEqual(lines[len(lines) - 1].replace('\n', ''),
@@ -81,6 +83,7 @@ class TestKGTKFilter(unittest.TestCase):
 
         f = open(f'{self.temp_dir}/Q47158.tsv')
         lines = f.readlines()
+        self.assertEqual(len(lines), 170)
         # strip off the \n
         self.assertEqual(lines[1].strip(), "Q1052204-P18-1	Q1052204	P18	Shengjianbao by buncheduptv in San Mateo, CA.jpg	normal")
         self.assertEqual(lines[len(lines) - 1].replace('\n', ''),
