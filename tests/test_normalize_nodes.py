@@ -2,7 +2,6 @@ import shutil
 import unittest
 import tempfile
 import pandas as pd
-import sys
 from kgtk.cli_entry import cli_entry
 from kgtk.exceptions import KGTKException
 
@@ -24,7 +23,7 @@ class TestKGTKNormalizeNodes(unittest.TestCase):
         self.assertEqual(len(df), 52)
         df = df.loc[df['node1'] == 'Q183'].loc[df['label'] == 'label']
         self.assertTrue(len(df), 3)
-        print(df, file=sys.stdout)
+        print(df)
         labels = list(df['node2'].unique())
 
         self.assertTrue("'Germany'@en" in labels)
