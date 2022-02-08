@@ -1075,7 +1075,8 @@ class KgtkWriter(KgtkBase):
 
                 except IOError as e:
                     if e.errno == errno.EPIPE:
-                        pass # TODO: propogate a close backwards.                                                                                                                        else:
+                        pass # TODO: propogate a close backwards.
+                    else:
                         raise
             kr.source.close()
                 
@@ -1241,7 +1242,7 @@ class KgtkWriter(KgtkBase):
                 print("Closing the GZIP thread.", file=self.error_file, flush=True)
             self.gzip_thread.close()
         else:
-            if self.file_path is None:
+            if self.file_path is None or str(self.file_path) == "-":
                 if self.verbose:
                     print("KgtkWriter: not closing standard output", file=self.error_file, flush=True)
             else:

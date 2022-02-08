@@ -98,16 +98,16 @@ def run(input_file: KGTKFiles, english_only, output_file: KGTKFiles, weights_fil
 
         if weights_file:
             info_kgtk_file: Path = KGTKArgumentParser.get_output_file(weights_file)
-            ew_auxr = KgtkWriter.open(out_columns[:3],
-                                      info_kgtk_file,
-                                      #mode=input_kr.mode,
-                                      require_all_columns=False,
-                                      prohibit_extra_columns=True,
-                                      fill_missing_columns=True,
-                                      gzip_in_parallel=False,
-                                      #verbose=self.verbose,
-                                      #very_verbose=self.very_verbose
-                                      )
+            ew_aux = KgtkWriter.open(out_columns[:3],
+                                     info_kgtk_file,
+                                     #mode=input_kr.mode,
+                                     require_all_columns=False,
+                                     prohibit_extra_columns=True,
+                                     fill_missing_columns=True,
+                                     gzip_in_parallel=False,
+                                     #verbose=self.verbose,
+                                     #very_verbose=self.very_verbose
+                                     )
 
         with open(filename, 'r') as f:
             reader = csv.reader(f, delimiter='\t', quotechar='"')

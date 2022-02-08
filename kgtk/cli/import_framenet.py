@@ -216,8 +216,9 @@ def run(output_file: KGTKFiles):
 
             # The following hack appears to be necessary to work around a bug somewhere;
             # without this we get an ugly 'Exception ignored...' msg when we quit with head or a pager:
-            import os
-            sys.stdout = os.fdopen(1)
+            # However, with this hack the unit tests fail.
+            # import os
+            # sys.stdout = os.fdopen(1)
 
     except Exception as e:
         kgtk_exception_auto_handler(e)
