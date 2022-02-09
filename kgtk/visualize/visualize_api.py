@@ -172,6 +172,12 @@ class KgtkVisualize:
             if self.edge_width_minimum == 0 and self.edge_width_scale == 'log':
                 raise ValueError("edge width cannot be 0 when using log scale")
 
+            if self.node_size_minimum < 0.0 and self.node_size_scale == 'sqrt':
+                raise ValueError("node size cannot be less than 0 when using sqrt scale")
+
+            if self.edge_width_minimum < 0 and self.edge_width_scale == 'sqrt':
+                raise ValueError("edge width cannot be less than 0 when using sqrt scale")
+
             n1 = kr.column_name_map['node1']
             n2 = kr.column_name_map['node2']
 
@@ -194,6 +200,7 @@ class KgtkVisualize:
             color_set = {}
             literal_count = 0
             literal_list = []
+
 
             for row in kr:
                 temp_edge = {}
@@ -285,7 +292,6 @@ class KgtkVisualize:
                         literal_count += 1
                         literal_list.append(temp_edge['target'])
                 edges.append(temp_edge)
-
             arr = []
             if self.edge_width_mapping == 'fixed':
                 for edge in edges:
@@ -346,7 +352,40 @@ class KgtkVisualize:
                                 self.edge_width_maximum - self.edge_width_minimum) / (log_max - log_min)
                     else:
                         edge['width'] = self.edge_width_default
+            elif self.edge_width_scale == 'sqrt':
+                for edge in edges:
+                    if pd.isna(edge['width_orig']) or str(edge['width_orig']) == '':
+                        edge['width'] = self.edge_width_default
+                        continue
+                    if edge['width_orig'] >= 0:
+                        arr.append(edge['width_orig'])
+                for edge in edges:
+                    if pd.isna(edge['width_orig']) or str(edge['width_orig']) == '':
+                        edge['width'] = self.edge_width_default
+                        continue
+                    if edge['width_orig'] >= 0:
+                        if min(arr) <= 0:
+                            sqrt_min = 0
+                        else:
+                            sqrt_min = math.sqrt(min(arr))
 
+                        if max(arr) <= 0:
+                            sqrt_max = 0
+                        else:
+                            sqrt_max = math.sqrt(max(arr))
+
+                        if edge['width_orig'] <= 0:
+                            sqrt_cur = -1
+                        else:
+                            sqrt_cur = math.sqrt(edge['width_orig'])
+
+                        if sqrt_max == sqrt_min:
+                            edge['width'] = self.edge_width_default
+                        else:
+                            edge['width'] = self.edge_width_minimum + (sqrt_cur - sqrt_min) * (
+                                    self.edge_width_maximum - self.edge_width_minimum) / (sqrt_max - sqrt_min)
+                    else:
+                        edge['width'] = self.edge_width_default
             if self.edge_color_column is not None and self.edge_color_style == 'gradient':
                 edge_color_list = []
                 for edge in edges:
@@ -386,19 +425,24 @@ class KgtkVisualize:
                 node_color_list = []
                 node_size_list = []
 
+
+
                 for row in kr_node:
-                    if self.node_color_scale == 'linear' or self.node_color_scale == 'log':
+                    if self.node_color_scale == 'linear' or self.node_color_scale == 'log'\
+                            or self.node_color_scale == 'sqrt':
                         if not pd.isna(row[kr_node.column_name_map[self.node_color_column]]) and str(
                                 row[kr_node.column_name_map[self.node_color_column]]) != '':
                             node_color_list.append(
                                 float(row[kr_node.column_name_map[self.node_color_column]]))
-                    if self.node_size_scale == 'linear' or self.node_size_scale == 'log':
+                    if self.node_size_scale == 'linear' or self.node_size_scale == 'log' \
+                            or self.node_size_scale == 'sqrt':
                         if not pd.isna(row[kr_node.column_name_map[self.node_size_column]]) and str(
                                 row[kr_node.column_name_map[self.node_size_column]]) != '':
                             node_size_list.append(
                                 float(row[kr_node.column_name_map[self.node_size_column]]))
 
                 kr_node.close()
+
 
                 kr_node: KgtkReader = KgtkReader.open(self.node_file,
                                                       error_file=error_file,
@@ -494,6 +538,33 @@ class KgtkVisualize:
                                         temp['color'] = float(color_value) if not pd.isna(
                                             row[kr_node.column_name_map[
                                                 self.node_color_column]]) else self.node_color_default
+                                elif self.node_color_scale == 'sqrt':
+                                    node_color = 1
+                                    node_color_min = min(node_color_list)
+                                    node_color_max = max(node_color_list)
+                                    if node_color_min <= 0:
+                                        sqrt_min = 0
+                                    else:
+                                        sqrt_min = math.sqrt(node_color_min)
+
+                                    if node_color_max <= 0:
+                                        sqrt_max = 0
+                                    else:
+                                        sqrt_max = math.sqrt(node_color_max)
+
+                                    if float(row[kr_node.column_name_map[self.node_color_column]]) <= 0:
+                                        sqrt_cur = 0
+                                    else:
+                                        sqrt_cur = math.sqrt(float(row[kr_node.column_name_map[self.node_color_column]]))
+
+                                    if sqrt_max == sqrt_min:
+                                        temp['color'] = self.node_color_default
+                                    else:
+                                        color_value\
+                                            = 0 + (sqrt_cur - sqrt_min) * (1 - 0) / (sqrt_max - sqrt_min)
+                                        temp['color'] = float(color_value) if not pd.isna(
+                                            row[kr_node.column_name_map[
+                                                self.node_color_column]]) else self.node_color_default
                                 else:
                                     temp['color'] = row[kr_node.column_name_map[self.node_color_column]] if not pd.isna(
                                         row[kr_node.column_name_map[
@@ -553,6 +624,31 @@ class KgtkVisualize:
                                             self.node_size_maximum - self.node_size_minimum) / (log_max - log_min)
                                     temp['size'] = size_value if not pd.isna(
                                         row[kr_node.column_name_map[self.node_size_column]]) else self.node_size_default
+                            elif self.node_size_scale == 'sqrt':
+                                if min(node_size_list) <= 0:
+                                    sqrt_min = 0
+                                else:
+                                    sqrt_min = math.sqrt(min(node_size_list))
+
+                                if max(node_size_list) <= 0:
+                                    sqrt_max = 0
+                                else:
+                                    sqrt_max = math.sqrt(max(node_size_list))
+
+                                if float(row[kr_node.column_name_map[self.node_size_column]]) <= 0:
+                                    sqrt_cur = 0
+                                else:
+                                    sqrt_cur = math.sqrt(
+                                        float(row[kr_node.column_name_map[self.node_size_column]]))
+
+                                if sqrt_max == sqrt_min:
+                                    temp['size'] = self.node_size_default
+                                else:
+                                    size_value = self.node_size_minimum + (sqrt_cur - sqrt_min) * (
+                                            self.node_size_maximum - self.node_size_minimum) / (sqrt_max - sqrt_min)
+                                    temp['size'] = size_value if not pd.isna(
+                                        row[kr_node.column_name_map[self.node_size_column]]) else self.node_size_default
+
 
                     else:
                         temp['size'] = self.node_size_default
