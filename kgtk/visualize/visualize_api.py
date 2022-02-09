@@ -555,7 +555,8 @@ class KgtkVisualize:
                                     if float(row[kr_node.column_name_map[self.node_color_column]]) <= 0:
                                         sqrt_cur = 0
                                     else:
-                                        sqrt_cur = math.sqrt(float(row[kr_node.column_name_map[self.node_color_column]]))
+                                        sqrt_cur = math.sqrt(float(
+                                            row[kr_node.column_name_map[self.node_color_column]]))
 
                                     if sqrt_max == sqrt_min:
                                         temp['color'] = self.node_color_default
