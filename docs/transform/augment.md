@@ -1,6 +1,6 @@
 ## Summary
 
-This command will augmented graph from a KGTK Edge file
+This command will augmented graph from a KGTK Edge file with numeric value in float (or date) on node2. This command will automatically detect date in wikidata format and transform it to float in year
 
 ### Input File
 
@@ -157,3 +157,17 @@ head -5 fb_augment/augment_output_FHC_3/output.tsv
 |/m/04p_hy	|Interval-<http://rdf.freebase.com/ns/location.geocode.longitude>_0|	Interval-<http://rdf.freebase.com/ns/location.geocode.longitude>(-175.2_-108.99791662499999)|
 |/m/0c1xm	|Interval-<http://rdf.freebase.com/ns/location.geocode.longitude>_0	|Interval-<http://rdf.freebase.com/ns/location.geocode.longitude>(-175.2_-108.99791662499999)|
 |/m/0c5x_	|Interval-<http://rdf.freebase.com/ns/location.geocode.longitude>_0|	Interval-<http://rdf.freebase.com/ns/location.geocode.longitude>(-175.2_-108.99791662499999)|
+
+
+1. To augment the dataset with link prediction, make sure the directory `data/{dataset}` contains at least four files:
+      1. `train.txt`: The training entity triples.
+      2. `valid.txt`: The validation entity triples.
+      3. `test.txt`: The testing entity triples.
+      4. `numerical_literals.txt`: The literal triples.
+      5. Once you get the above files, augment the graph with `kgtk augment --dataset {dataset} --bins {bins} --prediction-type lp`.
+2. To augment the dataset with numericaprediction, make sure the directory `data/{dataset}` contains at least four files:
+      1. `train_kge`: The entity triples.
+      2. `train_100`: The training literal triples.
+      3. `dev`: The validation literal triples.
+      4. `test`: The test literal triples.
+      5. Once you get the above files, augment the graph with `kgtk augment --dataset {dataset} --bins {bins} --prediction-type np`.
