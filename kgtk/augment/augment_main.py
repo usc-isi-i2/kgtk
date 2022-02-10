@@ -149,8 +149,8 @@ def augment_only(entities, dataset, mode, output_path, bins=None, reverse=False,
     if mode in CHAINABLE_MODE:
         print(f'Running mode {mode}')
 
-        (train_edges_processed, valid_edges_processed, test_edges_processed),\
-        (train_edges_raw, valid_edges_raw, test_edges_raw), qnode_edges = \
+        (train_edges_processed, valid_edges_processed,
+         test_edges_processed), (train_edges_raw, valid_edges_raw, test_edges_raw), qnode_edges = \
             create_new_edges(entities, mode, bins, valid=None, test=None, reverse=reverse)
 
         def generate_target(target, with_chain=False, include_original=True):
