@@ -156,7 +156,7 @@ def augment_only(entities, dataset, mode, output_path, bins=None, reverse=False,
         def generate_target(target, with_chain=False, include_original=True):
             try_to_make_dir(target)
             if not with_chain:
-               if include_original:
+                if include_original:
                     kgtk_writer_to_file(train_edges_processed, f'{target}/output.tsv')
                 else:
                     kgtk_writer_to_file(pd.concat([entities, train_edges_processed]), f'{target}/output.tsv')
