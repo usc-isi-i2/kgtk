@@ -14,12 +14,11 @@ The input file should be a KGTK Edge file with the following columns or their al
 
 ### The Output File
 
-The output file is an edge file that contains the following columns:
+The output file is an edge file for each mode that contains the following columns:
 
 - `node1`: this column contains each node
-- `label`: this column contains only 'in'
-- `node2`: this column contains the resulting cluster
-- `node2;prob`: this column contains the probability/confidence of clustering
+- `label`: this column contains only name of intervals
+- `node2`: this column contains range (bin) for numeric value
 
 
 ## Usage
