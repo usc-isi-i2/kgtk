@@ -12,8 +12,6 @@ from kgtk.augment.augment_main import augment_lp
 from kgtk.augment.loader import get_data_lp
 from kgtk.augment.loader import get_data_only
 
-
-
 import argparse
 from kgtk.augment.constant import *
 import os
@@ -139,20 +137,18 @@ def run(input_file: KGTKFiles,
         **kwargs  # Whatever KgtkFileOptions and KgtkValueOptions want.
         ) -> int:
 
-
     modes = aug_mode.split(',')
-
     if modes[0] == "All":
         modes = SUPPORTED_MODE
 
     # link prediction
     if prediction_type == 'lp':
-       entities, values = get_data_lp(dataset, train_file_name, num_literal_name)
+        entities, values = get_data_lp(dataset, train_file_name, num_literal_name)
 
-       for mode in modes:
-           if mode in SUPPORTED_MODE:
-               augment_lp(entities, values, dataset, train_file_name,
-                          valid_file_name, test_file_name, mode, output_path, bins, reverse)
+        for mode in modes:
+            if mode in SUPPORTED_MODE:
+                augment_lp(entities, values, dataset, train_file_name,
+                           valid_file_name, test_file_name, mode, output_path, bins, reverse)
 
     # numerical prediction
     elif prediction_type == 'np':
@@ -163,12 +159,8 @@ def run(input_file: KGTKFiles,
                 augment_np(entities, train, valid, test, entity_triple_name, train_literal_name,
                            valid_literal_name, test_literal_name,
                            dataset, mode, output_path, bins, reverse)
-
-
     else:
-
         modes = aug_mode.split(',')
-
         if modes[0] == "All":
             modes = SUPPORTED_MODE
 
@@ -177,7 +169,3 @@ def run(input_file: KGTKFiles,
         for mode in modes:
             print(mode)
             augment_only(entities, dataset, mode, output_path, bins, reverse, include_original)
-
-
-
-
