@@ -4,6 +4,33 @@ import pandas as pd
 #    Obtain data functions
 ##########################################
 
+def get_float_year(input):
+    date = input[1:input.find('T')]
+    ymd = date.split('-')
+    return float(ymd[0]) + float(ymd[1])/12 + float(ymd[2])/12/12
+
+def get_data_only(entity_path):
+
+    # import modules locally
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.reshape.kgtkidbuilder import KgtkIdBuilder, KgtkIdBuilderOptions
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
+    entities = pd.DataFrame(columns=['node1', 'label', 'node2'])
+
+    kr_ent: KgtkReader = KgtkReader.open(entity_path)
+
+    for row in kr_ent:
+        if row[kr_ent.column_name_map['node2']].startswith('^'):
+            entities.loc[len(entities.index)] = {'node1': row[kr_ent.column_name_map['node1']],
+                                                 'label': row[kr_ent.column_name_map['label']],
+                                                 'node2': get_float_year(row[kr_ent.column_name_map['node2']])}
+        else:
+            entities.loc[len(entities.index)] = {'node1': row[kr_ent.column_name_map['node1']],
+                                                 'label': row[kr_ent.column_name_map['label']],
+                                                 'node2': row[kr_ent.column_name_map['node2']]}
+
+
+    return entities
 
 def get_data_lp(dataset, train_file_path, num_literal_path):
     """

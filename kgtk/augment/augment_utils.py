@@ -268,16 +268,19 @@ def create_new_edges(train, mode, num_bins=None, valid=None, test=None, reverse=
     valid_edges, valid_edges_raw = [], None
     test_edges, test_edges_raw = [], None
 
+
     for property_ in tqdm(train['label'].unique()):
 
         # Iterate through each numeric property
         sli_train = train[train['label'] == property_]
-        if len(sli_train) < 100:  # Filter out rare properties
-            continue
+
+        #if len(sli_train) < 100:  # Filter out rare properties
+        #    continue
         sli_valid = valid[valid['label'] == property_] if valid is not None else None
         sli_test = test[test['label'] == property_] if test is not None else None
 
         try:
+
             if mode.endswith("Single"):
                 assert(num_bins is not None)
                 a, b, c, d, e = generate_edges_single(sli_train, property_, num_bins=num_bins,
@@ -299,12 +302,14 @@ def create_new_edges(train, mode, num_bins=None, valid=None, test=None, reverse=
 
 
 
+
             qnodes_edges += a
             qnodes_label_edges += b
             pnodes_edges += c
             pnodes_label_edges += d
 
             train_edges += e[0]
+
             train_edges_raw = sli_train if train_edges_raw is None else pd.concat([train_edges_raw, sli_train])
 
             if valid is not None:
@@ -326,5 +331,8 @@ def create_new_edges(train, mode, num_bins=None, valid=None, test=None, reverse=
         return (train_edges_processed, None, None), (train_edges_raw, None, None), qnodes_edges
     valid_edges_processed = pd.DataFrame(valid_edges)
     test_edges_processed = pd.DataFrame(test_edges)
+
+
+
     return (train_edges_processed, valid_edges_processed, test_edges_processed), \
            (train_edges_raw, valid_edges_raw, test_edges_raw), qnodes_edges
