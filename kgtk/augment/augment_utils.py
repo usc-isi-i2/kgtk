@@ -5,13 +5,9 @@ from kgtk.augment.utils import *
 from kgtk.augment.loader import *
 from kgtk.augment.partition import *
 
-
-
-
 ##########################################
 #    Edge Generation Utility Functions
 ##########################################
-
 
 
 def get_edge_starts(df_sli, mode, num_bins=None):
@@ -130,7 +126,7 @@ def create_numeric_edges(df_sli, bins, qnodes_collect, suffix=""):
         _pnode = gen_pnode(row['label'])
         try:
             _qnode = qnodes_collect[bisect(bins, row['node2']) - 1]
-        except:
+        except Exception:
             _qnode = qnodes_collect[0]
         numeric_edges.append({
             'node1': row['node1'],
@@ -211,6 +207,7 @@ def generate_edges_hierarchy(train, property_, levels=3, unit=None, mode='Quanti
     Link Hierarchy
     """
     from functools import reduce
+
     def compute_numeric_edges(df, bs_list, qnodes_collect_list):
         if df is None:
             return None
@@ -255,7 +252,7 @@ def generate_edges_hierarchy(train, property_, levels=3, unit=None, mode='Quanti
 #    Edge Creation Functions
 ##########################################
 
-#usage create_new_edges(train, mode, bins, valid=valid, test=test, reverse=reverse)
+# usage create_new_edges(train, mode, bins, valid=valid, test=test, reverse=reverse)
 
 def create_new_edges(train, mode, num_bins=None, valid=None, test=None, reverse=False):
     """
@@ -268,13 +265,12 @@ def create_new_edges(train, mode, num_bins=None, valid=None, test=None, reverse=
     valid_edges, valid_edges_raw = [], None
     test_edges, test_edges_raw = [], None
 
-
     for property_ in tqdm(train['label'].unique()):
 
         # Iterate through each numeric property
         sli_train = train[train['label'] == property_]
 
-        #if len(sli_train) < 100:  # Filter out rare properties
+        # if len(sli_train) < 100:  # Filter out rare properties
         #    continue
         sli_valid = valid[valid['label'] == property_] if valid is not None else None
         sli_test = test[test['label'] == property_] if test is not None else None
@@ -300,9 +296,6 @@ def create_new_edges(train, mode, num_bins=None, valid=None, test=None, reverse=
                 print("Unsupported data type!")
                 continue
 
-
-
-
             qnodes_edges += a
             qnodes_label_edges += b
             pnodes_edges += c
@@ -319,7 +312,6 @@ def create_new_edges(train, mode, num_bins=None, valid=None, test=None, reverse=
                 test_edges += e[2]
                 test_edges_raw = sli_test if test_edges_raw is None else pd.concat([test_edges_raw, sli_test])
 
-
         except TypeError as e:
             assert(sli_train is not None)
             print(f"Error encountered at property {property_}. Size {len(sli_train)}. Error: {e}. Continue...")
@@ -331,8 +323,6 @@ def create_new_edges(train, mode, num_bins=None, valid=None, test=None, reverse=
         return (train_edges_processed, None, None), (train_edges_raw, None, None), qnodes_edges
     valid_edges_processed = pd.DataFrame(valid_edges)
     test_edges_processed = pd.DataFrame(test_edges)
-
-
 
     return (train_edges_processed, valid_edges_processed, test_edges_processed), \
            (train_edges_raw, valid_edges_raw, test_edges_raw), qnodes_edges
