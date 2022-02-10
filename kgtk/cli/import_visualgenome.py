@@ -30,8 +30,9 @@ def run(input_file: KGTKFiles,
     from kgtk.exceptions import kgtk_exception_auto_handler
     import csv
     import json
-    import re
     from pathlib import Path
+    import re
+    import typing
     from collections import defaultdict
     from kgtk.kgtkformat import KgtkFormat
     from kgtk.io.kgtkwriter import KgtkWriter
@@ -40,6 +41,8 @@ def run(input_file: KGTKFiles,
         my_row=[node1, rel, node2, '|'.join(node1_lbl), '|'.join(node2_lbl), rel_lbl, '', KgtkFormat.stringify('VG'), '']
         return my_row
 
+    ew: typing.Optional[KgtkWriter] = None
+
     try:
         scene_graph_filename: Path = KGTKArgumentParser.get_input_file(input_file)
         attr_synsets_filename: Path = KGTKArgumentParser.get_input_file(attr_syn_file)
@@ -47,16 +50,16 @@ def run(input_file: KGTKFiles,
         out_columns=['node1', 'relation', 'node2', 'node1;label', 'node2;label','relation;label', 'relation;dimension', 'source', 'sentence']
 
         output_kgtk_file: Path = KGTKArgumentParser.get_output_file(output_file)
-        ew: KgtkWriter = KgtkWriter.open(out_columns,
-                                         output_kgtk_file,
-                                         #mode=input_kr.mode,
-                                         require_all_columns=False,
-                                         prohibit_extra_columns=True,
-                                         fill_missing_columns=True,
-                                         gzip_in_parallel=False,
-                                         #verbose=self.verbose,
-                                         #very_verbose=self.very_verbose
-                                         )
+        ew = KgtkWriter.open(out_columns,
+                             output_kgtk_file,
+                             #mode=input_kr.mode,
+                             require_all_columns=False,
+                             prohibit_extra_columns=True,
+                             fill_missing_columns=True,
+                             gzip_in_parallel=False,
+                             #verbose=self.verbose,
+                             #very_verbose=self.very_verbose
+                             )
 
         proximity_relation='/r/LocatedNear'
         property_relation='mw:MayHaveProperty'
@@ -147,8 +150,12 @@ def run(input_file: KGTKFiles,
             for a_row in rows:
                 ew.write(a_row)
 
-        # Clean up
-        ew.close()
-
     except Exception as e:
             kgtk_exception_auto_handler(e)
+
+    finally:
+        # Clean up
+        if ew is not None:
+            ew.close()
+
+        
