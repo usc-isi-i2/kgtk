@@ -1,7 +1,6 @@
 ## Summary
 
-This command will return a clutering results from the input kgtk file.
-The algorithms are provided by graph_tool (blockmodel, nested and mcmc)
+This command will augmented graph from a KGTK Edge file
 
 ### Input File
 
