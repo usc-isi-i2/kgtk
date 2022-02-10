@@ -148,7 +148,7 @@ head -5 examples/docs/augment-FB15K-samele.tsv
 An example result file
 
 ```bash
-kgtk community-detection -i examples/docs/community-detection-arnold.tsv --method blockmodel
+head -5 fb_augment/augment_output_FHC_3/output.tsv
 ```
 
 |node1                                        |label|node2    |
