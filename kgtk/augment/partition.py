@@ -81,7 +81,7 @@ def get_bins_quantile(df, num_bins=None):
     try:
         df.insert(loc=len(df.columns), column="lower_bound", value=["" for i in range(df.shape[0])])
         df.insert(loc=len(df.columns), column="upper_bound", value=["" for i in range(df.shape[0])])
-    except:
+    except Exception:
         pass
 
     values = np.array(df.loc[:, "node2"])
@@ -105,5 +105,5 @@ def get_bins_fixed_length(df, num_bins=None):
         num_bins = len(get_bins_kde(df))
     values = np.array(df.loc[:, "node2"])
     values.astype(float)
-    values = np.asarray(values, dtype = np.float64)
+    values = np.asarray(values, dtype=np.float64)
     return np.linspace(values.min(), values.max() - values.min(), num_bins + 1)[:-1]

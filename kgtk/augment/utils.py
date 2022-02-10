@@ -33,11 +33,11 @@ def parse_number(s):
     if s[0] != '-' and '-' in s:
         try:
             return int(s.split('-')[0])
-        except:
+        except Exception:
             try:
                 print(s)
                 return int(s.split('-')[0][:-1]) * 10
-            except:
+            except Exception:
                 print(s)
                 return int(s.split('-')[0][:-2]) * 100
     return float(s.split('^^')[0])

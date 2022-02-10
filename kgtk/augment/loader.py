@@ -4,10 +4,12 @@ import pandas as pd
 #    Obtain data functions
 ##########################################
 
+
 def get_float_year(input):
     date = input[1:input.find('T')]
     ymd = date.split('-')
     return float(ymd[0]) + float(ymd[1])/12 + float(ymd[2])/12/12
+
 
 def get_data_only(entity_path):
 
@@ -29,8 +31,8 @@ def get_data_only(entity_path):
                                                  'label': row[kr_ent.column_name_map['label']],
                                                  'node2': row[kr_ent.column_name_map['node2']]}
 
-
     return entities
+
 
 def get_data_lp(dataset, train_file_path, num_literal_path):
     """
@@ -57,8 +59,8 @@ def get_data_lp(dataset, train_file_path, num_literal_path):
 
     for row in kr_num:
         df.loc[len(df.index)] = {'node1': row[kr_num.column_name_map['node1']],
-                                             'label': row[kr_num.column_name_map['label']],
-                                             'node2': row[kr_num.column_name_map['node2']]}
+                                 'label': row[kr_num.column_name_map['label']],
+                                 'node2': row[kr_num.column_name_map['node2']]}
     kr_num.close()
 
     df = df[df['node2'].notnull()]
@@ -89,7 +91,7 @@ def clean_numeric(df, dataset):
 
 
 def get_data_np(dataset, entity_triple_name, train_literal_name,
-                         valid_literal_name, test_literal_name):
+                valid_literal_name, test_literal_name):
     """ Get the entity file and literal file for """
 
     # import modules locally
@@ -106,8 +108,6 @@ def get_data_np(dataset, entity_triple_name, train_literal_name,
     kr_train: KgtkReader = KgtkReader.open(f"{dataset}/{train_literal_name}")
     kr_valid: KgtkReader = KgtkReader.open(f"{dataset}/{valid_literal_name}")
     kr_test: KgtkReader = KgtkReader.open(f"{dataset}/{test_literal_name}")
-
-
 
     for row in kr_entities:
         entities.loc[len(entities.index)] = {'node1': row[kr_entities.column_name_map['node1']],
@@ -128,7 +128,6 @@ def get_data_np(dataset, entity_triple_name, train_literal_name,
                                      'label': row[kr_test.column_name_map['label']],
                                      'node2': row[kr_test.column_name_map['node2']]}
 
-
     entities = entities[entities['node2'].notnull()]
     entities = entities.reset_index(drop=True)
 
@@ -145,6 +144,5 @@ def get_data_np(dataset, entity_triple_name, train_literal_name,
     kr_train.close()
     kr_valid.close()
     kr_test.close()
-
 
     return entities, train, valid, test
