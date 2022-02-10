@@ -133,7 +133,7 @@ optional arguments:
 The following file will be used to illustrate some of the capabilities of `kgtk reachable-nodes`.
 
 ```bash
-head -5 examples/docs/augment-FB15K-samele.tsv
+head -5 examples/docs/augment-FB15K-sample.tsv
 ```
 
 | node1 | label | node2 |
