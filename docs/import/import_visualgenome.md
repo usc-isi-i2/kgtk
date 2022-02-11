@@ -24,7 +24,7 @@ optional arguments:
 Import Visual Genome into KGTK. 
 
 ```
-kgtk import-visualgenome -i scene_graphs.json --attr-synsets attribute_synsets.json -o vg.tsv
+kgtk import-visualgenome -i scene_graphs.json --attr-synsets tests/data/attribute_synsets.json -o vg.tsv
 ```
 
 Example output (first and last 10 lines):

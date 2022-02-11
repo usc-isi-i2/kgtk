@@ -34,11 +34,14 @@ Example output (first 10 lines):
 | fn:abandonment | /r/HasA | fn:fe:place | "abandonment" | "place" | "/r/has a" |  | "FN" |  |
 | fn:abandonment | /r/HasA | fn:fe:time | "abandonment" | "time" | "/r/has a" |  | "FN" |  |
 
-The following feedback messages are generated:
+The following feedback messages are generated. Note that the `Exception` and `BrokenPipeError` messages
+are a known deficiency, but are not an indication of data corruption.
 
     [nltk_data] Downloading package framenet_v17 to
     [nltk_data]     /home/rogers/nltk_data...
     [nltk_data]   Package framenet_v17 is already up-to-date!
+    Exception ignored in: <_io.TextIOWrapper name='<stdout>' mode='w' encoding='utf-8'>
+    BrokenPipeError: [Errno 32] Broken pipe
 
 ```
 kgtk import-framenet / tail -n 10
@@ -48,16 +51,16 @@ Example output (tail 10 lines):
 
 | node1 | relation | node2 | node1;label | node2;label | relation;label | relation;dimension | source | sentence |
 | -- | -- | -- | -- | -- | -- | -- | -- | -- |
-| fn:word_relations | fn:HasLexicalUnit | fn:lu:word_relations:contrary | "word relations" | "contrary" | "has lexical unit" |  | "FN" |  |
-| fn:word_relations | fn:HasLexicalUnit | fn:lu:word_relations:hyponym | "word relations" | "hyponym" | "has lexical unit" |  | "FN" |  |
-| fn:word_relations | fn:HasLexicalUnit | fn:lu:word_relations:hypernym | "word relations" | "hypernym" | "has lexical unit" |  | "FN" |  |
-| fn:word_relations | fn:HasLexicalUnit | fn:lu:word_relations:synonymous | "word relations" | "synonymous" | "has lexical unit" |  | "FN" |  |
-| fn:word_relations | fn:HasLexicalUnit | fn:lu:word_relations:meronym | "word relations" | "meronym" | "has lexical unit" |  | "FN" |  |
-| fn:word_relations | fn:HasLexicalUnit | fn:lu:word_relations:holonym | "word relations" | "holonym" | "has lexical unit" |  | "FN" |  |
-| fn:word_relations | fn:HasLexicalUnit | fn:lu:word_relations:homophone | "word relations" | "homophone" | "has lexical unit" |  | "FN" |  |
-| fn:word_relations | fn:HasLexicalUnit | fn:lu:word_relations:homograph | "word relations" | "homograph" | "has lexical unit" |  | "FN" |  |
-| fn:word_relations | fn:HasLexicalUnit | fn:lu:word_relations:collocate | "word relations" | "collocate" | "has lexical unit" |  | "FN" |  |
-| fn:word_relations | fn:HasLexicalUnit | fn:lu:word_relations:collocate | "word relations" | "collocate" | "has lexical unit" |  | "FN" |  |
+| fn:working_a_post | /r/HasA | fn:fe:means | "working a post" | "means" | "/r/has a" |  | "FN" |  |
+| fn:working_a_post | /r/HasA | fn:fe:manner | "working a post" | "manner" | "/r/has a" |  | "FN" |  |
+| fn:working_a_post | /r/HasA | fn:fe:frequency | "working a post" | "frequency" | "/r/has a" |  | "FN" |  |
+| fn:working_a_post | /r/HasA | fn:fe:period_of_iterations | "working a post" | "period of iterations" | "/r/has a" |  | "FN" |  |
+| fn:working_a_post | /r/HasA | fn:fe:result | "working a post" | "result" | "/r/has a" |  | "FN" |  |
+| fn:working_a_post | /r/HasA | fn:fe:particular_iteration | "working a post" | "particular iteration" | "/r/has a" |  | "FN" |  |
+| fn:working_a_post | /r/HasA | fn:fe:explanation | "working a post" | "explanation" | "/r/has a" |  | "FN" |  |
+| fn:working_a_post | /r/HasA | fn:fe:event_description | "working a post" | "event description" | "/r/has a" |  | "FN" |  |
+| fn:working_a_post | /r/HasA | fn:fe:post | "working a post" | "post" | "/r/has a" |  | "FN" |  |
+| fn:working_a_post | /r/HasA | fn:fe:salient_entity | "working a post" | "salient entity" | "/r/has a" |  | "FN" |  |
 
 The following feedback messages are generated:
 
