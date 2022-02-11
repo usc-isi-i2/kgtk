@@ -124,6 +124,7 @@ usage: kgtk lexicalize [-h] [-i INPUT_FILE]
                        [-o OUTPUT_FILE]
                        [--label-properties [LABEL_PROPERTIES [LABEL_PROPERTIES ...]]]
                        [--description-properties [DESCRIPTION_PROPERTIES [DESCRIPTION_PROPERTIES ...]]]
+                       [--language [LANGUAGE [LANGUAGE ...]]]
                        [--isa-properties [ISA_PROPERTIES [ISA_PROPERTIES ...]]]
                        [--has-properties [HAS_PROPERTIES [HAS_PROPERTIES ...]]]
                        [--property-values [PROPERTY_VALUES [PROPERTY_VALUES ...]]]
@@ -147,6 +148,8 @@ optional arguments:
                         The label properties. (default=['label'])
   --description-properties [DESCRIPTION_PROPERTIES [DESCRIPTION_PROPERTIES ...]]
                         The description properties. (default=['description'])
+  --language [LANGUAGE [LANGUAGE ...]]
+                        The label and description language. (default='en')
   --isa-properties [ISA_PROPERTIES [ISA_PROPERTIES ...]]
                         The isa properties. (default=['P21', 'P31', 'P39',
                         'P106', 'P279'])
@@ -559,4 +562,4 @@ kgtk lexicalize --input-file examples/docs/lexicalize-Q75992564.tsv \
 
 | node1 | label | node2 |
 | -- | -- | -- |
-| Q75992564 | sentence | "Because of You is a music track with vocals, and has cover version and duet and studio recording." |
+| Q75992564 | sentence | "Because of You is a music track with vocals, and has studio recording and duet and cover version." |
