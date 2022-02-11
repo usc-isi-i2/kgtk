@@ -1046,118 +1046,129 @@ class KgtkLift(KgtkFormat):
 
     
     def process(self):
-        # Open the input file.
-        input_mode: typing.Optional[KgtkReaderMode] = KgtkReaderMode.NONE if self.force_input_mode_none else None
-        if self.verbose:
-            if self.input_file_path is not None:
-                print("Opening the input file: %s" % self.input_file_path, file=self.error_file, flush=True)
-            else:
-                print("Reading the input data from stdin", file=self.error_file, flush=True)
-
-        ikr: KgtkReader =  KgtkReader.open(self.input_file_path,
-                                           error_file=self.error_file,
-                                           mode=input_mode,
-                                           options=self.input_reader_options,
-                                           value_options = self.value_options,
-                                           verbose=self.verbose,
-                                           very_verbose=self.very_verbose,
-        )
-
+        ikr: typing.Optional[KgtkReader] = None
         lkr: typing.Optional[KgtkReader] = None
-        if self.label_file_path is not None:
+        urkw: typing.Optional[KgtkWriter] = None
+        mlkw: typing.Optional[KgtkWriter] = None
+        ulkw: typing.Optional[KgtkWriter] = None
+
+        try:
+            # Open the input file.
+            input_mode: typing.Optional[KgtkReaderMode] = KgtkReaderMode.NONE if self.force_input_mode_none else None
             if self.verbose:
                 if self.input_file_path is not None:
-                    print("Opening the label file: %s" % self.label_file_path, file=self.error_file, flush=True)
+                    print("Opening the input file: %s" % self.input_file_path, file=self.error_file, flush=True)
                 else:
-                    print("Reading the label data from stdin", file=self.error_file, flush=True)
+                    print("Reading the input data from stdin", file=self.error_file, flush=True)
 
-            lkr =  KgtkReader.open(self.label_file_path,
-                                   error_file=self.error_file,
-                                   options=self.label_reader_options,
-                                   value_options = self.value_options,
-                                   verbose=self.verbose,
-                                   very_verbose=self.very_verbose,
+            ikr: KgtkReader =  KgtkReader.open(self.input_file_path,
+                                               error_file=self.error_file,
+                                               mode=input_mode,
+                                               options=self.input_reader_options,
+                                               value_options = self.value_options,
+                                               verbose=self.verbose,
+                                               very_verbose=self.very_verbose,
             )
 
-        urkw: typing.Optional[KgtkWriter] = None
-        if self.unmodified_row_file_path is not None:
-            urkw = KgtkWriter.open(ikr.column_names,
-                                   self.unmodified_row_file_path,
-                                   mode=KgtkWriter.Mode[ikr.mode.name],
-                                   require_all_columns=False,
-                                   prohibit_extra_columns=True,
-                                   fill_missing_columns=True,
-                                   use_mgzip=False if self.input_reader_options is None else self.input_reader_options.use_mgzip , # Hack!
-                                   mgzip_threads=3 if self.input_reader_options is None else self.input_reader_options.mgzip_threads , # Hack!
-                                   gzip_in_parallel=False,
-                                   verbose=self.verbose,
-                                   very_verbose=self.very_verbose)        
-            
-        label_column_names: typing.List[str]
-        label_file_mode_name: str
+            if self.label_file_path is not None:
+                if self.verbose:
+                    if self.input_file_path is not None:
+                        print("Opening the label file: %s" % self.label_file_path, file=self.error_file, flush=True)
+                    else:
+                        print("Reading the label data from stdin", file=self.error_file, flush=True)
 
-        mlkw: typing.Optional[KgtkWriter] = None
-        if self.matched_label_file_path is not None:
+                lkr =  KgtkReader.open(self.label_file_path,
+                                       error_file=self.error_file,
+                                       options=self.label_reader_options,
+                                       value_options = self.value_options,
+                                       verbose=self.verbose,
+                                       very_verbose=self.very_verbose,
+                )
+
+            if self.unmodified_row_file_path is not None:
+                urkw = KgtkWriter.open(ikr.column_names,
+                                       self.unmodified_row_file_path,
+                                       mode=KgtkWriter.Mode[ikr.mode.name],
+                                       require_all_columns=False,
+                                       prohibit_extra_columns=True,
+                                       fill_missing_columns=True,
+                                       use_mgzip=False if self.input_reader_options is None else self.input_reader_options.use_mgzip , # Hack!
+                                       mgzip_threads=3 if self.input_reader_options is None else self.input_reader_options.mgzip_threads , # Hack!
+                                       gzip_in_parallel=False,
+                                       verbose=self.verbose,
+                                       very_verbose=self.very_verbose)        
+
             label_column_names: typing.List[str]
             label_file_mode_name: str
-            if lkr is not None:
-                label_column_names = lkr.column_names
-                label_file_mode_name = lkr.mode.name
+
+            if self.matched_label_file_path is not None:
+                label_column_names: typing.List[str]
+                label_file_mode_name: str
+                if lkr is not None:
+                    label_column_names = lkr.column_names
+                    label_file_mode_name = lkr.mode.name
+                else:
+                    label_column_names = ikr.column_names
+                    label_file_mode_name = ikr.mode.name
+                mlkw = KgtkWriter.open(label_column_names,
+                                       self.matched_label_file_path,
+                                       mode=KgtkWriter.Mode[label_file_mode_name],
+                                       require_all_columns=False,
+                                       prohibit_extra_columns=True,
+                                       fill_missing_columns=True,
+                                       use_mgzip=False if self.input_reader_options is None else self.input_reader_options.use_mgzip , # Hack!
+                                       mgzip_threads=3 if self.input_reader_options is None else self.input_reader_options.mgzip_threads , # Hack!
+                                       gzip_in_parallel=False,
+                                       verbose=self.verbose,
+                                       very_verbose=self.very_verbose)        
+
+
+            if self.unmatched_label_file_path is not None:
+                label_column_names: typing.List[str]
+                label_file_mode_name: str
+                if lkr is not None:
+                    label_column_names = lkr.column_names
+                    label_file_mode_name = lkr.mode.name
+                else:
+                    label_column_names = ikr.column_names
+                    label_file_mode_name = ikr.mode.name
+                ulkw = KgtkWriter.open(label_column_names,
+                                       self.unmatched_label_file_path,
+                                       mode=KgtkWriter.Mode[label_file_mode_name],
+                                       require_all_columns=False,
+                                       prohibit_extra_columns=True,
+                                       fill_missing_columns=True,
+                                       use_mgzip=False if self.input_reader_options is None else self.input_reader_options.use_mgzip , # Hack!
+                                       mgzip_threads=3 if self.input_reader_options is None else self.input_reader_options.mgzip_threads , # Hack!
+                                       gzip_in_parallel=False,
+                                       verbose=self.verbose,
+                                       very_verbose=self.very_verbose)        
+
+            if (self.input_lifting_column_names is not None
+                and len(self.input_lifting_column_names) == 1 
+                and not self.suppress_empty_columns
+                and self.input_is_presorted
+                and self.labels_are_presorted
+                and lkr is not None):
+                self.process_as_merge(ikr, lkr, urkw, mlkw, ulkw)
             else:
-                label_column_names = ikr.column_names
-                label_file_mode_name = ikr.mode.name
-            mlkw = KgtkWriter.open(label_column_names,
-                                   self.matched_label_file_path,
-                                   mode=KgtkWriter.Mode[label_file_mode_name],
-                                   require_all_columns=False,
-                                   prohibit_extra_columns=True,
-                                   fill_missing_columns=True,
-                                   use_mgzip=False if self.input_reader_options is None else self.input_reader_options.use_mgzip , # Hack!
-                                   mgzip_threads=3 if self.input_reader_options is None else self.input_reader_options.mgzip_threads , # Hack!
-                                   gzip_in_parallel=False,
-                                   verbose=self.verbose,
-                                   very_verbose=self.very_verbose)        
-            
+                self.process_in_memory(ikr, lkr, urkw, mlkw, ulkw)
 
-        ulkw: typing.Optional[KgtkWriter] = None
-        if self.unmatched_label_file_path is not None:
-            label_column_names: typing.List[str]
-            label_file_mode_name: str
+        finally:
+            if urkw is not None:
+                urkw.close()
+
+            if mlkw is not None:
+                mlkw.close()
+
+            if ulkw is not None:
+                ulkw.close()
+
+            if ikr is not None:
+                ikr.close()
+
             if lkr is not None:
-                label_column_names = lkr.column_names
-                label_file_mode_name = lkr.mode.name
-            else:
-                label_column_names = ikr.column_names
-                label_file_mode_name = ikr.mode.name
-            ulkw = KgtkWriter.open(label_column_names,
-                                   self.unmatched_label_file_path,
-                                   mode=KgtkWriter.Mode[label_file_mode_name],
-                                   require_all_columns=False,
-                                   prohibit_extra_columns=True,
-                                   fill_missing_columns=True,
-                                   use_mgzip=False if self.input_reader_options is None else self.input_reader_options.use_mgzip , # Hack!
-                                   mgzip_threads=3 if self.input_reader_options is None else self.input_reader_options.mgzip_threads , # Hack!
-                                   gzip_in_parallel=False,
-                                   verbose=self.verbose,
-                                   very_verbose=self.very_verbose)        
-            
-        if self.input_lifting_column_names is not None and len(self.input_lifting_column_names) == 1 and \
-           not self.suppress_empty_columns and \
-           self.input_is_presorted and \
-           self.labels_are_presorted and \
-           lkr is not None:
-            self.process_as_merge(ikr, lkr, urkw, mlkw, ulkw)
-        else:
-            self.process_in_memory(ikr, lkr, urkw, mlkw, ulkw)
-
-        if urkw is not None:
-            urkw.close()
-
-        if mlkw is not None:
-            mlkw.close()
-
-        if ulkw is not None:
-            ulkw.close()
+                lkr.close()
 
 def main():
     """
