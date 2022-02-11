@@ -121,18 +121,21 @@ def run(output_file: KGTKFiles):
                                          #very_verbose=self.very_verbose
                                          )
 
-        all_labels, all_hyps, all_members, all_parts, all_subs=get_wn_data()
-        hyp_edges=create_edges(all_hyps, all_labels, '/r/IsA', KgtkFormat.stringify('is a'))
-        member_edges=create_edges(all_members, all_labels, '/r/PartOf', KgtkFormat.stringify('is a part of'))
-        part_edges=create_edges(all_parts, all_labels, '/r/PartOf', KgtkFormat.stringify('is a part of'))
-        sub_edges=create_edges(all_subs, all_labels, '/r/MadeOf', KgtkFormat.stringify('is made of'))
-        all_edges=hyp_edges+member_edges+part_edges+sub_edges
+        try:
+            all_labels, all_hyps, all_members, all_parts, all_subs=get_wn_data()
+            hyp_edges=create_edges(all_hyps, all_labels, '/r/IsA', KgtkFormat.stringify('is a'))
+            member_edges=create_edges(all_members, all_labels, '/r/PartOf', KgtkFormat.stringify('is a part of'))
+            part_edges=create_edges(all_parts, all_labels, '/r/PartOf', KgtkFormat.stringify('is a part of'))
+            sub_edges=create_edges(all_subs, all_labels, '/r/MadeOf', KgtkFormat.stringify('is made of'))
+            all_edges=hyp_edges+member_edges+part_edges+sub_edges
 
-        for edge in all_edges:
-            ew.write(edge)
+            for edge in all_edges:
+                ew.write(edge)
 
-        # Clean up.
-        ew.close()
+        finally:
+            # Clean up.
+            ew.close()
 
     except Exception as e:
             kgtk_exception_auto_handler(e)
+
