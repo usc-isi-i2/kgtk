@@ -178,11 +178,14 @@ class KgtkJoiner(KgtkFormat):
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)
 
-        if len(join_idx_list) == 1:
-            # This uses optimized code:
-            return self.single_column_key_set(kr, join_idx_list[0]) # closes er file
-        else:
-            return self.multi_column_key_set(kr, join_idx_list) # closes er file
+        try:
+            if len(join_idx_list) == 1:
+                # This uses optimized code:
+                return self.single_column_key_set(kr, join_idx_list[0])
+            else:
+                return self.multi_column_key_set(kr, join_idx_list)
+        finally:
+            kr.close()
         
 
     def join_key_sets(self, left_join_idx_list: typing.List[int], right_join_idx_list: typing.List[int])->typing.Optional[typing.Set[str]]:
@@ -245,111 +248,118 @@ class KgtkJoiner(KgtkFormat):
             return False
 
     def process(self):
-        if self.verbose:
-            print("Opening the left edge file: %s" % str(self.left_file_path), file=self.error_file, flush=True)
-        left_kr: KgtkReader = KgtkReader.open(self.left_file_path,
-                                              who="left input",
-                                              options=self.left_reader_options,
-                                              value_options = self.value_options,
-                                              error_file=self.error_file,
-                                              verbose=self.verbose,
-                                              very_verbose=self.very_verbose
-        )
+        left_kr: typing.Optional[KgtkReader] = None
+        right_kr: typing.Optional[KgtkReader] = None
+        ew: typing.Optional[KgtkWriter] = None
+
+        try:
+            if self.verbose:
+                print("Opening the left edge file: %s" % str(self.left_file_path), file=self.error_file, flush=True)
+            left_kr = KgtkReader.open(self.left_file_path,
+                                      who="left input",
+                                      options=self.left_reader_options,
+                                      value_options = self.value_options,
+                                      error_file=self.error_file,
+                                      verbose=self.verbose,
+                                      very_verbose=self.very_verbose
+                                      )
 
 
-        if self.verbose:
-            print("Opening the right edge file: %s" % str(self.right_file_path), file=self.error_file, flush=True)
-        right_kr: KgtkReader = KgtkReader.open(self.right_file_path,
-                                               who="right input",
-                                               options=self.right_reader_options,
-                                               value_options = self.value_options,
-                                               error_file=self.error_file,
-                                               verbose=self.verbose,
-                                               very_verbose=self.very_verbose
-        )
+            if self.verbose:
+                print("Opening the right edge file: %s" % str(self.right_file_path), file=self.error_file, flush=True)
+            right_kr = KgtkReader.open(self.right_file_path,
+                                       who="right input",
+                                       options=self.right_reader_options,
+                                       value_options = self.value_options,
+                                       error_file=self.error_file,
+                                       verbose=self.verbose,
+                                       very_verbose=self.very_verbose
+                                       )
 
-        if not self.ok_to_join(left_kr, right_kr):
-            left_kr.close()
-            right_kr.close()
-            return 1
+            if not self.ok_to_join(left_kr, right_kr):
+                return 1
 
-        left_join_idx_list: typing.List[int] = self.build_join_idx_list(left_kr, self.LEFT, self.left_join_columns)
-        right_join_idx_list: typing.List[int] = self.build_join_idx_list(right_kr, self.RIGHT, self.right_join_columns)
-        if len(left_join_idx_list) != len(right_join_idx_list):
-            print("the left join key has %d components, the right join key has %d columns. Exiting." % (len(left_join_idx_list), len(right_join_idx_list)), file=self.error_file, flush=True)
-            left_kr.close()
-            right_kr.close()
-            return 1
+            left_join_idx_list: typing.List[int] = self.build_join_idx_list(left_kr, self.LEFT, self.left_join_columns)
+            right_join_idx_list: typing.List[int] = self.build_join_idx_list(right_kr, self.RIGHT, self.right_join_columns)
+            if len(left_join_idx_list) != len(right_join_idx_list):
+                print("the left join key has %d components, the right join key has %d columns. Exiting." % (len(left_join_idx_list), len(right_join_idx_list)), file=self.error_file, flush=True)
+                return 1
 
-        # This might open the input files for a second time. This won't work with stdin.
-        joined_key_set: typing.Optional[typing.Set[str]] = self.join_key_sets(left_join_idx_list, right_join_idx_list)
+            # This might open the input files for a second time. This won't work with stdin.
+            joined_key_set: typing.Optional[typing.Set[str]] = self.join_key_sets(left_join_idx_list, right_join_idx_list)
 
-        if self.verbose:
-            print("Mapping the column names for the join.", file=self.error_file, flush=True)
-        kmc: KgtkMergeColumns = KgtkMergeColumns()
-        kmc.merge(left_kr.column_names, prefix=self.left_prefix)
-        right_column_names: typing.List[str] = kmc.merge(right_kr.column_names, prefix=self.right_prefix)
-        joined_column_names: typing.List[str] = kmc.column_names
+            if self.verbose:
+                print("Mapping the column names for the join.", file=self.error_file, flush=True)
+            kmc: KgtkMergeColumns = KgtkMergeColumns()
+            kmc.merge(left_kr.column_names, prefix=self.left_prefix)
+            right_column_names: typing.List[str] = kmc.merge(right_kr.column_names, prefix=self.right_prefix)
+            joined_column_names: typing.List[str] = kmc.column_names
 
-        if self.verbose:
-            print("       left   columns: %s" % " ".join(left_kr.column_names), file=self.error_file, flush=True)
-            print("       right  columns: %s" % " ".join(right_kr.column_names), file=self.error_file, flush=True)
-            print("mapped right  columns: %s" % " ".join(right_column_names), file=self.error_file, flush=True)
-            print("       joined columns: %s" % " ".join(joined_column_names), file=self.error_file, flush=True)
-        
-        if self.verbose:
-            print("Opening the output edge file: %s" % str(self.output_path), file=self.error_file, flush=True)
-        ew: KgtkWriter = KgtkWriter.open(joined_column_names,
-                                         self.output_path,
-                                         mode=left_kr.mode,
-                                         require_all_columns=False,
-                                         prohibit_extra_columns=True,
-                                         fill_missing_columns=True,
-                                         gzip_in_parallel=False,
-                                         verbose=self.verbose,
-                                         very_verbose=self.very_verbose)
+            if self.verbose:
+                print("       left   columns: %s" % " ".join(left_kr.column_names), file=self.error_file, flush=True)
+                print("       right  columns: %s" % " ".join(right_kr.column_names), file=self.error_file, flush=True)
+                print("mapped right  columns: %s" % " ".join(right_column_names), file=self.error_file, flush=True)
+                print("       joined columns: %s" % " ".join(joined_column_names), file=self.error_file, flush=True)
 
-        output_data_lines: int = 0
-        left_data_lines_read: int = 0
-        left_data_lines_kept: int = 0
-        right_data_lines_read: int = 0
-        right_data_lines_kept: int = 0
-        
-        if self.verbose:
-            print("Processing the left input file: %s" % str(self.left_file_path), file=self.error_file, flush=True)
-        row: typing.List[str]
-        for row in left_kr:
-            left_data_lines_read += 1
-            if joined_key_set is None:
-                ew.write(row)
-                output_data_lines += 1
-                left_data_lines_kept += 1
-            else:
-                left_key: str = self.build_join_key(left_kr, left_join_idx_list, row)
-                if left_key in joined_key_set:
+            if self.verbose:
+                print("Opening the output edge file: %s" % str(self.output_path), file=self.error_file, flush=True)
+            ew = KgtkWriter.open(joined_column_names,
+                                 self.output_path,
+                                 mode=left_kr.mode,
+                                 require_all_columns=False,
+                                 prohibit_extra_columns=True,
+                                 fill_missing_columns=True,
+                                 gzip_in_parallel=False,
+                                 verbose=self.verbose,
+                                 very_verbose=self.very_verbose)
+
+            output_data_lines: int = 0
+            left_data_lines_read: int = 0
+            left_data_lines_kept: int = 0
+            right_data_lines_read: int = 0
+            right_data_lines_kept: int = 0
+
+            if self.verbose:
+                print("Processing the left input file: %s" % str(self.left_file_path), file=self.error_file, flush=True)
+            row: typing.List[str]
+            for row in left_kr:
+                left_data_lines_read += 1
+                if joined_key_set is None:
                     ew.write(row)
                     output_data_lines += 1
                     left_data_lines_kept += 1
-        # Flush the output file so far:
-        ew.flush()
+                else:
+                    left_key: str = self.build_join_key(left_kr, left_join_idx_list, row)
+                    if left_key in joined_key_set:
+                        ew.write(row)
+                        output_data_lines += 1
+                        left_data_lines_kept += 1
+            # Flush the output file so far:
+            ew.flush()
 
-        if self.verbose:
-            print("Processing the right input file: %s" % str(self.right_file_path), file=self.error_file, flush=True)
-        right_shuffle_list: typing.List[int] = ew.build_shuffle_list(right_column_names)
-        for row in right_kr:
-            right_data_lines_read += 1
-            if joined_key_set is None:
-                ew.write(row, shuffle_list=right_shuffle_list)
-                output_data_lines += 1
-                right_data_lines_kept += 1
-            else:
-                right_key: str = self.build_join_key(right_kr, right_join_idx_list, row)
-                if right_key in joined_key_set:
+            if self.verbose:
+                print("Processing the right input file: %s" % str(self.right_file_path), file=self.error_file, flush=True)
+            right_shuffle_list: typing.List[int] = ew.build_shuffle_list(right_column_names)
+            for row in right_kr:
+                right_data_lines_read += 1
+                if joined_key_set is None:
                     ew.write(row, shuffle_list=right_shuffle_list)
                     output_data_lines += 1
                     right_data_lines_kept += 1
-            
-        ew.close()
+                else:
+                    right_key: str = self.build_join_key(right_kr, right_join_idx_list, row)
+                    if right_key in joined_key_set:
+                        ew.write(row, shuffle_list=right_shuffle_list)
+                        output_data_lines += 1
+                        right_data_lines_kept += 1
+        finally:
+            if ew is not None:
+                ew.close()
+            if left_kr is not None:
+                left_kr.close()
+            if right_kr is not None:
+                right_kr.close()
+
         if self.verbose:
             print("The join is complete", file=self.error_file, flush=True)
             print("%d left input data lines read, %d kept" % (left_data_lines_read, left_data_lines_kept), file=self.error_file, flush=True)
