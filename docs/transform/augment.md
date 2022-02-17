@@ -147,16 +147,17 @@ head -5 examples/docs/augment-FB15K-sample.tsv
 An example result file
 
 ```bash
-head -5 fb_augment/augment_output_FHC_3/output.tsv
+head -6 fb_augment/augment_output_QOC_8/output.tsv
 ```
 
 |node1                                        |label|node2    |
 |---------------------------------------------|-----|---------|
-|/m/06rf7	|Interval-<http://rdf.freebase.com/ns/location.geocode.longitude>_0|	Interval-<http://rdf.freebase.com/ns/location.geocode.longitude>(-175.2_-108.99791662499999)|
-|/m/04p_hy	|Interval-<http://rdf.freebase.com/ns/location.geocode.longitude>_0|	Interval-<http://rdf.freebase.com/ns/location.geocode.longitude>(-175.2_-108.99791662499999)|
-|/m/0c1xm	|Interval-<http://rdf.freebase.com/ns/location.geocode.longitude>_0	|Interval-<http://rdf.freebase.com/ns/location.geocode.longitude>(-175.2_-108.99791662499999)|
-|/m/0c5x_	|Interval-<http://rdf.freebase.com/ns/location.geocode.longitude>_0|	Interval-<http://rdf.freebase.com/ns/location.geocode.longitude>(-175.2_-108.99791662499999)|
-
+|/m/06rf7|	Interval-<http://rdf.freebase.com/ns/location.geocode.longitude>_right|	Interval-<http://rdf.freebase.com/ns/location.geocode.longitude>(11.866667999999999_inf)
+|/m/04p_hy|	Interval-<http://rdf.freebase.com/ns/location.geocode.longitude>_right|	Interval-<http://rdf.freebase.com/ns/location.geocode.longitude>(-0.00537_-3.603)|
+|/m/0c1xm	|Interval-<http://rdf.freebase.com/ns/location.geocode.longitude>_right|	Interval-<http://rdf.freebase.com/ns/location.geocode.longitude>(-0.00537_-3.603)|
+|/m/0c5x_	|Interval-<http://rdf.freebase.com/ns/location.geocode.longitude>_right	|Interval-<http://rdf.freebase.com/ns/location.geocode.longitude>(-0.00537_-3.603)|
+|/m/0j_1v	|Interval-<http://rdf.freebase.com/ns/location.geocode.longitude>_right|	Interval-<http://rdf.freebase.com/ns/location.geocode.longitude>(-7.999999_11.866667)|
+### link / numeric prediction
 
 1. To augment the dataset with link prediction, make sure the directory `data/{dataset}` contains at least four files:
       1. `train.txt`: The training entity triples.
