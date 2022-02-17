@@ -130,7 +130,7 @@ optional arguments:
 
 ### Default (augment only, without prediction)
 
-The following file will be used to illustrate some of the capabilities of `kgtk reachable-nodes`.
+The following file will be used to illustrate some of the capabilities of `kgtk augment`.
 
 ```bash
 head -5 examples/docs/augment-FB15K-sample.tsv
@@ -143,6 +143,10 @@ head -5 examples/docs/augment-FB15K-sample.tsv
 |/m/04258w|	<http://rdf.freebase.com/ns/people.person.date_of_birth>|	1912.66666667|
 |/m/04258w|	<http://rdf.freebase.com/ns/people.deceased_person.date_of_death>|	1997.83333333|
 
+
+```bash
+kgtk augment --dataset augment-FB15K-sample --output-path fb_augment
+```
 
 An example result file
 
