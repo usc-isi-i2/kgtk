@@ -21,7 +21,7 @@ class TestKGTKAugment(unittest.TestCase):
                   "--verify-id-unique", )
         df = pd.read_csv(self.file_path, sep='\t')
         files = glob.glob(f'{self.output_folder_path}/*/*.tsv')
-        
+
         for file in files:
             df_temp = pd.read_csv(self.file_path, sep='\t')
             self.assertEqual(len(df), len(df_temp))
