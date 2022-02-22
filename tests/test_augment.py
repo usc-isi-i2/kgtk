@@ -27,7 +27,7 @@ class TestKGTKAugment(unittest.TestCase):
 
     def test_kgtk_augment_lp(self):
         cli_entry("kgtk", "augment", "--dataset", 'YAGO15K', "--output-path",
-            self.output_folder_path, "--prediction", "lp")
+                  self.output_folder_path, "--prediction", "lp")
         df = pd.read_csv(self.file_path, sep='\t')
         files = glob.glob(f'{self.output_folder_path}/*/train.tsv')
 
@@ -37,11 +37,10 @@ class TestKGTKAugment(unittest.TestCase):
 
     def test_kgtk_augment_np(self):
         cli_entry("kgtk", "augment", "--dataset", 'YAGO15K', "--output-path", self.output_folder_path,
-        "--prediction", "np")
+                  "--prediction", "np")
         df = pd.read_csv(self.file_path, sep='\t')
         files = glob.glob(f'{self.output_folder_path}/*/train.tsv')
 
         for file in files:
             df_temp = pd.read_csv(self.file_path, sep='\t')
             self.assertGreater(len(df_temp), 0)
-
