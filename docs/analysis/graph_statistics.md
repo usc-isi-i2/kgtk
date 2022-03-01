@@ -848,6 +848,7 @@ kgtk graph-statistics \
     --output-statistics-only True \
     / filter -p 'Q5;;'
 ```
+
 | node1 | label | node2 | id |
 | -- | -- | -- | -- |
 | Q5 | Pindegree | 20 | Q5-Pindegree-0 |
@@ -912,6 +913,7 @@ kgtk graph-statistics \
     --output-statistics-only True \
     / filter -p 'Q5;;'
 ```
+
 | node1 | label | node2 | id |
 | -- | -- | -- | -- |
 | Q5 | Pindegree | 0 | Q5-Pindegree-0 |

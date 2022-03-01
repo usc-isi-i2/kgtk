@@ -18,6 +18,7 @@ class KgtkIdBuilderOptions(KgtkFormat):
     DEFAULT_VERIFY_ID_UNIQUE: bool = False
 
     # TODO: use an enum
+    COMPACT_PREFIXED_STYLE: str = "compact-prefix" # XXX### where ### is in a higher radix
     CONCAT_NLN_STYLE: str = "node1-label-node2" # node1-label-node2
     CONCAT_NL_NUM_STYLE: str = "node1-label-num" # node1-label-#
     CONCAT_NLN_NUM_STYLE: str = "node1-label-node2-num" # node1-label-node2-#
@@ -28,11 +29,12 @@ class KgtkIdBuilderOptions(KgtkFormat):
     WIKIDATA_WITH_CLAIM_ID_STYLE: str = "wikidata-with-claim-id" # node1-label-node2/hash-claimidhash
 
     STYLES: typing.List[str] = [
+        COMPACT_PREFIXED_STYLE,
+        EMPTY_STYLE,
         CONCAT_NLN_STYLE,
         CONCAT_NL_NUM_STYLE,
         CONCAT_NLN_NUM_STYLE,
         CONCAT_WITH_OLD_ID_STYLE,
-        EMPTY_STYLE,
         PREFIXED_STYLE,
         WIKIDATA_STYLE,
         WIKIDATA_WITH_CLAIM_ID_STYLE,
@@ -169,7 +171,7 @@ class KgtkIdBuilderOptions(KgtkFormat):
         if self.new_id_column_name is not None:
             print("--new-id-column-name=%s" % str(self.new_id_column_name), file=out, flush=True)
         print("--overwrite-id=%s" % str(self.overwrite_id), file=out, flush=True)
-        print("--verify_id_unique=%s" % str(self.verify_id_unique), file=out, flush=True)
+        print("--verify-id-unique=%s" % str(self.verify_id_unique), file=out, flush=True)
         print("--id-style=%s" % str(self.id_style), file=out, flush=True)
         print("--id-prefix=%s" % repr(self.id_prefix), file=out, flush=True)
         print("--initial-id=%s" % str(self.initial_id), file=out, flush=True)
@@ -424,7 +426,9 @@ class KgtkIdBuilder(KgtkFormat):
         # has already been assigned, reuse it.
 
         new_id: str
-        if self.options.id_style == KgtkIdBuilderOptions.CONCAT_NLN_STYLE:
+        if self.options.id_style == KgtkIdBuilderOptions.COMPACT_PREFIXED_STYLE:
+            new_id = self.build_compact_prefixed(row)
+        elif self.options.id_style == KgtkIdBuilderOptions.CONCAT_NLN_STYLE:
             new_id = self.build_concat_nln(row)
         elif self.options.id_style == KgtkIdBuilderOptions.CONCAT_NL_NUM_STYLE:
             new_id = self.build_concat_nl_num(row)
@@ -447,6 +451,44 @@ class KgtkIdBuilder(KgtkFormat):
         if self.options.verify_id_unique:
             self.verify_uniqueness(new_id, row, line_number, "new")
         return row
+
+    # Build more compact prefixed IDs by encoding the ID in a base that uses
+    # the decimal digits and most of the lower and upper case letters.  Vowels
+    # are omitted to avoid creating English language obscenities ('w' is retained,
+    # which raises the issue of potential Welsh language obscenities).  The
+    # resulting set of digits implies base 50.
+    #
+    # Note:  The base digits should start with '0' for zfill to be intuitive.
+    # Conversely, '+' and '-' must not be in the base digits due to zfill.
+    #
+    # Note:  Negative ID values are supported, but they should probably be forbidden.
+    #
+    # TODO: Disallow negative ID values.
+    base_digits: str = "0123456789bcdfghjklmnpqrstvwxzBCDFGHJKLMNPQRSTVWXZ"
+
+    def build_compact_prefixed(self, row: typing.List[str])->str:
+        id: int = self.current_id
+        self.current_id += 1
+
+        compact_id: str
+        if id == 0:
+            compact_id = self.base_digits[0]
+        else:
+            base: int = len(self.base_digits)
+            encoded_digits: typing.List[str] = list()
+            negative: bool = False
+            if id < 0:
+                negative = True
+                id = - id
+            while id:
+                encoded_digits.append(self.base_digits[id % base])
+                id //= base
+            if negative:
+                encoded_digits.append('-')
+            encoded_digits.reverse()
+            compact_id = ''.join(encoded_digits)
+        
+        return self.options.id_prefix + compact_id.zfill(self.options.id_prefix_num_width)
 
     def build_concat_nln(self, row: typing.List[str])->str:
         return row[self.node1_column_idx] + self.options.id_separator + row[self.label_column_idx] + self.options.id_separator + row[self.node2_column_idx]
@@ -517,7 +559,7 @@ def main():
     parser.add_argument(dest="input_file_path", help="The KGTK file with the input data (default=%(default)s)", type=Path, nargs="?", default="-")
     parser.add_argument("-o", "--output-file", dest="output_file_path", help="The KGTK file to write (default=%(default)s).", type=Path, default="-")
 
-    KgtkIdBuilderOptions.add_arguments(parser)
+    KgtkIdBuilderOptions.add_arguments(parser, expert=True)
     
     KgtkReader.add_debug_arguments(parser)
     KgtkReaderOptions.add_arguments(parser, mode_options=True)

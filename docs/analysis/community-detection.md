@@ -303,6 +303,7 @@ kgtk community-detection -i examples/docs/community-detection-arnold.tsv --metho
 ```bash
 kgtk community-detection -i examples/docs/community-detection-arnold.tsv --method mcmc
 ```
+
 |node1                                        |label|node2    |node2;prob         |
 |---------------------------------------------|-----|---------|-------------------|
 |Christopher Lawford                          |in   |cluster_0|1.0                |

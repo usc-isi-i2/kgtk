@@ -321,6 +321,7 @@ kgtk add-labels --input-file examples/docs/add-labels-file1.tsv \
                 --label-file examples/docs/add-labels-labels2.tsv \
                 --language en
 ```
+
 | node1 | label | node2 | node1;label |
 | -- | -- | -- | -- |
 | Q1 | P1 | Q5 | 'Elmo'@en |
@@ -337,6 +338,7 @@ kgtk add-labels --input-file examples/docs/add-labels-file1.tsv \
                 --label-file examples/docs/add-labels-labels2.tsv \
                 --languages en fr
 ```
+
 | node1 | label | node2 | node1;label | node2;label |
 | -- | -- | -- | -- | -- |
 | Q1 | P1 | Q5 | 'Elmo'@en |  |
@@ -354,6 +356,7 @@ kgtk add-labels --input-file examples/docs/add-labels-file1.tsv \
                 --label-file examples/docs/add-labels-labels2.tsv \
                 --language ANY
 ```
+
 | node1 | label | node2 | node1;label | node2;label |
 | -- | -- | -- | -- | -- |
 | Q1 | P1 | Q5 | 'Elmo'@en |  |
@@ -370,6 +373,7 @@ kgtk add-labels --input-file examples/docs/add-labels-file1.tsv \
                 --label-file examples/docs/add-labels-labels2.tsv \
                 --language NONE
 ```
+
 | node1 | label | node2 | label;label | node2;label |
 | -- | -- | -- | -- | -- |
 | Q1 | P1 | Q5 | "instance of" | "human" |
@@ -386,6 +390,7 @@ kgtk add-labels --input-file examples/docs/add-labels-file1.tsv \
                 --label-file examples/docs/add-labels-labels2.tsv \
 	        --language en NONE
 ```
+
 | node1 | label | node2 | node1;label | label;label | node2;label |
 | -- | -- | -- | -- | -- | -- |
 | Q1 | P1 | Q5 | 'Elmo'@en | "instance of" | "human" |
@@ -421,6 +426,7 @@ kgtk add-labels --input-file examples/docs/add-labels-file1.tsv \
                 --label-file examples/docs/add-labels-labels3.tsv \
                 --language en
 ```
+
 | node1 | label | node2 | node1;label | node2;label |
 | -- | -- | -- | -- | -- |
 | Q1 | P1 | Q5 | 'Elmo'@en |  |
@@ -435,6 +441,7 @@ kgtk add-labels --input-file examples/docs/add-labels-file1.tsv \
                 --label-file examples/docs/add-labels-labels3.tsv \
                 --language es
 ```
+
 | node1 | label | node2 | node1;label | node2;label |
 | -- | -- | -- | -- | -- |
 | Q1 | P1 | Q5 | 'Sr Elmo'@es |  |
@@ -449,6 +456,7 @@ kgtk add-labels --input-file examples/docs/add-labels-file1.tsv \
                 --label-file examples/docs/add-labels-labels3.tsv \
                 --languages en es
 ```
+
 | node1 | label | node2 | node1;label | node2;label |
 | -- | -- | -- | -- | -- |
 | Q1 | P1 | Q5 | 'Elmo'@en |  |
@@ -463,6 +471,7 @@ kgtk add-labels --input-file examples/docs/add-labels-file1.tsv \
                 --label-file examples/docs/add-labels-labels3.tsv \
                 --languages es en
 ```
+
 | node1 | label | node2 | node1;label | node2;label |
 | -- | -- | -- | -- | -- |
 | Q1 | P1 | Q5 | 'Sr Elmo'@es |  |
@@ -477,6 +486,7 @@ kgtk add-labels --input-file examples/docs/add-labels-file1.tsv \
                 --label-file examples/docs/add-labels-labels3.tsv \
                 --languages fr en es
 ```
+
 | node1 | label | node2 | node1;label | node2;label |
 | -- | -- | -- | -- | -- |
 | Q1 | P1 | Q5 | 'Elmo'@en |  |

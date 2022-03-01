@@ -133,6 +133,7 @@ class KgtkReaderOptions():
     implied_label: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
 
     graph_cache: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
+    ignore_stale_graph_cache: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
     use_graph_cache_envar: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
     graph_cache_fetchmany_size: int = attr.ib(validator=attr.validators.instance_of(int), default=GRAPH_CACHE_FETCHMANY_SIZE_DEFAULT)
     graph_cache_filter_batch_size: int = attr.ib(validator=attr.validators.instance_of(int), default=GRAPH_CACHE_FILTER_BATCH_SIZE_DEFAULT)
@@ -230,6 +231,12 @@ class KgtkReaderOptions():
                             dest=prefix2 + "use_graph_cache_envar",
                             metavar="optional True|False",
                             help=h(prefix3 + "use KGTK_GRAPH_CACHE if --graph-cache is not specified. (default=%(default)s)."),
+                            type=optional_bool, nargs='?', const=True, **d(default=True))
+
+        fgroup.add_argument(prefix1 + "ignore-stale-graph-cache",
+                            dest=prefix2 + "ignore_stale_graph_cache",
+                            metavar="optional True|False",
+                            help=h(prefix3 + "Ignore the graph cache if the file exists with a differen size or modificatin time. (default=%(default)s)."),
                             type=optional_bool, nargs='?', const=True, **d(default=True))
 
         fgroup.add_argument(prefix1 + "graph-cache",
@@ -456,6 +463,7 @@ class KgtkReaderOptions():
             implied_label=lookup("implied_label", None),
             graph_cache=lookup("graph_cache", None),
             use_graph_cache_envar=lookup("use_graph_cache_envar", True),
+            ignore_stale_graph_cache=lookup("ignore_stale_graph_cache", True),
             graph_cache_fetchmany_size=lookup("graph_cache_fetchmany_size", cls.GRAPH_CACHE_FETCHMANY_SIZE_DEFAULT),
             graph_cache_filter_batch_size=lookup("graph_cache_filter_batch_size", cls.GRAPH_CACHE_FILTER_BATCH_SIZE_DEFAULT),
             header_error_action=lookup("header_error_action", ValidationAction.EXCLUDE),
@@ -532,6 +540,7 @@ class KgtkReaderOptions():
         if self.implied_label is not None:
             print("%simplied-label=%s" % (prefix, str(self.implied_label)), file=out)
         print("%suse-graph-cache-envar=%s" % (prefix, str(self.use_graph_cache_envar)), file=out)
+        print("%signore-stale-graph-cache=%s" % (prefix, str(self.ignore_stale_graph_cache)), file=out)
         print("%sgraph-cache-fetchmany-size=%s" % (prefix, str(self.graph_cache_fetchmany_size)), file=out)
         print("%sgraph-cache-filter-batch-size=%s" % (prefix, str(self.graph_cache_filter_batch_size)), file=out)
         if self.graph_cache is not None:
@@ -606,6 +615,9 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
     # Use the fast reading path?
     use_fast_path: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+
+    # Can we rewind this input file?
+    rewindable: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     # Reject file
     reject_file: typing.Optional[typing.TextIO] = attr.ib(default=None)
@@ -712,6 +724,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                 print("Using KGTK_GRAPH_CACHE=%s" % repr(graph_cache), file=error_file, flush=True)
 
         source: ClosableIter[str]
+        rewindable: bool
         header: str
         column_name: str
         column_names: typing.List[str]
@@ -735,6 +748,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             from kgtk.io.graphcacheadaptor import GraphCacheAdaptor
             gca: typing.Optional[GraphCacheAdaptor] = GraphCacheAdaptor.open(graph_cache_path=Path(graph_cache),
                                                                              file_path=file_path,
+                                                                             ignore_stale_graph_cache=options.ignore_stale_graph_cache,
                                                                              error_file=error_file,
                                                                              verbose=verbose)
             if gca is not None:
@@ -743,6 +757,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                     print("KgtkReader: Using the graph cache.", file=error_file, flush=True)
                     
                 source = ClosableIterTextIOWrapper(sys.stdin) # This is a dummy definition.
+                rewindable = True
                 column_names = gca.column_names.copy()
                 header = KgtkFormat.COLUMN_SEPARATOR.join(column_names)
 
@@ -759,7 +774,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
 
         if not use_graph_cache:
-            source = cls._openfile(file_path, options=options, error_file=error_file, verbose=verbose)
+            source, rewindable = cls._openfile(file_path, options=options, error_file=error_file, verbose=verbose)
 
             # Read the kgtk file header and split it into column names.  We get the
             # header back, too, for use in debugging and error messages.
@@ -984,6 +999,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                    is_edge_file=is_edge_file,
                    is_node_file=is_node_file,
                    use_fast_path=use_fast_path,
+                   rewindable=rewindable,
                    verbose=verbose,
                    very_verbose=very_verbose,
         )
@@ -1035,36 +1051,37 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
         else:
             # TODO: throw a better exception.
-                raise ValueError("%s: Unexpected compression_type '%s'" % (who, compression_type))
+            raise ValueError("%s: Unexpected compression_type '%s'" % (who, compression_type))
 
     @classmethod
     def _openfile(cls,
                   file_path: typing.Optional[Path],
                   options: KgtkReaderOptions, 
                   error_file: typing.TextIO,
-                  verbose: bool)->ClosableIter[str]:
+                  verbose: bool) -> typing.Tuple[ClosableIter[str], bool]:
         who: str = cls.__name__
         if file_path is None or str(file_path) == "-":
             if options.compression_type is not None and len(options.compression_type) > 0:
-                return ClosableIterTextIOWrapper(cls._open_compressed_file(options.compression_type,
-                                                                           "-",
-                                                                           sys.stdin,
-                                                                           who,
-                                                                           options.use_mgzip,
-                                                                           options.mgzip_threads,
-                                                                           error_file,
-                                                                           verbose))
+                return (ClosableIterTextIOWrapper(cls._open_compressed_file(options.compression_type,
+                                                                            "-",
+                                                                            sys.stdin,
+                                                                            who,
+                                                                            options.use_mgzip,
+                                                                            options.mgzip_threads,
+                                                                            error_file,
+                                                                            verbose)),
+                        False)
             else:
                 if verbose:
                     print("%s: reading stdin" % who, file=error_file, flush=True)
-                return ClosableIterTextIOWrapper(sys.stdin)
+                return (ClosableIterTextIOWrapper(sys.stdin), False)
 
         if str(file_path).startswith("<"):
             # Note: compression is not currently supported for fd input files.
             fd: int = int(str(file_path)[1:])
             if verbose:
                 print("%s: reading file descriptor %d" % (who, fd), file=error_file, flush=True)
-            return ClosableIterTextIOWrapper(open(fd, "r"))
+            return (ClosableIterTextIOWrapper(open(fd, "r")), False)
 
         if verbose:
             print("%s: File_path.suffix: %s" % (who, file_path.suffix), file=error_file, flush=True)
@@ -1091,14 +1108,15 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         else:
             if verbose:
                 print("%s: reading file %s" % (who, str(file_path)), file=error_file, flush=True)
-            return ClosableIterTextIOWrapper(open(file_path, "r"))
+            return (ClosableIterTextIOWrapper(open(file_path, "r")), True)
 
+        # TODO: remove the gzip_in_parallel code.
         if options.gzip_in_parallel:
             gzip_thread: GunzipProcess = GunzipProcess(input_file, Queue(options.gzip_queue_size))
             gzip_thread.start()
-            return gzip_thread
+            return (gzip_thread, True)
         else:
-            return ClosableIterTextIOWrapper(input_file)
+            return (ClosableIterTextIOWrapper(input_file), True)
             
 
     @classmethod

@@ -1,4 +1,4 @@
-41;368;0c>## Overview
+## Overview
 
 `kgtk select-columns` selects a subsetfile columns while copying a KGTK file from input to output.
 You provide a list of column names in the order in which they should appear in the output file.

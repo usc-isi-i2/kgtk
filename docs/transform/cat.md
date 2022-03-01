@@ -1,4 +1,4 @@
-## Overview
+41;370;0c>## Overview
 
 The cat command combines (concatenates) one or more KGTK files, optionally
 decompressing input files and compressing the output file, while managing the
@@ -154,11 +154,28 @@ selection extensions, e.g. `.kgtk.gz`, `.csv.gz`, `.json.bz2`.
     files (filesnames that begin with `>`, followed by a file descriptor number)
     will not be compressed.  This behavior may change at a later date.
 
+## Fast Copies
+
+When certain conditions are met, `kgtk cat` will use Unix system utilities to perform
+decompression. concatenation, and compression.  The major constraints are:
+
+ * The input files must have the same column header names (allowing for aliases)
+   and order.
+ * The input files must come from the filesystem, not standard input or a file
+   descriptor number.
+ * The input files must meet a minimum total size.
+ * Various checking options must not be turned on.
+ * The files must contain column names headers that are not
+   overidden bu command line options.
+   
+
 ## Usage
 
 ```bash
 usage: kgtk cat [-h] [-i INPUT_FILE [INPUT_FILE ...]] [-o OUTPUT_FILE]
                 [--output-format {csv,html,html-compact,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,table,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}]
+                [--pure-python [True|False]]
+                [--fast-copy-min-size FAST_COPY_MIN_SIZE]
                 [-v [optional True|False]]
 
 Concatenate two or more KGTK files, merging the columns appropriately. All files must be KGTK edge files or all files must be KGTK node files (unless overridden with --mode=NONE). 
@@ -175,6 +192,11 @@ optional arguments:
                         stdout.)
   --output-format {csv,html,html-compact,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,table,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}
                         The file format (default=kgtk)
+  --pure-python [True|False]
+                        When True, use Python code. (default=False)
+  --fast-copy-min-size FAST_COPY_MIN_SIZE
+                        The minium number of bytes before using OS tools for
+                        fast copy (default=10000).
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).
@@ -189,6 +211,7 @@ Suppose that `movies_reduced.tsv` contains the following table in KGTK format:
 ```bash
 kgtk cat -i examples/docs/movies_reduced.tsv
 ```
+
 | id | node1 | label | node2 |
 | -- | -- | -- | -- |
 | t1 | terminator | label | 'The Terminator'@en |
@@ -215,6 +238,7 @@ Suppose that `tutorial_people_full.tsv` contains the following table in KGTK for
 ```bash
 kgtk cat -i examples/docs/tutorial_people_full.tsv
 ```
+
 | id | node1 | label | node2 |
 | -- | -- | -- | -- |
 | h1 | james_cameron | label | "James Cameron" |
@@ -249,6 +273,7 @@ These two files have only he 4 basic KGTK fields.
 ```bash
 kgtk cat -i examples/docs/movies_reduced.tsv examples/docs/tutorial_people_full.tsv
 ```
+
 The result will be the following file in KGTK format:
 
 | id | node1 | label | node2 |
@@ -381,7 +406,8 @@ Consider the following input file:
 
 ```bash
 kgtk cat -i examples/docs/no-header.tsv --mode=NONE
-````
+```
+
 | a | b | c | d |
 | -- | -- | -- | -- |
 | h21 | robert_patrick | label | "Robert Patrick" |
@@ -726,7 +752,7 @@ kgtk cat --implied-label=founded -i examples/docs/cat-two-columns.tsv
     The `--implied-label=VALUE` option is implemented by KgtkReader, and
     can be used with most KGTK subcommands.
 
-### Expert Example: Supressing the Output Header
+### Expert Topic: Supressing the Output Header
 
 Sometimes it is desired to produce a TSV file without an output header.
 
@@ -735,6 +761,9 @@ kgtk cat -i examples/docs/movies_reduced.tsv --no-output-header
 The result will be the following file in KGTK format except
 for missing the header line.
 
+
+|  |  |  |  |
+|---|---|---|---|
 | t1 | terminator | label | 'The Terminator'@en |
 | t2 | terminator | instance_of | film |
 | t3 | terminator | genre | action |
@@ -754,7 +783,9 @@ for missing the header line.
 | t17 | terminator | award | national_film_registry |
 | t18 | t17 | point_in_time | ^2008-01-01T00:00:00Z/9 |
 
-### Expert Example: Reading Files without Header Records
+
+
+### Expert Topic: Reading Files without Header Records: Supply Column Names
 
 Sometimes you may wish to read a TSV file that does not contain a
 header record.
@@ -787,3 +818,466 @@ The result will be the following file in KGTK format:
 | lionheart | born | ^1157-09-08T00:00 |
 | year0001 | starts | ^0001-01-01T00:00 |
 | year9999 | ends | ^9999-12-31T11:59:59 |
+
+### Expert Topic: Reading Files without Header Records: Automatic Column Names
+
+Another approach to reading a file without a header record is to have KGTK
+assign column names, which it will do beginning with COL1, COL2, etc.  It is
+necessary to tell KGTK how many columns are in the file.  It is also necessary
+to say `--mode=NONE`, since the generated column names do not match the definition
+of a KGTK edge file or node file.
+
+```
+kgtk cat -i examples/docs/cat-file-without-header.tsv \
+         --no-input-header \
+         --supply-missing-column-names \
+	 --number-of-columns 3 \
+	 --mode=NONE
+```
+
+| COL1 | COL2 | COL3 |
+| -- | -- | -- |
+| john | woke | ^2020-05-02T00:00 |
+| john | woke | ^2020-05-00T00:00 |
+| john | slept | ^2020-05-02T24:00 |
+| lionheart | born | ^1157-09-08T00:00 |
+| year0001 | starts | ^0001-01-01T00:00 |
+| year9999 | ends | ^9999-12-31T11:59:59 |
+
+### Expert Topic: Reading Files without Header Records: Empty Column Names
+
+Assume that you have a TSV file with the right number of columns in the
+header record, but one or more missing column names.
+
+```
+kgtk cat -i examples/docs/cat-file-with-empty-column-names.tsv
+```
+
+    In input 1 header 'node1	label	node2		': Column 3 has an empty name in the file header
+    Exit requested
+
+
+You can ask the system to replace the empty column names with COLn:
+
+```
+kgtk cat -i examples/docs/cat-file-with-empty-column-names.tsv \
+         --supply-missing-column-names
+```
+
+| node1 | label | node2 | COL4 | COL5 |
+| -- | -- | -- | -- | -- |
+| john | observed | ^2020-05-02T00:00 | fever | cough |
+| john | observed | ^2020-05-00T00:00 | normal | normal |
+| john | observed | ^2020-05-02T24:00 | normal | cough |
+
+
+### Expert Topic: Requiring Certain Columns
+
+Sometimes you may wish to require that an input file contains certain
+named columns that are essential to your analysis.
+
+```
+kgtk cat -i examples/docs/cat-edges-with-totals.tsv
+```
+
+| node1 | label | node2 | node1;total |
+| -- | -- | -- | -- |
+| P10 | p585-count | 73 | 3879 |
+| P1000 | p585-count | 16 | 266 |
+| P101 | p585-count | 5 | 157519 |
+| P1018 | p585-count | 2 | 177 |
+| P102 | p585-count | 295 | 414726 |
+| P1025 | p585-count | 26 | 693 |
+| P1026 | p585-count | 40 | 6930 |
+| P1027 | p585-count | 14 | 10008 |
+| P1028 | p585-count | 1131 | 4035 |
+| P1029 | p585-count | 4 | 2643 |
+| P1035 | p585-count | 4 | 366 |
+| P1037 | p585-count | 60 | 9317 |
+| P1040 | p585-count | 1 | 45073 |
+| P1050 | p585-count | 246 | 226380 |
+
+Supposw you require that the `node1;total` column be present:
+
+```
+kgtk cat -i examples/docs/cat-edges-with-totals.tsv \
+         --require-column-names  'node1;total'
+```
+
+This will succeed:
+
+| node1 | label | node2 | node1;total |
+| -- | -- | -- | -- |
+| P10 | p585-count | 73 | 3879 |
+| P1000 | p585-count | 16 | 266 |
+| P101 | p585-count | 5 | 157519 |
+| P1018 | p585-count | 2 | 177 |
+| P102 | p585-count | 295 | 414726 |
+| P1025 | p585-count | 26 | 693 |
+| P1026 | p585-count | 40 | 6930 |
+| P1027 | p585-count | 14 | 10008 |
+| P1028 | p585-count | 1131 | 4035 |
+| P1029 | p585-count | 4 | 2643 |
+| P1035 | p585-count | 4 | 366 |
+| P1037 | p585-count | 60 | 9317 |
+| P1040 | p585-count | 1 | 45073 |
+| P1050 | p585-count | 246 | 226380 |
+
+Suppose you also require that an 'average' column be present, but it is missing:
+
+```
+kgtk cat -i examples/docs/cat-edges-with-totals.tsv \
+         --require-column-names  'node1;total' average
+```
+
+This will result in an error message:
+
+    In input 1 header 'node1	label	node2	node1;total': The following required columns were missing: ['average']
+    Exit requested
+
+### Expert Topic: Prohibiting Additional Columns
+
+Sometimes you may want to prohibit additional columns.  There are several
+special cases to consider:
+
+ * Prohibiting additional columns for a standard KGTK node file.
+ * Prohibiting additional columns for a standard KGTK edge file.
+ * Requiring certain additional columns and prohibiting others.
+
+Suppose that you have a standard KGTK edge file and you wish to
+prohibit any additional columns.
+
+Consider a standard KGTK node file without additional columns:
+
+```
+kgtk cat -i examples/docs/cat-nodes.tsv \
+         --no-additional-columns
+```
+
+This command will succeed:
+
+| id |
+| -- |
+| P10 |
+| P100 |
+| P1000 |
+
+A KGTK node file with unexpected additional columns will fail:
+
+```
+kgtk cat -i examples/docs/cat-nodes-and-titles.tsv \
+         --no-additional-columns
+```
+
+    In input 1 header 'id	titel': The following additional columns are unexpected: ['titel']
+    Exit requested
+
+
+
+Consider a standard KGTK edge file without additional columns:
+
+```
+kgtk cat -i examples/docs/cat-edges.tsv \
+         --no-additional-columns
+```
+
+This command will succeed:
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| P10 | p585-count | 73 |
+| P1000 | p585-count | 16 |
+| P101 | p585-count | 5 |
+| P1018 | p585-count | 2 |
+| P102 | p585-count | 295 |
+| P1025 | p585-count | 26 |
+| P1026 | p585-count | 40 |
+| P1027 | p585-count | 14 |
+| P1028 | p585-count | 1131 |
+| P1029 | p585-count | 4 |
+| P1035 | p585-count | 4 |
+| P1037 | p585-count | 60 |
+| P1040 | p585-count | 1 |
+| P1050 | p585-count | 246 |
+
+Note: The `node1`, `label`, and `node2` columns (or their aliases) are allowed.
+The `id` column is also allowed, although it is not required.
+
+Consider a KGTK edge file with an undesired additional column:
+
+```
+kgtk cat -i examples/docs/cat-edges-with-totals.tsv \
+         --no-additional-columns
+```
+
+This will fail with the following error message:
+
+    In input 1 header 'node1	label	node2	node1;total': The following additional columns are unexpected: ['node1;total']
+    Exit requested
+
+If we want to accept the `node1;total` additional column, but prohibit
+others, we can do so by explicitly listing the required columns.  All
+required columns (e.g., `node1`, `label, `and node2`) must be listed:
+
+```
+kgtk cat -i examples/docs/cat-edges-with-totals.tsv \
+         --require-column-names node1 label node2 'node1;total' \
+         --no-additional-columns
+```
+
+This will succeed:
+
+| node1 | label | node2 | node1;total |
+| -- | -- | -- | -- |
+| P10 | p585-count | 73 | 3879 |
+| P1000 | p585-count | 16 | 266 |
+| P101 | p585-count | 5 | 157519 |
+| P1018 | p585-count | 2 | 177 |
+| P102 | p585-count | 295 | 414726 |
+| P1025 | p585-count | 26 | 693 |
+| P1026 | p585-count | 40 | 6930 |
+| P1027 | p585-count | 14 | 10008 |
+| P1028 | p585-count | 1131 | 4035 |
+| P1029 | p585-count | 4 | 2643 |
+| P1035 | p585-count | 4 | 366 |
+| P1037 | p585-count | 60 | 9317 |
+| P1040 | p585-count | 1 | 45073 |
+| P1050 | p585-count | 246 | 226380 |
+
+An unexpected additional column will fail:
+
+```
+kgtk cat -i examples/docs/cat-edges-with-totals-and-averages.tsv \
+         --require-column-names node1 label node2 'node1;total' \
+         --no-additional-columns
+```
+
+    In input 1 header 'node1	label	node2	node1;total	average': The following additional columns are unexpected: ['average']
+    Exit requested
+
+We can add the `average` column to the list of required column names
+and accept that file:
+
+```
+kgtk cat -i examples/docs/cat-edges-with-totals-and-averages.tsv \
+         --require-column-names node1 label node2 'node1;total' average \
+         --no-additional-columns
+```
+
+| node1 | label | node2 | node1;total | average |
+| -- | -- | -- | -- | -- |
+| P10 | p585-count | 73 | 3879 | 53.136986301369866 |
+| P1000 | p585-count | 16 | 266 | 16.625 |
+| P101 | p585-count | 5 | 157519 | 31503.8 |
+| P1018 | p585-count | 2 | 177 | 88.5 |
+| P102 | p585-count | 295 | 414726 | 1405.8508474576272 |
+| P1025 | p585-count | 26 | 693 | 26.653846153846153 |
+| P1026 | p585-count | 40 | 6930 | 173.25 |
+| P1027 | p585-count | 14 | 10008 | 714.8571428571429 |
+| P1028 | p585-count | 1131 | 4035 | 3.5676392572944295 |
+| P1029 | p585-count | 4 | 2643 | 660.75 |
+| P1035 | p585-count | 4 | 366 | 91.5 |
+| P1037 | p585-count | 60 | 9317 | 155.28333333333333 |
+| P1040 | p585-count | 1 | 45073 | 45073.0 |
+| P1050 | p585-count | 246 | 226380 | 920.2439024390244 |
+
+!!! note
+    At the present time there is no option to list optional additional columns.
+
+### Expert Topic: Requiring a Certain Number of Columns
+
+Another way to ensure that a KGTK edge  file has only
+[ `node1`, `label`, `node2`] columns is to require that the
+file have 3 columns.  More generally, you can require that
+a file have a certain number of columns without having to name
+all the columns individually.
+
+```
+kgtk cat -i examples/docs/cat-edges.tsv \
+         --number-of-columns 3
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| P10 | p585-count | 73 |
+| P1000 | p585-count | 16 |
+| P101 | p585-count | 5 |
+| P1018 | p585-count | 2 |
+| P102 | p585-count | 295 |
+| P1025 | p585-count | 26 |
+| P1026 | p585-count | 40 |
+| P1027 | p585-count | 14 |
+| P1028 | p585-count | 1131 |
+| P1029 | p585-count | 4 |
+| P1035 | p585-count | 4 |
+| P1037 | p585-count | 60 |
+| P1040 | p585-count | 1 |
+| P1050 | p585-count | 246 |
+
+```
+kgtk cat -i examples/docs/cat-edges-with-totals.tsv \
+         --number-of-columns 3
+```
+
+    In input 1 header 'node1	label	node2	node1;total': Expected 3 columns, got 4 in the header
+    Exit requested
+
+```
+kgtk cat -i examples/docs/cat-edges-with-totals.tsv \
+         --number-of-columns 4
+```
+
+| node1 | label | node2 | node1;total |
+| -- | -- | -- | -- |
+| P10 | p585-count | 73 | 3879 |
+| P1000 | p585-count | 16 | 266 |
+| P101 | p585-count | 5 | 157519 |
+| P1018 | p585-count | 2 | 177 |
+| P102 | p585-count | 295 | 414726 |
+| P1025 | p585-count | 26 | 693 |
+| P1026 | p585-count | 40 | 6930 |
+| P1027 | p585-count | 14 | 10008 |
+| P1028 | p585-count | 1131 | 4035 |
+| P1029 | p585-count | 4 | 2643 |
+| P1035 | p585-count | 4 | 366 |
+| P1037 | p585-count | 60 | 9317 |
+| P1040 | p585-count | 1 | 45073 |
+| P1050 | p585-count | 246 | 226380 |
+
+### Expert Topic: Pure Python Copies
+
+The fast copy option can be disabled by specifying `--pure-python`.
+
+```
+kgtk cat -i examples/docs/cat-edges.tsv \
+         -i examples/docs/cat-edges.tsv \
+         --pure-python
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| P10 | p585-count | 73 |
+| P1000 | p585-count | 16 |
+| P101 | p585-count | 5 |
+| P1018 | p585-count | 2 |
+| P102 | p585-count | 295 |
+| P1025 | p585-count | 26 |
+| P1026 | p585-count | 40 |
+| P1027 | p585-count | 14 |
+| P1028 | p585-count | 1131 |
+| P1029 | p585-count | 4 |
+| P1035 | p585-count | 4 |
+| P1037 | p585-count | 60 |
+| P1040 | p585-count | 1 |
+| P1050 | p585-count | 246 |
+| P10 | p585-count | 73 |
+| P1000 | p585-count | 16 |
+| P101 | p585-count | 5 |
+| P1018 | p585-count | 2 |
+| P102 | p585-count | 295 |
+| P1025 | p585-count | 26 |
+| P1026 | p585-count | 40 |
+| P1027 | p585-count | 14 |
+| P1028 | p585-count | 1131 |
+| P1029 | p585-count | 4 |
+| P1035 | p585-count | 4 |
+| P1037 | p585-count | 60 |
+| P1040 | p585-count | 1 |
+| P1050 | p585-count | 246 |
+
+### Expert Topic: Changing the Fast Copy Minimum Size Throshold
+
+Normally, `kgtk cat` will use the fast copy path with system commands only
+when the total sizes of the input files pass a threshhold.  This is because
+that are overheads on starting the system utilities as subprocesses, and for
+very small files it may be faster to perform all processing directly in
+Python.
+
+The threshold may be changed.  For example, if you wanted the code to use
+the fast copy path regardless of the size of the input files, use:
+
+```
+kgtk cat -i examples/docs/cat-edges.tsv \
+         -i examples/docs/cat-edges.tsv \
+         --fast-copy-min-size 0
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| P10 | p585-count | 73 |
+| P1000 | p585-count | 16 |
+| P101 | p585-count | 5 |
+| P1018 | p585-count | 2 |
+| P102 | p585-count | 295 |
+| P1025 | p585-count | 26 |
+| P1026 | p585-count | 40 |
+| P1027 | p585-count | 14 |
+| P1028 | p585-count | 1131 |
+| P1029 | p585-count | 4 |
+| P1035 | p585-count | 4 |
+| P1037 | p585-count | 60 |
+| P1040 | p585-count | 1 |
+| P1050 | p585-count | 246 |
+| P10 | p585-count | 73 |
+| P1000 | p585-count | 16 |
+| P101 | p585-count | 5 |
+| P1018 | p585-count | 2 |
+| P102 | p585-count | 295 |
+| P1025 | p585-count | 26 |
+| P1026 | p585-count | 40 |
+| P1027 | p585-count | 14 |
+| P1028 | p585-count | 1131 |
+| P1029 | p585-count | 4 |
+| P1035 | p585-count | 4 |
+| P1037 | p585-count | 60 |
+| P1040 | p585-count | 1 |
+| P1050 | p585-count | 246 |
+
+
+### Expert Topic: Overriding System Commands
+
+The names of the system commands used by the fast copy path may
+be overridden on the command line.
+
+```
+kgtk cat -i examples/docs/cat-edges.tsv \
+         -i examples/docs/cat-edges.tsv \
+         --bash-command /usr/bin/bash \
+	 --bzip2-command /usr/bin/bzip2 \
+	 --cat-command /usr/bin/cat \
+	 --gzip-command /usr/bin/gzip \
+	 --tail-command /usr/bin/tail \
+	 --xz-command /usr/bin/xz
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| P10 | p585-count | 73 |
+| P1000 | p585-count | 16 |
+| P101 | p585-count | 5 |
+| P1018 | p585-count | 2 |
+| P102 | p585-count | 295 |
+| P1025 | p585-count | 26 |
+| P1026 | p585-count | 40 |
+| P1027 | p585-count | 14 |
+| P1028 | p585-count | 1131 |
+| P1029 | p585-count | 4 |
+| P1035 | p585-count | 4 |
+| P1037 | p585-count | 60 |
+| P1040 | p585-count | 1 |
+| P1050 | p585-count | 246 |
+| P10 | p585-count | 73 |
+| P1000 | p585-count | 16 |
+| P101 | p585-count | 5 |
+| P1018 | p585-count | 2 |
+| P102 | p585-count | 295 |
+| P1025 | p585-count | 26 |
+| P1026 | p585-count | 40 |
+| P1027 | p585-count | 14 |
+| P1028 | p585-count | 1131 |
+| P1029 | p585-count | 4 |
+| P1035 | p585-count | 4 |
+| P1037 | p585-count | 60 |
+| P1040 | p585-count | 1 |
+| P1050 | p585-count | 246 |
+

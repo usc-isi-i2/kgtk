@@ -85,6 +85,7 @@ kgtk cat -i examples/docs/tee-file1.tsv
 kgtk cat -i examples/docs/tee-file1.tsv \
    / tee --into-file tee-out.tsv
 ```
+
 | node1 | label | node2 | location | years |
 | -- | -- | -- | -- | -- |
 | john | zipcode | 12345 | home | 10 |
@@ -125,6 +126,7 @@ kgtk cat -i tee-out.tsv
 kgtk tee -i examples/docs/tee-file1.tsv \
          --into-file tee-out.tsv
 ```
+
 | node1 | label | node2 | location | years |
 | -- | -- | -- | -- | -- |
 | john | zipcode | 12345 | home | 10 |

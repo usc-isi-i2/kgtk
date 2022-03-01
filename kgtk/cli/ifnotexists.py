@@ -212,7 +212,7 @@ def run(input_file: KGTKFiles,
             print("--filter-keys=%s" % " ".join(filter_keys), file=error_file)
         print("--cache-input=%s" % str(cache_input), file=error_file)
         print("--preserve-order=%s" % str(preserve_order), file=error_file)
-        print("--presortedr=%s" % str(presorted), file=error_file)
+        print("--presorted=%s" % str(presorted), file=error_file)
         print("--field-separator='%s'" % repr(field_separator), file=error_file)
         print("--left-join=%s" % str(left_join), file=error_file)
         print("--right-join=%s" % str(right_join), file=error_file)

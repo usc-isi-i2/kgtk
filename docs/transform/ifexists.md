@@ -277,6 +277,7 @@ kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
               --filter-on examples/docs/ifexists-file3.tsv
 
 ```
+
 | id | node1 | label | node2 | location | years |
 | -- | -- | -- | -- | -- | -- |
 | s1 | steve | title | supervisor |  |  |
@@ -299,6 +300,7 @@ kgtk ifexists --input-file examples/docs/ifexists-file4.tsv \
               --filter-on examples/docs/ifexists-file3.tsv
 
 ```
+
 | id |
 | -- |
 | john |
@@ -317,6 +319,7 @@ kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
               --input-keys location
 
 ```
+
 | id | node1 | label | node2 | location | years |
 | -- | -- | -- | -- | -- | -- |
 | p2 | peter | zipcode | 12040 | home |  |
@@ -345,6 +348,7 @@ kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
               --filter-keys label node2
 
 ```
+
 | id | node1 | label | node2 | location | years |
 | -- | -- | -- | -- | -- | -- |
 | p2 | peter | zipcode | 12040 | home |  |
@@ -382,6 +386,7 @@ kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
               --unmatched-filter-file ifexists-unmatched-filter.tsv
 
 ```
+
 | id | node1 | label | node2 | location | years |
 | -- | -- | -- | -- | -- | -- |
 | p2 | peter | zipcode | 12040 | home |  |
@@ -394,6 +399,7 @@ kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
 ```bash
 kgtk cat -i ifexists-matched-filter.tsv --mode NONE
 ```
+
 | label | node2 |
 | -- | -- |
 | zipcode | 12040 |
@@ -403,6 +409,7 @@ kgtk cat -i ifexists-matched-filter.tsv --mode NONE
 ```bash
 kgtk cat -i ifexists-unmatched-filter.tsv --mode NONE
 ```
+
 | label | node2 |
 | -- | -- |
 | zipcode | 52040 |
@@ -428,6 +435,7 @@ kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
               --input-keys id
 
 ```
+
 | id | node1 | label | node2 | location | years |
 | -- | -- | -- | -- | -- | -- |
 | s1 | steve | title | supervisor |  |  |
@@ -454,6 +462,7 @@ kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
               --input-keys id
 
 ```
+
 | id | node1 | label | node2 | location | years |
 | -- | -- | -- | -- | -- | -- |
 | s1 | steve | title | supervisor |  |  |
@@ -462,6 +471,7 @@ kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
 ```bash
 kgtk cat -i ifexists-rejects.tsv
 ```
+
 | id | node1 | label | node2 | location | years |
 | -- | -- | -- | -- | -- | -- |
 | p1 | peter | title | manager |  |  |
@@ -491,6 +501,7 @@ kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
               --cache-input
 
 ```
+
 | id | node1 | label | node2 | location | years |
 | -- | -- | -- | -- | -- | -- |
 | j1 | john | title | programmer |  |  |
@@ -522,6 +533,7 @@ kgtk ifexists --input-file examples/docs/ifexists-file1.tsv \
               --cache-input --preserve-order
 
 ```
+
 | id | node1 | label | node2 | location | years |
 | -- | -- | -- | -- | -- | -- |
 | s1 | steve | title | supervisor |  |  |
