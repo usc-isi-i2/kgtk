@@ -5,12 +5,15 @@ import math
 import pandas as pd
 import re
 
+
+
 from kgtk.cli_argparse import KGTKArgumentParser
 
 from pathlib import Path
 import sys
 import typing
 
+from kgtk.kgtkformat import KgtkFormat
 from kgtk.exceptions import KGTKException
 from kgtk.io.kgtkreader import KgtkReader, \
     KgtkReaderOptions, KgtkReaderMode
@@ -206,12 +209,12 @@ class KgtkVisualize:
                 temp_edge = {}
                 if self.node_file is None:
                     if '@' in row[l1] and self.auto_remove_wikidata_language_tag:
-                        nodes.add((row[n1], row[l1][1:row[l1].find('@') - 1]))
+                        nodes.add((row[n1], KgtkFormat.destringify(row[l1])[0])
                     else:
                         nodes.add((row[n1], row[l1]))
 
                     if '@' in row[l3] and self.auto_remove_wikidata_language_tag:
-                        nodes.add((row[n2], row[l3][1:row[l3].find('@') - 1]))
+                        nodes.add((row[n2], KgtkFormat.destringify(row[l3])[0])
                     else:
                         nodes.add((row[n2], row[l3]))
 
@@ -227,14 +230,14 @@ class KgtkVisualize:
 
                 if self.edge_color_column is not None and '@' in row[l2] and self.auto_remove_wikidata_language_tag:
                     if self.edge_color_mapping == 'fixed':
-                        temp_edge = ({'source': row[n1], 'target': row[n2], 'label': row[l2][1:row[l2].find('@') - 1],
+                        temp_edge = ({'source': row[n1], 'target': row[n2], 'label': KgtkFormat.destringify(row[l2])[0],
                                       'color': row[kr.column_name_map[self.edge_color_column]] if not pd.isna(
                                           row[kr.column_name_map[self.edge_color_column]]) and str(
                                           row[kr.column_name_map[
                                               self.edge_color_column]]) != '' else self.edge_color_default,
                                       'width_orig': width_orig})
                     elif self.edge_color_style == 'gradient':
-                        temp_edge = ({'source': row[n1], 'target': row[n2], 'label': row[l2][1:row[l2].find('@') - 1],
+                        temp_edge = ({'source': row[n1], 'target': row[n2], 'label': KgtkFormat.destringify(row[l2])[0],
                                       'color': row[kr.column_name_map[self.edge_color_column]] if not pd.isna(
                                           row[kr.column_name_map[self.edge_color_column]]) and str(
                                           row[kr.column_name_map[self.edge_color_column]]) != '' else -1,
@@ -243,7 +246,7 @@ class KgtkVisualize:
                         if row[kr.column_name_map[self.edge_color_column]] not in color_set:
                             color_set[row[kr.column_name_map[self.edge_color_column]]] = count
                             count += 1
-                        temp_edge = ({'source': row[n1], 'target': row[n2], 'label': row[l2][1:row[l2].find('@') - 1],
+                        temp_edge = ({'source': row[n1], 'target': row[n2], 'label': KgtkFormat.destringify(row[l2])[0],
                                       'color': min(color_set[row[kr.column_name_map[self.edge_color_column]]],
                                                    9) if not pd.isna(
                                           row[kr.column_name_map[self.edge_color_column]]) or str(
@@ -274,8 +277,7 @@ class KgtkVisualize:
                                           row[kr.column_name_map[self.edge_color_column]]) else self.edge_color_default,
                                       'width_orig': width_orig})
                 elif self.edge_color_column is None and '@' in row[l2] and self.auto_remove_wikidata_language_tag:
-                    temp_edge = ({'source': row[n1], 'target': row[n2], 'label': row[l2][1:row[l2].find(
-                        '@') - 1], 'width_orig': width_orig})
+                    temp_edge = ({'source': row[n1], 'target': row[n2], 'label': KgtkFormat.destringify(row[l2])[0], 'width_orig': width_orig})
                 else:
                     temp_edge = (
                         {'source': row[n1], 'target': row[n2], 'label': row[l2], 'width_orig': width_orig})
@@ -462,8 +464,7 @@ class KgtkVisualize:
                     if 'label' not in kr_node.column_name_map:
                         temp['label'] = row[kr_node.column_name_map[self.node_file_id]]
                     elif '@' in str(row[kr_node.column_name_map['label']]):
-                        temp['label'] = row[kr_node.column_name_map['label']][
-                                        1:row[kr_node.column_name_map['label']].find('@') - 1]
+                        temp['label'] = KgtkFormat.destringify(row[kr_node.column_name_map['label']])[0]
                     elif pd.isna(row[kr_node.column_name_map['label']]) \
                             or str(row[kr_node.column_name_map['label']]).lower() == 'nan' \
                             or str(row[kr_node.column_name_map['label']]).lower() == '':
