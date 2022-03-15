@@ -4,6 +4,7 @@ import subprocess
 from pathlib import Path
 from typing import List
 from kgtk.files_config import files_config
+import shutil
 
 always_print_env_variables = {
     'EXAMPLES_DIR',
@@ -91,7 +92,12 @@ class ConfigureKGTK(object):
 
         # If the input graph path is not None, it is assumed it has the files required
         if input_graph_path is None:
-            input_graph_path = f"{self.user_home}/{self.default_folder}/input"
+            input_graph_path = f"{self.user_home}/{self.default_folder}/{project_name}_input"
+
+            # if the input folder already exists from a previous run, delete it
+            if Path(input_graph_path).exists():
+                shutil.rmtree(input_graph_path)
+
             Path(input_graph_path).mkdir(parents=True, exist_ok=True)
             self.download_tutorial_files(input_graph_path)
 
