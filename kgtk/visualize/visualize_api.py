@@ -118,8 +118,8 @@ class KgtkVisualize:
         self.kwargs = kwargs
 
     def execute(self) -> int:
-        d, node_color = self.compute_visualization_graph()
-        self.to_html(d, node_color)
+        d, node_color, node_color_map_len = self.compute_visualization_graph()
+        self.to_html(d, node_color, node_color_map_len - 1)
         return 0
 
     def compute_visualization_graph(self):
@@ -253,7 +253,13 @@ class KgtkVisualize:
                         '@') - 1], 'width_orig': width_orig})
                 else:
                     edges.append(
-                        {'source': row[n1], 'target': row[n2], 'label': row[l2], 'width_orig': width_orig})
+                        {
+                            'source': row[n1],
+                            'target': row[n2],
+                            'label': row[l2],
+                            'width_orig': width_orig,
+                            'color': self.edge_color_default
+                        })
 
             arr = []
             if self.edge_width_mapping == 'fixed':
@@ -312,9 +318,12 @@ class KgtkVisualize:
                             edge['width'] = self.edge_width_default
                         else:
                             edge['width'] = self.edge_width_minimum + (log_cur - log_min) * (
-                                self.edge_width_maximum - self.edge_width_minimum) / (log_max - log_min)
+                                    self.edge_width_maximum - self.edge_width_minimum) / (log_max - log_min)
                     else:
                         edge['width'] = self.edge_width_default
+            else:
+                for edge in edges:
+                    edge['width'] = self.edge_width_default
 
             if self.edge_color_column is not None and self.edge_color_style == 'gradient':
                 edge_color_list = []
@@ -449,7 +458,7 @@ class KgtkVisualize:
                                     if log_max == log_min:
                                         temp['color'] = self.node_color_default
                                     else:
-                                        color_value\
+                                        color_value \
                                             = 0 + (log_cur - log_min) * (1 - 0) / (log_max - log_min)
                                         temp['color'] = float(color_value) if not pd.isna(
                                             row[kr_node.column_name_map[
@@ -460,18 +469,12 @@ class KgtkVisualize:
                                             self.node_color_column]]) else self.node_color_default
                             else:
                                 node_color = 2
-                                if row[kr_node.column_name_map[self.node_color_column]] not in node_color_map \
-                                        and len(node_color_map) < 10:
-                                    node_color_map[row[kr_node.column_name_map[self.node_color_column]]] \
-                                        = len(node_color_map)
+                                if row[kr_node.column_name_map[self.node_color_column]] not in node_color_map:
+                                    node_color_map[row[kr_node.column_name_map[self.node_color_column]]] = len(
+                                        node_color_map)
 
-                                # temp['color'] = min(color_set[row[kr_node.column_name_map[self.node_color_column]]],
-                                #                     9) if not pd.isna(
-                                #     row[kr_node.column_name_map[self.node_color_column]]) else self.node_color_default
-                                # TODO this is a hack for now to get fix colors for few and many subclasses node,
-                                # TODO these are the only 2 options in the node graph, we'll fix it properly
-                                temp['color'] = node_color_map.get(row[kr_node.column_name_map[self.node_color_column]],
-                                                                   self.node_color_default)
+                                temp['color'] = node_color_map[row[kr_node.column_name_map[self.node_color_column]]]
+
                     if self.node_size_column is not None:
                         if self.node_size_mapping == 'fixed':
                             temp['size'] = row[kr_node.column_name_map[self.node_size_column]] if not pd.isna(
@@ -485,8 +488,8 @@ class KgtkVisualize:
                                 size_value = self.node_size_minimum + (
                                         float(row[kr_node.column_name_map[self.node_size_column]]) -
                                         min(node_size_list)) * (
-                                        self.node_size_maximum - self.node_size_minimum) / (
-                                        max(node_size_list) - min(node_size_list))
+                                                     self.node_size_maximum - self.node_size_minimum) / (
+                                                     max(node_size_list) - min(node_size_list))
                                 temp['size'] = float(size_value) if not pd.isna(
                                     row[kr_node.column_name_map[self.node_size_column]]) else self.node_size_default
                             elif self.node_size_scale == 'log':
@@ -530,22 +533,27 @@ class KgtkVisualize:
             raise KGTKException("Exit requested")
         except Exception as e:
             raise KGTKException(str(e))
-        return d, node_color
+        return d, node_color, len(node_color_map)
 
-    def to_html(self, d, node_color):
+    def to_html(self, d, node_color, num_colors):
         output_kgtk_file: Path = KGTKArgumentParser.get_output_file(self.output_file)
         f = open(output_kgtk_file, 'w')
-        f.write('''<head>
-    <style> body { margin: 0; } </style>
+        f.write(f'''<head>
+    <style> body {{ margin: 0; }} </style>
     <script src="https://cdn.jsdelivr.net/npm/d3-color@3"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3-interpolate@3"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3-scale-chromatic@3"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-scale@4"></script>
     <script src="https://unpkg.com/force-graph"></script>
     <!--<script src="../../dist/force-graph.js"></script>-->
     </head>
     <body>
     <div id="graph"></div>
     <script>
+        rainbow = d3.scaleSequential().domain([0, {num_colors}]).interpolator(d3.interpolateRainbow);
+        <!--rainbow = d3.scaleSequential().domain([1,71]).interpolator(d3.interpolateSinebow);-->
+        <!--rainbow = d3.scaleSequential().domain([1,71]).interpolator(d3.interpolateCool);-->
+                
        const j = ''')
         f.write(json.dumps(d, indent=4))
         f.write('''
@@ -555,7 +563,9 @@ class KgtkVisualize:
         .nodeId('id')
         .nodeLabel('tooltip')
         .nodeVal('size')''')
+
         node_text_format = ''
+
         if node_color == 0:
             f.write('''
         .nodeAutoColorBy('group')
@@ -567,9 +577,10 @@ class KgtkVisualize:
             node_text_format = self.node_gradient_scale + '(node.color)'
         else:
             f.write(f'''
-        .nodeColor((node) => node.color[0] == "#" ? node.color : {self.node_categorical_scale}[node.color])
-        .linkWidth((link) => link.width)''')
-            node_text_format = self.node_categorical_scale + '[node.color]'
+                .nodeColor((node) => node.color[0] == "#" ? node.color : rainbow(node.color))
+                .linkWidth((link) => link.width)''')
+
+            node_text_format = 'rainbow(node.color)'
         if self.node_border_color is not None:
             node_text_format = "'" + self.node_border_color + "'"
         if self.direction == 'arrow':
