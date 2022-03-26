@@ -1,21 +1,17 @@
 """Convert edge file and optional node file to html visualization
 """
-import pandas as pd
-import json
-from argparse import Namespace, SUPPRESS
-import sys
-
-import math
-from kgtk.visualize.visualize_api import KgtkVisualize
-
+from argparse import Namespace
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
+from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+from kgtk.reshape.kgtkidbuilder import KgtkIdBuilderOptions
+from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 
 def parser():
     return {
         'help': 'Convert edge file to html visualization',
         'description': 'Convert edge file (optional node file)' +
-        'to html graph visualization file'
+                       'to html graph visualization file'
     }
 
 
@@ -26,10 +22,6 @@ def add_arguments_extended(parser: KGTKArgumentParser,
     Args:
         parser (argparse.ArgumentParser)
     """
-    # import modules locally
-    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
-    from kgtk.reshape.kgtkidbuilder import KgtkIdBuilder, KgtkIdBuilderOptions
-    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     _expert: bool = parsed_shared_args._expert
 
@@ -47,12 +39,12 @@ def add_arguments_extended(parser: KGTKArgumentParser,
     parser.add_argument('--direction', dest='direction', type=str,
                         default=None,
                         help="Specify direction (arrow, " +
-                        "particle and None), default none")
+                             "particle and None), default none")
 
     parser.add_argument('--show-edge-label', dest='edge_label', type=bool,
                         default=False,
                         help="Specify direction (arrow, particle and None)" +
-                        ", default none")
+                             ", default none")
 
     parser.add_argument('--edge-color-column',
                         dest='edge_color_column', type=str,
@@ -63,7 +55,7 @@ def add_arguments_extended(parser: KGTKArgumentParser,
                         dest='edge_color_style', type=str,
                         default=None,
                         help="Specify style (categorical, gradient)" +
-                        "used for edge color")
+                             "used for edge color")
 
     parser.add_argument('--edge-color-mapping',
                         dest='edge_color_mapping', type=str,
@@ -107,12 +99,12 @@ def add_arguments_extended(parser: KGTKArgumentParser,
     parser.add_argument('--node-color-style', dest='node_color_style',
                         type=str, default=None,
                         help="Specify style (categorical, gradient)" +
-                        " used for node color")
+                             " used for node color")
 
     parser.add_argument('--node-color-mapping', dest='node_color_mapping',
                         type=str, default=None,
                         help="Specify mapping (auto, fixed)" +
-                        " for node color")
+                             " for node color")
 
     parser.add_argument('--node-color-default', dest='node_color_default',
                         type=str, default='#000000',
@@ -149,12 +141,12 @@ def add_arguments_extended(parser: KGTKArgumentParser,
     parser.add_argument('--node-file-id', dest='node_file_id', type=str,
                         default='id',
                         help="Specify id column name in node file," +
-                        " default is id")
+                             " default is id")
 
     parser.add_argument('--show-text-limit', dest='show_text_limit', type=int,
                         default=500,
                         help="When node number is greater than this number, " +
-                        "will not show text as label, default is 500")
+                             "will not show text as label, default is 500")
 
     parser.add_argument('--node-border-color', dest='node_border_color',
                         type=str, default=None,
@@ -166,33 +158,33 @@ def add_arguments_extended(parser: KGTKArgumentParser,
 
     parser.add_argument('--text-node', dest='text_node', type=str,
                         default=None,
-                        help="Specify option to show text" +
-                        " (None, center, above), default is None")
+                        help="Specify option to show text [None|center|above], default is None. If the number of"
+                             "nodes in the graph is greater than specified by --show-text-limit option, which is"
+                             "500 by default, then the text will not be shown in the visualization.")
 
     parser.add_argument('--node-categorical-scale',
                         dest='node_categorical_scale',
                         type=str, default='d3.schemeCategory10',
                         help="Specify color categorical scale " +
-                        "for node from d3-scale-chromatic")
+                             "for node from d3-scale-chromatic")
 
     parser.add_argument('--edge-categorical-scale',
                         dest='edge_categorical_scale',
                         type=str, default='d3.schemeCategory10',
                         help="Specify color categorical scale " +
-                        "for edge d3-scale-chromatic")
+                             "for edge d3-scale-chromatic")
 
     parser.add_argument('--node-gradient-scale', dest='node_gradient_scale',
                         type=str, default='d3.interpolateRdBu',
                         help="Specify color gradient scale" +
-                        " for node from d3-scale-chromatic")
+                             " for node from d3-scale-chromatic")
 
     parser.add_argument('--edge-gradient-scale', dest='edge_gradient_scale',
                         type=str, default='d3.interpolateRdBu',
                         help="Specify color gradient scale" +
-                        " for edge d3-scale-chromatic")
+                             " for edge d3-scale-chromatic")
 
-    KgtkIdBuilderOptions.add_arguments(parser,
-                                       expert=True)  # Show all the options.
+    KgtkIdBuilderOptions.add_arguments(parser, expert=True)  # Show all the options.
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
@@ -241,48 +233,48 @@ def run(input_file: KGTKFiles,
 
         **kwargs  # Whatever KgtkFileOptions and KgtkValueOptions want.
         ) -> int:
-
+    from kgtk.visualize.visualize_api import KgtkVisualize
     kv: KgtkVisualize = KgtkVisualize(
-                        input_file=input_file,
-                        output_file=output_file,
-                        errors_to_stdout=errors_to_stdout,
-                        errors_to_stderr=errors_to_stderr,
-                        show_options=show_options,
-                        verbose=verbose,
-                        very_verbose=very_verbose,
-                        node_file=node_file,
-                        direction=direction,
-                        edge_label=edge_label,
-                        edge_color_column=edge_color_column,
-                        edge_color_style=edge_color_style,
-                        edge_color_mapping=edge_color_mapping,
-                        edge_color_default=edge_color_default,
-                        edge_width_column=edge_width_column,
-                        edge_width_mapping=edge_width_mapping,
-                        edge_width_default=edge_width_default,
-                        edge_width_minimum=edge_width_minimum,
-                        edge_width_maximum=edge_width_maximum,
-                        edge_width_scale=edge_width_scale,
-                        node_color_column=node_color_column,
-                        node_color_style=node_color_style,
-                        node_color_mapping=node_color_mapping,
-                        node_color_default=node_color_default,
-                        node_color_scale=node_color_scale,
-                        node_size_column=node_size_column,
-                        node_size_mapping=node_size_mapping,
-                        node_size_default=node_size_default,
-                        node_size_minimum=node_size_minimum,
-                        node_size_maximum=node_size_maximum,
-                        node_size_scale=node_size_scale,
-                        node_file_id=node_file_id,
-                        show_text_limit=show_text_limit,
-                        node_border_color=node_border_color,
-                        tooltip_column=tooltip_column,
-                        text_node=text_node,
-                        node_categorical_scale=node_categorical_scale,
-                        edge_categorical_scale=edge_categorical_scale,
-                        node_gradient_scale=node_gradient_scale,
-                        edge_gradient_scale=edge_gradient_scale,
-                        kwargs=kwargs
-                )
+        input_file=input_file,
+        output_file=output_file,
+        errors_to_stdout=errors_to_stdout,
+        errors_to_stderr=errors_to_stderr,
+        show_options=show_options,
+        verbose=verbose,
+        very_verbose=very_verbose,
+        node_file=node_file,
+        direction=direction,
+        edge_label=edge_label,
+        edge_color_column=edge_color_column,
+        edge_color_style=edge_color_style,
+        edge_color_mapping=edge_color_mapping,
+        edge_color_default=edge_color_default,
+        edge_width_column=edge_width_column,
+        edge_width_mapping=edge_width_mapping,
+        edge_width_default=edge_width_default,
+        edge_width_minimum=edge_width_minimum,
+        edge_width_maximum=edge_width_maximum,
+        edge_width_scale=edge_width_scale,
+        node_color_column=node_color_column,
+        node_color_style=node_color_style,
+        node_color_mapping=node_color_mapping,
+        node_color_default=node_color_default,
+        node_color_scale=node_color_scale,
+        node_size_column=node_size_column,
+        node_size_mapping=node_size_mapping,
+        node_size_default=node_size_default,
+        node_size_minimum=node_size_minimum,
+        node_size_maximum=node_size_maximum,
+        node_size_scale=node_size_scale,
+        node_file_id=node_file_id,
+        show_text_limit=show_text_limit,
+        node_border_color=node_border_color,
+        tooltip_column=tooltip_column,
+        text_node=text_node,
+        node_categorical_scale=node_categorical_scale,
+        edge_categorical_scale=edge_categorical_scale,
+        node_gradient_scale=node_gradient_scale,
+        edge_gradient_scale=edge_gradient_scale,
+        kwargs=kwargs
+    )
     kv.execute()
