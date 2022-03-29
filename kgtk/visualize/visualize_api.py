@@ -2,7 +2,6 @@
 """
 import json
 import math
-import pandas as pd
 
 from kgtk.cli_argparse import KGTKArgumentParser
 
@@ -11,9 +10,9 @@ import sys
 import typing
 
 from kgtk.exceptions import KGTKException
-from kgtk.io.kgtkreader import KgtkReader, \
-    KgtkReaderOptions, KgtkReaderMode
+from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
+from kgtk.kgtkformat import KgtkFormat
 
 
 def parser():
@@ -27,6 +26,8 @@ node_color_map = {
     'few_subclasses': 0,
     'many_subclasses': 1
 }
+
+kgtk_format = KgtkFormat()
 
 
 class KgtkVisualize:
@@ -158,130 +159,85 @@ class KgtkVisualize:
             if self.edge_width_minimum == 0 and self.edge_width_scale == 'log':
                 raise ValueError("edge width cannot be 0 when using log scale")
 
-            n1 = kr.column_name_map['node1']
-            n2 = kr.column_name_map['node2']
+            node1_idx = kr.column_name_map['node1']
+            node2_idx = kr.column_name_map['node2']
 
             if self.node_file is None and 'node1;label' in kr.column_name_map:
-                l1 = kr.column_name_map['node1;label']
+                node1_label_idx = kr.column_name_map['node1;label']
             else:
-                l1 = kr.column_name_map['node1']
+                node1_label_idx = kr.column_name_map['node1']
 
-            if self.node_file is None and 'node1;label' in kr.column_name_map:
-                l3 = kr.column_name_map['node2;label']
+            if self.node_file is None and 'node2;label' in kr.column_name_map:
+                node2_label_idx = kr.column_name_map['node2;label']
             else:
-                l3 = kr.column_name_map['node2']
+                node2_label_idx = kr.column_name_map['node2']
 
             if 'label;label' not in kr.column_name_map:
-                l2 = kr.column_name_map['label']
+                label_label_idx = kr.column_name_map['label']
             else:
-                l2 = kr.column_name_map['label;label']
+                label_label_idx = kr.column_name_map['label;label']
 
             count = 0
             color_set = {}
 
             for row in kr:
                 if self.node_file is None:
-                    if '@' in row[l1]:
-                        nodes.add((row[n1], row[l1][1:row[l1].find('@') - 1]))
-                    else:
-                        nodes.add((row[n1], row[l1]))
+                    clean_node1_label, _, _ = kgtk_format.destringify(row[node1_label_idx])
+                    nodes.add((row[node1_idx], clean_node1_label))
 
-                    if '@' in row[l3]:
-                        nodes.add((row[n2], row[l3][1:row[l3].find('@') - 1]))
-                    else:
-                        nodes.add((row[n2], row[l3]))
+                    clean_node2_label, _, _ = kgtk_format.destringify(row[node2_label_idx])
+                    nodes.add((row[node2_idx], clean_node2_label))
 
+                width_orig = 1.0
                 if self.edge_width_column is not None:
-                    if (not pd.isna(row[kr.column_name_map[self.edge_width_column]])) and str(
-                            row[kr.column_name_map[self.edge_width_column]]) != '':
-                        width_orig = float(
-                            row[kr.column_name_map[self.edge_width_column]])
-                    else:
-                        width_orig = -1.0
-                else:
-                    width_orig = 1
+                    _width_orig = row[kr.column_name_map[self.edge_width_column]]
+                    try:
+                        width_orig = float(_width_orig)
+                    except Exception as e:
+                        print(f"Can't convert edge width column value: {_width_orig} to float", file=error_file)
 
-                if self.edge_color_column is not None and '@' in row[l2]:
-                    if self.edge_color_mapping == 'fixed':
-                        edges.append({'source': row[n1], 'target': row[n2], 'label': row[l2][1:row[l2].find('@') - 1],
-                                      'color': row[kr.column_name_map[self.edge_color_column]] if not pd.isna(
-                                          row[kr.column_name_map[self.edge_color_column]]) and str(
-                                          row[kr.column_name_map[
-                                              self.edge_color_column]]) != '' else self.edge_color_default,
-                                      'width_orig': width_orig})
-                    elif self.edge_color_style == 'gradient':
-                        edges.append({'source': row[n1], 'target': row[n2], 'label': row[l2][1:row[l2].find('@') - 1],
-                                      'color': row[kr.column_name_map[self.edge_color_column]] if not pd.isna(
-                                          row[kr.column_name_map[self.edge_color_column]]) and str(
-                                          row[kr.column_name_map[self.edge_color_column]]) != '' else -1,
-                                      'width_orig': width_orig})
-                    else:
-                        if row[kr.column_name_map[self.edge_color_column]] not in color_set:
-                            color_set[row[kr.column_name_map[self.edge_color_column]]] = count
-                            count += 1
-                        edges.append({'source': row[n1], 'target': row[n2], 'label': row[l2][1:row[l2].find('@') - 1],
-                                      'color': min(color_set[row[kr.column_name_map[self.edge_color_column]]],
-                                                   9) if not pd.isna(
-                                          row[kr.column_name_map[self.edge_color_column]]) or str(
-                                          row[kr.column_name_map[self.edge_color_column]]) else self.edge_color_default,
-                                      'width_orig': width_orig})
-                elif self.edge_color_column is not None and '@' not in row[l2]:
-                    if self.edge_color_style == 'fixed':
-                        edges.append({'source': row[n1], 'target': row[n2], 'label': row[l2],
-                                      'color': row[kr.column_name_map[self.edge_color_column]] if not pd.isna(
-                                          row[kr.column_name_map[self.edge_color_column]]) and str(
-                                          row[kr.column_name_map[
-                                              self.edge_color_column]]) != '' else self.edge_color_default,
-                                      'width_orig': width_orig})
-                    elif self.edge_color_style == 'gradient':
-                        edges.append({'source': row[n1], 'target': row[n2], 'label': row[l2],
-                                      'color': row[kr.column_name_map[self.edge_color_column]] if not pd.isna(
-                                          row[kr.column_name_map[self.edge_color_column]]) and str(
-                                          row[kr.column_name_map[self.edge_color_column]]) != '' else -1,
-                                      'width_orig': width_orig})
-                    else:
-                        if row[kr.column_name_map[self.edge_color_column]] not in color_set:
-                            color_set[row[kr.column_name_map[self.edge_color_column]]] = count
-                            count += 1
-                        edges.append({'source': row[n1], 'target': row[n2], 'label': row[l2],
-                                      'color': min(color_set[row[kr.column_name_map[self.edge_color_column]]],
-                                                   9) if not pd.isna(
-                                          row[kr.column_name_map[self.edge_color_column]]) else self.edge_color_default,
-                                      'width_orig': width_orig})
-                elif self.edge_color_column is None and '@' in row[l2]:
-                    edges.append({'source': row[n1], 'target': row[n2], 'label': row[l2][1:row[l2].find(
-                        '@') - 1], 'width_orig': width_orig})
+                if '@' in row[label_label_idx]:
+                    _label_label, _, _ = kgtk_format.destringify(row[label_label_idx])
                 else:
-                    edges.append(
-                        {
-                            'source': row[n1],
-                            'target': row[n2],
-                            'label': row[l2],
-                            'width_orig': width_orig,
-                            'color': self.edge_color_default
-                        })
+                    _label_label = row[label_label_idx]
+
+                _edge_obj = {
+                    'source': row[node1_idx],
+                    'target': row[node2_idx],
+                    'label': _label_label,
+                    'width_orig': width_orig
+                }
+
+                if self.edge_color_column is not None:
+                    _edge_color = row[kr.column_name_map[self.edge_color_column]].strip()
+                    if self.edge_color_mapping == 'fixed':
+                        _edge_obj['color'] = _edge_color if _edge_color != '' else self.edge_color_default
+                    elif self.edge_color_style == 'gradient':
+                        _edge_obj['color'] = _edge_color if _edge_color != '' else -1
+                    else:
+                        if _edge_color not in color_set:
+                            color_set[_edge_color] = count
+                            count += 1
+                        _edge_obj['color'] = min(color_set[_edge_color], 9) \
+                            if _edge_color != "" \
+                            else self.edge_color_default
+                else:
+                    _edge_obj['color'] = self.edge_color_default
+
+                edges.append(_edge_obj)
 
             arr = []
             if self.edge_width_mapping == 'fixed':
                 for edge in edges:
-                    if pd.isna(edge['width_orig']) or str(edge['width_orig']) == '':
-                        edge['width'] = self.edge_width_default
-                        continue
                     if edge['width_orig'] >= 0:
                         edge['width'] = edge['width_orig']
                     else:
                         edge['width'] = self.edge_width_default
             elif self.edge_width_scale == 'linear':
                 for edge in edges:
-                    if pd.isna(edge['width_orig']) or str(edge['width_orig']) == '':
-                        edge['width'] = self.edge_width_default
-                        continue
                     if edge['width_orig'] >= 0:
                         arr.append(edge['width_orig'])
                 for edge in edges:
-                    if pd.isna(edge['width_orig']) or str(edge['width_orig']) == '':
-                        edge['width'] = self.edge_width_default
-                        continue
                     if edge['width_orig'] >= 0:
                         edge['width'] = self.edge_width_minimum + (edge['width_orig'] - min(arr)) * (
                                 self.edge_width_maximum - self.edge_width_minimum) / (max(arr) - min(arr))
@@ -289,15 +245,9 @@ class KgtkVisualize:
                         edge['width'] = self.edge_width_default
             elif self.edge_width_scale == 'log':
                 for edge in edges:
-                    if pd.isna(edge['width_orig']) or str(edge['width_orig']) == '':
-                        edge['width'] = self.edge_width_default
-                        continue
                     if edge['width_orig'] >= 0:
                         arr.append(edge['width_orig'])
                 for edge in edges:
-                    if pd.isna(edge['width_orig']) or str(edge['width_orig']) == '':
-                        edge['width'] = self.edge_width_default
-                        continue
                     if edge['width_orig'] >= 0:
                         if min(arr) == 0:
                             log_min = -1
@@ -346,8 +296,6 @@ class KgtkVisualize:
                 d['nodes'] = []
 
             d['links'] = edges
-            color_set = {}
-            count = 0
 
             node_color = 0
 
@@ -366,17 +314,29 @@ class KgtkVisualize:
 
                 for row in kr_node:
                     if self.node_color_scale == 'linear' or self.node_color_scale == 'log':
-                        if not pd.isna(row[kr_node.column_name_map[self.node_color_column]]) and str(
-                                row[kr_node.column_name_map[self.node_color_column]]) != '':
-                            node_color_list.append(
-                                float(row[kr_node.column_name_map[self.node_color_column]]))
+                        _node_color = None
+                        try:
+                            _node_color = float(row[kr_node.column_name_map[self.node_color_column]])
+                        except:
+                            pass
+                        if _node_color is not None:
+                            node_color_list.append(_node_color)
                     if self.node_size_scale == 'linear' or self.node_size_scale == 'log':
-                        if not pd.isna(row[kr_node.column_name_map[self.node_size_column]]) and str(
-                                row[kr_node.column_name_map[self.node_size_column]]) != '':
-                            node_size_list.append(
-                                float(row[kr_node.column_name_map[self.node_size_column]]))
+                        _node_size = None
+                        try:
+                            _node_size = float(row[kr_node.column_name_map[self.node_size_column]])
+                        except:
+                            pass
+                        if _node_size is not None:
+                            node_size_list.append(_node_size)
 
                 kr_node.close()
+
+                max_node_color = max(node_color_list) if node_color_list else None
+                min_node_color = min(node_color_list) if node_color_list else None
+
+                max_node_size = max(node_size_list) if node_size_list else None
+                min_node_size = min(node_size_list) if node_size_list else None
 
                 kr_node: KgtkReader = KgtkReader.open(self.node_file,
                                                       error_file=error_file,
@@ -391,131 +351,122 @@ class KgtkVisualize:
                     raise ValueError("no id column in node file")
 
                 for row in kr_node:
-                    temp = {'id': row[kr_node.column_name_map[self.node_file_id]]}
+                    _id = row[kr_node.column_name_map[self.node_file_id]]
+                    temp = {'id': _id}
 
-                    if 'label' not in kr_node.column_name_map:
-                        temp['label'] = row[kr_node.column_name_map[self.node_file_id]]
-                    elif '@' in str(row[kr_node.column_name_map['label']]):
-                        temp['label'] = row[kr_node.column_name_map['label']][
-                                        1:row[kr_node.column_name_map['label']].find('@') - 1]
-                    elif pd.isna(row[kr_node.column_name_map['label']]) \
-                            or str(row[kr_node.column_name_map['label']]).lower() == 'nan' \
-                            or str(row[kr_node.column_name_map['label']]).lower() == '':
-                        temp['label'] = row[kr_node.column_name_map[self.node_file_id]]
+                    if 'label' in kr_node.column_name_map:
+                        _node_label, _, _ = kgtk_format.destringify(row[kr_node.column_name_map['label']])
+                        if _node_label != "":
+                            temp['label'] = _node_label
+                        else:
+                            temp['label'] = _id
                     else:
-                        temp['label'] = row[kr_node.column_name_map['label']]
+                        temp['label'] = _id
 
                     if self.tooltip_column is not None:
-                        if (not pd.isna(row[kr_node.column_name_map[self.tooltip_column]])) and str(
-                                row[kr_node.column_name_map[self.tooltip_column]]) != '':
-                            temp['tooltip'] = str(
-                                row[kr_node.column_name_map[self.tooltip_column]])
+                        if str(row[kr_node.column_name_map[self.tooltip_column]]).strip() != '':
+                            temp['tooltip'] = str(row[kr_node.column_name_map[self.tooltip_column]])
                         else:
-                            temp['tooltip'] = str(
-                                row[kr_node.column_name_map[self.node_file_id]])
+                            temp['tooltip'] = temp['label']
                     else:
                         temp['tooltip'] = temp['label']
 
                     if self.node_color_column is not None:
+                        _node_color = row[kr_node.column_name_map[self.node_color_column]]
                         if self.node_color_mapping == 'fixed':
-                            if pd.isna(row[kr_node.column_name_map[self.node_color_column]]) or str(
-                                    row[kr_node.column_name_map[self.node_color_column]]) == '':
-                                temp['color'] = self.node_color_default
+                            if str(_node_color).strip() != '':
+                                temp['color'] = _node_color
                             else:
-                                temp['color'] = row[kr_node.column_name_map[self.node_color_column]]
+                                temp['color'] = self.node_color_default
                         else:
                             if self.node_color_style == 'gradient':
                                 if self.node_color_scale == 'linear':
+
                                     node_color = 1
-                                    temp['color'] = (float(row[kr_node.column_name_map[self.node_color_column]]) -
-                                                     min(node_color_list)) / (max(node_color_list)
-                                                                              - min(node_color_list)) \
-                                        if not pd.isna(row[kr_node.column_name_map[self.node_color_column]]) \
-                                           or str(row[kr_node.column_name_map[self.node_color_column]]) == '' \
-                                        else self.node_color_default
+                                    try:
+                                        temp['color'] = (float(_node_color) - min_node_color) / (max_node_color
+                                                                                                 - min_node_color)
+                                    except:
+                                        temp['color'] = self.node_color_default
                                 elif self.node_color_scale == 'log':
                                     node_color = 1
-                                    node_color_min = min(node_color_list)
-                                    node_color_max = max(node_color_list)
-                                    if node_color_min == 0:
+
+                                    if min_node_color == 0:
                                         log_min = -1
                                     else:
-                                        log_min = math.log(
-                                            node_color_min, base)
+                                        log_min = math.log(min_node_color, base)
 
-                                    if node_color_max == 0:
+                                    if max_node_color == 0:
                                         log_max = -1
                                     else:
-                                        log_max = math.log(
-                                            node_color_max, base)
+                                        log_max = math.log(max_node_color, base)
 
-                                    if float(row[kr_node.column_name_map[self.node_color_column]]) == 0:
+                                    if float(_node_color) == 0:
                                         log_cur = -1
                                     else:
-                                        log_cur = math.log(float(row[kr_node.column_name_map[self.node_color_column]]),
-                                                           base)
+                                        log_cur = math.log(float(_node_color), base)
 
                                     if log_max == log_min:
                                         temp['color'] = self.node_color_default
                                     else:
                                         color_value \
                                             = 0 + (log_cur - log_min) * (1 - 0) / (log_max - log_min)
-                                        temp['color'] = float(color_value) if not pd.isna(
-                                            row[kr_node.column_name_map[
-                                                self.node_color_column]]) else self.node_color_default
+                                        try:
+                                            temp['color'] = float(color_value)
+                                        except:
+                                            temp['color'] = self.node_color_default
+
                                 else:
-                                    temp['color'] = row[kr_node.column_name_map[self.node_color_column]] if not pd.isna(
-                                        row[kr_node.column_name_map[
-                                            self.node_color_column]]) else self.node_color_default
+                                    if self.node_color_mapping == 'fixed':
+                                        if str(_node_color).strip() != '':
+                                            temp['color'] = _node_color
+                                        else:
+                                            temp['color'] = self.node_color_default
                             else:
                                 node_color = 2
-                                if row[kr_node.column_name_map[self.node_color_column]] not in node_color_map:
-                                    node_color_map[row[kr_node.column_name_map[self.node_color_column]]] = len(
-                                        node_color_map)
+                                if _node_color not in node_color_map:
+                                    node_color_map[_node_color] = len(node_color_map)
 
-                                temp['color'] = node_color_map[row[kr_node.column_name_map[self.node_color_column]]]
+                                temp['color'] = node_color_map[_node_color]
 
                     if self.node_size_column is not None:
+                        _node_size = row[kr_node.column_name_map[self.node_size_column]]
                         if self.node_size_mapping == 'fixed':
-                            temp['size'] = row[kr_node.column_name_map[self.node_size_column]] if not pd.isna(
-                                row[kr_node.column_name_map[self.node_size_column]]) else self.node_size_default
-
-                        if pd.isna(row[kr_node.column_name_map[self.node_size_column]]) or str(
-                                row[kr_node.column_name_map[self.node_size_column]]) == '':
-                            temp['size'] = self.node_size_default
+                            temp['size'] = _node_size if _node_size.strip() != "" else self.node_size_default
                         else:
                             if self.node_size_scale == 'linear':
-                                size_value = self.node_size_minimum + (
-                                        float(row[kr_node.column_name_map[self.node_size_column]]) -
-                                        min(node_size_list)) * (
-                                                     self.node_size_maximum - self.node_size_minimum) / (
-                                                     max(node_size_list) - min(node_size_list))
-                                temp['size'] = float(size_value) if not pd.isna(
-                                    row[kr_node.column_name_map[self.node_size_column]]) else self.node_size_default
+                                try:
+                                    size_value = self.node_size_minimum + (float(_node_size) - min_node_size) * \
+                                                 (self.node_size_maximum - self.node_size_minimum) / \
+                                                 (max_node_size - min_node_size)
+                                    temp['size'] = float(size_value)
+                                except:
+                                    temp['size'] = self.node_size_default
                             elif self.node_size_scale == 'log':
-                                if min(node_size_list) == 0:
+                                if min_node_size == 0:
                                     log_min = -1
                                 else:
-                                    log_min = math.log(min(node_size_list), base)
+                                    log_min = math.log(min_node_size, base)
 
-                                if max(node_size_list) == 0:
+                                if max_node_size == 0:
                                     log_max = -1
                                 else:
-                                    log_max = math.log(max(node_size_list), base)
+                                    log_max = math.log(max_node_size, base)
 
-                                if float(row[kr_node.column_name_map[self.node_size_column]]) == 0:
+                                if float(_node_size) == 0:
                                     log_cur = -1
                                 else:
-                                    log_cur = math.log(
-                                        float(row[kr_node.column_name_map[self.node_size_column]]), base)
+                                    log_cur = math.log(float(_node_size), base)
 
                                 if log_max == log_min:
                                     temp['size'] = self.node_size_default
                                 else:
-                                    size_value = self.node_size_minimum + (log_cur - log_min) * (
-                                            self.node_size_maximum - self.node_size_minimum) / (log_max - log_min)
-                                    temp['size'] = size_value if not pd.isna(
-                                        row[kr_node.column_name_map[self.node_size_column]]) else self.node_size_default
+                                    try:
+                                        size_value = self.node_size_minimum + (log_cur - log_min) * (
+                                                self.node_size_maximum - self.node_size_minimum) / (log_max - log_min)
+                                        temp['size'] = size_value
+                                    except:
+                                        temp['size'] = self.node_size_default
 
                     else:
                         temp['size'] = self.node_size_default
