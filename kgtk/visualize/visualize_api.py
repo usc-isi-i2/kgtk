@@ -45,21 +45,17 @@ class KgtkVisualize:
             edge_label: bool = False,
             edge_color_column: str = None,
             edge_color_style: str = None,
-            edge_color_mapping: str = None,
             edge_color_default: str = '#000000',
             edge_width_column: str = None,
-            edge_width_mapping: str = None,
             edge_width_default: float = 1.0,
             edge_width_minimum: float = 1.0,
             edge_width_maximum: float = 5.0,
             edge_width_scale: str = None,
             node_color_column: str = None,
             node_color_style: str = None,
-            node_color_mapping: str = None,
             node_color_default: str = '#000000',
             node_color_scale: str = None,
             node_size_column: str = None,
-            node_size_mapping: str = None,
             node_size_default: float = 2.0,
             node_size_minimum: float = 1.0,
             node_size_maximum: float = 5.0,
@@ -68,7 +64,7 @@ class KgtkVisualize:
             show_text_limit: int = 500,
             node_border_color: str = None,
             tooltip_column: str = None,
-            text_node: str = None,
+            show_text: str = None,
             node_categorical_scale: str = 'd3.schemeCategory10',
             edge_categorical_scale: str = 'd3.schemeCategory10',
             node_gradient_scale: str = 'd3.interpolateRdBu',
@@ -88,21 +84,17 @@ class KgtkVisualize:
         self.edge_label = edge_label
         self.edge_color_column = edge_color_column
         self.edge_color_style = edge_color_style
-        self.edge_color_mapping = edge_color_mapping
         self.edge_color_default = edge_color_default
         self.edge_width_column = edge_width_column
-        self.edge_width_mapping = edge_width_mapping
         self.edge_width_default = edge_width_default
         self.edge_width_minimum = edge_width_minimum
         self.edge_width_maximum = edge_width_maximum
         self.edge_width_scale = edge_width_scale
         self.node_color_column = node_color_column
         self.node_color_style = node_color_style
-        self.node_color_mapping = node_color_mapping
         self.node_color_default = node_color_default
         self.node_color_scale = node_color_scale
         self.node_size_column = node_size_column
-        self.node_size_mapping = node_size_mapping
         self.node_size_default = node_size_default
         self.node_size_minimum = node_size_minimum
         self.node_size_maximum = node_size_maximum
@@ -111,7 +103,7 @@ class KgtkVisualize:
         self.show_text_limit = show_text_limit
         self.node_border_color = node_border_color
         self.tooltip_column = tooltip_column
-        self.text_node = text_node
+        self.show_text = show_text
         self.node_categorical_scale = node_categorical_scale
         self.edge_categorical_scale = edge_categorical_scale
         self.node_gradient_scale = node_gradient_scale
@@ -591,9 +583,9 @@ class KgtkVisualize:
           ctx.restore();
         });
         ''')
-        if self.text_node is not None and self.show_text_limit > len(d['nodes']):
+        if self.show_text is not None and self.show_text_limit > len(d['nodes']):
 
-            if self.text_node == 'center':
+            if self.show_text == 'center':
                 y_move = 0
             else:
                 y_move = 10
