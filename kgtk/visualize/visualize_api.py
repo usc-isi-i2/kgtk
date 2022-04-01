@@ -14,6 +14,7 @@ from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 from kgtk.kgtkformat import KgtkFormat
 import re
+from typing import List
 
 
 def parser():
@@ -22,11 +23,6 @@ def parser():
         'description': 'Use API to convert edge file to html visualization'
     }
 
-
-node_color_map = {
-    'few_subclasses': 0,
-    'many_subclasses': 1
-}
 
 kgtk_format = KgtkFormat()
 
@@ -76,8 +72,8 @@ class KgtkVisualize:
             node_border_color: str = None,
             tooltip_column: str = None,
             show_text: str = None,
-            node_categorical_scale: str = 'd3.schemeCategory10',
-            edge_categorical_scale: str = 'd3.schemeCategory10',
+            node_categorical_scale: str = 'rainbow',
+            edge_categorical_scale: str = 'rainbow',
             node_gradient_scale: str = 'd3.interpolateRdBu',
             edge_gradient_scale: str = 'd3.interpolateRdBu',
             kwargs=None):
@@ -139,6 +135,13 @@ class KgtkVisualize:
 
         self.edge_color_map = {}
 
+        self.node_color_map = {
+            'few_subclasses': 0,
+            'many_subclasses': 1
+        }
+
+        self.node_color_choice = 0
+
         if self.node_size_minimum == 0.0 and self.node_size_scale == 'log':
             raise ValueError("node size cannot be 0 when using log scale")
         if self.edge_width_minimum == 0 and self.edge_width_scale == 'log':
@@ -146,8 +149,8 @@ class KgtkVisualize:
 
     def execute(self) -> int:
 
-        d, node_color, node_color_map_len = self.compute_visualization_graph()
-        self.to_html(d, node_color, node_color_map_len - 1)
+        d = self.compute_visualization_graph()
+        self.to_html(d)
         return 0
 
     def compute_visualization_graph(self):
@@ -163,7 +166,7 @@ class KgtkVisualize:
             raise KGTKException("Exit requested")
         except Exception as e:
             raise KGTKException(str(e))
-        return d, len(node_color_map)
+        return d
 
     def process_edge_file(self):
         # First create the KgtkReader.  It provides parameters used by the ID
@@ -253,68 +256,22 @@ class KgtkVisualize:
         kr.close()
 
         if self.edge_width_column is not None:
-            edge_width_list = [x['width_orig'] for x in edges]
-            max_width = max(edge_width_list)
-            min_width = min(edge_width_list)
-
-            log_max_width = math.log(max_width, self.base) if max_width > 0.0 else -1.0
-            log_min_width = math.log(min_width, self.base) if min_width > 0.0 else -1.0
-
-            for edge in edges:
-                edge_width = edge['width_orig']
-                if self.edge_width_scale == 'linear':
-                    edge['width'] = self.edge_width_minimum + (edge_width - min_width) * \
-                                    (self.edge_width_minimum - self.edge_width_maximum) / \
-                                    (max_width - min_width)
-                elif self.edge_width_scale == 'log':
-                    if edge_width == 0.0 or log_max_width == log_min_width:
-                        edge['width'] = self.edge_width_default
-                    else:
-                        edge['width'] = self.edge_width_minimum + (math.log(edge_width, self.base) - log_min_width) * (
-                                self.edge_width_maximum - self.edge_width_minimum) / (log_max_width - log_min_width)
-                else:
-                    edge['width'] = edge_width if edge_width > 0 else self.edge_width_default
+            edges = self.calculate_size(edges,
+                                        self.edge_width_scale,
+                                        self.edge_width_default,
+                                        self.edge_width_minimum,
+                                        self.edge_width_maximum,
+                                        'width_orig',
+                                        'width')
 
         if self.edge_color_column is not None:
-            if self.edge_color_hex:
-                # all good, nothing to do here
-                pass
-            else:
-                if self.edge_color_numbers:
-                    edge_color_list = [x['orig_color'] for x in edges]
-                    max_color = max(edge_color_list)
-                    min_color = min(edge_color_list)
-
-                    log_max_color = math.log(max_color, self.base) if max_color > 0.0 else -1.0
-                    log_min_color = math.log(min_color, self.base) if min_color > 0.0 else -1.0
-
-                    for edge in edges:
-                        orig_color = edge['orig_color']
-                        if self.edge_color_style == 'gradient':
-                            if self.edge_color_scale == 'linear':
-                                edge['color'] = (orig_color - min_color) / (max_color - min_color)
-                            elif self.edge_color_scale == 'log':
-                                if orig_color == 0.0 or log_max_color == log_min_color:
-                                    edge['color'] = self.node_color_default
-                                else:
-                                    edge['color'] = (math.log(orig_color, self.base) - log_min_color) / (
-                                            log_max_color - log_min_color)
-                            else:
-                                edge['color'] = orig_color if orig_color != 0.0 else self.edge_color_default
-                        else:
-                            if orig_color not in self.edge_color_map:
-                                self.edge_color_map[orig_color] = len(self.edge_color_map)
-
-                            edge['color'] = self.edge_color_map[orig_color]
-                        del edge['orig_color']
-                else:
-                    for edge in edges:
-                        orig_color = edge['orig_color']
-                        if orig_color not in self.edge_color_map:
-                            self.edge_color_map[orig_color] = len(self.edge_color_map)
-
-                        edge['color'] = self.edge_color_map[orig_color]
-                        del edge['orig_color']
+            edges = self.calculate_color(edges,
+                                         self.edge_color_hex,
+                                         self.edge_color_numbers,
+                                         self.edge_color_style,
+                                         self.edge_color_scale,
+                                         self.edge_color_default,
+                                         False)
         if self.node_file is None:
             for ele in nodes:
                 nodes_from_edge_file.append(
@@ -344,7 +301,6 @@ class KgtkVisualize:
 
     def process_node_file(self):
         nodes = []
-
         if self.node_file is not None:
 
             kr_node: KgtkReader = KgtkReader.open(self.node_file,
@@ -414,73 +370,109 @@ class KgtkVisualize:
                 nodes.append(temp)
             kr_node.close()
 
-            if self.node_size_column is not None:
-                if self.node_color_hex:
-                    # all good, nothing to do here
-                    pass
-                else:
-                    if self.node_color_numbers:
-                        node_color_list = [x['orig_color'] for x in nodes]
-                        max_color = max(node_color_list)
-                        min_color = min(node_color_list)
-
-                        log_max_color = math.log(max_color, self.base) if max_color > 0.0 else -1.0
-                        log_min_color = math.log(min_color, self.base) if min_color > 0.0 else -1.0
-
-                        for node in nodes:
-                            orig_color = node['orig_color']
-                            if self.node_color_style == 'gradient':
-                                if self.node_color_scale == 'linear':
-                                    node['color'] = (orig_color - min_color) / (max_color - min_color)
-                                elif self.node_color_scale == 'log':
-                                    if orig_color == 0.0 or log_max_color == log_min_color:
-                                        node['color'] = self.node_color_default
-                                    else:
-                                        node['color'] = (math.log(orig_color, self.base) - log_min_color) / (
-                                                log_max_color - log_min_color)
-                                else:
-                                    node['color'] = orig_color if orig_color != 0.0 else self.node_color_default
-                            else:
-                                if orig_color not in node_color_map:
-                                    node_color_map[orig_color] = len(node_color_map)
-
-                                node['color'] = node_color_map[orig_color]
-                            del node['orig_color']
-                    else:
-                        for node in nodes:
-                            orig_color = node['orig_color']
-                            if orig_color not in node_color_map:
-                                node_color_map[orig_color] = len(node_color_map)
-
-                            node['color'] = node_color_map[orig_color]
-                            del node['orig_color']
+            if self.node_color_column is not None:
+                nodes = self.calculate_color(nodes,
+                                             self.node_color_hex,
+                                             self.node_color_numbers,
+                                             self.node_color_style,
+                                             self.node_color_scale,
+                                             self.node_color_default,
+                                             True)
 
             if self.node_size_column is not None:
-                node_size_list = [x['orig_size'] for x in nodes]
-                max_size = max(node_size_list)
-                min_size = min(node_size_list)
-
-                log_max_size = math.log(max_size, self.base) if max_size > 0.0 else -1.0
-                log_min_size = math.log(min_size, self.base) if min_size > 0.0 else -1.0
-
-                for node in nodes:
-                    node_size = node['orig_size']
-                    if self.node_size_scale == 'linear':
-                        node['size'] = self.node_size_minimum + (node_size - min_size) * \
-                                       (self.node_size_maximum - self.node_size_minimum) / \
-                                       (max_size - min_size)
-                    elif self.node_size_scale == 'log':
-                        if node_size == 0.0 or log_min_size == log_max_size:
-                            node['size'] = self.node_size_default
-                        else:
-                            node['size'] = self.node_size_minimum + (math.log(node_size, self.base) - log_min_size) * (
-                                    self.node_size_maximum - self.node_size_minimum) / (log_max_size - log_min_size)
-                    else:
-                        node['size'] = node_size if node_size > 0 else self.node_size_default
+                self.calculate_size(nodes,
+                                    self.node_size_scale,
+                                    self.node_size_default,
+                                    self.node_size_minimum,
+                                    self.node_size_maximum,
+                                    'orig_size',
+                                    'size')
 
         return nodes
 
-    def to_html(self, d, node_color, num_colors):
+    def calculate_color(self,
+                        nodes: List[dict],
+                        node_color_hex: bool,
+                        node_color_numbers: bool,
+                        node_color_style: str,
+                        node_color_scale: str,
+                        node_color_default: str,
+                        process_nodes: bool) -> List[dict]:
+
+        if node_color_hex:
+            # all good, nothing to do here
+            pass
+        else:
+
+            for node in nodes:
+                orig_color = node['orig_color']
+                if node_color_numbers:
+                    node_color_list = [x['orig_color'] for x in nodes]
+                    max_color = max(node_color_list)
+                    min_color = min(node_color_list)
+
+                    log_max_color = math.log(max_color, self.base) if max_color > 0.0 else -1.0
+                    log_min_color = math.log(min_color, self.base) if min_color > 0.0 else -1.0
+
+                    if node_color_style == GRADIENT:
+                        if process_nodes:
+                            self.node_color_choice = 1
+                        if node_color_scale == 'linear':
+                            node['color'] = (orig_color - min_color) / (max_color - min_color)
+                        elif node_color_scale == 'log':
+                            if orig_color == 0.0 or log_max_color == log_min_color:
+                                node['color'] = node_color_default
+                            else:
+                                node['color'] = (math.log(orig_color, self.base) - log_min_color) / (
+                                        log_max_color - log_min_color)
+                        else:
+                            node['color'] = orig_color if orig_color != 0.0 else node_color_default
+
+                if 'color' not in node:
+                    if process_nodes:
+                        self.node_color_choice = 2
+                        if orig_color not in self.node_color_map:
+                            self.node_color_map[orig_color] = len(self.node_color_map)
+
+                        node['color'] = self.node_color_map[orig_color]
+                    else:
+                        if orig_color not in self.edge_color_map:
+                            self.edge_color_map[orig_color] = len(self.edge_color_map)
+                        node['color'] = self.edge_color_map[orig_color]
+                del node['orig_color']
+        return nodes
+
+    def calculate_size(self,
+                       nodes: List[dict],
+                       node_size_scale: str,
+                       node_size_default: str,
+                       node_size_minimum: float,
+                       node_size_maximum: float,
+                       size_field: str,
+                       output_field: str
+                       ) -> List[dict]:
+        node_size_list = [x[size_field] for x in nodes]
+        max_size = max(node_size_list)
+        min_size = min(node_size_list)
+        log_max_size = math.log(max_size, self.base) if max_size > 0.0 else -1.0
+        log_min_size = math.log(min_size, self.base) if min_size > 0.0 else -1.0
+        for node in nodes:
+            node_size = node[size_field]
+            if node_size_scale == 'linear':
+                node[output_field] = node_size_minimum + (node_size - min_size) * \
+                                     (node_size_maximum - node_size_minimum) / \
+                                     (max_size - min_size)
+            elif node_size_scale == 'log':
+                if node_size == 0.0 or log_min_size == log_max_size:
+                    node[output_field] = node_size_default
+                else:
+                    node[output_field] = node_size_minimum + (math.log(node_size, self.base) - log_min_size) * (
+                            node_size_maximum - node_size_minimum) / (log_max_size - log_min_size)
+            else:
+                node[output_field] = node_size if node_size > 0 else node_size_default
+        return nodes
+
+    def to_html(self, d):
         output_kgtk_file: Path = KGTKArgumentParser.get_output_file(self.output_file)
         f = open(output_kgtk_file, 'w')
         f.write(f'''<head>
@@ -495,10 +487,7 @@ class KgtkVisualize:
             <body>
             <div id="graph"></div>
             <script>
-                rainbow = d3.scaleSequential().domain([0, {num_colors}]).interpolator(d3.interpolateRainbow);
-                <!--rainbow = d3.scaleSequential().domain([1,71]).interpolator(d3.interpolateSinebow);-->
-                <!--rainbow = d3.scaleSequential().domain([1,71]).interpolator(d3.interpolateCool);-->
-                        
+                rainbow = d3.scaleSequential().domain([0, {len(self.node_color_map) - 1}]).interpolator(d3.interpolateRainbow);        
                const j = ''')
         f.write(json.dumps(d, indent=4))
         f.write('''
@@ -510,22 +499,21 @@ class KgtkVisualize:
                 .nodeVal('size')''')
 
         node_text_format = ''
-
-        if node_color == 0:
+        if self.node_color_choice == 0:
             f.write('''
                 .nodeAutoColorBy('group')
                 .linkWidth((link) => link.width)''')
-        elif node_color == 1:
+        elif self.node_color_choice == 1:
             f.write(f'''
                 .nodeColor((node) => node.color[0] == "#" ? node.color : {self.node_gradient_scale}(node.color))
                 .linkWidth((link) => link.width)''')
             node_text_format = self.node_gradient_scale + '(node.color)'
         else:
             f.write(f'''
-                        .nodeColor((node) => node.color[0] == "#" ? node.color : rainbow(node.color))
+                        .nodeColor((node) => node.color[0] == "#" ? node.color : {self.node_categorical_scale}(node.color))
                         .linkWidth((link) => link.width)''')
 
-            node_text_format = 'rainbow(node.color)'
+            node_text_format = f'{self.node_categorical_scale}(node.color)'
         if self.node_border_color is not None:
             node_text_format = "'" + self.node_border_color + "'"
         if self.direction == 'arrow':
@@ -535,11 +523,11 @@ class KgtkVisualize:
         elif self.direction == 'particle':
             f.write('''      .linkDirectionalParticles(2)
                 ''')
-        if self.edge_color_style == 'categorical':
+        if self.edge_color_style == CATEGORICAL:
             f.write(
                 f'''        .linkColor((link) => link.color[0] == "#" ? link.color :
                             {self.edge_categorical_scale}[link.color])''')
-        elif self.edge_color_style == 'gradient':
+        elif self.edge_color_style == GRADIENT:
             f.write(
                 f'''        .linkColor((link) => link.color[0] == "#" ? link.color :
                             {self.edge_gradient_scale}(link.color))''')
