@@ -160,7 +160,7 @@ class KgtkVisualize:
             edges, nodes = self.process_edge_file()
             if self.node_file is not None:
                 nodes = self.process_node_file()
-            d['edges'] = edges
+            d['links'] = edges
             d['nodes'] = nodes
         except SystemExit as e:
             raise KGTKException("Exit requested")
@@ -503,6 +503,7 @@ class KgtkVisualize:
             f.write('''
                 .nodeAutoColorBy('group')
                 .linkWidth((link) => link.width)''')
+            node_text_format = '(node.color)'
         elif self.node_color_choice == 1:
             f.write(f'''
                 .nodeColor((node) => node.color[0] == "#" ? node.color : {self.node_gradient_scale}(node.color))
@@ -523,6 +524,42 @@ class KgtkVisualize:
         elif self.direction == 'particle':
             f.write('''      .linkDirectionalParticles(2)
                 ''')
+        if self.show_text is not None and self.show_text_limit > len(d['nodes']):
+
+            if self.show_text == 'center':
+                y_move = 0
+            else:
+                y_move = 10
+
+            f.write('''
+                            .nodeCanvasObject((node, ctx, globalScale) => {
+                      const label = node.label;
+                      const fontSize = 12/globalScale;
+                      ctx.font = `${fontSize}px Sans-Serif`;
+                      const textWidth = ctx.measureText(label).width;
+                      const bckgDimensions = [textWidth, fontSize].map(n => n + fontSize * 0.2); // some padding
+                      ''')
+
+            f.write(f'''
+                      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                      ctx.fillRect(node.x - bckgDimensions[0] / 2, node.y - {y_move} - 
+                      bckgDimensions[1] / 2, ...bckgDimensions);
+                      ctx.textAlign = 'center';
+                      ctx.textBaseline = 'middle';
+                      ''')
+
+            if node_text_format != '':
+                f.write(f'''
+                        ctx.fillStyle = {node_text_format};
+                        ''')
+            f.write(f'''
+                      ctx.fillText(label, node.x, node.y - {y_move});
+                      ''')
+
+            f.write('''
+                      ctx.beginPath(); ctx.arc(node.x, node.y, node.size, 0, 2 * Math.PI, false);  ctx.fill();
+                      node.__bckgDimensions = bckgDimensions; // to re-use in nodePointerAreaPaint
+                      })''')
         if self.edge_color_style == CATEGORICAL:
             f.write(
                 f'''        .linkColor((link) => link.color[0] == "#" ? link.color :
@@ -573,41 +610,5 @@ class KgtkVisualize:
                   ctx.restore();
                 });
                 ''')
-        if self.show_text is not None and self.show_text_limit > len(d['nodes']):
-
-            if self.show_text == 'center':
-                y_move = 0
-            else:
-                y_move = 10
-
-            f.write('''
-                            .nodeCanvasObject((node, ctx, globalScale) => {
-                      const label = node.label;
-                      const fontSize = 12/globalScale;
-                      ctx.font = `${fontSize}px Sans-Serif`;
-                      const textWidth = ctx.measureText(label).width;
-                      const bckgDimensions = [textWidth, fontSize].map(n => n + fontSize * 0.2); // some padding
-                      ''')
-
-            f.write(f'''
-                      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-                      ctx.fillRect(node.x - bckgDimensions[0] / 2, node.y - {y_move} - 
-                      bckgDimensions[1] / 2, ...bckgDimensions);
-                      ctx.textAlign = 'center';
-                      ctx.textBaseline = 'middle';
-                      ''')
-
-            if node_text_format != '':
-                f.write(f'''
-                        ctx.fillStyle = {node_text_format};
-                        ''')
-            f.write(f'''
-                      ctx.fillText(label, node.x, node.y - {y_move});
-                      ''')
-
-            f.write('''
-                      ctx.beginPath(); ctx.arc(node.x, node.y, node.size, 0, 2 * Math.PI, false);  ctx.fill();
-                      node.__bckgDimensions = bckgDimensions; // to re-use in nodePointerAreaPaint
-                      })''')
         f.write('''  </script>
             </body>''')
