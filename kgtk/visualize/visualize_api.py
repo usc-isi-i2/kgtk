@@ -60,8 +60,8 @@ class KgtkVisualize:
             node_color_style: str = None,
             node_color_default: str = '#000000',
             node_color_scale: str = None,
-            node_colors_numbers: bool = False,
-            node_colors_hex: bool = False,
+            node_color_numbers: bool = False,
+            node_color_hex: bool = False,
             node_size_column: str = None,
             node_size_default: float = 2.0,
             node_size_minimum: float = 1.0,
@@ -118,8 +118,8 @@ class KgtkVisualize:
         self.edge_categorical_scale = edge_categorical_scale
         self.node_gradient_scale = node_gradient_scale
         self.edge_gradient_scale = edge_gradient_scale
-        self.node_color_numbers = node_colors_numbers
-        self.node_color_hex = node_colors_hex
+        self.node_color_numbers = node_color_numbers
+        self.node_color_hex = node_color_hex
         self.kwargs = kwargs
 
         self.input_kgtk_file: Path = KGTKArgumentParser.get_input_file(self.input_file)
