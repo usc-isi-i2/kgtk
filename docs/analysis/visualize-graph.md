@@ -225,7 +225,7 @@ kgtk visualize-force-graph -i examples/docs/visualize_force_graph_example2.tsv \
 --node-color-style categorical \
 -o show_countries.html
 ```
-This customization uses is_country as columns for assigning colors. --node-color-style categorical indicates that we assign a unique color to each different string. The default d3.schemeCategory10 supports a max of 10 different colors.
+This customization uses is_country as columns for assigning colors. --node-color-style categorical indicates that we assign a unique color to each different string.
 
 <img src="https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/2_show_country.jpg" width="300"/>
 
@@ -237,7 +237,7 @@ kgtk visualize-force-graph -i examples/docs/visualize_force_graph_example2.tsv \
 --node-color-style categorical \
 -o show_types.html
 ```
-This customization uses type as columns for assigning colors. --node-color-style categorical indicates that we assign a unique color to each different string. The default d3.schemeCategory10 supports a max of 10 different colors 
+This customization uses type as columns for assigning colors. --node-color-style categorical indicates that we assign a unique color to each different string.
 
 <img src="https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/3_show_type.jpg" width="300"/>
 
@@ -250,7 +250,7 @@ kgtk visualize-force-graph -i examples/docs/visualize_force_graph_example2.tsv \
 -o show_types_missing.html
 ```
 
-This customization uses type_missing as columns for assigning colors. --node-color-style categorical indicates that we assign a unique color to each different string. The default d3.schemeCategory10 supports a max of 10 different colors. Notice here there are missing values. All missing values will be assigned a color. 
+This customization uses type_missing as columns for assigning colors. --node-color-style categorical indicates that we assign a unique color to each different string. Notice here there are missing values. All missing values will be assigned the default node color. 
 
 <img src="https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/4_missing_value.jpg" width="300"/>
 
@@ -274,7 +274,7 @@ kgtk visualize-force-graph -i examples/docs/visualize_force_graph_example2.tsv \
 --edge-color-style categorical \
 -o show_edge_color.html
 ```
-This customization uses label as categorical coloring. Each different label will be assigned a different color. The default d3.schemeCategory10 supports a max of 10 different colors.
+This customization uses label as categorical coloring. Each different label will be assigned a different color.
 
 <img src="https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/6_edge_color_categorical.jpg" width="300"/>
 
@@ -332,7 +332,7 @@ kgtk visualize-force-graph -i examples/docs/visualize_force_graph_example2.tsv \
 --node-color-column degree \
 --node-color-style gradient \
 --node-color-scale linear \
---text-node above \
+--show-text above \
 -o show_node_label.html
 ```
 This customization uses degree column in node file to interpolate color based on linear scale. Also the label of each nodes will be showing as text above nodes.
