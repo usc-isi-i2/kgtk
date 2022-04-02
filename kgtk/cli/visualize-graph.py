@@ -32,145 +32,215 @@ def add_arguments_extended(parser: KGTKArgumentParser,
     parser.add_input_file(positional=True)
     parser.add_output_file()
 
-    parser.add_argument('--node-file', dest='node_file', type=str,
+    parser.add_argument('--node-file',
+                        dest='node_file',
+                        type=str,
                         default=None,
-                        help="Specify the location of node file.")
+                        help="Path of the node file.")
 
-    parser.add_argument('--direction', dest='direction', type=str,
+    parser.add_argument('--direction',
+                        dest='direction',
+                        type=str,
                         default=None,
-                        help="Specify direction (arrow, " +
-                             "particle and None), default none")
+                        help="The edge direction: arrow|particle|None. Default: None")
 
-    parser.add_argument('--show-edge-label', dest='edge_label', type=bool,
+    parser.add_argument('--show-edge-label',
+                        dest='edge_label',
+                        action='store_true',
                         default=False,
-                        help="Specify direction (arrow, particle and None)" +
-                             ", default none")
+                        help="Add this option to show labels on edges. Default: False")
 
     parser.add_argument('--edge-color-column',
-                        dest='edge_color_column', type=str,
+                        dest='edge_color_column',
+                        type=str,
                         default=None,
-                        help="Specify column used for edge color")
+                        help="Column for edge colors in the edge file. "
+                             "The values can be numbers, hex codes or any strings")
+
+    parser.add_argument('--edge-color-numbers',
+                        dest='edge_color_numbers',
+                        action='store_true',
+                        default=False,
+                        help="Add this option if the values in the --edge-color-column are numbers")
+
+    parser.add_argument('--edge-color-hex',
+                        dest='edge_color_hex',
+                        action='store_true',
+                        default=False,
+                        help="Add this option if the values in the --edge-color-column are valid hexadecimal colors."
+                             "Valid hexadecimal colors start with # and are of 3 or 6 length (without the #) ")
 
     parser.add_argument('--edge-color-style',
-                        dest='edge_color_style', type=str,
+                        dest='edge_color_style',
+                        type=str,
                         default=None,
-                        help="Specify style (categorical, gradient)" +
-                             "used for edge color")
+                        help="Edge color style for edge color: categorical|gradient. Default: None")
 
     parser.add_argument('--edge-color-default',
-                        dest='edge_color_default', type=str,
+                        dest='edge_color_default',
+                        type=str,
                         default='#000000',
-                        help="Specify default color for edge")
+                        help="Default color for edges. Default: '#000000'")
 
     parser.add_argument('--edge-width-column',
-                        dest='edge_width_column', type=str,
+                        dest='edge_width_column',
+                        type=str,
                         default=None,
-                        help="Specify column used for edge width")
+                        help="Column for edge widths in the edge file. The values should be numbers.")
 
-    parser.add_argument('--edge-width-minimum', dest='edge_width_minimum',
-                        type=float, default=1.0,
-                        help="Specify edge width minimum")
+    parser.add_argument('--edge-width-minimum',
+                        dest='edge_width_minimum',
+                        type=float,
+                        default=1.0,
+                        help="Minimum edge width. Default: 1.0")
 
-    parser.add_argument('--edge-width-maximum', dest='edge_width_maximum',
-                        type=float, default=5.0,
-                        help="Specify edge width maximum")
+    parser.add_argument('--edge-width-maximum',
+                        dest='edge_width_maximum',
+                        type=float,
+                        default=5.0,
+                        help="Maximum edge width. Default: 5.0")
 
-    parser.add_argument('--edge-width-mapping', dest='edge_width_mapping',
-                        type=str, default=None,
-                        help="Specify mapping (auto, fixed) for edge width")
+    parser.add_argument('--edge-width-default',
+                        dest='edge_width_default',
+                        type=float,
+                        default=1.0,
+                        help="Default edge width. Default: 1.0")
 
-    parser.add_argument('--edge-width-default', dest='edge_width_default',
-                        type=float, default=1.0,
-                        help="Specify default width for edge")
-
-    parser.add_argument('--edge-width-scale', dest='edge_width_scale',
-                        type=str, default=None,
-                        help="Specify scale for width for edge (linear, log)")
-
-    parser.add_argument('--node-color-column', dest='node_color_column',
-                        type=str, default=None,
-                        help="Specify column used for node color")
-
-    parser.add_argument('--node-color-style', dest='node_color_style',
-                        type=str, default=None,
-                        help="Specify style (categorical, gradient)" +
-                             " used for node color")
-
-    parser.add_argument('--node-color-default', dest='node_color_default',
-                        type=str, default='#000000',
-                        help="Specify default color for node")
-
-    parser.add_argument('--node-color-scale', dest='node_color_scale',
-                        type=str, default=None,
-                        help="Specify node color scale (linear/log)")
-
-    parser.add_argument('--node-size-column', dest='node_size_column',
-                        type=str, default=None,
-                        help="Specify column used for node size")
-
-    parser.add_argument('--node-size-minimum', dest='node_size_minimum',
-                        type=float, default=1.0,
-                        help="Specify node size minimum")
-
-    parser.add_argument('--node-size-maximum', dest='node_size_maximum',
-                        type=float, default=5.0,
-                        help="Specify node size maximum")
-
-    parser.add_argument('--node-size-default', dest='node_size_default',
-                        type=float, default=2.0,
-                        help="Specify default size for node")
-
-    parser.add_argument('--node-size-scale', dest='node_size_scale', type=str,
+    parser.add_argument('--edge-width-scale',
+                        dest='edge_width_scale',
+                        type=str,
                         default=None,
-                        help="Specify scale for node size (linear, log)")
+                        help="Edge width scale: linear|log. Default: None")
 
-    parser.add_argument('--node-file-id', dest='node_file_id', type=str,
+    parser.add_argument('--node-color-column',
+                        dest='node_color_column',
+                        type=str,
+                        default=None,
+                        help="Column for node colors in the --node-file. The values can be numbers, valid hex codes"
+                             " or any strings.")
+
+    parser.add_argument('--node-color-style',
+                        dest='node_color_style',
+                        type=str,
+                        default=None,
+                        help="Node color style: categorical|gradient. Default: None")
+
+    parser.add_argument('--node-color-default',
+                        dest='node_color_default',
+                        type=str,
+                        default='#000000',
+                        help="Default node color. Default: '#000000'")
+
+    parser.add_argument('--node-color-scale',
+                        dest='node_color_scale',
+                        type=str,
+                        default=None,
+                        help="Node color scale: linear|log. Default: None")
+
+    parser.add_argument('--node-color-numbers',
+                        dest='node_color_numbers',
+                        action='store_true',
+                        default=False,
+                        help="Add this option if the values in the --node-color-column are numbers")
+
+    parser.add_argument('--node-color-hex',
+                        dest='node_color_hex',
+                        action='store_true',
+                        default=False,
+                        help="Add this option if the values in the --node-color-column are valid hexadecimal colors."
+                             "Valid hexadecimal colors start with # and are of 3 or 6 length (without the #) ")
+
+    parser.add_argument('--node-size-column',
+                        dest='node_size_column',
+                        type=str,
+                        default=None,
+                        help="Column for node sizes in the --node-file. Default: None")
+
+    parser.add_argument('--node-size-minimum',
+                        dest='node_size_minimum',
+                        type=float,
+                        default=1.0,
+                        help="Minimum node size. Default: 1.0")
+
+    parser.add_argument('--node-size-maximum',
+                        dest='node_size_maximum',
+                        type=float,
+                        default=5.0,
+                        help="Maximum node size. Default: 5.0")
+
+    parser.add_argument('--node-size-default',
+                        dest='node_size_default',
+                        type=float,
+                        default=2.0,
+                        help="Default node size. Default: 2.0")
+
+    parser.add_argument('--node-size-scale',
+                        dest='node_size_scale',
+                        type=str,
+                        default=None,
+                        help="Node size scale: linear|log. Default: None")
+
+    parser.add_argument('--node-file-id',
+                        dest='node_file_id',
+                        type=str,
                         default='id',
-                        help="Specify id column name in node file," +
-                             " default is id")
+                        help="ID column name in the --node-file. Default: 'id'")
 
-    parser.add_argument('--show-text-limit', dest='show_text_limit', type=int,
+    parser.add_argument('--show-text-limit',
+                        dest='show_text_limit',
+                        type=int,
                         default=500,
-                        help="When node number is greater than this number, " +
-                             "will not show text as label, default is 500")
+                        help="When number of nodes is greater than --show-text-limit, node labels will not be visible."
+                             "Default: 500")
 
-    parser.add_argument('--node-border-color', dest='node_border_color',
-                        type=str, default=None,
-                        help="Specify node border color ")
-
-    parser.add_argument('--tooltip-column', dest='tooltip_column', type=str,
+    parser.add_argument('--node-border-color',
+                        dest='node_border_color',
+                        type=str,
                         default=None,
-                        help="Specify option to show tooltip ")
+                        help="Node border color. Default: None")
 
-    parser.add_argument('--show-text', dest='show_text', type=str,
+    parser.add_argument('--tooltip-column',
+                        dest='tooltip_column',
+                        type=str,
                         default=None,
-                        help="Specify option to show text [None|center|above], default is None. If the number of"
-                             "nodes in the graph is greater than specified by --show-text-limit option, which is"
-                             "500 by default, then the text will not be shown in the visualization.")
+                        help="Column for node tooltips in the --node-file. Default: None")
+
+    parser.add_argument('--show-text',
+                        dest='show_text',
+                        type=str,
+                        default=None,
+                        help="Show node labels at the position relative to node: center|above. Default: None. "
+                             "If the number of nodes in the graph is greater than specified by "
+                             "--show-text-limit option, which is 500 by default, "
+                             "then the text will not be shown in the visualization.")
 
     parser.add_argument('--node-categorical-scale',
                         dest='node_categorical_scale',
-                        type=str, default='d3.schemeCategory10',
-                        help="Specify color categorical scale " +
-                             "for node from d3-scale-chromatic")
+                        type=str,
+                        default='rainbow',
+                        help="Node color categorical scale node from d3-scale-chromatic."
+                             "https://observablehq.com/@d3/sequential-scales. Default: rainbow")
 
     parser.add_argument('--edge-categorical-scale',
                         dest='edge_categorical_scale',
-                        type=str, default='d3.schemeCategory10',
-                        help="Specify color categorical scale " +
-                             "for edge d3-scale-chromatic")
+                        type=str,
+                        default='rainbow',
+                        help="Edge color categorical scale for edge d3-scale-chromatic."
+                             "https://observablehq.com/@d3/sequential-scales. Default: rainbow")
 
-    parser.add_argument('--node-gradient-scale', dest='node_gradient_scale',
-                        type=str, default='d3.interpolateRdBu',
-                        help="Specify color gradient scale" +
-                             " for node from d3-scale-chromatic")
+    parser.add_argument('--node-gradient-scale',
+                        dest='node_gradient_scale',
+                        type=str,
+                        default='d3.interpolateRdBu',
+                        help="Node color gradient scale from d3-scale-chromatic. Default: d3.interpolateRdBu")
 
-    parser.add_argument('--edge-gradient-scale', dest='edge_gradient_scale',
-                        type=str, default='d3.interpolateRdBu',
-                        help="Specify color gradient scale" +
-                             " for edge d3-scale-chromatic")
+    parser.add_argument('--edge-gradient-scale',
+                        dest='edge_gradient_scale',
+                        type=str,
+                        default='d3.interpolateRdBu',
+                        help="Edge color gradient scale from d3-scale-chromatic. Default: d3.interpolateRdBu")
 
-    KgtkIdBuilderOptions.add_arguments(parser, expert=True)  # Show all the options.
+    KgtkIdBuilderOptions.add_arguments(parser, expert=_expert)  # Show all the options.
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
@@ -187,6 +257,8 @@ def run(input_file: KGTKFiles,
         direction: str = None,
         edge_label: bool = False,
         edge_color_column: str = None,
+        edge_color_hex: bool = False,
+        edge_color_numbers: bool = False,
         edge_color_style: str = None,
         edge_color_default: str = '#000000',
         edge_width_column: str = None,
@@ -195,6 +267,8 @@ def run(input_file: KGTKFiles,
         edge_width_maximum: float = 5.0,
         edge_width_scale: str = None,
         node_color_column: str = None,
+        node_color_numbers: bool = False,
+        node_color_hex: bool = False,
         node_color_style: str = None,
         node_color_default: str = '#000000',
         node_color_scale: str = None,
@@ -208,8 +282,8 @@ def run(input_file: KGTKFiles,
         node_border_color: str = None,
         tooltip_column: str = None,
         show_text: str = None,
-        node_categorical_scale: str = 'd3.schemeCategory10',
-        edge_categorical_scale: str = 'd3.schemeCategory10',
+        node_categorical_scale: str = 'rainbow',
+        edge_categorical_scale: str = 'rainbow',
         node_gradient_scale: str = 'd3.interpolateRdBu',
         edge_gradient_scale: str = 'd3.interpolateRdBu',
 
@@ -228,6 +302,8 @@ def run(input_file: KGTKFiles,
         direction=direction,
         edge_label=edge_label,
         edge_color_column=edge_color_column,
+        edge_color_hex=edge_color_hex,
+        edge_color_numbers=edge_color_numbers,
         edge_color_style=edge_color_style,
         edge_color_default=edge_color_default,
         edge_width_column=edge_width_column,
@@ -236,6 +312,8 @@ def run(input_file: KGTKFiles,
         edge_width_maximum=edge_width_maximum,
         edge_width_scale=edge_width_scale,
         node_color_column=node_color_column,
+        node_color_hex=node_color_hex,
+        node_color_numbers=node_color_numbers,
         node_color_style=node_color_style,
         node_color_default=node_color_default,
         node_color_scale=node_color_scale,
