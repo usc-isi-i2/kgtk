@@ -3,7 +3,6 @@
 from argparse import Namespace
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
-from kgtk.reshape.kgtkidbuilder import KgtkIdBuilderOptions
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 
@@ -11,12 +10,11 @@ def parser():
     return {
         'help': 'Convert edge file to html visualization',
         'description': 'Convert edge file (optional node file)' +
-                       'to html graph visualization file'
+                       ' to html graph visualization file'
     }
 
 
-def add_arguments_extended(parser: KGTKArgumentParser,
-                           parsed_shared_args: Namespace):
+def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Namespace):
     """
     Parse arguments
     Args:
@@ -240,7 +238,6 @@ def add_arguments_extended(parser: KGTKArgumentParser,
                         default='d3.interpolateRdBu',
                         help="Edge color gradient scale from d3-scale-chromatic. Default: d3.interpolateRdBu")
 
-    KgtkIdBuilderOptions.add_arguments(parser, expert=_expert)  # Show all the options.
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
