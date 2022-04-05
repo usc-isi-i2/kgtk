@@ -175,7 +175,8 @@ class TestVisualizeGraph(unittest.TestCase):
                   "-i", self.example_file,
                   "-o", f'{output}',
                   "--show-edge-label",
-                  "--edge-color-column", "hex_color"
+                  "--edge-color-column", "hex_color",
+                  "--edge-color-hex"
                   )
         f1 = set(open(self.ground_truth_edge_text).readlines())
         f2 = open(output).readlines()

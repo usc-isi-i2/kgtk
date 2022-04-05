@@ -1,19 +1,19 @@
-node1	label	node2	weight
-Alice	friend	Susan	0.9
-Susan	friend	John	0.3
-John	friend	Claudia	
-Ulrich	friend	John	
-Fritz	friend	Ulrich	
-Fritz	friend	Alice	
-Alice	born	USA	
-Susan	born	USA	
-John	born	USA	
-Claudia	born	Germany	
-Ulrich	born	Germany	
-Fritz	born	Germany	
-Alice	lives	Germany	
-Susan	lives	USA	
-John	lives	Brazil	
-Claudia	lives	Germany	
-Ulrich	lives	Brazil	
-Fritz	lives	Germany	
+node1	label	node2	weight	hex_color
+Q1	"friend"	Q2	0.9	#FF69B4
+Q2	"friend"	Q3	0.3	#FF69B4
+Q3	"friend"	Q4	""	#FF69B4
+Q5	"friend"	Q3	""	#FF69B4
+Q6	"friend"	Q5	""	#FF69B4
+Q6	"friend"	Q1	""	#FF69B4
+Q1	"born"	Q7	""	#FFF68F
+Q2	"born"	Q7	""	#FFF68F
+Q3	"born"	Q7	""	#FFF68F
+Q4	"born"	Q8	""	#FFF68F
+Q5	"born"	Q8	""	#FFF68F
+Q6	"born"	Q8	""	#FFF68F
+Q1	"lives"	Q8	""	#32CD32
+Q2	"lives"	Q7	""	#32CD32
+Q3	"lives"	Q9	""	#32CD32
+Q4	"lives"	Q8	""	#32CD32
+Q5	"lives"	Q9	""	#32CD32
+Q6	"lives"	Q8	""	#32CD32
