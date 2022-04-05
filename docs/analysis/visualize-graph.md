@@ -214,7 +214,7 @@ kgtk visualize-force-graph -i examples/docs/visualize_force_graph_example2.tsv -
 ```
 This is the default version of this command, only producing a graph with default color, width and size
 
-<img src="../images/visualize-force-graph-examples/1_default.jpg" width="300"/>
+<img src="../images/visualize-force-graph-examples/1.jpg" width="300"/>
 
 
 ## 2. Color by `is_country` column in the node file
