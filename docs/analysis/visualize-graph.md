@@ -336,7 +336,7 @@ Colors edges by the hexadecimal codes in the column `hex_color` and shows labels
 
 <img src="../images/visualize-force-graph-examples/10.jpg" width="300"/>
 
-## 11. Show labels on nodes and edges
+## 11. Show labels and color nodes and edges
 ```
 kgtk visualize-force-graph -i examples/docs/visualize_force_graph_example2.tsv \
 --node-file examples/docs/visualize_force_graph_example2_node.tsv \
@@ -344,9 +344,11 @@ kgtk visualize-force-graph -i examples/docs/visualize_force_graph_example2.tsv \
 --node-color-hex \
 --show-text above \
 --show-edge-label \
+--edge-color-hex \
+--edge-color-column hex_color \
 -o show_node_edge_label.html
 ```
 
-Colors nodes by hexadecimal color codes in the columns `hex_color`, show labels above nodes and on edges.
+Colors nodes by hexadecimal color codes in the column `hex_color` for both edges and nodes and  show labels above nodes and on edges.
 
 <img src="../images/visualize-force-graph-examples/11.jpg" width="300"/>
