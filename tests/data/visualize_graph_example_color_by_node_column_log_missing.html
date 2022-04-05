@@ -1,0 +1,217 @@
+<head>
+            <style> body { margin: 0; } </style>
+            <script src="https://cdn.jsdelivr.net/npm/d3-color@3"></script>
+            <script src="https://cdn.jsdelivr.net/npm/d3-interpolate@3"></script>
+            <script src="https://cdn.jsdelivr.net/npm/d3-scale-chromatic@3"></script>
+            <script src="https://cdn.jsdelivr.net/npm/d3-scale@4"></script>
+            <script src="https://unpkg.com/force-graph"></script>
+            <!--<script src="../../dist/force-graph.js"></script>-->
+            </head>
+            <body>
+            <div id="graph"></div>
+            <script>
+                rainbow = d3.scaleSequential().domain([0, 3]).interpolator(d3.interpolateRainbow);        
+               const j = {
+    "links": [
+        {
+            "source": "Q1",
+            "target": "Q2",
+            "label": "\"friend\"",
+            "width": 1.0,
+            "color": "#000000"
+        },
+        {
+            "source": "Q2",
+            "target": "Q3",
+            "label": "\"friend\"",
+            "width": 1.0,
+            "color": "#000000"
+        },
+        {
+            "source": "Q3",
+            "target": "Q4",
+            "label": "\"friend\"",
+            "width": 1.0,
+            "color": "#000000"
+        },
+        {
+            "source": "Q5",
+            "target": "Q3",
+            "label": "\"friend\"",
+            "width": 1.0,
+            "color": "#000000"
+        },
+        {
+            "source": "Q6",
+            "target": "Q5",
+            "label": "\"friend\"",
+            "width": 1.0,
+            "color": "#000000"
+        },
+        {
+            "source": "Q6",
+            "target": "Q1",
+            "label": "\"friend\"",
+            "width": 1.0,
+            "color": "#000000"
+        },
+        {
+            "source": "Q1",
+            "target": "Q7",
+            "label": "\"born\"",
+            "width": 1.0,
+            "color": "#000000"
+        },
+        {
+            "source": "Q2",
+            "target": "Q7",
+            "label": "\"born\"",
+            "width": 1.0,
+            "color": "#000000"
+        },
+        {
+            "source": "Q3",
+            "target": "Q7",
+            "label": "\"born\"",
+            "width": 1.0,
+            "color": "#000000"
+        },
+        {
+            "source": "Q4",
+            "target": "Q8",
+            "label": "\"born\"",
+            "width": 1.0,
+            "color": "#000000"
+        },
+        {
+            "source": "Q5",
+            "target": "Q8",
+            "label": "\"born\"",
+            "width": 1.0,
+            "color": "#000000"
+        },
+        {
+            "source": "Q6",
+            "target": "Q8",
+            "label": "\"born\"",
+            "width": 1.0,
+            "color": "#000000"
+        },
+        {
+            "source": "Q1",
+            "target": "Q8",
+            "label": "\"lives\"",
+            "width": 1.0,
+            "color": "#000000"
+        },
+        {
+            "source": "Q2",
+            "target": "Q7",
+            "label": "\"lives\"",
+            "width": 1.0,
+            "color": "#000000"
+        },
+        {
+            "source": "Q3",
+            "target": "Q9",
+            "label": "\"lives\"",
+            "width": 1.0,
+            "color": "#000000"
+        },
+        {
+            "source": "Q4",
+            "target": "Q8",
+            "label": "\"lives\"",
+            "width": 1.0,
+            "color": "#000000"
+        },
+        {
+            "source": "Q5",
+            "target": "Q9",
+            "label": "\"lives\"",
+            "width": 1.0,
+            "color": "#000000"
+        },
+        {
+            "source": "Q6",
+            "target": "Q8",
+            "label": "\"lives\"",
+            "width": 1.0,
+            "color": "#000000"
+        }
+    ],
+    "nodes": [
+        {
+            "id": "Q1",
+            "label": "Alice",
+            "tooltip": "Alice",
+            "size": 2.0,
+            "color": 2
+        },
+        {
+            "id": "Q2",
+            "label": "Susan",
+            "tooltip": "Susan",
+            "size": 2.0,
+            "color": 2
+        },
+        {
+            "id": "Q3",
+            "label": "John",
+            "tooltip": "John",
+            "size": 2.0,
+            "color": 2
+        },
+        {
+            "id": "Q4",
+            "label": "Claudia",
+            "tooltip": "Claudia",
+            "size": 2.0,
+            "color": 2
+        },
+        {
+            "id": "Q5",
+            "label": "Ulrich",
+            "tooltip": "Ulrich",
+            "size": 2.0,
+            "color": 2
+        },
+        {
+            "id": "Q6",
+            "label": "Fritz",
+            "tooltip": "Fritz",
+            "size": 2.0,
+            "color": 2
+        },
+        {
+            "id": "Q7",
+            "label": "USA",
+            "tooltip": "USA",
+            "size": 2.0,
+            "color": 3
+        },
+        {
+            "id": "Q8",
+            "label": "Germany",
+            "tooltip": "Germany",
+            "size": 2.0,
+            "color": 3
+        },
+        {
+            "id": "Q9",
+            "label": "Brazil",
+            "tooltip": "Brazil",
+            "size": 2.0,
+            "color": 3
+        }
+    ]
+}
+              const Graph = ForceGraph()
+              (document.getElementById('graph'))
+                .graphData(j)
+                .nodeId('id')
+                .nodeLabel('tooltip')
+                .nodeVal('size')
+                        .nodeColor((node) => node.color[0] == "#" ? node.color : rainbow(node.color))
+                        .linkWidth((link) => link.width)        .linkColor((link) => link.color)  </script>
+            </body>
