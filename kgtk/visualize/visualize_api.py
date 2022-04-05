@@ -498,7 +498,7 @@ class KgtkVisualize:
             <body>
             <div id="graph"></div>
             <script>
-                rainbow = d3.scaleSequential().domain([0, {len(self.node_color_map) - 1}]).interpolator(d3.interpolateRainbow);        
+                rainbow = d3.scaleSequential().domain([0, {len(self.node_color_map) - 1}]).interpolator(d3.interpolateRainbow);
                const j = ''')
         f.write(json.dumps(d, indent=4))
         f.write('''
