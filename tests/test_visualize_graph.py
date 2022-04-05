@@ -194,7 +194,9 @@ class TestVisualizeGraph(unittest.TestCase):
                   "--node-color-column", "hex_color",
                   "--node-color-hex",
                   "--show-text", "above",
-                  "--show-edge-label"
+                  "--show-edge-label",
+                  "--edge-color-hex",
+                  "--edge-color-column", "hex_color"
                   )
         f1 = set(open(self.ground_truth_node_edge_text).readlines())
         f2 = open(output).readlines()
