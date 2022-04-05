@@ -206,10 +206,18 @@ class KgtkVisualize:
 
         for row in kr:
             if self.node_file is None:
-                clean_node1_label, _, _ = kgtk_format.destringify(row[node1_label_idx])
+                node1_label = row[node1_label_idx]
+                node2_label = row[node2_label_idx]
+                if '@' in node1_label:
+                    clean_node1_label, _, _ = kgtk_format.destringify(node1_label)
+                else:
+                    clean_node1_label = node1_label
                 nodes.add((row[node1_idx], clean_node1_label))
 
-                clean_node2_label, _, _ = kgtk_format.destringify(row[node2_label_idx])
+                if '@' in node2_label:
+                    clean_node2_label, _, _ = kgtk_format.destringify(node2_label)
+                else:
+                    clean_node2_label = node2_label
                 nodes.add((row[node2_idx], clean_node2_label))
 
             if '@' in row[label_label_idx]:
@@ -403,13 +411,16 @@ class KgtkVisualize:
             # all good, nothing to do here
             pass
         else:
-
+            node_color_list = []
+            max_color = -1
+            min_color = -1
+            if self.node_color_numbers:
+                node_color_list = [x['orig_color'] for x in nodes]
+                max_color = max(node_color_list)
+                min_color = min(node_color_list)
             for node in nodes:
                 orig_color = node['orig_color']
                 if node_color_numbers:
-                    node_color_list = [x['orig_color'] for x in nodes]
-                    max_color = max(node_color_list)
-                    min_color = min(node_color_list)
 
                     log_max_color = math.log(max_color, self.base) if max_color > 0.0 else -1.0
                     log_min_color = math.log(min_color, self.base) if min_color > 0.0 else -1.0
