@@ -1,0 +1,275 @@
+<head>
+            <style> body { margin: 0; } </style>
+            <script src="https://cdn.jsdelivr.net/npm/d3-color@3"></script>
+            <script src="https://cdn.jsdelivr.net/npm/d3-interpolate@3"></script>
+            <script src="https://cdn.jsdelivr.net/npm/d3-scale-chromatic@3"></script>
+            <script src="https://cdn.jsdelivr.net/npm/d3-scale@4"></script>
+            <script src="https://unpkg.com/force-graph"></script>
+            <!--<script src="../../dist/force-graph.js"></script>-->
+            </head>
+            <body>
+            <div id="graph"></div>
+            <script>
+                rainbow = d3.scaleSequential().domain([0, 1]).interpolator(d3.interpolateRainbow);        
+               const j = {
+    "links": [
+        {
+            "source": "Q1",
+            "target": "Q2",
+            "label": "\"friend\"",
+            "width": 1.0,
+            "color": "#FF69B4"
+        },
+        {
+            "source": "Q2",
+            "target": "Q3",
+            "label": "\"friend\"",
+            "width": 1.0,
+            "color": "#FF69B4"
+        },
+        {
+            "source": "Q3",
+            "target": "Q4",
+            "label": "\"friend\"",
+            "width": 1.0,
+            "color": "#FF69B4"
+        },
+        {
+            "source": "Q5",
+            "target": "Q3",
+            "label": "\"friend\"",
+            "width": 1.0,
+            "color": "#FF69B4"
+        },
+        {
+            "source": "Q6",
+            "target": "Q5",
+            "label": "\"friend\"",
+            "width": 1.0,
+            "color": "#FF69B4"
+        },
+        {
+            "source": "Q6",
+            "target": "Q1",
+            "label": "\"friend\"",
+            "width": 1.0,
+            "color": "#FF69B4"
+        },
+        {
+            "source": "Q1",
+            "target": "Q7",
+            "label": "\"born\"",
+            "width": 1.0,
+            "color": "#FFF68F"
+        },
+        {
+            "source": "Q2",
+            "target": "Q7",
+            "label": "\"born\"",
+            "width": 1.0,
+            "color": "#FFF68F"
+        },
+        {
+            "source": "Q3",
+            "target": "Q7",
+            "label": "\"born\"",
+            "width": 1.0,
+            "color": "#FFF68F"
+        },
+        {
+            "source": "Q4",
+            "target": "Q8",
+            "label": "\"born\"",
+            "width": 1.0,
+            "color": "#FFF68F"
+        },
+        {
+            "source": "Q5",
+            "target": "Q8",
+            "label": "\"born\"",
+            "width": 1.0,
+            "color": "#FFF68F"
+        },
+        {
+            "source": "Q6",
+            "target": "Q8",
+            "label": "\"born\"",
+            "width": 1.0,
+            "color": "#FFF68F"
+        },
+        {
+            "source": "Q1",
+            "target": "Q8",
+            "label": "\"lives\"",
+            "width": 1.0,
+            "color": "#32CD32"
+        },
+        {
+            "source": "Q2",
+            "target": "Q7",
+            "label": "\"lives\"",
+            "width": 1.0,
+            "color": "#32CD32"
+        },
+        {
+            "source": "Q3",
+            "target": "Q9",
+            "label": "\"lives\"",
+            "width": 1.0,
+            "color": "#32CD32"
+        },
+        {
+            "source": "Q4",
+            "target": "Q8",
+            "label": "\"lives\"",
+            "width": 1.0,
+            "color": "#32CD32"
+        },
+        {
+            "source": "Q5",
+            "target": "Q9",
+            "label": "\"lives\"",
+            "width": 1.0,
+            "color": "#32CD32"
+        },
+        {
+            "source": "Q6",
+            "target": "Q8",
+            "label": "\"lives\"",
+            "width": 1.0,
+            "color": "#32CD32"
+        }
+    ],
+    "nodes": [
+        {
+            "id": "Q1",
+            "label": "Alice",
+            "tooltip": "Alice",
+            "color": "#00FFFF",
+            "size": 2.0
+        },
+        {
+            "id": "Q2",
+            "label": "Susan",
+            "tooltip": "Susan",
+            "color": "#8A2BE2",
+            "size": 2.0
+        },
+        {
+            "id": "Q3",
+            "label": "John",
+            "tooltip": "John",
+            "color": "#FF4040",
+            "size": 2.0
+        },
+        {
+            "id": "Q4",
+            "label": "Claudia",
+            "tooltip": "Claudia",
+            "color": "#7FFF00",
+            "size": 2.0
+        },
+        {
+            "id": "Q5",
+            "label": "Ulrich",
+            "tooltip": "Ulrich",
+            "color": "#FFB90F",
+            "size": 2.0
+        },
+        {
+            "id": "Q6",
+            "label": "Fritz",
+            "tooltip": "Fritz",
+            "color": "#C1FFC1",
+            "size": 2.0
+        },
+        {
+            "id": "Q7",
+            "label": "USA",
+            "tooltip": "USA",
+            "color": "#FF1493",
+            "size": 2.0
+        },
+        {
+            "id": "Q8",
+            "label": "Germany",
+            "tooltip": "Germany",
+            "color": "#FFD700",
+            "size": 2.0
+        },
+        {
+            "id": "Q9",
+            "label": "Brazil",
+            "tooltip": "Brazil",
+            "color": "#FF69B4",
+            "size": 2.0
+        }
+    ]
+}
+              const Graph = ForceGraph()
+              (document.getElementById('graph'))
+                .graphData(j)
+                .nodeId('id')
+                .nodeLabel('tooltip')
+                .nodeVal('size')
+                .nodeAutoColorBy('group')
+                .linkWidth((link) => link.width)
+                            .nodeCanvasObject((node, ctx, globalScale) => {
+                      const label = node.label;
+                      const fontSize = 12/globalScale;
+                      ctx.font = `${fontSize}px Sans-Serif`;
+                      const textWidth = ctx.measureText(label).width;
+                      const bckgDimensions = [textWidth, fontSize].map(n => n + fontSize * 0.2); // some padding
+                      
+                      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                      ctx.fillRect(node.x - bckgDimensions[0] / 2, node.y - 10 - 
+                      bckgDimensions[1] / 2, ...bckgDimensions);
+                      ctx.textAlign = 'center';
+                      ctx.textBaseline = 'middle';
+                      
+                        ctx.fillStyle = (node.color);
+                        
+                      ctx.fillText(label, node.x, node.y - 10);
+                      
+                      ctx.beginPath(); ctx.arc(node.x, node.y, node.size, 0, 2 * Math.PI, false);  ctx.fill();
+                      node.__bckgDimensions = bckgDimensions; // to re-use in nodePointerAreaPaint
+                      })        .linkColor((link) => link.color)                        .linkCanvasObjectMode(() => 'after')
+                .linkCanvasObject((link, ctx) => {
+                  const MAX_FONT_SIZE = 4;
+                  const LABEL_NODE_MARGIN = Graph.nodeRelSize() * 1.5;
+                  const start = link.source;
+                  const end = link.target;
+                  // ignore unbound links
+                  if (typeof start !== 'object' || typeof end !== 'object') return;
+                  // calculate label positioning
+                  const textPos = Object.assign(...['x', 'y'].map(c => ({
+                    [c]: start[c] + (end[c] - start[c]) / 2 // calc middle point
+                  })));
+                  const relLink = { x: end.x - start.x, y: end.y - start.y };
+                  const maxTextLength = Math.sqrt(Math.pow(relLink.x, 2) + Math.pow(relLink.y, 2)) - LABEL_NODE_MARGIN * 2;
+                  let textAngle = Math.atan2(relLink.y, relLink.x);
+                  // maintain label vertical orientation for legibility
+                  if (textAngle > Math.PI / 2) textAngle = -(Math.PI - textAngle);
+                  if (textAngle < -Math.PI / 2) textAngle = -(-Math.PI - textAngle);
+                  const label = `${link.label}`;
+                  // estimate fontSize to fit in link length
+                  const color = `rgba(${link.color}, 0.8)`;
+                  ctx.font = '1px Sans-Serif';
+                  const fontSize = Math.min(MAX_FONT_SIZE, maxTextLength / ctx.measureText(label).width);
+                  ctx.font = `${fontSize}px Sans-Serif`;
+                  const textWidth = ctx.measureText(label).width;
+                  const bckgDimensions = [textWidth, fontSize].map(n => n + fontSize * 0.2); // some padding
+                  // draw text label (with background rect)
+                  ctx.save();
+                  ctx.translate(textPos.x, textPos.y);
+                  ctx.rotate(textAngle);
+                  ctx.fillStyle = 'rgba(255, 255, 255)';
+                  ctx.fillRect(- bckgDimensions[0] / 2, - bckgDimensions[1] / 2, ...bckgDimensions);
+                  ctx.textAlign = 'center';
+                  ctx.textBaseline = 'middle';
+                  ctx.fillStyle = 'darkgrey';
+                  ctx.fillText(label, 0, 0);
+                  ctx.restore();
+                });
+                  </script>
+            </body>
