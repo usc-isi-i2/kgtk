@@ -135,10 +135,7 @@ class KgtkVisualize:
 
         self.edge_color_map = {}
 
-        self.node_color_map = {
-            'few_subclasses': 0,
-            'many_subclasses': 1
-        }
+        self.node_color_map = {}
 
         self.node_color_choice = 0
 
