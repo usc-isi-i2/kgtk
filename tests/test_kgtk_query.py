@@ -1428,3 +1428,19 @@ class TestKGTKQuery(unittest.TestCase):
         inputs = ' '.join([self.file_path, self.works_path])
         qdf = self.run_test_query(query, input=inputs)
         self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_special_functions(self):
+        # Test functions such as 'concat' and 'likelihood' that require special translation:
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match 'g: (x)-[r1:loves]->(y), \
+                                 w: (x)-[r2:works]->(c)' \
+                        --where 'likelihood(not x is null, 0.9)' \
+                        --return 'lower(concat(x, y, 3, c, 2.5)) as value'
+                """
+        result = ["""value""",
+                  """hansmolly3acme2.5""",
+                  """ottosusi3kaiser2.5""",
+                  """joejoe3kaiser2.5"""]
+        inputs = ' '.join([self.file_path, self.works_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
