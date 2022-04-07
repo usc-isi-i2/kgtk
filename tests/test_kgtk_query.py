@@ -1405,3 +1405,26 @@ class TestKGTKQuery(unittest.TestCase):
         inputs = ' '.join([self.file_path, self.works_path])
         qdf = self.run_test_query(query, input=inputs)
         self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_multi_edges_with_optional(self):
+        # Output multi-edges combined with optionals:
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --multi 3
+                        --match 'g: (x)-[r1:loves]->(y),
+                                 w: (x)-[r2:works]->(c)'
+                        --opt   'g: (x)-[r3:friend]->(f)'
+                        --return 'x, r1.label, y,
+                                  x, r2.label, c,
+                                  x, r3.label, f'
+                """
+        result = ["""node1\tlabel\tnode2""",
+                  """Hans\tloves\tMolly""",
+                  """Hans\tworks\tACME""",
+                  """Otto\tloves\tSusi""",
+                  """Otto\tworks\tKaiser""",
+                  """Joe\tloves\tJoe""",
+                  """Joe\tworks\tKaiser""",
+                  """Joe\tfriend\tOtto"""]
+        inputs = ' '.join([self.file_path, self.works_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
