@@ -21,12 +21,12 @@ usage: kgtk query [-h] [-i INPUT_FILE [INPUT_FILE ...]] [--as NAME]
                   [--comment COMMENT] [--query QUERY] [--match PATTERN]
                   [--where CLAUSE] [--opt PATTERN] [--with CLAUSE]
                   [--where: CLAUSE] [--return CLAUSE] [--order-by CLAUSE]
-                  [--skip CLAUSE] [--limit CLAUSE] [--para NAME=VAL]
-                  [--spara NAME=VAL] [--lqpara NAME=VAL] [--no-header]
-                  [--force] [--index MODE [MODE ...]] [--idx SPEC [SPEC ...]]
-                  [--explain [MODE]] [--graph-cache GRAPH_CACHE_FILE]
-                  [--show-cache] [--read-only] [--import MODULE_LIST]
-                  [-o OUTPUT]
+                  [--skip CLAUSE] [--limit CLAUSE] [--multi N]
+                  [--para NAME=VAL] [--spara NAME=VAL] [--lqpara NAME=VAL]
+                  [--no-header] [--force] [--index MODE [MODE ...]]
+                  [--idx SPEC [SPEC ...]] [--explain [MODE]]
+                  [--graph-cache GRAPH_CACHE_FILE] [--show-cache]
+                  [--read-only] [--import MODULE_LIST] [-o OUTPUT]
 
 Query one or more KGTK files with Kypher.
 IMPORTANT: input can come from stdin but chaining queries is not yet supported.
@@ -57,6 +57,8 @@ optional arguments:
   --order-by CLAUSE     ORDER BY clause of a Kypher query
   --skip CLAUSE         SKIP clause of a Kypher query
   --limit CLAUSE        LIMIT clause of a Kypher query
+  --multi N             split each result into N separate edges or output rows
+                        of equal number of columns
   --para NAME=VAL       zero or more named value parameters to be passed to
                         the query
   --spara NAME=VAL      zero or more named string parameters to be passed to
@@ -1364,7 +1366,7 @@ Finally, here is an example query that marks symmetric edges
 in the data if they exist:
 
 ```
-kgtk query -i $GRAPH -i $WORKS \
+kgtk query -i $GRAPH \
      --match 'g: (x)-[r]->(y)' \
      --where 'r.label != "name"' \
      --opt   'g: (y)-[r2]->(x)' \
@@ -1379,6 +1381,102 @@ Result:
 | Otto  | loves  | Susi  | 0         |
 | Joe   | friend | Otto  | 0         |
 | Joe   | loves  | Joe   | 1         |
+
+
+### Returning multiple edges with `--multi`
+
+It is sometimes useful to output query results as a set of separate
+edges for each match instead of returning every match as a single row.
+For example, we might want to collect separate facets of information
+about each node of interest and then output those facets as separate
+rows or edges.  The `--multi N` option can be used for this purpose
+which simply splits each result row into `N` separate rows of equal
+size.  For example, in this query we collect a person's love interest
+and place of work and then output those as two separate edges per node
+`x` using `--multi 2`.  Note that the formatting of the return clause
+used here is simply for readability:
+
+```
+kgtk query -i $GRAPH -i $WORKS --multi 2 \
+     --match 'g: (x)-[r1:loves]->(y), \
+              w: (x)-[r2:works]->(c)' \
+     --return 'x, r1.label, y, \
+               x, r2.label, c'
+```
+Result:
+
+| node1 | label  | node2   |
+|-------|--------|---------|
+| Hans  | loves  | Molly   |
+| Hans  | works  | ACME    |
+| Otto  | loves  | Susi    |
+| Otto  | works  | Kaiser  |
+| Joe   | loves  | Joe     |
+| Joe   | works  | Kaiser  |
+
+The column headers of the return values constituting the first result
+row are used as the headers for all output rows.  Any column headers of
+other return values are simply ignored.
+
+We might also want to add optional information, for example, a
+person's friend.  In this case `--multi` filters output rows that
+contain NULL values leaving only rows with fully defined columns:
+
+```
+kgtk query -i $GRAPH -i $WORKS --multi 3 \
+     --match 'g: (x)-[r1:loves]->(y), \
+              w: (x)-[r2:works]->(c)' \
+     --opt   'g: (x)-[r3:friend]->(f)' \
+     --return 'x, r1.label, y, \
+               x, r2.label, c, \
+               x, r3.label, f'
+```
+Result:
+
+| node1 | label  |  node2   |
+|-------|--------|----------|
+| Hans  | loves  |  Molly   |
+| Hans  | works  |  ACME    |
+| Otto  | loves  |  Susi    |
+| Otto  | works  |  Kaiser  |
+| Joe   | loves  |  Joe     |
+| Joe   | works  |  Kaiser  |
+| Joe   | friend |  Otto    |
+
+Note that `--multi` is simply an output formatting directive.  All
+other processing of return values such as generation of distinct
+values, ordering, aggregation, limit, etc., is unaffected and proceeds
+as usual applying to the full set of values of the return clause.
+This also means one needs to be careful when including multi-valued
+edges in a `--multi` result, since the inherent combination of values
+that occurs (e.g., a person's love interest combined with all their
+friends) might lead to a lot of duplicated edges which then have to be
+filtered by subsequent processing.  Since the familiar `--return
+distinct...` applies to the whole return clause and not individual
+sub-edges or rows, deduplication of `--multi` output rows cannot be
+achieved in this way.
+
+In the following example we use a `--limit` clause to limit the number
+of return values, but since that limit applies to the set of full
+return values, we in fact get twice as many multi-output rows in this
+case:
+
+```
+kgtk query -i $GRAPH -i $WORKS --multi 2 \
+     --match 'g: (x)-[r1:loves]->(y), \
+              w: (x)-[r2:works]->(c)' \
+     --return 'x, r1.label, y, \
+               x, r2.label, c' \
+     --limit 2
+```
+Result:
+
+| node1 | label  | node2   |
+|-------|--------|---------|
+| Hans  | loves  | Molly   |
+| Hans  | works  | ACME    |
+| Otto  | loves  | Susi    |
+| Otto  | works  | Kaiser  |
 
 
 <A NAME="input-output"></A>
