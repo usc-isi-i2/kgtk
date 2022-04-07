@@ -8,6 +8,7 @@ import io
 import re
 import time
 import pprint
+import itertools
 
 import sh
 from   odictliteral import odict
@@ -162,7 +163,7 @@ class KgtkQuery(object):
 
     def __init__(self, files, store, options=None, query=None,
                  match='()', where=None, optionals=None, with_=None,
-                 ret='*', order=None, skip=None, limit=None,
+                 ret='*', order=None, skip=None, limit=None, multi=None,
                  parameters={}, index='auto', force=False, loglevel=0):
         self.options = options or {}
         self.store = store
@@ -207,7 +208,10 @@ class KgtkQuery(object):
         self.order_clause = self.query.get_order_clause()
         self.skip_clause = self.query.get_skip_clause()
         self.limit_clause = self.query.get_limit_clause()
-
+        if multi is not None and multi < 1:
+            raise Exception(f'Illegal multi-edge value: {multi}')
+        self.multi_edge = multi
+        
         # process/import files after we parsed the query, so we get syntax errors right away:
         self.files = []
         for file in listify(files):
@@ -930,6 +934,31 @@ class KgtkQuery(object):
         self.ensure_relevant_indexes(state)
         result = self.store.execute(state.get_sql(), state.get_parameters())
         self.result_header = [self.unalias_column_name(c[0]) for c in result.description]
+        result = self.wrap_multi_edge_result(result)
+        return result
+
+    def wrap_multi_edge_result(self, result):
+        """If we need to return multi-edges, wrap 'result' with the appropriate
+        iterator magic that first flattens and then regroups appropriately.
+        This also adjust the header column list as needed and filters out rows
+        that contain empty values if the query had optional clauses.
+        For single-edge queries, return the 'result' iterator unmodified.
+        """
+        if self.multi_edge and self.multi_edge > 1:
+            ncols = len(self.result_header)
+            if ncols % self.multi_edge != 0:
+                raise Exception(f'illegal multi-edge value: {ncols} result columns' +
+                                f' cannot be evenly split into {self.multi_edge} separate rows')
+            ncols = ncols // self.multi_edge
+            self.result_header = self.result_header[:ncols]
+            flatres = itertools.chain.from_iterable(result)
+            result = zip(*([flatres] * ncols))
+            if len(self.optional_clauses) > 0:
+                # if we have optionals, filter out tuples that contain empty (aka null) values -
+                # relies on all values being strings and that we can't distinguish null from empty
+                # (this is similar to SPARQL CONSTRUCT where triples are not created for patterns
+                # that involve an unbound/null variable):
+                result = filter(all, result)
         return result
 
     def explain(self, mode='plan'):
