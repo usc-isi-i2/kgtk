@@ -25,7 +25,7 @@ pp = pprint.PrettyPrinter(indent=4)
 # - support node property access without having to introduce the property variable in the
 #   match clause first (e.g., y.salary in the multi-graph join example)
 # + support parameters in lists
-# - support concat function (|| operator in sqlite)
+# + support concat function (|| operator in sqlite)
 # - maybe support positional parameters $0, $1,...
 # - intelligent interpretation of ^ and $ when regex-matching to string literals?
 #   - one can use kgtk_unstringify first to get to the text content
@@ -435,6 +435,36 @@ class KgtkQuery(object):
                 return graph, column, sql
         raise Exception("Unhandled property lookup expression: " + str(expr))
 
+    def function_call_to_sql(self, expr, state):
+        function = expr.function
+        normfun = function.upper()
+        if normfun == 'CAST':
+            # special-case SQLite CAST which isn't directly supported by Cypher:
+            if len(expr.args) == 2 and isinstance(expr.args[1], parser.Variable):
+                arg = self.expression_to_sql(expr.args[0], state)
+                typ = expr.args[1].name
+                return f'{function}({arg} AS {typ})'
+            else:
+                raise Exception("Illegal CAST expression")
+        elif normfun == 'LIKELIHOOD':
+            # special-case SQLite LIKELIHOOD which needs a compile-time constant for its probability argument:
+            if len(expr.args) == 2 and isinstance(expr.args[1], parser.Literal) and isinstance(expr.args[1].value, (int, float)):
+                arg = self.expression_to_sql(expr.args[0], state)
+                prob = expr.args[1].value
+                return f'{function}({arg}, {prob})'
+            else:
+                raise Exception("Illegal LIKELIHOOD expression")
+        elif is_text_match_operator(function):
+            return translate_text_match_op_to_sql(self, expr, state)
+        args = [self.expression_to_sql(arg, state) for arg in expr.args]
+        distinct = expr.distinct and 'DISTINCT ' or ''
+        self.store.load_user_function(function, error=False)
+        if normfun == 'CONCAT':
+            # special-case Cypher's CONCAT function which is handled by SQLite's ||-operator:
+            return f'({" || ".join(args)})'
+        else:
+            return f'{function}({distinct}{", ".join(args)})'
+
     def expression_to_sql(self, expr, state):
         """Translate a Kypher expression 'expr' into its SQL equivalent.
         """
@@ -487,21 +517,7 @@ class KgtkQuery(object):
             raise Exception("Unsupported operator: 'CASE'")
         
         elif expr_type == parser.Call:
-            function = expr.function
-            if function.upper() == 'CAST':
-                # special-case SQLite CAST which isn't directly supported by Cypher:
-                if len(expr.args) == 2 and isinstance(expr.args[1], parser.Variable):
-                    arg = self.expression_to_sql(expr.args[0], state)
-                    typ = expr.args[1].name
-                    return 'CAST(%s AS %s)' % (arg, typ)
-                else:
-                    raise Exception("Illegal CAST expression")
-            elif is_text_match_operator(function):
-                return translate_text_match_op_to_sql(self, expr, state)
-            args = [self.expression_to_sql(arg, state) for arg in expr.args]
-            distinct = expr.distinct and 'DISTINCT ' or ''
-            self.store.load_user_function(function, error=False)
-            return function + '(' + distinct + ', '.join(args) + ')'
+            return self.function_call_to_sql(expr, state)
         
         elif expr_type == parser.Expression2:
             graph, column, sql = self.property_to_sql(expr, state)
