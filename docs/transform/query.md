@@ -2132,6 +2132,7 @@ to their full documentation.
 | Function                  | Description                                                                                                    |
 |---------------------------|----------------------------------------------------------------------------------------------------------------|
 | cast(x, type)             | Convert `x` into an expression of `type`.                                                                      |
+| concat(x, ...)            | Cocatenate printed representations of the given arguments into a string.                                       |
 | instr(x, sub)             | Find the first occurrence of `sub` in string `x`  ([full doc](https://sqlite.org/lang_corefunc.html#instr)).   |
 | length(x)                 | Number of characters in a string `x`              ([full doc](https://sqlite.org/lang_corefunc.html#length)).  |
 | lower(x)                  | Convert `x` to lower case                         ([full doc](https://sqlite.org/lang_corefunc.html#lower)).   |
