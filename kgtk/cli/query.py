@@ -110,6 +110,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args):
                         help="SKIP clause of a Kypher query")
     parser.add_argument('--limit', metavar='CLAUSE', default=None, action='store', dest='limit',
                         help="LIMIT clause of a Kypher query")
+    parser.add_argument('--multi', metavar='N', type=int, default=None, action='store', dest='multi_edge',
+                        help="split each result into N separate edges or output rows of equal number of columns")
     parser.add_argument('--para', metavar='NAME=VAL', action='append', dest='regular_paras',
                         help="zero or more named value parameters to be passed to the query")
     parser.add_argument('--spara', metavar='NAME=VAL', action='append', dest='string_paras',
@@ -270,6 +272,7 @@ def run(input_files: KGTKFiles, **options):
                                       order=options.get('order'),
                                       skip=options.get('skip'),
                                       limit=options.get('limit'),
+                                      multi=options.get('multi_edge'),
                                       parameters=options.get('parameters'),
                                       index=options.get('index_mode'),
                                       force=options.get('force'))

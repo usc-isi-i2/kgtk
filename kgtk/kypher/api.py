@@ -137,6 +137,7 @@ class KypherQuery(object):
                 with_='*', wwhere=None,
                 ret='*', order=None,
                 skip=None, limit=None,
+                multi=None,
                 parameters={},
                 force=False,
                 index=None, loglevel=None,
@@ -200,6 +201,7 @@ class KypherQuery(object):
             order=cmd.get('order', order),
             skip=cmd.get('skip', skip),
             limit=limit,
+            multi=cmd.get('multi_edge', multi),
             parameters=cmd.get('parameters', parameters),
             force=cmd.get('force', force))
         
@@ -282,8 +284,10 @@ class KypherQuery(object):
         # TO DO: abstract some of this better in KgtkQuery API
         kgtk_query = self.kgtk_query
         result = kgtk_query.store.execute(self.sql, parameters)
-        if kgtk_query.result_header is None:
+        if kgtk_query.result_header is None or kgtk_query.multi_edge is not None:
+            # NOTE: if we have multi edges, we need to recompute the original full-width header:
             kgtk_query.result_header = [kgtk_query.unalias_column_name(c[0]) for c in result.description]
+            result = kgtk_query.wrap_multi_edge_result(result)
         if fmt is None:
             # convert to list so we can reuse if we memoize:
             return tuple(result)
@@ -625,6 +629,7 @@ class KypherApi(object):
                   with_='*', wwhere=None,
                   ret='*', order=None,
                   skip=None, limit=None,
+                  multi=None,
                   parameters={},
                   force=False,
                   index=None,
@@ -697,6 +702,8 @@ class KypherApi(object):
         However, the default for 'limit' is not unbounded but the number of 'maxresults' configured during
         creation of the API object.  To specify unlimited results, use -1 as the value for 'limit'.
 
+        'multi' is the multi-edge option of a Kypher query (just as the --multi option of the 'query' command).
+
         'parameters' is a fixed dictionary of Kypher parameter name/value pairs to use in each invocation
         of this query (parameter names do not include the leading dollar sign).  Any parameters whose values
         are not defined in this dictionary will need to be bound in each call to 'execute'.
@@ -720,8 +727,8 @@ class KypherApi(object):
         kypher_query = KypherQuery(
             self, inputs=inputs, doc=doc, name=name, maxcache=maxcache,
             query=query, match=match, where=where, opt=opt, owhere=owhere, opt2=opt2, owhere2=owhere2,
-            with_=with_, wwhere=wwhere, ret=ret, order=order, skip=skip, limit=limit, parameters=parameters,
-            force=force, index=index, loglevel=loglevel, cmd=cmd,
+            with_=with_, wwhere=wwhere, ret=ret, order=order, skip=skip, limit=limit, multi=multi,
+            parameters=parameters, force=force, index=index, loglevel=loglevel, cmd=cmd,
             **kwargs)
         return kypher_query
 
