@@ -8,10 +8,12 @@ from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 def parser():
     return {
         'help': 'Convert embeddings format from KGTK edge file to word2vec or Google Projector format, or vice versa',
-        'description': 'Convert KGTK edge embeddings file to word2vec or Google Projector format or vice versa\n. '
-                       'Takes an optional node file for Google Project format and processes only the top 10,000 '
-                       'rows from the edge file as Google Projector only accepts 10,000 rows\n.'
-                       'Also creates a metadata file for Google Projector if a node file is present.\n'
+        'description': 'Converts KGTK edge embeddings file to word2vec or Google Projector format.'
+                       'Takes an optional node file for Google Project format to create a metadata file. '
+                       'Processes only top 10,000 rows from the edge file for Google Projector as it only'
+                       ' accepts 10,000 rows.\n'
+                       'Additional options are shown in expert help.\n'
+                       'kgtk --expert convert-embeddings-format --help'
     }
 
 
@@ -22,8 +24,6 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         parser (argparse.ArgumentParser)
     """
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderMode, KgtkReaderOptions
-    from kgtk.io.kgtkwriter import KgtkWriter
-    from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     _expert: bool = parsed_shared_args._expert
@@ -43,7 +43,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                           positional=True,
                           allow_list=False)
 
-    parser.add_input_file(who="The KGTK node file for Google Projector Metadata",
+    parser.add_input_file(who="The KGTK node file for creating Google Projector Metadata. All the columns in the node "
+                              "file will be added to the metadata file by default. You can customise this with the "
+                              "--metadata-columns option.",
                           options=["--node-file"],
                           dest="node_file",
                           metavar="NODE_FILE",
@@ -52,7 +54,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_output_file()
 
-    parser.add_output_file(who="The metadata file for Google Projector",
+    parser.add_output_file(who="The output metadata file for Google Projector. If --output-format == gprojector and"
+                               "--metadata-file is not specified, a file named "
+                               "`kgtk_embeddings_gprojector_metadata.tsv` will be created in USER_HOME",
                            options=["--metadata-file"],
                            dest="metadata_file",
                            metavar="METADATA_FILE",
@@ -62,8 +66,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument("--input-property",
                         dest="input_property",
-                        help="The property name for embeddings in the input KGTK edge file. (default=embeddings)."
-                             "Only relevant if --input-format == kgtk",
+                        help="The property name for embeddings in the input KGTK edge file. (default=embeddings).",
                         default='embeddings',
                         type=str)
 
@@ -75,18 +78,18 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument("--metadata-columns",
                         dest="metadata_columns",
-                        help="A comma separated string of columns names in the input file to be used for creating the"
-                             "metadata file for Google projector. Only to be used when --output-format == 'gprojector',"
-                             "and --node-file is not specified.",
+                        help="A comma separated string of columns names in the input file or the --node-file to be "
+                             "used for creating the metadata file for Google projector. "
+                             "Only to be used when --output-format == 'gprojector'. If --node-file is specified, "
+                             "the command will look for --metadata-columns in the --node-file, otherwise input file."
+                             "The command will throw an error if the columns specified are not in either of the files.",
                         default=None,
                         type=str)
 
-    KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser,
                                     mode_options=True,
                                     default_mode=KgtkReaderMode[parsed_shared_args._mode],
                                     expert=_expert)
-    KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 
 def run(input_file: KGTKFiles,
@@ -122,7 +125,7 @@ def run(input_file: KGTKFiles,
                                                                input_property=input_property,
                                                                error_file=error_file,
                                                                output_metadata_file=metadata_file_path,
-                                                               edge_columns_metadata=metadata_columns,
+                                                               metadata_columns=metadata_columns,
                                                                **kwargs
                                                                )
 
