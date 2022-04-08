@@ -620,3 +620,4 @@ class KgtkVisualize:
                 ''')
         f.write('''  </script>
             </body>''')
+        f.close()
