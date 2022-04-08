@@ -61,4 +61,115 @@ optional arguments:
 
 ## Examples
 
-###
+### Convert KGTK to word2vec format
+
+```
+kgtk convert-embeddings-format -i examples/doc/convert_embeddings_edge.tsv --input-property graph_embeddings -o embeddings_word2vec.txt
+```
+
+Let's look at the output word2vec file ,
+```
+>>>head embeddings_word2vec.txt
+
+19 30
+Q494335 -0.162911773 0.071842454 -0.223435551 -0.289004564 0.834948838 ...
+Q1278301 0.039679553 -0.115788229 -0.179974616 0.590080559 0.158913493 ...
+Q611586 -0.015744781 -0.020170633 -0.313573331 0.515067458 0.039014913 ...
+Q816369 0.488982528 -0.719077468 0.109514274 0.301486224 -0.402110636 ...
+Q26833575 0.095825180 -0.207610607 -0.293776900 0.226735979 0.113529690 ...
+
+```
+
+### Convert KGTK to gprojector format, use all columns in the node file for metadata
+
+```
+kgtk convert-embeddings-format \
+  -i examples/doc/convert_embeddings_edge.tsv  \
+  --node-file examples/doc/convert_embeddings_node.tsv \
+  --output-format gprojector \
+  --input-property graph_embeddings \
+  --metadata-file gprojector_metadata.tsv \
+  -o embeddings_gprojector.tsv
+```
+
+Let's take a look at the `metadata` and `embeddings` file ,
+
+```
+>>> head gprojector_metadata.tsv
+```
+
+|id       |label       |type        |type_label  |
+|---------|------------|------------|------------|
+|Q494335  |Tours University|Q3551775    |university in France|
+|Q1278301 |Robert Bouline|Q5          |human       |
+|Q611586  |William Monahan|Q5          |human       |
+|Q816369  |rated voltage|Q25428      |voltage     |
+
+```
+>>> head embeddings_gprojector.tsv
+```
+
+|-0.162911773|0.071842454 |-0.223435551|-0.289004564|0.834948838 |-0.373376131|1.436196566|-0.942946911|...         |
+|------------|------------|------------|------------|------------|------------|-----------|------------|------------|
+|0.039679553 |-0.115788229|-0.179974616|0.590080559 |0.158913493 |0.008464743 |0.712676883|0.380636603 |...         |
+|-0.015744781|-0.020170633|-0.313573331|0.515067458 |0.039014913 |-0.114478707|0.770638645|0.304640383 |...         |
+|0.488982528 |-0.719077468|0.109514274 |0.301486224 |-0.402110636|0.291337997 |0.829619348|-0.365474463|...         |
+|0.095825180 |-0.207610607|-0.293776900|0.226735979 |0.113529690 |0.536592960 |0.747583449|-0.221452087|...         |
+
+
+
+
+### Convert KGTK to gprojector format, use columns: `label` and `type_label` in the node file for metadata
+
+```
+kgtk convert-embeddings-format \
+  -i examples/doc/convert_embeddings_edge.tsv  \
+  --node-file examples/doc/convert_embeddings_node.tsv \
+  --metadata-columns label,type_label \
+  --output-format gprojector \
+  --input-property graph_embeddings \
+  --metadata-file gprojector_metadata.tsv \
+  -o embeddings_gprojector.tsv
+```
+
+Let's take a look at the customized metadata file
+
+```
+>>> head gprojector_metadata.tsv
+```
+
+|label    |type_label  |
+|---------|------------|
+|Tours University|university in France|
+|Robert Bouline|human       |
+|William Monahan|human       |
+|rated voltage|voltage     |
+|France-Guernsey border|international border|
+
+### Convert KGTK to gprojector format, use columns: `node1_label` and `type` in the edge file for metadata
+
+```
+kgtk convert-embeddings-format \
+  -i examples/doc/convert_embeddings_edge.tsv  \
+  --metadata-columns node1_label,type \
+  --output-format gprojector \
+  --input-property graph_embeddings \
+  --metadata-file gprojector_metadata.tsv \
+  -o embeddings_gprojector.tsv
+```
+
+Let's take a look at the customized metadata file
+
+```
+>>> head gprojector_metadata.tsv
+```
+
+|node1_label|type        |
+|-----------|------------|
+|Tours University|university in France|
+|Robert Bouline|human       |
+|William Monahan|human       |
+|rated voltage|voltage     |
+|France-Guernsey border|international border|
+
+
