@@ -17,7 +17,7 @@ class ConvertEmbeddingsFormat(object):
                  node_file: Path = None,
                  output_format: Optional[str] = WORD2VEC,
                  input_property: Optional[str] = 'embeddings',
-                 edge_columns_metadata: Optional[str] = None,
+                 metadata_columns: Optional[str] = None,
                  output_metadata_file: Path = None,
                  error_file: str = sys.stderr,
                  line_separator: str = ",",
@@ -35,7 +35,7 @@ class ConvertEmbeddingsFormat(object):
             output_metadata_file = f"{str(Path.home())}/kgtk_embeddings_gprojector_metadata.tsv"
         self.output_metadata_file = output_metadata_file
 
-        self.edge_columns_metadata = edge_columns_metadata.split(",") if edge_columns_metadata is not None else []
+        self.metadata_columns = metadata_columns.split(",") if metadata_columns is not None else []
 
         self.error_file = error_file
 
@@ -48,7 +48,7 @@ class ConvertEmbeddingsFormat(object):
         row_count = 0
         if self.output_format == GPROJECTOR:
             node_metadata = self.read_node_file()
-            metadata_column_names = node_metadata['column_names'] if node_metadata else self.edge_columns_metadata
+            metadata_column_names = node_metadata['column_names'] if node_metadata else self.metadata_columns
             kw_metadata = KgtkWriter.open(file_path=self.output_metadata_file,
                                           error_file=self.error_file,
                                           column_names=metadata_column_names,
@@ -68,6 +68,19 @@ class ConvertEmbeddingsFormat(object):
                                          mode=KgtkReaderMode.EDGE,
                                          options=self.reader_options
                                          )
+        if self.node_file is None and self.output_format == GPROJECTOR and len(self.metadata_columns) > 0:
+            columns_not_found = []
+            for col in self.metadata_columns:
+                if col not in kr.column_name_map:
+                    columns_not_found.append(col)
+            if len(columns_not_found) > 0:
+                kr.close()
+                kw.close()
+                if kw_metadata:
+                    kw_metadata.close()
+                raise KGTKException(
+                    f"The following metadata columns are not found in the input file: {','.join(columns_not_found)}")
+
         if self.output_format == WORD2VEC:
             # first line is number of vectors and vector dimension
             line_count, dimension_count = self.count_lines(kr)
@@ -98,8 +111,8 @@ class ConvertEmbeddingsFormat(object):
                         if node_metadata:
                             if node1 in node_metadata:
                                 node1_metadata = "\t".join(node_metadata[node1].values())
-                        elif len(self.edge_columns_metadata) > 0:
-                            values = [row[kr.column_name_map[x]] for x in self.edge_columns_metadata]
+                        elif len(self.metadata_columns) > 0:
+                            values = [row[kr.column_name_map[x]] for x in self.metadata_columns]
                             node1_metadata = "\t".join(values)
                         kw_metadata.writeline(node1_metadata)
 
@@ -144,14 +157,26 @@ class ConvertEmbeddingsFormat(object):
                                               options=self.reader_options,
                                               mode=KgtkReaderMode.NONE,
                                               )
-        node_metadata['column_names'] = kr_node.column_names
+        columns_not_found = []
+        if len(self.metadata_columns) > 0:
+            for col in self.metadata_columns:
+                if col not in kr_node.column_names:
+                    columns_not_found.append(col)
+            node_metadata['column_names'] = self.metadata_columns
+        else:
+            node_metadata['column_names'] = kr_node.column_names
+
+        if len(columns_not_found) > 0:
+            kr_node.close()
+            raise KGTKException(
+                f"The following metadata columns are not found in the node file: {','.join(columns_not_found)}")
 
         for row in kr_node:
             if len(row) == len(kr_node.column_names):
                 node_id = row[kr_node.id_column_idx]
                 if node_id not in node_metadata:
                     node_metadata[node_id] = dict()
-                for col in kr_node.column_names:
+                for col in node_metadata['column_names']:
                     node_metadata[node_id][col] = row[kr_node.column_name_map[col]]
         kr_node.close()
         return node_metadata
