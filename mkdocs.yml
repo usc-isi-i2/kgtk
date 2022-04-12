@@ -26,6 +26,7 @@ nav:
       - 'calc': 'transform/calc.md'
       - 'cat': 'transform/cat.md'
       - 'compact': 'transform/compact.md'
+      - 'convert-embeddings-format': 'transform/convert_embeddings_format.md'
       - 'expand': 'transform/expand.md'
       - 'explode': 'transform/explode.md'
       - 'filter': 'transform/filter.md'

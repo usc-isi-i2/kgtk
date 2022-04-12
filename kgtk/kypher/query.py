@@ -8,6 +8,7 @@ import io
 import re
 import time
 import pprint
+import itertools
 
 import sh
 from   odictliteral import odict
@@ -24,7 +25,7 @@ pp = pprint.PrettyPrinter(indent=4)
 # - support node property access without having to introduce the property variable in the
 #   match clause first (e.g., y.salary in the multi-graph join example)
 # + support parameters in lists
-# - support concat function (|| operator in sqlite)
+# + support concat function (|| operator in sqlite)
 # - maybe support positional parameters $0, $1,...
 # - intelligent interpretation of ^ and $ when regex-matching to string literals?
 #   - one can use kgtk_unstringify first to get to the text content
@@ -162,7 +163,7 @@ class KgtkQuery(object):
 
     def __init__(self, files, store, options=None, query=None,
                  match='()', where=None, optionals=None, with_=None,
-                 ret='*', order=None, skip=None, limit=None,
+                 ret='*', order=None, skip=None, limit=None, multi=None,
                  parameters={}, index='auto', force=False, loglevel=0):
         self.options = options or {}
         self.store = store
@@ -207,7 +208,10 @@ class KgtkQuery(object):
         self.order_clause = self.query.get_order_clause()
         self.skip_clause = self.query.get_skip_clause()
         self.limit_clause = self.query.get_limit_clause()
-
+        if multi is not None and multi < 1:
+            raise Exception(f'Illegal multi-edge value: {multi}')
+        self.multi_edge = multi
+        
         # process/import files after we parsed the query, so we get syntax errors right away:
         self.files = []
         for file in listify(files):
@@ -431,6 +435,36 @@ class KgtkQuery(object):
                 return graph, column, sql
         raise Exception("Unhandled property lookup expression: " + str(expr))
 
+    def function_call_to_sql(self, expr, state):
+        function = expr.function
+        normfun = function.upper()
+        if normfun == 'CAST':
+            # special-case SQLite CAST which isn't directly supported by Cypher:
+            if len(expr.args) == 2 and isinstance(expr.args[1], parser.Variable):
+                arg = self.expression_to_sql(expr.args[0], state)
+                typ = expr.args[1].name
+                return f'{function}({arg} AS {typ})'
+            else:
+                raise Exception("Illegal CAST expression")
+        elif normfun == 'LIKELIHOOD':
+            # special-case SQLite LIKELIHOOD which needs a compile-time constant for its probability argument:
+            if len(expr.args) == 2 and isinstance(expr.args[1], parser.Literal) and isinstance(expr.args[1].value, (int, float)):
+                arg = self.expression_to_sql(expr.args[0], state)
+                prob = expr.args[1].value
+                return f'{function}({arg}, {prob})'
+            else:
+                raise Exception("Illegal LIKELIHOOD expression")
+        elif is_text_match_operator(function):
+            return translate_text_match_op_to_sql(self, expr, state)
+        args = [self.expression_to_sql(arg, state) for arg in expr.args]
+        distinct = expr.distinct and 'DISTINCT ' or ''
+        self.store.load_user_function(function, error=False)
+        if normfun == 'CONCAT':
+            # special-case Cypher's CONCAT function which is handled by SQLite's ||-operator:
+            return f'({" || ".join(args)})'
+        else:
+            return f'{function}({distinct}{", ".join(args)})'
+
     def expression_to_sql(self, expr, state):
         """Translate a Kypher expression 'expr' into its SQL equivalent.
         """
@@ -483,21 +517,7 @@ class KgtkQuery(object):
             raise Exception("Unsupported operator: 'CASE'")
         
         elif expr_type == parser.Call:
-            function = expr.function
-            if function.upper() == 'CAST':
-                # special-case SQLite CAST which isn't directly supported by Cypher:
-                if len(expr.args) == 2 and isinstance(expr.args[1], parser.Variable):
-                    arg = self.expression_to_sql(expr.args[0], state)
-                    typ = expr.args[1].name
-                    return 'CAST(%s AS %s)' % (arg, typ)
-                else:
-                    raise Exception("Illegal CAST expression")
-            elif is_text_match_operator(function):
-                return translate_text_match_op_to_sql(self, expr, state)
-            args = [self.expression_to_sql(arg, state) for arg in expr.args]
-            distinct = expr.distinct and 'DISTINCT ' or ''
-            self.store.load_user_function(function, error=False)
-            return function + '(' + distinct + ', '.join(args) + ')'
+            return self.function_call_to_sql(expr, state)
         
         elif expr_type == parser.Expression2:
             graph, column, sql = self.property_to_sql(expr, state)
@@ -930,6 +950,31 @@ class KgtkQuery(object):
         self.ensure_relevant_indexes(state)
         result = self.store.execute(state.get_sql(), state.get_parameters())
         self.result_header = [self.unalias_column_name(c[0]) for c in result.description]
+        result = self.wrap_multi_edge_result(result)
+        return result
+
+    def wrap_multi_edge_result(self, result):
+        """If we need to return multi-edges, wrap 'result' with the appropriate
+        iterator magic that first flattens and then regroups appropriately.
+        This also adjust the header column list as needed and filters out rows
+        that contain empty values if the query had optional clauses.
+        For single-edge queries, return the 'result' iterator unmodified.
+        """
+        if self.multi_edge and self.multi_edge > 1:
+            ncols = len(self.result_header)
+            if ncols % self.multi_edge != 0:
+                raise Exception(f'illegal multi-edge value: {ncols} result columns' +
+                                f' cannot be evenly split into {self.multi_edge} separate rows')
+            ncols = ncols // self.multi_edge
+            self.result_header = self.result_header[:ncols]
+            flatres = itertools.chain.from_iterable(result)
+            result = zip(*([flatres] * ncols))
+            if len(self.optional_clauses) > 0:
+                # if we have optionals, filter out tuples that contain empty (aka null) values -
+                # relies on all values being strings and that we can't distinguish null from empty
+                # (this is similar to SPARQL CONSTRUCT where triples are not created for patterns
+                # that involve an unbound/null variable):
+                result = filter(all, result)
         return result
 
     def explain(self, mode='plan'):
