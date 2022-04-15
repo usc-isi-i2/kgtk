@@ -482,6 +482,7 @@ class KgtkVisualize:
 
     def to_html(self, d):
         output_kgtk_file: Path = KGTKArgumentParser.get_output_file(self.output_file)
+
         f = open(output_kgtk_file, 'w')
         f.write(f'''<head>
             <style> body {{ margin: 0; }} </style>
@@ -518,11 +519,17 @@ class KgtkVisualize:
                 .linkWidth((link) => link.width)''')
             node_text_format = self.node_gradient_scale + '(node.color)'
         else:
-            f.write(f'''
+            if len(self.node_color_map) <= 10:
+                f.write(f'''
+                        .nodeColor((node) => node.color[0] == "#" ? node.color : d3.schemeCategory10[node.color])
+                        .linkWidth((link) => link.width)''')
+                node_text_format = f'{self.node_categorical_scale}(node.color)'
+            else:
+                f.write(f'''
                         .nodeColor((node) => node.color[0] == "#" ? node.color : {self.node_categorical_scale}(node.color))
                         .linkWidth((link) => link.width)''')
+                node_text_format = f'{self.node_categorical_scale}(node.color)'
 
-            node_text_format = f'{self.node_categorical_scale}(node.color)'
         if self.node_border_color is not None:
             node_text_format = "'" + self.node_border_color + "'"
         if self.direction == 'arrow':
@@ -569,9 +576,12 @@ class KgtkVisualize:
                       node.__bckgDimensions = bckgDimensions; // to re-use in nodePointerAreaPaint
                       })''')
         if self.edge_color_style == CATEGORICAL:
-            f.write(
-                f'''        .linkColor((link) => link.color[0] == "#" ? link.color :
-                            {self.edge_categorical_scale}[link.color])''')
+            if len(self.edge_color_map) <= 10:
+                f.write(f'''        
+                .linkColor((link) => link.color[0] == "#" ? link.color : d3.schemeCategory10[link.color])''')
+            else:
+                f.write(f'''        
+                .linkColor((link) => link.color[0] == "#" ? link.color : {self.edge_categorical_scale}(link.color))''')
         elif self.edge_color_style == GRADIENT:
             f.write(
                 f'''        .linkColor((link) => link.color[0] == "#" ? link.color :
