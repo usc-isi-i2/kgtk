@@ -76,6 +76,7 @@ class KgtkVisualize:
             edge_categorical_scale: str = 'rainbow',
             node_gradient_scale: str = 'd3.interpolateRdBu',
             edge_gradient_scale: str = 'd3.interpolateRdBu',
+            show_blank_labels: bool = False,
             kwargs=None):
         if kwargs is None:
             kwargs = {'errors_to_stderr': True, 'show_options': False}
@@ -120,6 +121,7 @@ class KgtkVisualize:
         self.edge_gradient_scale = edge_gradient_scale
         self.node_color_numbers = node_color_numbers
         self.node_color_hex = node_color_hex
+        self.show_blank_labels = show_blank_labels
         self.kwargs = kwargs
 
         self.input_kgtk_file: Path = KGTKArgumentParser.get_input_file(self.input_file)
@@ -330,7 +332,7 @@ class KgtkVisualize:
 
                 if 'label' in kr_node.column_name_map:
                     _node_label, _, _ = kgtk_format.destringify(row[kr_node.column_name_map['label']])
-                    if _node_label != "":
+                    if _node_label != "" or self.show_blank_labels:
                         temp['label'] = _node_label
                     else:
                         temp['label'] = _id
@@ -343,7 +345,7 @@ class KgtkVisualize:
                     else:
                         temp['tooltip'] = temp['label']
                 else:
-                    temp['tooltip'] = temp['label']
+                    temp['tooltip'] = temp['label'] if temp['label'] != "" else _id
 
                 if self.node_color_column is not None:
                     _node_color = row[kr_node.column_name_map[self.node_color_column]]
