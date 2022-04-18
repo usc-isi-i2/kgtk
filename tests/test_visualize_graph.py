@@ -24,8 +24,7 @@ class TestVisualizeGraph(unittest.TestCase):
         self.temp_dir = tempfile.mkdtemp()
 
     def tearDown(self) -> None:
-        pass
-        # shutil.rmtree(self.temp_dir)
+        shutil.rmtree(self.temp_dir)
 
     def test_default_no_node_file(self):
         output = f'{self.temp_dir}/test_1.html'
