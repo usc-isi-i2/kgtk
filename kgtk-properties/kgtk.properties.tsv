@@ -127,3 +127,11 @@ Pinstance_count_star	label	'number of instances of a class and its subclasses (c
 Pinstance_count_star	description	'The number of P31/P31x instances of a class and its subclasses'@en	Pinstance_count_star-description-bceb9a
 Pinstance_count_star	P31	Q18616576	Pinstance_count_star-P31-Q18616576
 Pinstance_count_star	data_type	quantity	Pinstance_count_star-data_type-1a7b30
+Plong_abstract	label	'abstract from Wikipedia articles'@en	Plong_abstract-label-cb8792
+Plong_abstract	desccription	'text before the table of contents from Wikipedia articles'@en	Plong_abstract-desccription-687f33
+Plong_abstract	P31	Q18616576	Plong_abstract-P31-Q18616576
+Plong_abstract	data_type	string	Plong_abstract-data_type-473287
+Pshort_abstract	label	'short abstract from Wikipedia articles'@en	Pshort_abstract-label-45e53b
+Pshort_abstract	description	'text before the table of contents from Wikipedia articles shortened to 2-3 sentences'@en	Pshort_abstract-description-d251e5
+Pshort_abstract	P31	Q18616576	Pshort_abstract-P31-Q18616576
+Pshort_abstract	data_type	string	Pshort_abstract-data_type-473287
