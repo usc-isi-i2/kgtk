@@ -240,6 +240,10 @@ class SqliteStore(SqlStore):
         self.user_functions = set()
         self.init_meta_tables()
         self.configure()
+        # run this right after 'configure()' since it is not thread
+        # safe and later calls might lead to undefined behavior;
+        # also we might need it for distinct or order-by queries:
+        self.configure_temp_dir()
 
     def log(self, level, message):
         if self.loglevel >= level:
@@ -286,9 +290,14 @@ class SqliteStore(SqlStore):
         This tries to avoid disk-full errors when large files are imported and indexed, since
         standard temp directories are usually located in smaller OS disk partitions.
         """
-        if not self.pragma('temp_store_directory') and not os.getenv('SQLITE_TMPDIR') and self.dbfile:
-            tmpdir = os.path.dirname(os.path.realpath(self.dbfile))
-            self.pragma(f'temp_store_directory={sql_quote_ident(tmpdir)}')
+        # 'temp_store_directory' is deprecated and might not be available, but there is no good
+        # alternative except SQLITE_TMPDIR, so we try anyway and report just a warning if --debug:
+        try:
+            if not self.pragma('temp_store_directory') and not os.getenv('SQLITE_TMPDIR') and self.dbfile:
+                tmpdir = os.path.dirname(os.path.realpath(self.dbfile))
+                self.pragma(f'temp_store_directory={sql_quote_ident(tmpdir)}')
+        except:
+            self.log(1, "WARN: cannot set 'pragma temp_store_directory', set SQLITE_TMPDIR envar instead if needed")
 
 
     ### DB control:
@@ -689,7 +698,6 @@ class SqliteStore(SqlStore):
         if not self.has_graph_index(table_name, index):
             if self.readonly:
                 return
-            self.configure_temp_dir()
             loglevel = explain and 0 or 1
             indexes = self.get_graph_indexes(table_name)
             # delete anything that is redefined by this 'index':
@@ -866,7 +874,6 @@ class SqliteStore(SqlStore):
         indexes = self.get_graph_indexes(table_name)
         if index not in indexes:
             raise KGTKException(f'No such index for {table_name}: {index}]')
-        self.configure_temp_dir()
         oldsize = self.get_db_size()
         for index_stmt in index.get_drop_script():
             self.log(1, index_stmt)
@@ -896,7 +903,6 @@ class SqliteStore(SqlStore):
         if self.readonly:
             return
         self.log(1, 'IMPORT graph via csv.reader into table %s from %s ...' % (table, file))
-        self.configure_temp_dir()
         if self.is_standard_input(file):
             file = sys.stdin
         with open_to_read(file) as inp:
@@ -954,7 +960,6 @@ class SqliteStore(SqlStore):
                 self.dbfile, '.import /dev/stdin %s' % table]
 
         self.log(1, 'IMPORT graph directly into table %s from %s ...' % (table, file))
-        self.configure_temp_dir()
         try:
             if isplain:
                 tailproc = tail('-n', '+2', file, _piped=True)
