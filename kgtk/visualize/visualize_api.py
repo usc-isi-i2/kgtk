@@ -331,7 +331,10 @@ class KgtkVisualize:
                     temp['fy'] = float(row[kr_node.column_name_map['y']])
 
                 if 'label' in kr_node.column_name_map:
-                    _node_label, _, _ = kgtk_format.destringify(row[kr_node.column_name_map['label']])
+                    _node_label = row[kr_node.column_name_map['label']]
+                    if '@' in _node_label:
+                        _node_label, _, _ = kgtk_format.destringify(_node_label)
+
                     if _node_label != "" or self.show_blank_labels:
                         temp['label'] = _node_label
                     else:
