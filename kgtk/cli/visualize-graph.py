@@ -238,6 +238,13 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         default='d3.interpolateRdBu',
                         help="Edge color gradient scale from d3-scale-chromatic. Default: d3.interpolateRdBu")
 
+    parser.add_argument('--show-blank-labels',
+                        dest='show_blank_labels',
+                        action='store_true',
+                        default=False,
+                        help="if --show-text is specified, show the label of a Qnode as emptry string, and not the "
+                             "Qnode, if the label is an empty string.")
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
@@ -283,7 +290,7 @@ def run(input_file: KGTKFiles,
         edge_categorical_scale: str = 'rainbow',
         node_gradient_scale: str = 'd3.interpolateRdBu',
         edge_gradient_scale: str = 'd3.interpolateRdBu',
-
+        show_blank_labels: bool = False,
         **kwargs  # Whatever KgtkFileOptions and KgtkValueOptions want.
         ) -> int:
     from kgtk.visualize.visualize_api import KgtkVisualize
@@ -328,6 +335,7 @@ def run(input_file: KGTKFiles,
         edge_categorical_scale=edge_categorical_scale,
         node_gradient_scale=node_gradient_scale,
         edge_gradient_scale=edge_gradient_scale,
+        show_blank_labels=show_blank_labels,
         kwargs=kwargs
     )
     kv.execute()

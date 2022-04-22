@@ -8,6 +8,7 @@ class TestVisualizeGraph(unittest.TestCase):
     def setUp(self) -> None:
         self.example_file = 'data/visualize_force_graph_example2.tsv'
         self.node_file = 'data/visualize_force_graph_example2_node.tsv'
+        self.node_file_blank_labels = 'data/visualize_graph_node_example_blank_labels.tsv'
         self.ground_truth_default = 'data/visualize_graph_example_1_no_node_default.html'
         self.ground_truth_color_node = 'data/visualize_graph_example_color_by_node_column.html'
         self.ground_truth_color_node_log = 'data/visualize_graph_example_color_by_node_column_log.html'
@@ -19,6 +20,7 @@ class TestVisualizeGraph(unittest.TestCase):
         self.ground_truth_node_text = 'data/visualize_graph_example_node_text.html'
         self.ground_truth_edge_text = 'data/visualize_graph_example_edge_text.html'
         self.ground_truth_node_edge_text = 'data/visualize_graph_example_node_edge_text.html'
+        self.ground_truth_node_text_blank_labels = 'data/visualize_graph_example_node_text_blank_labels.html'
         self.temp_dir = tempfile.mkdtemp()
 
     def tearDown(self) -> None:
@@ -217,6 +219,26 @@ class TestVisualizeGraph(unittest.TestCase):
                   )
 
         f = open(self.ground_truth_node_edge_text)
+        f1 = set(f.readlines())
+        f.close()
+        with open(output) as f2:
+            for line in f2:
+                self.assertTrue(line in f1)
+
+    def test_node_text_blank_labels(self):
+        output = f'{self.temp_dir}/test_12.html'
+        cli_entry("kgtk", "--debug",
+                  "visualize-graph",
+                  "-i", self.example_file,
+                  "--node-file", f'{self.node_file_blank_labels}',
+                  "-o", f'{output}',
+                  "--node-color-column", "hex_color",
+                  "--node-color-hex",
+                  "--show-text", "above",
+                  "--show-blank-labels"
+                  )
+
+        f = open(self.ground_truth_node_text_blank_labels)
         f1 = set(f.readlines())
         f.close()
         with open(output) as f2:
