@@ -7,7 +7,6 @@ import os.path
 import io
 import re
 import time
-import pprint
 import itertools
 
 import sh
@@ -16,8 +15,8 @@ from   odictliteral import odict
 import kgtk.kypher.parser as parser
 import kgtk.kypher.sqlstore as ss
 from   kgtk.value.kgtkvalue import KgtkValue
-
-pp = pprint.PrettyPrinter(indent=4)
+from   kgtk.kypher.utils import *
+import kgtk.kypher.indexspec as ispec
 
 
 ### TO DO:
@@ -400,11 +399,11 @@ class KgtkQuery(object):
             if graph == self.ALIAS_GRAPH:
                 # variable names a return column alias, rename it apart to avoid name conflicts:
                 column = self.alias_column_name(col)
-                return None, column, ss.sql_quote_ident(column)
+                return None, column, sql_quote_ident(column)
         # otherwise, pick the representative from the set of equiv-joined column vars,
         # which corresponds to the graph alias and column name used by the first reference:
         graph, column = sql_vars[0]
-        return graph, column, f'{graph}.{ss.sql_quote_ident(column)}'
+        return graph, column, f'{graph}.{sql_quote_ident(column)}'
 
     def property_to_sql(self, expr, state):
         """Translate the property lookup expression 'expr' into the corresponding
@@ -696,7 +695,7 @@ class KgtkQuery(object):
         external_condition = []
         
         for (g1, c1), (g2, c2) in sorted(list(state.get_match_clause_joins(match_clause))):
-            condition = '%s.%s = %s.%s' % (g1, ss.sql_quote_ident(c1), g2, ss.sql_quote_ident(c2))
+            condition = '%s.%s = %s.%s' % (g1, sql_quote_ident(c1), g2, sql_quote_ident(c2))
             graph1 = (self.graph_alias_to_graph(g1), g1)
             graph2 = (self.graph_alias_to_graph(g2), g2)
             internal = graph1 in clause_sources and graph2 in clause_sources
@@ -714,7 +713,7 @@ class KgtkQuery(object):
                 external_condition.append(condition)
 
         for (g, c), val in sorted(list(state.get_match_clause_restrictions(match_clause))):
-            internal_condition.append('%s.%s = %s' % (g, ss.sql_quote_ident(c), val))
+            internal_condition.append('%s.%s = %s' % (g, sql_quote_ident(c), val))
 
         where = self.where_clause_to_sql(match_clause.get_where_clause(), state)
         if where:
@@ -869,18 +868,18 @@ class KgtkQuery(object):
         return default_index_specs
 
     def ensure_indexes(self, graphs, index_specs, state, explain=False):
-        """Ensure that for each graph in 'graphs' all indexes according to 'index_specs' are avaible.
+        """Ensure that for each graph in 'graphs' all indexes according to 'index_specs' are available.
         'state' is the final translation state of the query.
         """
         graphs = listify(graphs)
         for index_spec in listify(index_specs):
-            index_spec = ss.get_normalized_index_mode(index_spec)
+            index_spec = ispec.get_normalized_index_mode(index_spec)
             if isinstance(index_spec, list):
                 for spec in index_spec:
                     for graph in graphs:
-                        self.store.ensure_graph_index(graph, ss.TableIndex(graph, spec), explain=explain)
+                        self.store.ensure_graph_index(graph, ispec.TableIndex(graph, spec), explain=explain)
                     
-            elif index_spec == ss.INDEX_MODE_AUTO:
+            elif index_spec == ispec.INDEX_MODE_AUTO:
                 # build indexes as suggested by query joins and restrictions (restricted to 'graphs'):
                 for graph, column in self.compute_auto_indexes(state):
                     if graph in graphs:
@@ -891,7 +890,7 @@ class KgtkQuery(object):
                             unique = False
                             self.store.ensure_graph_index_for_columns(graph, column, unique=unique, explain=explain)
                             
-            elif index_spec == ss.INDEX_MODE_EXPERT:
+            elif index_spec == ispec.INDEX_MODE_EXPERT:
                 # build indexes as suggested by the database (restricted to 'graphs'):
                 for name, graph, columns in self.store.suggest_indexes(state.get_sql()):
                     if graph in graphs:
@@ -902,18 +901,18 @@ class KgtkQuery(object):
                         unique = False
                         self.store.ensure_graph_index_for_columns(graph, column, unique=unique, explain=explain)
 
-            elif index_spec == ss.INDEX_MODE_NONE:
+            elif index_spec == ispec.INDEX_MODE_NONE:
                 pass
 
-            elif index_spec == ss.INDEX_MODE_CLEAR:
+            elif index_spec == ispec.INDEX_MODE_CLEAR:
                 for graph in graphs:
                     self.store.drop_graph_indexes(graph)
 
-            elif index_spec == ss.INDEX_MODE_CLEAR_TEXT:
+            elif index_spec == ispec.INDEX_MODE_CLEAR_TEXT:
                 for graph in graphs:
-                    self.store.drop_graph_indexes(graph, index_type=ss.TextIndex)
+                    self.store.drop_graph_indexes(graph, index_type=ispec.TextIndex)
             
-            elif index_spec in (ss.INDEX_MODE_AUTO_TEXT):
+            elif index_spec in (ispec.INDEX_MODE_AUTO_TEXT):
                 print(f'WARN: {index_spec} not yet implemented')
 
     def ensure_relevant_indexes(self, state, explain=False):
@@ -1317,7 +1316,7 @@ def translate_text_match_op_to_sql(query, expr, state):
     if not (column_name == query.get_id_column(graph) and isinstance(arg1, parser.Variable)):
         # we have a column-specific search:
         index_column = column_name
-    index_column = ss.sql_quote_ident(index_column)
+    index_column = sql_quote_ident(index_column)
     state.add_match_clause_aux_table(index_table, index_alias)
 
     if normfun in ('match', 'like', 'glob'):
@@ -1337,16 +1336,16 @@ def get_implied_text_indexes(query, graph):
     """
     index_specs = query.get_explicit_graph_index_specs().get(graph)
     index_specs = query.get_default_graph_index_specs().get(graph) if index_specs is None else index_specs
-    current_indexes = [idx for idx in query.store.get_graph_indexes(graph) if isinstance(idx, ss.TextIndex)]
+    current_indexes = [idx for idx in query.store.get_graph_indexes(graph) if isinstance(idx, ispec.TextIndex)]
     explicit_indexes = []
     for index_spec in index_specs:
-        index_spec = ss.get_normalized_index_mode(index_spec)
+        index_spec = ispec.get_normalized_index_mode(index_spec)
         if isinstance(index_spec, list):
                 for spec in index_spec:
-                    index = ss.TableIndex(graph, spec)
-                    if isinstance(index, ss.TextIndex):
+                    index = ispec.TableIndex(graph, spec)
+                    if isinstance(index, ispec.TextIndex):
                         explicit_indexes.append(index)
-        elif index_spec in (ss.INDEX_MODE_CLEAR, ss.INDEX_MODE_CLEAR_TEXT):
+        elif index_spec in (ispec.INDEX_MODE_CLEAR, ispec.INDEX_MODE_CLEAR_TEXT):
             explicit_indexes = []
             current_indexes = []
     for expidx in explicit_indexes[:]:
