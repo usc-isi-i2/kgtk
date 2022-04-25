@@ -267,7 +267,7 @@ class TableIndex(object):
             self.__class__ = klass
         return index
 
-    INDEX_TYPES = {'index': 'StandardIndex', 'text': 'TextIndex', 'sql': 'SqlIndex'}
+    INDEX_TYPES = {'index': 'StandardIndex', 'text': 'TextIndex', 'sql': 'SqlIndex', 'vector': 'VectorIndex'}
     DEFAULT_INDEX_TYPE = 'index'
 
     def get_index_type_name(self):
@@ -626,23 +626,81 @@ class SqlIndex(TableIndex):
         return (self.table == index.table
                 and isinstance(index, (SqlIndex, StandardIndex))
                 and self.subsumes_columns(index.index.columns.keys()))
+
+
+class VectorIndex(TableIndex):
+    """Specialized indexes needed for numeric vectors.  Since these are not really
+    SQL indexes, this abuses the current SQL table-centric model a little bit.
+    We should refactor if we stick with this.
+    """
+
+    def parse_spec(self, index_spec):
+        """Parse a vector table 'index_spec' such as, for example:
+        'vector:node2' or 'vector: node2/fmt=auto/nn=faiss,node1;oemb/fmt=numpy'.
+        """
+        # TO DO:
+        # - generalize option definition and checking
+        # - support 'node2' as the default column
+        parse = parse_index_spec(index_spec)
+        type_name = self.get_index_type_name()
+        if parse.type is None:
+            parse.type = type_name
+        if parse.type != type_name:
+            raise KGTKException(f'mismatched index spec type: {parse.type}')
+        return parse
+
+    def get_name(self):
+        """Return the global name to be used for this index (not really used).
+        """
+        table_name = self.get_table_name()
+        index_name = self.index.options.get('name')
+        if index_name is None:
+            import shortuuid
+            # generate a name based on the index itself instead of external state
+            # (minor gamble on uniqueness with shortened key):
+            index_name = shortuuid.uuid(repr(self)).lower()[0:10] + '_'
+        return f'{table_name}_vecidx_{index_name}'
+
+    def get_create_script(self):
+        """Return a list of SQL statements required to create this index.
+        Since this is not an SQL index, we return the empty list here.
+        """
+        return []
+
+    def get_drop_script(self):
+        """Return a list of SQL statements required to delete this index.
+        Since this is not an SQL index, we return the empty list here.
+        """
+        return []
+
+    def subsumes(self, index):
+        """Return True if 'self' subsumes or is more general than 'index',
+        that is it can handle a superset of lookup requests.
+        """
+        return False
     
 """
->>> ss.TableIndex('graph1', 'node1, label, node2')
+>>> TableIndex('graph1', 'node1, label, node2')
 StandardIndex('graph1', sdict['type': 'index', 'columns': sdict['node1': {}, 'label': {}, 'node2': {}], 'options': {}])
 >>> _.get_create_script()
 ['CREATE INDEX "graph1_node1_label_node2_idx" ON "graph1" ("node1", "label", "node2")',
  'ANALYZE "graph1_node1_label_node2_idx"']
 
->>> ss.TableIndex('graph2', 'text:node1,node2//tokenize=trigram//case_sensitive//name=myidx')
+>>> TableIndex('graph2', 'text:node1,node2//tokenize=trigram//case_sensitive//name=myidx')
 TextIndex('graph2', sdict['type': 'text', 'columns': sdict['node1': {}, 'node2': {}], 'options': {'tokenize': 'trigram', 'case_sensitive': True, 'name': 'myidx', 'content': 'graph2'}])
 >>> _.get_create_script()
 ['CREATE VIRTUAL TABLE "graph2_txtidx_myidx" USING FTS5 ("node1", "node2", tokenize="trigram case_sensitive \'1\'", content="graph2")', 
  'INSERT INTO "graph2_txtidx_myidx" ("node1", "node2") SELECT "node1", "node2" FROM graph2']
 
->>> ss.TableIndex('graph_1', 'sql: CREATE UNIQUE INDEX "graph_1_node1_idx" on graph_1 ("node1")')
+>>> TableIndex('graph_1', 'sql: CREATE UNIQUE INDEX "graph_1_node1_idx" on graph_1 ("node1")')
 SqlIndex('graph_1', sdict['type': 'sql', 'columns': sdict['node1': {}], 'options': {'unique': True, 'name': 'graph_1_node1_idx', 'table': 'graph_1'}, 'definition': 'CREATE UNIQUE INDEX "graph_1_node1_idx" on graph_1 ("node1")'])
 >>> _.get_create_script()
 ['CREATE UNIQUE INDEX "graph_1_node1_idx" on graph_1 ("node1")',
  'ANALYZE "graph_1_node1_idx"']
+
+>>> TableIndex('graph2', 'vector: node2/fmt=auto/nn=faiss/store=hd5')
+VectorIndex('graph2', sdict['type': 'vector', 'columns': sdict['node2': {'fmt': 'auto', 'nn': 'faiss', 'store': 'hd5'}], 'options': {}])
+>>> _.get_create_script()
+[]
+>>> 
 """
