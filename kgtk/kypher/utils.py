@@ -15,6 +15,9 @@ pp = pprint.PrettyPrinter(indent=4)
 
 ### Utilities
 
+def listify(x):
+    return (hasattr(x, '__iter__') and not isinstance(x, str) and list(x)) or (x and [x]) or []
+
 # TO DO: I am sure some form of this already exists somewhere in Craig's code
 
 def open_to_read(file, mode='rt'):
