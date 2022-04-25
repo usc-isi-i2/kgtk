@@ -13,6 +13,7 @@ import csv
 import io
 import re
 from   functools import lru_cache
+import itertools
 
 import sh
 
@@ -20,7 +21,7 @@ import sh
 from   kgtk.value.kgtkvalue import KgtkValue
 from   kgtk.exceptions import KGTKException
 from   kgtk.kypher.utils import *
-from   kgtk.kypher.indexspec import TableIndex
+import kgtk.kypher.indexspec as ispec
 
 
 ### TO DO:
@@ -140,6 +141,7 @@ class SqliteStore(SqlStore):
         else:
             self.dbfile = self.pragma('database_list')[0][2]
         self.user_functions = set()
+        self.vector_store = None
         self.init_meta_tables()
         self.configure()
         # run this right after 'configure()' since it is not thread
@@ -266,9 +268,11 @@ class SqliteStore(SqlStore):
     AGGREGATE_FUNCTIONS = ('AVG', 'COUNT', 'GROUP_CONCAT', 'MAX', 'MIN', 'SUM', 'TOTAL')
 
     @staticmethod
-    def register_user_function(name, num_params, func, deterministic=False):
+    def register_user_function(name, num_params, func, deterministic=False, closure=None):
         name = name.upper()
-        SqliteStore.USER_FUNCTIONS[name] = {'name': name, 'num_params': num_params, 'func': func, 'deterministic': deterministic}
+        SqliteStore.USER_FUNCTIONS[name] = {'name': name, 'num_params': num_params,
+                                            'func': func, 'deterministic': deterministic,
+                                            'closure': closure}
 
     @staticmethod
     def is_user_function(name):
@@ -281,9 +285,19 @@ class SqliteStore(SqlStore):
             return
         elif self.is_user_function(name):
             info = self.USER_FUNCTIONS.get(name)
+            func = info['func']
+            closure = info['closure']
+            if closure is not None:
+                # the function is actually a function generator which is called with a closure object:
+                if closure == 'sqlstore':
+                    func = func(self)
+                elif closure == 'vecstore':
+                    func = func(self.get_vector_store())
+                else:
+                    raise KGTKException(f'Unhandled user-function closure object type: {closure}')
             # Py 3.8 or later:
-            #self.get_conn().create_function(info['name'], info['num_params'], info['func'], deterministic=info['deterministic'])
-            self.get_conn().create_function(info['name'], info['num_params'], info['func'])
+            #self.get_conn().create_function(info['name'], info['num_params'], func, deterministic=info['deterministic'])
+            self.get_conn().create_function(info['name'], info['num_params'], func)
             self.user_functions.add(name)
         elif error:
             raise KGTKException('No user-function has been registered for: ' + str(name))
@@ -387,7 +401,7 @@ class SqliteStore(SqlStore):
         index_spec = f'index: {", ".join([sql_quote_ident(col) for col in columns])}'
         if unique:
             index_spec += '//unique'
-        return TableIndex(table_or_schema, index_spec)
+        return ispec.TableIndex(table_or_schema, index_spec)
 
     def get_column_list(self, *columns):
         return ', '.join([sql_quote_ident(col._name_) for col in columns])
@@ -577,10 +591,10 @@ class SqliteStore(SqlStore):
             columns = schema.columns
             query = (f"""SELECT {columns.name._name_}, {columns.sql._name_} FROM {schema._name_}""" +
                      f""" WHERE {columns.type._name_}="index" and {columns.tbl_name._name_}=?""")
-            indexes = [TableIndex(table_name, 'sql: ' + idx_sql) for _, idx_sql in self.execute(query, (table_name,))]
-            indexes = TableIndex.encode(indexes)
+            indexes = [ispec.TableIndex(table_name, 'sql: ' + idx_sql) for _, idx_sql in self.execute(query, (table_name,))]
+            indexes = ispec.TableIndex.encode(indexes)
             self.set_graph_info(table_name, indexes=indexes)
-        return TableIndex.decode(indexes)
+        return ispec.TableIndex.decode(indexes)
 
     def has_graph_index(self, table_name, index):
         """Return True if graph 'table_name' has an index that subsumes 'index'.
@@ -591,13 +605,29 @@ class SqliteStore(SqlStore):
         else:
             return False
 
+    def get_vector_indexes(self, table_name):
+        """Return the list of vector indexes currently defined for graph 'table_name'.
+        """
+        info = self.get_graph_info(table_name)
+        indexes = info.indexes
+        return [idx for idx in ispec.TableIndex.decode(indexes) if isinstance(idx, ispec.VectorIndex)]
+
+    def is_vector_column(self, table_name, column):
+        """Return True if 'column' in 'table_name' is a vector column.
+        """
+        for vindex in self.get_vector_indexes(table_name):
+            if column in vindex.index.columns:
+                return True
+        else:
+            return False
+
     def ensure_graph_index(self, table_name, index, explain=False):
         """Ensure a qualifying 'index' for 'table_name' already exists or gets created.
         Checks whether the existing index is at least as selective as requested, for
         example, an existing index on columns (node1, node2) will qualify even if 'index'
         has 'node1' as its only column.
         """
-        if not self.has_graph_index(table_name, index):
+        if not self.has_graph_index(table_name, index) and not isinstance(index, ispec.VectorIndex):
             if self.readonly:
                 return
             loglevel = explain and 0 or 1
@@ -617,7 +647,7 @@ class SqliteStore(SqlStore):
             ginfo = self.get_graph_info(table_name)
             ginfo.size += idxsize
             if not explain:
-                indexes = TableIndex.encode(indexes + [index])
+                indexes = ispec.TableIndex.encode(indexes + [index])
                 self.update_graph_info(table_name, indexes=indexes)
                 self.update_graph_info(table_name, size=ginfo.size)
                 self.commit()
@@ -711,9 +741,10 @@ class SqliteStore(SqlStore):
         """
         return self.determine_graph_action(file, alias=alias, error=False) == 'reuse'
 
-    def add_graph(self, file, alias=None):
+    def add_graph(self, file, alias=None, index_specs=None):
         """Import a graph from 'file' (and optionally named by 'alias') unless a matching
         graph has already been imported earlier according to 'has_graph' (which see).
+        'index_specs' is a list of index specifications relevant to the import of this graph.
         """
         graph_action = self.determine_graph_action(file, alias=alias)
         if graph_action == 'reuse':
@@ -735,12 +766,17 @@ class SqliteStore(SqlStore):
         file = self.normalize_file_path(file)
         table = self.new_graph_table()
         oldsize = self.get_db_size()
-        try:
-            # try fast shell-based import first, but if that is not applicable...
-            self.import_graph_data_via_import(table, file)
-        except (KGTKException, sh.CommandNotFound):
-            # ...fall back on CSV-based import which is more flexible but about 2x slower:
-            self.import_graph_data_via_csv(table, file)
+        vector_specs = self.get_vector_index_specs(table, index_specs)
+        indexes = []
+        if len(vector_specs) > 0:
+            indexes += self.import_graph_vector_data_via_csv(table, file, index_specs=vector_specs)
+        else:
+            try:
+                # try fast shell-based import first, but if that is not applicable...
+                self.import_graph_data_via_import(table, file)
+            except (KGTKException, sh.CommandNotFound):
+                # ...fall back on CSV-based import which is more flexible but about 2x slower:
+                self.import_graph_data_via_csv(table, file)
         graphsize = self.get_db_size() - oldsize
         # this isn't really needed, but we store it for now - maybe use JSON-encoding instead:
         header = str(self.get_table_header(table))
@@ -748,7 +784,8 @@ class SqliteStore(SqlStore):
             self.set_file_info(file, size=0, modtime=time.time(), graph=table)
         else:
             self.set_file_info(file, size=os.path.getsize(file), modtime=os.path.getmtime(file), graph=table)
-        self.set_graph_info(table, header=header, size=graphsize, acctime=time.time(), indexes=TableIndex.encode([]))
+        indexes = ispec.TableIndex.encode(indexes)
+        self.set_graph_info(table, header=header, size=graphsize, acctime=time.time(), indexes=indexes)
         if alias is not None:
             self.set_file_alias(file, alias)
 
@@ -783,14 +820,14 @@ class SqliteStore(SqlStore):
         idxsize = oldsize - self.get_db_size()
         indexes.remove(index)
         ginfo.size -= idxsize
-        self.update_graph_info(table_name, indexes=TableIndex.encode(indexes), size=ginfo.size)
+        self.update_graph_info(table_name, indexes=ispec.TableIndex.encode(indexes), size=ginfo.size)
 
     def drop_graph_indexes(self, table_name, index_type=None):
         """Delete all indexes for graph 'table_name'.  If 'index_type' is not None,
         restrict to indexes of that type (can be a short name or a class).
         """
         if isinstance(index_type, str):
-            index_type = TableIndex.get_index_type_class(index_type)
+            index_type = ispec.TableIndex.get_index_type_class(index_type)
         for index in self.get_graph_indexes(table_name)[:]:
             if index_type is None or isinstance(index, index_type):
                 self.drop_graph_index(table_name, index)
@@ -878,6 +915,99 @@ class SqliteStore(SqlStore):
             if sqlproc is not None and sqlproc.process.exit_code is None:
                 sqlproc.terminate()
 
+                
+    # we need to be able to comfortably fit that many un/parsed vectors into RAM:
+    VECTOR_IMPORT_CHUNKSIZE = 100000
+
+    def get_vector_store(self):
+        if self.vector_store is None:
+            import kgtk.kypher.vecstore as vs
+            self.vector_store = vs.VectorStore(self)
+        return self.vector_store
+
+    def get_vector_index_specs(self, graph, index_specs):
+        vector_specs = []
+        for index_spec in listify(index_specs):
+            index_spec = ispec.get_normalized_index_mode(index_spec)
+            if isinstance(index_spec, list):
+                for spec in index_spec:
+                    spec = ispec.TableIndex(graph, spec)
+                    if isinstance(spec, ispec.VectorIndex):
+                        vector_specs.append(spec)
+        return vector_specs
+
+    def normalize_vector_index_specs(self, graph, index_specs):
+        index_specs = listify(index_specs)
+        if len(index_specs) == 0:
+            # use this as the default, even though 'index_specs' shouldn't be empty:
+            index_specs = [ispec.TableIndex(graph, 'vector: node2/fmt=auto')]
+        vector_spec = index_specs[0]
+        for ospec in index_specs[1:]:
+            # merge and override from any subsequent specs:
+            for col, spec in ospec.index.columns.items():
+                vector_spec.index.columns[col] = spec
+        return vector_spec
+
+    def import_graph_vector_data_via_csv(self, table, file, index_specs=None):
+        """Import 'file' into 'table' using Python's csv.reader.  Parses and stores any vector columns
+        in binary format into the respective vector cache and blanks out the corresponding source field(s).
+        """
+        if self.readonly:
+            return
+        self.log(1, f'IMPORT graph vectors into table {table} and associated vector cache from {file}')
+        if self.is_standard_input(file):
+            file = sys.stdin
+
+        vector_spec = self.normalize_vector_index_specs(table, index_specs)
+        vector_columns = list(vector_spec.index.columns.keys()) or ['node2']
+        vstore = self.get_vector_store()
+        
+        with open_to_read(file) as inp:
+            csvreader = csv.reader(inp, dialect=None, delimiter='\t', quoting=csv.QUOTE_NONE)
+            header = next(csvreader)
+            schema = self.kgtk_header_to_graph_table_schema(table, header)
+
+            for vcol in vector_columns:
+                if vcol not in header:
+                    raise KGTKException(f"vector column '{vcol}' does not exist in {file}")
+            # TO DO: maybe rename and defer the drop until after import is successfully completed:
+            for vcol in vector_columns:
+                vstore.drop_vector_dataset(table, vcol)
+
+            insert = None
+            while True:
+                chunk = list(itertools.islice(csvreader, self.VECTOR_IMPORT_CHUNKSIZE))
+                for vcol in vector_columns:
+                    vcolidx = header.index(vcol)
+                    source_vectors = map(lambda row: row[vcolidx], chunk)
+                    fmt = vector_spec.index.columns[vcol].get('fmt', 'auto')
+                    dtype = vector_spec.index.columns[vcol].get('dtype', 'float32')
+                    vstore.import_vectors(table, vcol, source_vectors, fmt=fmt, dtype=dtype)
+                    # set all the respective fields in the KGTK source file tuples to the empty value:
+                    any(itertools.filterfalse(lambda row: not row.__setitem__(vcolidx, ''), chunk))
+                    
+                # add the non-vector data fields to the graph cache:
+                if insert is None:
+                    insert = f'INSERT INTO {table} VALUES ({",".join(["?"] * len(header))})'
+                    # defer this until we added some vectors to the cache in case anything goes wrong:
+                    self.execute(self.get_table_definition(schema))
+                if len(chunk) == 0:
+                    break
+                self.executemany(insert, chunk)
+
+        vstore.commit()
+        self.commit()
+        return [vector_spec]
+
+    def vector_column_to_sql(self, table, column, table_alias=None):
+        """Return an SQL expression that can be used to generate the actual vectors
+        corresponding to the vector-indexed 'column' variable of 'table'.
+        """
+        dsid = self.get_vector_store().get_dataset_id(table, column)
+        self.load_user_function('_kgtk_get_vector_spec')
+        table = table_alias or table
+        return f'_kgtk_get_vector_spec({dsid}, {table}.rowid)'
+    
                 
     def shell(self, *commands):
         """Execute a sequence of sqlite3 shell 'commands' in a single invocation
@@ -2045,3 +2175,57 @@ def kgtk_is_subnode(label, encoded_intervals):
     return bool(result5)
 
 SqliteStore.register_user_function('kgtk_is_subnode', 2, kgtk_is_subnode, deterministic=True)
+
+
+### Vector operations
+
+def _kgtk_get_vector_spec(dsid, rowid):
+    """Generate a vector spec or handle for the vector in row 'rowid' for dataset 'dsid'.
+    Note that SQLite rowid's are 1-based.  We encode this into an integer for now, assuming
+    that functions that need vectors to operate on will use 'VectorStore.get_vector' to
+    access the real thing.  We could also use a byte string encoding to distinguish this
+    better from other literals used in SQLite.
+    """
+    return ((rowid - 1) << 8) | dsid
+
+SqliteStore.register_user_function('_kgtk_get_vector_spec', 2, _kgtk_get_vector_spec, deterministic=True)
+
+def _sim_cosine(vecstore):
+    import numpy as np
+    def sim_cosine(x, y):
+        """Compute the cosine similarity between vectors 'x' and 'y'.
+        """
+        x = vecstore.get_vector(x).reshape(1, -1)
+        y = vecstore.get_vector(y).reshape(1, -1)
+        xnorm = x / np.linalg.norm(x, axis=1, keepdims=True)
+        ynorm = y / np.linalg.norm(y, axis=1, keepdims=True)
+        # make sure we don't return numpy floats:
+        return float(np.matmul(xnorm, ynorm.T))
+    return sim_cosine
+
+SqliteStore.register_user_function('sim_cosine', 2, _sim_cosine, deterministic=True, closure='vecstore')
+
+"""
+> kgtk query -i /data/tmp/wikidata-20210215-dwd-v2-wikidatadwd.complEx.graph-embeddings.txt.10000.kgtk.tsv.gz --as complex \
+           --idx vector:node2/fmt=auto/nn=faiss mode:valuegraph \
+           --match '(:Q12328857)-[]->(v1), \
+                    (x)-[]->(v2)' \
+           --where 'x != "Q12328857"' \
+           --return 'x, sim_cosine(v1, v2) as sim' \
+           --order 'sim desc' \
+           --limit 10 --force
+node1	sim
+Q21033445	0.8092302680015564
+Q3588447	0.7965388894081116
+Q5582547	0.7912010550498962
+Q31093301	0.7875844240188599
+Q21460259	0.784213662147522
+Q97163147	0.7809903025627136
+Q12310293	0.7786664366722107
+Q97920141	0.7778704762458801
+Q11624013	0.7745721936225891
+Q12319535	0.7685642242431641
+"""
+
+# uncomment to debug errors in user functions:
+#sqlite3.enable_callback_tracebacks(True)
