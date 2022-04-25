@@ -54,9 +54,6 @@ import kgtk.kypher.indexspec as ispec
 
 ### Utilities
 
-def listify(x):
-    return (hasattr(x, '__iter__') and not isinstance(x, str) and list(x)) or (x and [x]) or []
-
 def dwim_to_string_para(x):
     """Try to coerce 'x' to a KGTK string value that can be passed as a query parameter.
     """
@@ -217,7 +214,8 @@ class KgtkQuery(object):
             file = str(file) # in case we get a path object
             alias = self.get_input_option(file, 'alias')
             comment = self.get_input_option(file, 'comment')
-            store.add_graph(file, alias=alias)
+            index_specs = self.get_input_option(file, 'index_specs')
+            store.add_graph(file, alias=alias, index_specs=index_specs)
             # use aliases for handle matching, otherwise unnormalized files except for stdin:
             norm_file = store.get_normalized_file(file, alias=alias)
             if store.is_standard_input(file):
@@ -403,6 +401,9 @@ class KgtkQuery(object):
         # otherwise, pick the representative from the set of equiv-joined column vars,
         # which corresponds to the graph alias and column name used by the first reference:
         graph, column = sql_vars[0]
+        table = self.graph_alias_to_graph(graph)
+        if self.store.is_vector_column(table, column):
+            return graph, column, self.store.vector_column_to_sql(table, column, table_alias=graph)
         return graph, column, f'{graph}.{sql_quote_ident(column)}'
 
     def property_to_sql(self, expr, state):
