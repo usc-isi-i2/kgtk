@@ -160,3 +160,157 @@ class VectorStore(object):
         # this is what is most expensive right now, takes about 0.1ms / call which is probably not all that
         # different from just parsing the source....20,000 calls take about 2secs
         return ds[rowid]
+
+
+# numpy memmap notes:
+# - see: https://numpy.org/devdocs/reference/generated/numpy.lib.format.html
+# - this is significantly faster than the HD5 access (goes from 2.5 to 0.68 secs for 10k vecs)
+# - further speedups down to 0.16 secs possible with vector norm precomputation
+#   (see .work/embeddings-precompute-norms.log - note that the dot-product cost for this
+#   is 0.015 secs, so we have another factor 10 head room for speeding up vector access)
+# - np.frombuffer is really fast, 10M calls to generate a 100d array from bytes takes 4.25 secs
+#   ( x = np.frombuffer(bytes, dtype=np.float32) ), so maybe storing the bytes on the DB as 
+#   binary blobs might be the best thing after all...about 20secs for 10M vectors with precomputed norms?
+# - np.frombuffer takes an offset, so we could encode a norm as the first element and
+#   read from an offset to skip it
+# - using the struct package to get a norm value encoded in the first 4 bytes:
+#   - fmt=struct.Struct('<f'), fmt.unpack(vbytes[0:4]) -> (-0.10274789482355118,)
+# - we could have different sim-function variants depending on dtype and normalization and
+#   plug in the proper one depending on the vectors being passed in, e.g., sim_cosine would become
+#   _sim_cosine_dnorm_float32 which would make the assumption that both vectors use the same
+#   implementation, or maybe there is a slower one that knows how to handle the more general case
+#   if that actually makes sense
+
+class NumpyMemoryMapVectorStore(VectorStore):
+    """Auxiliary vector store implemented via numpy memmaps.
+    TO DO: we subclass this for now, but this should be refactored
+    """
+
+    MAX_OPEN_DATASETS = 256
+    
+    def __init__(self, store):
+        """Create and/or open an auxiliary VectorStore for the SQL store 'store'.
+        """
+        self.store = store
+        # a vector cache is tightly linked to its parent SQL store, so we use a fixed pattern here:
+        self.dbfile_root = store.dbfile + '.vec'
+        self.dataset_ids = {}
+        self.datasets = [None] * self.MAX_OPEN_DATASETS
+
+    def get_dataset_name(self, table, column):
+        return f'{table}:{column}'
+
+    def get_dataset_dbfile(self, table, column):
+        dsname = self.get_dataset_name(table, column)
+        return f'{self.dbfile_root}.{dsname}.npy'
+
+    def get_dataset_conn(self, table, column, mode='r', mmap=False):
+        """Return the dataset file connection object for this dataset, open it if necessary
+        according to 'mode'.  If it is already open in read mode but a write-mode is
+        requested, close it and reopen it according to the new mode (unless the underlying
+        SQL store is in read-only mode).
+        """
+        dsid = self.get_dataset_id(table, column)
+        conn = self.datasets[dsid]
+        if conn is None:
+            dbfile = self.get_dataset_dbfile(table, column)
+            if self.store.readonly:
+                # ignore mode, always open as read-only:
+                mode = 'r'
+            elif not os.path.exists(dbfile):
+                # create an empty .npy file so we can open it with any mode, we'll fix up info later:
+                np.save(dbfile, np.zeros(0))
+            if mmap:
+                conn = np.load(dbfile, mmap_mode='r', fix_imports=False)
+            else:
+                mode += 'b' if 'b' not in mode else ''
+                conn = open(dbfile, mode)
+            self.datasets[dsid] = conn
+        elif mode != 'r' and conn.mode == 'r' and not isinstance(conn, np.memmap) and not self.store.readonly:
+            # regular file opened as read-only, close and reopen with provided write mode:
+            conn.close()
+            conn = open(dbfile, mode)
+            self.datasets[dsid] = conn
+        return conn
+
+    def update_dataset_header(self, ds, dtype=np.float32, ndim=None):
+        curpos = ds.tell()
+        ds.seek(0)
+        version1 = np.lib.format.read_magic(ds)[0] == 1
+        if version1:
+            shape, fo, dt = np.lib.format.read_array_header_1_0(ds)
+        else:
+            shape, fo, dt = np.lib.format.read_array_header_2_0(ds)
+        startpos = ds.tell()
+        if shape[0] == 0:
+            if ndim is None:
+                raise KGTKException(f"cannot determine ndim of vector dataset")
+        else:
+            _, ndim = shape
+        ds.seek(0, 2)
+        endpos = ds.tell()
+        dtype = np.dtype(dtype)
+        nbytes = dtype.itemsize
+        count = (endpos - startpos) // (ndim * nbytes)
+        desc = {'descr': np.lib.format.dtype_to_descr(dtype), 'fortran_order': fo, 'shape': (count, ndim)}
+        ds.seek(0)
+        if version1:
+            np.lib.format.write_array_header_1_0(ds, desc)
+        else:
+            np.lib.format.write_array_header_2_0(ds, desc)
+        ds.seek(curpos)
+
+    def close(self):
+        for ds in self.datasets:
+            if ds is not None:
+                if not isinstance(ds, np.memmap):
+                    ds.close()
+        self.datasets = [None] * len(self.datasets)
+
+    def commit(self):
+        self.close()
+
+    def get_vector_dataset(self, table, column):
+        """Return a vector dataset object for 'table->column' if it exists, None otherwise.
+        """
+        return self.datasets[self.get_dataset_id(table, column)]
+
+    def get_vector_dataset_by_id(self, dsid):
+        """Return a vector dataset object for the dataset registered under 'dsid'.
+        Raise an error if no such dataset ID exists.
+        """
+        for (table, column), regid in self.dataset_ids.items():
+            if regid == dsid:
+                # TO DO: clean up the API on this, so that mmap vs. file is more cleanly separated:
+                return self.get_dataset_conn(table, column, mode='r', mmap=True)
+        else:
+            raise KGTKException(f"no registered dataset with ID {dsid}")
+
+    def drop_vector_dataset(self, table, column):
+        """If a vector dataset object for 'table->column' exists, delete it, no-op otherwise.
+        """
+        ds = self.get_vector_dataset(table, column)
+        if ds is not None and not isinstance(ds, np.memmap):
+            ds.close()
+        dbfile = self.get_dataset_dbfile(table, column)
+        if os.path.exists(dbfile):
+            os.remove(dbfile)
+
+    def import_vectors(self, table, column, source_vectors, fmt='auto', dtype=np.float32):
+        """Parse a collection of 'source_vectors' according to 'fmt' and 'dtype' into a
+        two-dimensional numpy array of vectors, and incrementally add them to end of the
+        vector dataset for 'table->column' (which will be created if necessary).
+        """
+        vectors = self.parse_vectors(source_vectors, fmt=fmt, dtype=dtype)
+        if len(vectors) == 0:
+            return
+        ds = self.get_vector_dataset(table, column)
+        if ds is None or 'a' not in ds.mode:
+            # maybe use a 'create_dataset' here for a cleaner API
+            # (we do need 'r+' here so we can append and read/write the header):
+            ds = self.get_dataset_conn(table, column, mode='r+')
+            # a+ doesn't do what we want, so we have to position by hand:
+            ds.seek(0, 2)
+        for vec in vectors:
+            vec.tofile(ds)
+        self.update_dataset_header(ds, dtype=dtype, ndim=len(vectors[0]))
