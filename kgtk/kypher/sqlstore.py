@@ -922,7 +922,8 @@ class SqliteStore(SqlStore):
     def get_vector_store(self):
         if self.vector_store is None:
             import kgtk.kypher.vecstore as vs
-            self.vector_store = vs.VectorStore(self)
+            #self.vector_store = vs.VectorStore(self)
+            self.vector_store = vs.NumpyMemoryMapVectorStore(self)
         return self.vector_store
 
     def get_vector_index_specs(self, graph, index_specs):
@@ -2226,6 +2227,22 @@ Q97920141	0.7778704762458801
 Q11624013	0.7745721936225891
 Q12319535	0.7685642242431641
 """
+
+def _sim_dot(vecstore):
+    import numpy as np
+    vx = np.zeros(100, dtype='float32')
+    vy = np.zeros(100, dtype='float32')
+    def sim_dot(x, y):
+        """Compute the dot product between vectors 'x' and 'y'.
+        """
+        vx[:] = vecstore.get_vector(x)
+        vy[:] = vecstore.get_vector(y)
+        # make sure we don't return numpy floats:
+        return float(np.dot(vx, vy))
+    return sim_dot
+
+SqliteStore.register_user_function('sim_dot', 2, _sim_dot, deterministic=True, closure='vecstore')
+
 
 # uncomment to debug errors in user functions:
 #sqlite3.enable_callback_tracebacks(True)
