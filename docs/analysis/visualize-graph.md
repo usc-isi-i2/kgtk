@@ -1,4 +1,4 @@
-This command loads a TSV edges file into html visualization of graph
+This command creates a html visualization of a KGTK edge file
 ## Usage
 ```
 usage: kgtk visualize-graph [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
@@ -233,7 +233,7 @@ This customization uses `is_country` as columns for assigning colors.
 kgtk visualize-graph -i examples/docs/visualize_force_graph_example2.tsv \
 --node-file examples/docs/visualize_force_graph_example2_node.tsv \
 --node-color-column degree \
---node-color-numbes \
+--node-color-numbers \
 --node-color-scale log \
 -o show_degrees.html
 ```
