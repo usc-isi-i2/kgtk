@@ -290,7 +290,12 @@ class KgtkVisualize:
 
         for ele in nodes:
             nodes_from_edge_file.append(
-                {'id': ele[0], 'label': ele[1], 'tooltip': ele[1]})
+                {
+                    'id': ele[0],
+                    'label': ele[1],
+                    'tooltip': ele[1],
+                    'size': self.node_size_default
+                })
 
         return edges, nodes_from_edge_file
 
@@ -395,7 +400,6 @@ class KgtkVisualize:
 
             for node_from_edge in nodes_from_edge:
                 if node_from_edge['id'] not in self.node_set:
-                    node_from_edge['size'] = self.node_size_default
                     if self.node_color_numbers:
                         node_from_edge['orig_color'] = 0.0
                     else:
