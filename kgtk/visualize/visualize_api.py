@@ -210,61 +210,63 @@ class KgtkVisualize:
             label_label_idx = kr.column_name_map['label;label']
 
         for row in kr:
-            # collect nodes from the edge file, incase node file is not present or a node is missing from the node file
-            node1_label = row[node1_label_idx]
-            node2_label = row[node2_label_idx]
-            if '@' in node1_label:
-                clean_node1_label, _, _ = kgtk_format.destringify(node1_label)
-            else:
-                clean_node1_label = node1_label
-            nodes.add((row[node1_idx], clean_node1_label))
-
-            if '@' in node2_label:
-                clean_node2_label, _, _ = kgtk_format.destringify(node2_label)
-            else:
-                clean_node2_label = node2_label
-            nodes.add((row[node2_idx], clean_node2_label))
-
-            if '@' in row[label_label_idx]:
-                _label_label, _, _ = kgtk_format.destringify(row[label_label_idx])
-            else:
-                _label_label = row[label_label_idx]
-
-            _edge_obj = {
-                'source': row[node1_idx],
-                'target': row[node2_idx],
-                'label': _label_label
-            }
-
-            if self.edge_width_column is not None:
-                _width_orig = KgtkVisualize.convert_string_float(row[kr.column_name_map[self.edge_width_column]])
-                if _width_orig is not None:
-                    _edge_obj['width_orig'] = _width_orig
+            if len(row) == len(kr.column_name_map):
+                # collect nodes from the edge file,
+                # incase node file is not present or a node is missing from the node file
+                node1_label = row[node1_label_idx]
+                node2_label = row[node2_label_idx]
+                if '@' in node1_label:
+                    clean_node1_label, _, _ = kgtk_format.destringify(node1_label)
                 else:
-                    _edge_obj['width_orig'] = 0.0
-            else:
-                _edge_obj['width'] = self.edge_width_default
+                    clean_node1_label = node1_label
+                nodes.add((row[node1_idx], clean_node1_label))
 
-            if self.edge_color_column is not None:
-                _edge_color = row[kr.column_name_map[self.edge_color_column]].strip()
+                if '@' in node2_label:
+                    clean_node2_label, _, _ = kgtk_format.destringify(node2_label)
+                else:
+                    clean_node2_label = node2_label
+                nodes.add((row[node2_idx], clean_node2_label))
 
-                if self.edge_color_numbers:
-                    _edge_color = KgtkVisualize.convert_string_float(_edge_color)
-                    if _edge_color is not None:
+                if '@' in row[label_label_idx]:
+                    _label_label, _, _ = kgtk_format.destringify(row[label_label_idx])
+                else:
+                    _label_label = row[label_label_idx]
+
+                _edge_obj = {
+                    'source': row[node1_idx],
+                    'target': row[node2_idx],
+                    'label': _label_label
+                }
+
+                if self.edge_width_column is not None:
+                    _width_orig = KgtkVisualize.convert_string_float(row[kr.column_name_map[self.edge_width_column]])
+                    if _width_orig is not None:
+                        _edge_obj['width_orig'] = _width_orig
+                    else:
+                        _edge_obj['width_orig'] = 0.0
+                else:
+                    _edge_obj['width'] = self.edge_width_default
+
+                if self.edge_color_column is not None:
+                    _edge_color = row[kr.column_name_map[self.edge_color_column]].strip()
+
+                    if self.edge_color_numbers:
+                        _edge_color = KgtkVisualize.convert_string_float(_edge_color)
+                        if _edge_color is not None:
+                            _edge_obj['orig_color'] = _edge_color
+                        else:
+                            _edge_obj['orig_color'] = 0.0
+                    elif self.edge_color_hex:
+                        if KgtkVisualize.is_valid_hex_color(_edge_color):
+                            _edge_obj['color'] = _edge_color
+                        else:
+                            _edge_obj['color'] = self.edge_color_default
+                    else:
                         _edge_obj['orig_color'] = _edge_color
-                    else:
-                        _edge_obj['orig_color'] = 0.0
-                elif self.edge_color_hex:
-                    if KgtkVisualize.is_valid_hex_color(_edge_color):
-                        _edge_obj['color'] = _edge_color
-                    else:
-                        _edge_obj['color'] = self.edge_color_default
                 else:
-                    _edge_obj['orig_color'] = _edge_color
-            else:
-                _edge_obj['color'] = self.edge_color_default
+                    _edge_obj['color'] = self.edge_color_default
 
-            edges.append(_edge_obj)
+                edges.append(_edge_obj)
 
         kr.close()
 
@@ -329,64 +331,66 @@ class KgtkVisualize:
                 raise ValueError("no id column in node file")
 
             for row in kr_node:
-                _id = row[kr_node.column_name_map[self.node_file_id]]
-                temp = {'id': _id}
-                self.node_set.add(_id)
+                if len(row) == len(kr_node.column_name_map):
+                    _id = row[kr_node.column_name_map[self.node_file_id]]
+                    temp = {'id': _id}
+                    self.node_set.add(_id)
 
-                if 'x' in kr_node.column_name_map:
-                    temp['fx'] = float(row[kr_node.column_name_map['x']])
-                    temp['fy'] = float(row[kr_node.column_name_map['y']])
+                    if 'x' in kr_node.column_name_map:
+                        temp['fx'] = float(row[kr_node.column_name_map['x']])
+                        temp['fy'] = float(row[kr_node.column_name_map['y']])
 
-                if 'label' in kr_node.column_name_map:
-                    try:
-                        _node_label, _, _ = kgtk_format.destringify(row[kr_node.column_name_map['label']])
-                    except Exception as e:
-                        print(e, file=self.error_file)
-                        _node_label = row[kr_node.column_name_map['label']]
+                    if 'label' in kr_node.column_name_map:
+                        try:
+                            _node_label, _, _ = kgtk_format.destringify(row[kr_node.column_name_map['label']])
+                        except Exception as e:
+                            print(e, file=self.error_file)
+                            _node_label = row[kr_node.column_name_map['label']]
 
-                    if _node_label != "" or self.show_blank_labels:
-                        temp['label'] = _node_label
+                        if _node_label != "" or self.show_blank_labels:
+                            temp['label'] = _node_label
+                        else:
+                            temp['label'] = _id
                     else:
                         temp['label'] = _id
-                else:
-                    temp['label'] = _id
 
-                if self.tooltip_column is not None:
-                    if str(row[kr_node.column_name_map[self.tooltip_column]]).strip() != '':
-                        temp['tooltip'] = str(row[kr_node.column_name_map[self.tooltip_column]])
+                    if self.tooltip_column is not None:
+                        if str(row[kr_node.column_name_map[self.tooltip_column]]).strip() != '':
+                            temp['tooltip'] = str(row[kr_node.column_name_map[self.tooltip_column]])
+                        else:
+                            temp['tooltip'] = temp['label']
                     else:
-                        temp['tooltip'] = temp['label']
-                else:
-                    temp['tooltip'] = temp['label'] if temp['label'] != "" else _id
+                        temp['tooltip'] = temp['label'] if temp['label'] != "" else _id
 
-                if self.node_color_column is not None:
-                    _node_color = row[kr_node.column_name_map[self.node_color_column]]
-                    if self.node_color_numbers:
-                        _node_color = KgtkVisualize.convert_string_float(_node_color)
-                        if _node_color is not None:
+                    if self.node_color_column is not None:
+                        _node_color = row[kr_node.column_name_map[self.node_color_column]]
+                        if self.node_color_numbers:
+                            _node_color = KgtkVisualize.convert_string_float(_node_color)
+                            if _node_color is not None:
+                                temp['orig_color'] = _node_color
+                            else:
+                                temp['orig_color'] = 0.0
+                        elif self.node_color_hex:
+                            if KgtkVisualize.is_valid_hex_color(_node_color):
+                                temp['color'] = _node_color
+                            else:
+                                temp['color'] = self.node_color_default
+                        else:
                             temp['orig_color'] = _node_color
-                        else:
-                            temp['orig_color'] = 0.0
-                    elif self.node_color_hex:
-                        if KgtkVisualize.is_valid_hex_color(_node_color):
-                            temp['color'] = _node_color
-                        else:
-                            temp['color'] = self.node_color_default
                     else:
-                        temp['orig_color'] = _node_color
-                else:
-                    temp['color'] = self.node_color_default
+                        temp['color'] = self.node_color_default
 
-                if self.node_size_column is not None:
-                    _node_size = KgtkVisualize.convert_string_float(row[kr_node.column_name_map[self.node_size_column]])
-                    if _node_size is not None:
-                        temp['orig_size'] = _node_size
+                    if self.node_size_column is not None:
+                        _node_size = KgtkVisualize.convert_string_float(
+                            row[kr_node.column_name_map[self.node_size_column]])
+                        if _node_size is not None:
+                            temp['orig_size'] = _node_size
+                        else:
+                            temp['orig_size'] = 0.0
                     else:
-                        temp['orig_size'] = 0.0
-                else:
-                    temp['size'] = self.node_size_default
+                        temp['size'] = self.node_size_default
 
-                nodes.append(temp)
+                    nodes.append(temp)
             kr_node.close()
 
             for node_from_edge in nodes_from_edge:
