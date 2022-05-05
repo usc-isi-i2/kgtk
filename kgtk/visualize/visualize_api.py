@@ -141,6 +141,8 @@ class KgtkVisualize:
 
         self.node_color_choice = 0
 
+        self.node_set = set()
+
         if self.node_size_minimum == 0.0 and self.node_size_scale == 'log':
             raise ValueError("node size cannot be 0 when using log scale")
         if self.edge_width_minimum == 0 and self.edge_width_scale == 'log':
@@ -154,11 +156,22 @@ class KgtkVisualize:
 
     def compute_visualization_graph(self):
         d = {}
+        nodes = []
         # Show the final option structures for debugging and documentation.
         try:
-            edges, nodes = self.process_edge_file()
+            edges, nodes_from_edge = self.process_edge_file()
             if self.node_file is not None:
                 nodes = self.process_node_file()
+            for node_from_edge in nodes_from_edge:
+                if node_from_edge['id'] not in self.node_set:
+                    nodes.append({
+                        "id": node_from_edge['id'],
+                        "label": node_from_edge['label'],
+                        "tooltip": node_from_edge['tooltip'],
+                        "size": self.node_size_default,
+                        "color": self.node_color_default
+                    })
+
             d['links'] = edges
             d['nodes'] = nodes
         except SystemExit as e:
@@ -204,20 +217,20 @@ class KgtkVisualize:
             label_label_idx = kr.column_name_map['label;label']
 
         for row in kr:
-            if self.node_file is None:
-                node1_label = row[node1_label_idx]
-                node2_label = row[node2_label_idx]
-                if '@' in node1_label:
-                    clean_node1_label, _, _ = kgtk_format.destringify(node1_label)
-                else:
-                    clean_node1_label = node1_label
-                nodes.add((row[node1_idx], clean_node1_label))
+            # collect nodes from the edge file, incase node file is not present or a node is missing from the node file
+            node1_label = row[node1_label_idx]
+            node2_label = row[node2_label_idx]
+            if '@' in node1_label:
+                clean_node1_label, _, _ = kgtk_format.destringify(node1_label)
+            else:
+                clean_node1_label = node1_label
+            nodes.add((row[node1_idx], clean_node1_label))
 
-                if '@' in node2_label:
-                    clean_node2_label, _, _ = kgtk_format.destringify(node2_label)
-                else:
-                    clean_node2_label = node2_label
-                nodes.add((row[node2_idx], clean_node2_label))
+            if '@' in node2_label:
+                clean_node2_label, _, _ = kgtk_format.destringify(node2_label)
+            else:
+                clean_node2_label = node2_label
+            nodes.add((row[node2_idx], clean_node2_label))
 
             if '@' in row[label_label_idx]:
                 _label_label, _, _ = kgtk_format.destringify(row[label_label_idx])
@@ -279,10 +292,10 @@ class KgtkVisualize:
                                          self.edge_color_scale,
                                          self.edge_color_default,
                                          False)
-        if self.node_file is None:
-            for ele in nodes:
-                nodes_from_edge_file.append(
-                    {'id': ele[0], 'label': ele[1], 'tooltip': ele[1]})
+
+        for ele in nodes:
+            nodes_from_edge_file.append(
+                {'id': ele[0], 'label': ele[1], 'tooltip': ele[1]})
 
         return edges, nodes_from_edge_file
 
@@ -325,6 +338,7 @@ class KgtkVisualize:
             for row in kr_node:
                 _id = row[kr_node.column_name_map[self.node_file_id]]
                 temp = {'id': _id}
+                self.node_set.add(_id)
 
                 if 'x' in kr_node.column_name_map:
                     temp['fx'] = float(row[kr_node.column_name_map['x']])
