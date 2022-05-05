@@ -161,16 +161,9 @@ class KgtkVisualize:
         try:
             edges, nodes_from_edge = self.process_edge_file()
             if self.node_file is not None:
-                nodes = self.process_node_file()
-            for node_from_edge in nodes_from_edge:
-                if node_from_edge['id'] not in self.node_set:
-                    nodes.append({
-                        "id": node_from_edge['id'],
-                        "label": node_from_edge['label'],
-                        "tooltip": node_from_edge['tooltip'],
-                        "size": self.node_size_default,
-                        "color": self.node_color_default
-                    })
+                nodes = self.process_node_file(nodes_from_edge=nodes_from_edge)
+            else:
+                nodes = nodes_from_edge
 
             d['links'] = edges
             d['nodes'] = nodes
@@ -319,7 +312,7 @@ class KgtkVisualize:
         except ValueError:
             return None
 
-    def process_node_file(self):
+    def process_node_file(self, nodes_from_edge):
         nodes = []
         if self.node_file is not None:
 
@@ -395,6 +388,15 @@ class KgtkVisualize:
 
                 nodes.append(temp)
             kr_node.close()
+
+            for node_from_edge in nodes_from_edge:
+                if node_from_edge['id'] not in self.node_set:
+                    node_from_edge['size'] = self.node_size_default
+                    if self.node_color_numbers:
+                        node_from_edge['orig_color'] = 0.0
+                    else:
+                        node_from_edge['orig_color'] = self.node_color_default
+                    nodes.append(node_from_edge)
 
             if self.node_color_column is not None:
                 nodes = self.calculate_color(nodes,
@@ -544,7 +546,7 @@ class KgtkVisualize:
                 f.write(f'''
                         .nodeColor((node) => node.color[0] == "#" ? node.color : d3.schemeCategory10[node.color])
                         .linkWidth((link) => link.width)''')
-                node_text_format = f'{self.node_categorical_scale}(node.color)'
+                node_text_format = 'd3.schemeCategory10[node.color]'
             else:
                 f.write(f'''
                         .nodeColor((node) => node.color[0] == "#" ? node.color : {self.node_categorical_scale}(node.color))
