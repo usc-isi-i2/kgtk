@@ -215,14 +215,14 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument('--node-categorical-scale',
                         dest='node_categorical_scale',
                         type=str,
-                        default='rainbow',
+                        default='d3.interpolateRainbow',
                         help="Node color categorical scale node from d3-scale-chromatic."
                              "https://observablehq.com/@d3/sequential-scales. Default: rainbow")
 
     parser.add_argument('--edge-categorical-scale',
                         dest='edge_categorical_scale',
                         type=str,
-                        default='rainbow',
+                        default='d3.interpolateRainbow',
                         help="Edge color categorical scale for edge d3-scale-chromatic."
                              "https://observablehq.com/@d3/sequential-scales. Default: rainbow")
 
@@ -286,8 +286,8 @@ def run(input_file: KGTKFiles,
         node_border_color: str = None,
         tooltip_column: str = None,
         show_text: str = None,
-        node_categorical_scale: str = 'rainbow',
-        edge_categorical_scale: str = 'rainbow',
+        node_categorical_scale: str = 'd3.interpolateRainbow',
+        edge_categorical_scale: str = 'd3.interpolateRainbow',
         node_gradient_scale: str = 'd3.interpolateRdBu',
         edge_gradient_scale: str = 'd3.interpolateRdBu',
         show_blank_labels: bool = False,
