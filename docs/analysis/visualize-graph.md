@@ -366,7 +366,7 @@ This customization uses type as columns for assigning colors. --node-categorical
 
 **Note: We are not using the option `--node-color-scale`, as the above command will find the range of colors (which are numbers) and map them to the `d3.interpolateRdYlBu` scale.
 
-<img src="https://github.com/usc-isi-i2/kgtk/blob/dev/docs/images/visualize-force-graph-examples/12.jpg" width="300"/>
+<img src="https://github.com/usc-isi-i2/kgtk/blob/dev/docs/images/visualize-force-graph-examples/12.png" width="300"/>
 
 
 ## 13. Color by column `degree`, values as numbers, use `d3.interpolateGreens` interpolator
@@ -382,4 +382,4 @@ This customization uses type as columns for assigning colors. --node-categorical
 
 **Note: We are not using the option `--node-color-scale`, as the above command will find the range of colors (which are numbers) and map them to the `d3.interpolateGreens` scale.
 
-<img src="https://github.com/usc-isi-i2/kgtk/blob/dev/docs/images/visualize-force-graph-examples/13.jpg" width="300"/>
+<img src="https://github.com/usc-isi-i2/kgtk/blob/dev/docs/images/visualize-force-graph-examples/13.png" width="300"/>
