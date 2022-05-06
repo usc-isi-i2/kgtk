@@ -364,7 +364,7 @@ kgtk visualize-graph -i examples/docs/visualize_force_graph_example2.tsv \
 ```
 This customization uses type as columns for assigning colors. --node-categorical-scale = 'd3.interpolateRdYlBu' will use the [following scale](https://github.com/d3/d3-scale-chromatic#interpolateRdYlBu) to color the nodes.
 
-**Note: We are not using the option `--node-color-scale`, as the above command will find the range of colors (which are numbers) and map them to the `d3.interpolateRdYlBu` scale.
+**Note: We are not using the option `--node-color-scale`, as the above command will find the range of colors (which are numbers) and map them to the `d3.interpolateRdYlBu` scale.**
 
 <img src="https://github.com/usc-isi-i2/kgtk/blob/dev/docs/images/visualize-force-graph-examples/12.png" width="300"/>
 
@@ -380,6 +380,6 @@ kgtk visualize-graph -i examples/docs/visualize_force_graph_example2.tsv \
 ```
 This customization uses type as columns for assigning colors. --node-categorical-scale = 'd3.interpolateGreens' will use the [following scale](https://github.com/d3/d3-scale-chromatic#interpolateGreens) to color the nodes.
 
-**Note: We are not using the option `--node-color-scale`, as the above command will find the range of colors (which are numbers) and map them to the `d3.interpolateGreens` scale.
+**Note: We are not using the option `--node-color-scale`, as the above command will find the range of colors (which are numbers) and map them to the `d3.interpolateGreens` scale.**
 
 <img src="https://github.com/usc-isi-i2/kgtk/blob/dev/docs/images/visualize-force-graph-examples/13.png" width="300"/>
