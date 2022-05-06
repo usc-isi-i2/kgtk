@@ -630,23 +630,73 @@ class SqlIndex(TableIndex):
 
 class VectorIndex(TableIndex):
     """Specialized indexes needed for numeric vectors.  Since these are not really
-    SQL indexes, this abuses the current SQL table-centric model a little bit.
-    We should refactor if we stick with this.
+    SQL indexes, this abuses the current SQL table-centric model a little bit,
+    however, there is some SQL support needed as well so it is not all wrong.
     """
+
+    FORMAT_AUTO    = 'auto'
+    FORMAT_TEXT    = 'text'
+    FORMAT_BASE64  = 'base64'
+    DTYPE_FLOAT32  = 'float32'
+    DTYPE_FLOAT16  = 'float16'
+    DTYPE_FLOAT64  = 'float64'
+    NORM_L2        = 'l2'
+    NN_INDEX_FAISS = 'faiss'
+    STORE_INLINE   = 'inline'
+    STORE_NUMPY    = 'npy'
+    STORE_HD5      = 'hd5'
+
+    DEFAULT_COLUMN = 'node2'
+    # the first value in each option list below is the default:
+    COLUMN_OPTIONS = {
+        # 'fmt' specifies the format the vectors are in, which can either be a plain text list of
+        #  numbers separated by one of ' ,;:|', or a base64 encoding of a numpy <vector>.tobytes();
+        # 'auto' will try to guess the format from the first vector in the imported list:
+        'fmt':   (FORMAT_AUTO, FORMAT_TEXT, FORMAT_BASE64,),
+        # 'dtype' specifies a numpy element data type to use for the imported vectors:
+        'dtype': (DTYPE_FLOAT32, DTYPE_FLOAT16, DTYPE_FLOAT64,),
+        # if 'norm' is requested, vectors will be normalized before they are stored, but the
+        # norm will be stored as well so it can be used to unnormalize a vector if needed
+        # (for now we only support the L2 norm):
+        'norm':  (True, False, NORM_L2,),
+        # 'nn' controls whether a nearest neighbor index should be built, and of what kind:
+        'nn':    (False, True, NN_INDEX_FAISS,),
+        # 'store' controls how imported vectors should be stored (only 'inline' for now):
+        'store': (STORE_INLINE,),
+    }
 
     def parse_spec(self, index_spec):
         """Parse a vector table 'index_spec' such as, for example:
-        'vector:node2' or 'vector: node2/fmt=auto/nn=faiss,node1;oemb/fmt=numpy'.
+        'vector:node2' or 'vector:node2/fmt=base64/nn=faiss,node1;txtemb/dtype=float16'.
         """
-        # TO DO:
-        # - generalize option definition and checking
-        # - support 'node2' as the default column
         parse = parse_index_spec(index_spec)
         type_name = self.get_index_type_name()
         if parse.type is None:
             parse.type = type_name
         if parse.type != type_name:
             raise KGTKException(f'mismatched index spec type: {parse.type}')
+        if len(parse.columns) == 0:
+            # use the default column if nothing is specified:
+            parse['columns'] = sdict[self.DEFAULT_COLUMN: {}]
+        for column, options in list(parse.columns.items()):
+            for opt, val in list(options.items()):
+                if opt.lower() not in self.COLUMN_OPTIONS.keys():
+                    raise KGTKException(f'unhandled vector index option: {opt}')
+                legal_values = self.COLUMN_OPTIONS[opt.lower()]
+                if val not in legal_values and str(val).lower() not in legal_values:
+                    raise KGTKException(f'unhandled vector option value for {opt}: {val}')
+                del options[opt]
+                options[opt.lower()] = val.lower() if isinstance(val, str) else val
+            for opt in self.COLUMN_OPTIONS.keys():
+                if opt not in options:
+                    options[opt] = self.COLUMN_OPTIONS[opt][0]
+            # map True onto respective default values:
+            if options['nn']:
+                options['nn'] = self.NN_INDEX_FAISS
+            if options['norm']:
+                options['norm'] = self.NORM_L2
+            # convert column options to sdict so we can use property syntax:
+            parse.columns[column] = sdict(options)
         return parse
 
     def get_name(self):
@@ -665,6 +715,9 @@ class VectorIndex(TableIndex):
         """Return a list of SQL statements required to create this index.
         Since this is not an SQL index, we return the empty list here.
         """
+        # TO DO: to build a FAISS index that can be used by the DB, we will
+        # have to add a column with cluster IDs and build an SQL index for that,
+        # so eventually these scripts might be non-empty:
         return []
 
     def get_drop_script(self):
@@ -698,8 +751,8 @@ SqlIndex('graph_1', sdict['type': 'sql', 'columns': sdict['node1': {}], 'options
 ['CREATE UNIQUE INDEX "graph_1_node1_idx" on graph_1 ("node1")',
  'ANALYZE "graph_1_node1_idx"']
 
->>> TableIndex('graph2', 'vector: node2/fmt=auto/nn=faiss/store=hd5')
-VectorIndex('graph2', sdict['type': 'vector', 'columns': sdict['node2': {'fmt': 'auto', 'nn': 'faiss', 'store': 'hd5'}], 'options': {}])
+>>> TableIndex('graph2', 'vector:node2/fmt=base64/nn=faiss/store=inline,node1;txtemb/dtype=float16/norm=False')
+VectorIndex('graph2', sdict['type': 'vector', 'columns': sdict['node2': sdict['fmt': 'base64', 'nn': 'faiss', 'store': 'inline', 'dtype': 'float32', 'norm': 'l2'], 'node1;txtemb': sdict['dtype': 'float16', 'norm': False, 'fmt': 'auto', 'nn': False, 'store': 'inline']], 'options': {}])
 >>> _.get_create_script()
 []
 >>> 
