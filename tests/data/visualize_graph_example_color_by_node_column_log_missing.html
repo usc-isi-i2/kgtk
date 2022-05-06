@@ -212,6 +212,6 @@
                 .nodeId('id')
                 .nodeLabel('tooltip')
                 .nodeVal('size')
-                        .nodeColor((node) => node.color[0] == "#" ? node.color : d3.schemeCategory10[node.color])
+                        .nodeColor((node) => node.color[0] == "#" ? node.color : rainbow(node.color))
                         .linkWidth((link) => link.width)        .linkColor((link) => link.color)  </script>
             </body>

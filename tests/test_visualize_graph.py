@@ -21,6 +21,7 @@ class TestVisualizeGraph(unittest.TestCase):
         self.ground_truth_edge_text = 'data/visualize_graph_example_edge_text.html'
         self.ground_truth_node_edge_text = 'data/visualize_graph_example_node_edge_text.html'
         self.ground_truth_node_text_blank_labels = 'data/visualize_graph_example_node_text_blank_labels.html'
+        self.ground_truth_color_node_custom_interpolator = 'data/visualize_graph_example_color_by_node_column_interpolator.html'
         self.temp_dir = tempfile.mkdtemp()
 
     def tearDown(self) -> None:
@@ -43,6 +44,8 @@ class TestVisualizeGraph(unittest.TestCase):
                   "-i", self.example_file,
                   "-o", f'{output}',
                   "--node-color-column", "is_country",
+                  "--node-categorical-scale", "d3.interpolateBlues",
+                  "--node-color-numbers",
                   "--node-file", f'{self.node_file}'
                   )
         f = open(self.ground_truth_color_node)
@@ -239,6 +242,25 @@ class TestVisualizeGraph(unittest.TestCase):
                   )
 
         f = open(self.ground_truth_node_text_blank_labels)
+        f1 = set(f.readlines())
+        f.close()
+        with open(output) as f2:
+            for line in f2:
+                self.assertTrue(line in f1)
+
+    def test_color_by_node_column_custom_interpolator(self):
+        output = f'{self.temp_dir}/test_13.html'
+        cli_entry("kgtk", "--debug",
+                  "visualize-graph",
+                  "-i", self.example_file,
+                  "-o", f'{output}',
+                  "--node-color-column", "degree",
+                  "--node-color-numbers",
+                  "--node-file", f'{self.node_file}',
+                  "--node-categorical-scale", "d3.interpolateGreens"
+                  )
+
+        f = open(self.ground_truth_color_node_custom_interpolator)
         f1 = set(f.readlines())
         f.close()
         with open(output) as f2:

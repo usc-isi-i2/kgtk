@@ -556,16 +556,11 @@ class KgtkVisualize:
                 .linkWidth((link) => link.width)''')
             node_text_format = self.node_gradient_scale + '(node.color)'
         else:
-            if len(self.node_color_map) <= 10:
-                f.write(f'''
-                        .nodeColor((node) => node.color[0] == "#" ? node.color : d3.schemeCategory10[node.color])
-                        .linkWidth((link) => link.width)''')
-                node_text_format = 'd3.schemeCategory10[node.color]'
-            else:
-                f.write(f'''
+
+            f.write(f'''
                         .nodeColor((node) => node.color[0] == "#" ? node.color : rainbow(node.color))
                         .linkWidth((link) => link.width)''')
-                node_text_format = f'rainbow(node.color)'
+            node_text_format = f'rainbow(node.color)'
 
         if self.node_border_color is not None:
             node_text_format = "'" + self.node_border_color + "'"
