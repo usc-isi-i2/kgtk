@@ -922,8 +922,10 @@ class SqliteStore(SqlStore):
     def get_vector_store(self):
         if self.vector_store is None:
             import kgtk.kypher.vecstore as vs
-            #self.vector_store = vs.VectorStore(self)
-            self.vector_store = vs.NumpyMemoryMapVectorStore(self)
+            #self.vector_store = vs.Hd5VectorStore(self)
+            #self.vector_store = vs.NumpyMemoryMapVectorStore(self)
+            #self.vector_store = vs.InlineVectorStore(self)
+            self.vector_store = vs.InlineNormVectorStore(self)
         return self.vector_store
 
     def get_vector_index_specs(self, graph, index_specs):
@@ -968,33 +970,44 @@ class SqliteStore(SqlStore):
             header = next(csvreader)
             schema = self.kgtk_header_to_graph_table_schema(table, header)
 
+            vector_infos = {}
             for vcol in vector_columns:
                 if vcol not in header:
                     raise KGTKException(f"vector column '{vcol}' does not exist in {file}")
+                vinfo = vector_infos.setdefault(vcol, {})
+                vinfo['column'] = vcol
+                vinfo['index'] = header.index(vcol)
+                vinfo['fmt'] = vector_spec.index.columns[vcol].get('fmt', 'auto')
+                vinfo['dtype'] = vector_spec.index.columns[vcol].get('dtype', 'float32')
+                
             # TO DO: maybe rename and defer the drop until after import is successfully completed:
             for vcol in vector_columns:
                 vstore.drop_vector_dataset(table, vcol)
 
+            schema = vstore.get_graph_table_schema(schema, vector_spec)
             insert = None
             while True:
+                
+                # for vinfo in vector_infos:
+                #     vcolidx = vinfo['index']
+                #     source_vectors = map(lambda row: row[vcolidx], chunk)
+                #     vstore.import_vectors(table, vcol, source_vectors, fmt=vinfo['fmt'], dtype=vinfo['dtype'])
+                #     # set all the respective fields in the KGTK source file tuples to the empty value:
+                #     any(itertools.filterfalse(lambda row: not row.__setitem__(vcolidx, ''), chunk))
+
                 chunk = list(itertools.islice(csvreader, self.VECTOR_IMPORT_CHUNKSIZE))
-                for vcol in vector_columns:
-                    vcolidx = header.index(vcol)
-                    source_vectors = map(lambda row: row[vcolidx], chunk)
-                    fmt = vector_spec.index.columns[vcol].get('fmt', 'auto')
-                    dtype = vector_spec.index.columns[vcol].get('dtype', 'float32')
-                    vstore.import_vectors(table, vcol, source_vectors, fmt=fmt, dtype=dtype)
-                    # set all the respective fields in the KGTK source file tuples to the empty value:
-                    any(itertools.filterfalse(lambda row: not row.__setitem__(vcolidx, ''), chunk))
+                for vcol, vinfo in vector_infos.items():
+                    chunk = vstore.import_vectors(table, vcol, vinfo['index'], chunk, fmt=vinfo['fmt'], dtype=vinfo['dtype'])
                     
-                # add the non-vector data fields to the graph cache:
-                if insert is None:
+                # if vector-adapted 'schema' is not None, add remaining/reformatted data fields to the graph cache:
+                if schema is not None and insert is None:
                     insert = f'INSERT INTO {table} VALUES ({",".join(["?"] * len(header))})'
                     # defer this until we added some vectors to the cache in case anything goes wrong:
                     self.execute(self.get_table_definition(schema))
                 if len(chunk) == 0:
                     break
-                self.executemany(insert, chunk)
+                if schema is not None:
+                    self.executemany(insert, chunk)
 
         vstore.commit()
         self.commit()
@@ -1004,10 +1017,7 @@ class SqliteStore(SqlStore):
         """Return an SQL expression that can be used to generate the actual vectors
         corresponding to the vector-indexed 'column' variable of 'table'.
         """
-        dsid = self.get_vector_store().get_dataset_id(table, column)
-        self.load_user_function('_kgtk_get_vector_spec')
-        table = table_alias or table
-        return f'_kgtk_get_vector_spec({dsid}, {table}.rowid)'
+        return self.get_vector_store().vector_column_to_sql(table, column, table_alias=table_alias)
     
                 
     def shell(self, *commands):
@@ -2242,6 +2252,71 @@ def _sim_dot(vecstore):
     return sim_dot
 
 SqliteStore.register_user_function('sim_dot', 2, _sim_dot, deterministic=True, closure='vecstore')
+
+def _sim_dot32(vecstore):
+    import numpy as np
+    def sim_dot32(x, y):
+        """Compute the dot product between vectors 'x' and 'y'.
+        """
+        vx = np.frombuffer(x, dtype=np.float32)
+        vy = np.frombuffer(y, dtype=np.float32)
+        # make sure we don't return numpy floats:
+        return float(np.dot(vx, vy))
+    return sim_dot32
+
+SqliteStore.register_user_function('sim_dot32', 2, _sim_dot32, deterministic=True, closure='vecstore')
+
+def _sim_dot32_norm(vecstore):
+    import numpy as np
+    def sim_dot32_norm(x, y):
+        """Compute the dot product between vectors 'x' and 'y'.
+        """
+        vx = np.frombuffer(x, dtype=np.float32)
+        vy = np.frombuffer(y, dtype=np.float32)
+        # make sure we don't return numpy floats:
+        return float(np.dot(vx[1:], vy[1:]) * vx[0] * vy[0])
+    return sim_dot32_norm
+
+SqliteStore.register_user_function('sim_dot32_norm', 2, _sim_dot32_norm, deterministic=True, closure='vecstore')
+
+def _sim_dot32_norm2(vecstore):
+    import numpy as np
+    def sim_dot32_norm2(x, y):
+        """Compute the dot product between vectors 'x' and 'y'.
+        """
+        vx = np.frombuffer(x, dtype=np.float32)
+        vy = np.frombuffer(y, dtype=np.float32)
+        # make sure we don't return numpy floats:
+        return float(np.dot(vx[0:-1], vy[0:-1]) * vx[-1] * vy[-1])
+    return sim_dot32_norm2
+
+SqliteStore.register_user_function('sim_dot32_norm2', 2, _sim_dot32_norm2, deterministic=True, closure='vecstore')
+
+def _sim_fast_cosine(vecstore):
+    import numpy as np
+    def sim_fast_cosine(x, y):
+        """Compute the dot product between vectors 'x' and 'y'.
+        """
+        vx = np.frombuffer(x, dtype=np.float32)
+        vy = np.frombuffer(y, dtype=np.float32)
+        # make sure we don't return numpy floats:
+        return float(np.dot(vx[1:], vy[1:]) * vx[0] * vy[0])
+    return sim_fast_cosine
+
+SqliteStore.register_user_function('sim_fast_cosine', 2, _sim_fast_cosine, deterministic=True, closure='vecstore')
+
+def _sim_fast_cosine16(vecstore):
+    import numpy as np
+    def sim_fast_cosine16(x, y):
+        """Compute the dot product between vectors 'x' and 'y'.
+        """
+        vx = np.frombuffer(x, dtype=np.float16)
+        vy = np.frombuffer(y, dtype=np.float16)
+        # make sure we don't return numpy floats:
+        return float(np.dot(vx[1:], vy[1:]) * vx[0] * vy[0])
+    return sim_fast_cosine16
+
+SqliteStore.register_user_function('sim_fast_cosine16', 2, _sim_fast_cosine16, deterministic=True, closure='vecstore')
 
 
 # uncomment to debug errors in user functions:
