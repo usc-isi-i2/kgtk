@@ -352,3 +352,34 @@ kgtk visualize-graph -i examples/docs/visualize_force_graph_example2.tsv \
 Colors nodes by hexadecimal color codes in the column `hex_color` for both edges and nodes and  show labels above nodes and on edges.
 
 <img src="https://github.com/usc-isi-i2/kgtk/blob/dev/docs/images/visualize-force-graph-examples/11.jpg" width="300"/>
+
+## 12. Color by column `degree`, values as numbers, use `d3.interpolateRdYlBu` interpolator
+```
+kgtk visualize-graph -i examples/docs/visualize_force_graph_example2.tsv \
+--node-file examples/docs/visualize_force_graph_example2_node.tsv \
+--node-color-column degree \
+--node-color-numbers \
+--node-categorical-scale d3.interpolateRdYlBu \
+-o show_degrees_interpolator.html
+```
+This customization uses type as columns for assigning colors. --node-categorical-scale = 'd3.interpolateRdYlBu' will use the [following scale](https://github.com/d3/d3-scale-chromatic#interpolateRdYlBu) to color the nodes.
+
+**Note: We are not using the option `--node-color-scale`, as the above command will find the range of colors (which are numbers) and map them to the `d3.interpolateRdYlBu` scale.
+
+<img src="https://github.com/usc-isi-i2/kgtk/blob/dev/docs/images/visualize-force-graph-examples/12.jpg" width="300"/>
+
+
+## 13. Color by column `degree`, values as numbers, use `d3.interpolateGreens` interpolator
+```
+kgtk visualize-graph -i examples/docs/visualize_force_graph_example2.tsv \
+--node-file examples/docs/visualize_force_graph_example2_node.tsv \
+--node-color-column degree \
+--node-color-numbers \
+--node-categorical-scale d3.interpolateGreens \
+-o show_degrees_interpolator_green.html
+```
+This customization uses type as columns for assigning colors. --node-categorical-scale = 'd3.interpolateGreens' will use the [following scale](https://github.com/d3/d3-scale-chromatic#interpolateGreens) to color the nodes.
+
+**Note: We are not using the option `--node-color-scale`, as the above command will find the range of colors (which are numbers) and map them to the `d3.interpolateGreens` scale.
+
+<img src="https://github.com/usc-isi-i2/kgtk/blob/dev/docs/images/visualize-force-graph-examples/13.jpg" width="300"/>
