@@ -216,15 +216,17 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         dest='node_categorical_scale',
                         type=str,
                         default='d3.interpolateRainbow',
-                        help="Node color categorical scale node from d3-scale-chromatic."
-                             "https://observablehq.com/@d3/sequential-scales. Default: rainbow")
+                        help="Node color categorical interpolator from d3-scale-chromatic. "
+                             "The scale is always d3.scaleSequential. You can choose any interpolator from, "
+                             "https://github.com/d3/d3-scale-chromatic. Default: d3.interpolateRainbow")
 
     parser.add_argument('--edge-categorical-scale',
                         dest='edge_categorical_scale',
                         type=str,
                         default='d3.interpolateRainbow',
-                        help="Edge color categorical scale for edge d3-scale-chromatic."
-                             "https://observablehq.com/@d3/sequential-scales. Default: rainbow")
+                        help="Edge color categorical interpolator from d3-scale-chromatic. "
+                             "The scale is always d3.scaleSequential. You can choose any interpolator from, "
+                             "https://github.com/d3/d3-scale-chromatic. Default: d3.interpolateRainbow")
 
     parser.add_argument('--node-gradient-scale',
                         dest='node_gradient_scale',
