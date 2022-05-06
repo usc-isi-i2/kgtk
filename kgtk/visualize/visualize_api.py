@@ -72,8 +72,8 @@ class KgtkVisualize:
             node_border_color: str = None,
             tooltip_column: str = None,
             show_text: str = None,
-            node_categorical_scale: str = 'rainbow',
-            edge_categorical_scale: str = 'rainbow',
+            node_categorical_scale: str = 'd3.interpolateRainbow',
+            edge_categorical_scale: str = 'd3.interpolateRainbow',
             node_gradient_scale: str = 'd3.interpolateRdBu',
             edge_gradient_scale: str = 'd3.interpolateRdBu',
             show_blank_labels: bool = False,
@@ -439,20 +439,26 @@ class KgtkVisualize:
             # all good, nothing to do here
             pass
         else:
-            node_color_list = []
+            node_color_set = set()
             max_color = -1
             min_color = -1
+            log_max_color = -1
+            log_min_color = -1
             if self.node_color_numbers:
-                node_color_list = [x['orig_color'] for x in nodes]
-                max_color = max(node_color_list)
-                min_color = min(node_color_list)
+                for x in nodes:
+                    node_color_set.add(x['orig_color'])
+
+                max_color = max(node_color_set)
+                min_color = min(node_color_set)
+
+                log_max_color = math.log(max_color, self.base) if max_color > 0.0 else -1.0
+                log_min_color = math.log(min_color, self.base) if min_color > 0.0 else -1.0
+
+                for i, color in enumerate(sorted(node_color_set)):
+                    self.node_color_map[color] = i
             for node in nodes:
                 orig_color = node['orig_color']
                 if node_color_numbers:
-
-                    log_max_color = math.log(max_color, self.base) if max_color > 0.0 else -1.0
-                    log_min_color = math.log(min_color, self.base) if min_color > 0.0 else -1.0
-
                     if node_color_style == GRADIENT:
                         if process_nodes:
                             self.node_color_choice = 1
@@ -527,7 +533,7 @@ class KgtkVisualize:
             <body>
             <div id="graph"></div>
             <script>
-                rainbow = d3.scaleSequential().domain([0, {len(self.node_color_map) - 1}]).interpolator(d3.interpolateRainbow);        
+                rainbow = d3.scaleSequential().domain([0, {len(self.node_color_map) - 1}]).interpolator({self.node_categorical_scale});        
                const j = ''')
         f.write(json.dumps(d, indent=4))
         f.write('''
@@ -557,9 +563,9 @@ class KgtkVisualize:
                 node_text_format = 'd3.schemeCategory10[node.color]'
             else:
                 f.write(f'''
-                        .nodeColor((node) => node.color[0] == "#" ? node.color : {self.node_categorical_scale}(node.color))
+                        .nodeColor((node) => node.color[0] == "#" ? node.color : rainbow(node.color))
                         .linkWidth((link) => link.width)''')
-                node_text_format = f'{self.node_categorical_scale}(node.color)'
+                node_text_format = f'rainbow(node.color)'
 
         if self.node_border_color is not None:
             node_text_format = "'" + self.node_border_color + "'"
