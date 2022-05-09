@@ -1,72 +1,46 @@
 This command creates a html visualization of a KGTK edge file
 ## Usage
 ```
-usage: kgtk visualize-graph [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
-                            [--node-file NODE_FILE] [--direction DIRECTION]
-                            [--show-edge-label]
-                            [--edge-color-column EDGE_COLOR_COLUMN]
-                            [--edge-color-numbers] [--edge-color-hex]
-                            [--edge-color-style EDGE_COLOR_STYLE]
-                            [--edge-color-default EDGE_COLOR_DEFAULT]
-                            [--edge-width-column EDGE_WIDTH_COLUMN]
-                            [--edge-width-minimum EDGE_WIDTH_MINIMUM]
-                            [--edge-width-maximum EDGE_WIDTH_MAXIMUM]
-                            [--edge-width-default EDGE_WIDTH_DEFAULT]
-                            [--edge-width-scale EDGE_WIDTH_SCALE]
-                            [--node-color-column NODE_COLOR_COLUMN]
-                            [--node-color-style NODE_COLOR_STYLE]
-                            [--node-color-default NODE_COLOR_DEFAULT]
-                            [--node-color-scale NODE_COLOR_SCALE]
-                            [--node-color-numbers] [--node-color-hex]
-                            [--node-size-column NODE_SIZE_COLUMN]
-                            [--node-size-minimum NODE_SIZE_MINIMUM]
-                            [--node-size-maximum NODE_SIZE_MAXIMUM]
-                            [--node-size-default NODE_SIZE_DEFAULT]
-                            [--node-size-scale NODE_SIZE_SCALE]
-                            [--node-file-id NODE_FILE_ID]
-                            [--show-text-limit SHOW_TEXT_LIMIT]
-                            [--node-border-color NODE_BORDER_COLOR]
-                            [--tooltip-column TOOLTIP_COLUMN]
-                            [--show-text SHOW_TEXT]
-                            [--node-categorical-scale NODE_CATEGORICAL_SCALE]
-                            [--edge-categorical-scale EDGE_CATEGORICAL_SCALE]
-                            [--node-gradient-scale NODE_GRADIENT_SCALE]
-                            [--edge-gradient-scale EDGE_GRADIENT_SCALE]
-                            [-v [optional True|False]]
+usage: kgtk visualize-graph [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [--node-file NODE_FILE] [--direction DIRECTION] [--show-edge-label]
+                            [--edge-color-column EDGE_COLOR_COLUMN] [--edge-color-numbers] [--edge-color-hex]
+                            [--edge-color-style EDGE_COLOR_STYLE] [--edge-color-default EDGE_COLOR_DEFAULT]
+                            [--edge-width-column EDGE_WIDTH_COLUMN] [--edge-width-minimum EDGE_WIDTH_MINIMUM]
+                            [--edge-width-maximum EDGE_WIDTH_MAXIMUM] [--edge-width-default EDGE_WIDTH_DEFAULT]
+                            [--edge-width-scale EDGE_WIDTH_SCALE] [--node-color-column NODE_COLOR_COLUMN]
+                            [--node-color-style NODE_COLOR_STYLE] [--node-color-default NODE_COLOR_DEFAULT]
+                            [--node-color-scale NODE_COLOR_SCALE] [--node-color-numbers] [--node-color-hex]
+                            [--node-size-column NODE_SIZE_COLUMN] [--node-size-minimum NODE_SIZE_MINIMUM]
+                            [--node-size-maximum NODE_SIZE_MAXIMUM] [--node-size-default NODE_SIZE_DEFAULT]
+                            [--node-size-scale NODE_SIZE_SCALE] [--node-file-id NODE_FILE_ID] [--show-text-limit SHOW_TEXT_LIMIT]
+                            [--node-border-color NODE_BORDER_COLOR] [--tooltip-column TOOLTIP_COLUMN] [--show-text SHOW_TEXT]
+                            [--node-categorical-scale NODE_CATEGORICAL_SCALE] [--edge-categorical-scale EDGE_CATEGORICAL_SCALE]
+                            [--node-gradient-scale NODE_GRADIENT_SCALE] [--edge-gradient-scale EDGE_GRADIENT_SCALE]
+                            [--show-blank-labels] [-v [optional True|False]]
 
 Convert edge file (optional node file) to html graph visualization file
 
 optional arguments:
   -h, --help            show this help message and exit
   -i INPUT_FILE, --input-file INPUT_FILE
-                        The KGTK input file. (May be omitted or '-' for
-                        stdin.)
+                        The KGTK input file. (May be omitted or '-' for stdin.)
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
-                        The KGTK output file. (May be omitted or '-' for
-                        stdout.)
+                        The KGTK output file. (May be omitted or '-' for stdout.)
   --node-file NODE_FILE
                         Path of the node file.
   --direction DIRECTION
                         The edge direction: arrow|particle|None. Default: None
-  --show-edge-label     Add this option to show labels on edges. Default:
-                        False
+  --show-edge-label     Add this option to show labels on edges. Default: False
   --edge-color-column EDGE_COLOR_COLUMN
-                        Column for edge colors in the edge file. The values
-                        can be numbers, hex codes or any strings
-  --edge-color-numbers  Add this option if the values in the --edge-color-
-                        column are numbers
-  --edge-color-hex      Add this option if the values in the --edge-color-
-                        column are valid hexadecimal colors.Valid hexadecimal
-                        colors start with # and are of 3 or 6 length (without
-                        the #)
+                        Column for edge colors in the edge file. The values can be numbers, hex codes or any strings
+  --edge-color-numbers  Add this option if the values in the --edge-color-column are numbers
+  --edge-color-hex      Add this option if the values in the --edge-color-column are valid hexadecimal colors.Valid hexadecimal colors
+                        start with # and are of 3 or 6 length (without the #)
   --edge-color-style EDGE_COLOR_STYLE
-                        Edge color style for edge color: categorical|gradient.
-                        Default: None
+                        Edge color style for edge color: categorical|gradient. Default: None
   --edge-color-default EDGE_COLOR_DEFAULT
                         Default color for edges. Default: '#000000'
   --edge-width-column EDGE_WIDTH_COLUMN
-                        Column for edge widths in the edge file. The values
-                        should be numbers.
+                        Column for edge widths in the edge file. The values should be numbers.
   --edge-width-minimum EDGE_WIDTH_MINIMUM
                         Minimum edge width. Default: 1.0
   --edge-width-maximum EDGE_WIDTH_MAXIMUM
@@ -76,23 +50,18 @@ optional arguments:
   --edge-width-scale EDGE_WIDTH_SCALE
                         Edge width scale: linear|log. Default: None
   --node-color-column NODE_COLOR_COLUMN
-                        Column for node colors in the --node-file. The values
-                        can be numbers, valid hex codes or any strings.
+                        Column for node colors in the --node-file. The values can be numbers, valid hex codes or any strings.
   --node-color-style NODE_COLOR_STYLE
                         Node color style: categorical|gradient. Default: None
   --node-color-default NODE_COLOR_DEFAULT
                         Default node color. Default: '#000000'
   --node-color-scale NODE_COLOR_SCALE
                         Node color scale: linear|log. Default: None
-  --node-color-numbers  Add this option if the values in the --node-color-
-                        column are numbers
-  --node-color-hex      Add this option if the values in the --node-color-
-                        column are valid hexadecimal colors.Valid hexadecimal
-                        colors start with # and are of 3 or 6 length (without
-                        the #)
+  --node-color-numbers  Add this option if the values in the --node-color-column are numbers
+  --node-color-hex      Add this option if the values in the --node-color-column are valid hexadecimal colors.Valid hexadecimal colors
+                        start with # and are of 3 or 6 length (without the #)
   --node-size-column NODE_SIZE_COLUMN
-                        Column for node sizes in the --node-file. Default:
-                        None
+                        Column for node sizes in the --node-file. Default: None
   --node-size-minimum NODE_SIZE_MINIMUM
                         Minimum node size. Default: 1.0
   --node-size-maximum NODE_SIZE_MAXIMUM
@@ -104,37 +73,30 @@ optional arguments:
   --node-file-id NODE_FILE_ID
                         ID column name in the --node-file. Default: 'id'
   --show-text-limit SHOW_TEXT_LIMIT
-                        When number of nodes is greater than --show-text-
-                        limit, node labels will not be visible.Default: 500
+                        When number of nodes is greater than --show-text-limit, node labels will not be visible.Default: 500
   --node-border-color NODE_BORDER_COLOR
                         Node border color. Default: None
   --tooltip-column TOOLTIP_COLUMN
-                        Column for node tooltips in the --node-file. Default:
-                        None
+                        Column for node tooltips in the --node-file. Default: None
   --show-text SHOW_TEXT
-                        Show node labels at the position relative to node:
-                        center|above. Default: None. If the number of nodes in
-                        the graph is greater than specified by --show-text-
-                        limit option, which is 500 by default, then the text
-                        will not be shown in the visualization.
+                        Show node labels at the position relative to node: center|above. Default: None. If the number of nodes in the
+                        graph is greater than specified by --show-text-limit option, which is 500 by default, then the text will not
+                        be shown in the visualization.
   --node-categorical-scale NODE_CATEGORICAL_SCALE
-                        Node color categorical scale node from d3-scale-
-                        chromatic.https://observablehq.com/@d3/sequential-
-                        scales. Default: rainbow
+                        Node color categorical interpolator from d3-scale-chromatic. The scale is always d3.scaleSequential. You can
+                        choose any interpolator from, https://github.com/d3/d3-scale-chromatic. Default: d3.interpolateRainbow
   --edge-categorical-scale EDGE_CATEGORICAL_SCALE
-                        Edge color categorical scale for edge d3-scale-
-                        chromatic.https://observablehq.com/@d3/sequential-
-                        scales. Default: rainbow
+                        Edge color categorical interpolator from d3-scale-chromatic. The scale is always d3.scaleSequential. You can
+                        choose any interpolator from, https://github.com/d3/d3-scale-chromatic. Default: d3.interpolateRainbow
   --node-gradient-scale NODE_GRADIENT_SCALE
-                        Node color gradient scale from d3-scale-chromatic.
-                        Default: d3.interpolateRdBu
+                        Node color gradient scale from d3-scale-chromatic. Default: d3.interpolateRdBu
   --edge-gradient-scale EDGE_GRADIENT_SCALE
-                        Edge color gradient scale from d3-scale-chromatic.
-                        Default: d3.interpolateRdBu
+                        Edge color gradient scale from d3-scale-chromatic. Default: d3.interpolateRdBu
+  --show-blank-labels   if --show-text is specified, show the label of a Qnode as emptry string, and not the Qnode, if the label is an
+                        empty string.
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).
-
 ```
 
 
@@ -352,3 +314,34 @@ kgtk visualize-graph -i examples/docs/visualize_force_graph_example2.tsv \
 Colors nodes by hexadecimal color codes in the column `hex_color` for both edges and nodes and  show labels above nodes and on edges.
 
 <img src="https://github.com/usc-isi-i2/kgtk/blob/dev/docs/images/visualize-force-graph-examples/11.jpg" width="300"/>
+
+## 12. Color by column `degree`, values as numbers, use `d3.interpolateRdYlBu` interpolator
+```
+kgtk visualize-graph -i examples/docs/visualize_force_graph_example2.tsv \
+--node-file examples/docs/visualize_force_graph_example2_node.tsv \
+--node-color-column degree \
+--node-color-numbers \
+--node-categorical-scale d3.interpolateRdYlBu \
+-o show_degrees_interpolator.html
+```
+This customization uses type as columns for assigning colors. --node-categorical-scale = 'd3.interpolateRdYlBu' will use the [following scale](https://github.com/d3/d3-scale-chromatic#interpolateRdYlBu) to color the nodes.
+
+**Note: We are not using the option `--node-color-scale`, as the above command will find the range of colors (which are numbers) and map them to the `d3.interpolateRdYlBu` scale.**
+
+<img src="https://github.com/usc-isi-i2/kgtk/blob/dev/docs/images/visualize-force-graph-examples/12.png" width="300"/>
+
+
+## 13. Color by column `degree`, values as numbers, use `d3.interpolateGreens` interpolator
+```
+kgtk visualize-graph -i examples/docs/visualize_force_graph_example2.tsv \
+--node-file examples/docs/visualize_force_graph_example2_node.tsv \
+--node-color-column degree \
+--node-color-numbers \
+--node-categorical-scale d3.interpolateGreens \
+-o show_degrees_interpolator_green.html
+```
+This customization uses type as columns for assigning colors. --node-categorical-scale = 'd3.interpolateGreens' will use the [following scale](https://github.com/d3/d3-scale-chromatic#interpolateGreens) to color the nodes.
+
+**Note: We are not using the option `--node-color-scale`, as the above command will find the range of colors (which are numbers) and map them to the `d3.interpolateGreens` scale.**
+
+<img src="https://github.com/usc-isi-i2/kgtk/blob/dev/docs/images/visualize-force-graph-examples/13.png" width="300"/>
