@@ -195,3 +195,25 @@ kgtk query --graph-cache /data/amandeep/wikidata-20211027-dwd-v3/useful-files/te
 Notice the files are loaded with an alias, `"/data/amandeep/wikidata-20211027-dwd-v3/claims.tsv.gz" --as claims`.
 
 At this step, the notebook setup is complete with set environment variables.
+
+## Print a List of KGTK File names
+
+Call this function to print a list of all file nicknames and corresponding 
+files or a subset of file nicknames.
+```
+ck.print_kgtk_file_names(file_names=None)
+```
+
+The variable `file_names` can be a `str` of a `List[str]`, if its `None`, the
+function will print all known file nick names and corresponding KGTK file.
+
+```
+ck.print_kgtk_file_names(file_names=['isa', 'p279star', 'claims'])
+
+isa: derived.isa.tsv.gz
+p279star: derived.P279star.tsv.gz
+claims: claims.tsv.gz
+```
+
+**Note: This function will only print file names, the files are not required to be
+in the input folder.**
