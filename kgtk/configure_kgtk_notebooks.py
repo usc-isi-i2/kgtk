@@ -172,14 +172,16 @@ class ConfigureKGTK(object):
         print(kypher_command)
         print(subprocess.getoutput(kypher_command))
 
-    def print_kgtk_file_names(self, file_name=None):
-        if file_name is not None:
-            if file_name not in self.graph_files:
-                print(f"Unknown file name: {file_name}. Here is a list of known file names")
-                self.print_kgtk_file_names()
-            else:
-                print(f"{file_name}: {self.graph_files[file_name]}")
+    def print_kgtk_file_names(self, file_names=None):
+        if file_names is not None:
+            if not type(file_names) == list:
+                file_names = [file_names]
+            for file_name in file_names:
+                if file_name not in self.graph_files:
+                    print(f"Unknown file name: {file_name}.")
+                else:
+                    print(f"{file_name}: {self.graph_files[file_name]}")
         else:
-            print("Printing a list of known KGTK file names...")
+            print("Printing a list of all known KGTK file names...")
             for key in self.graph_files:
                 print(f"{key}: {self.graph_files[key]}")
