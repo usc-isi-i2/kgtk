@@ -83,12 +83,14 @@ P1963computed	description	'The properties defined for a class, computed based on
 P1963computed	P31	Q19820110	P1963computed-P31-Q19820110
 P1963computed	P279	Q22582645	P1963computed-P279-Q22582645
 P1963computed	P1659	P1963	P1963computed-P1659-P1963
+P1963computed	P7482	Q108739856	P1963computed-P7482-Q108739856
 P1963computed	datatype	quantity	P1963computed-datatype-1a7b30
 Pproperty_domain	label	'entity types used (computed)'@en	Pproperty_domain-label-4ffb8a
 Pproperty_domain	description	'List the classes that appear as values of a property'@en	Pproperty_domain-description-7eb869
 Pproperty_domain	P31	Q19820110	Pproperty_domain-P31-Q19820110
 Pproperty_domain	P279	Q22582645	Pproperty_domain-P279-Q22582645
 Pproperty_domain	P1659	P1963	Pproperty_domain-P1659-P1963
+Pproperty_domain	P7482	Q108739856	Pproperty_domain-P7482-Q108739856
 Pproperty_domain	datatype	wikibase-item	Pproperty_domain-datatype-643cc9
 Pproperty_units_used	label	'units used (computed)'@en	Pproperty_units_used-label-9b6df6
 Pproperty_units_used	description	'The units used in quantity properties'@en	Pproperty_units_used-description-8cb3de
@@ -140,4 +142,5 @@ P1963computed_star	description	'The properties defined for a class, computed bas
 P1963computed_star	P31	Q19820110	P1963computed_star-P31-Q19820110
 P1963computed_star	P279	Q22582645	P1963computed_star-P279-Q22582645
 P1963computed_star	P1659	P1963	P1963computed_star-P1659-P1963
+P1963computed_star	P7482	Q108739856	P1963computed_star-P7482-Q108739856
 P1963computed_star	datatype	quantity	P1963computed_star-datatype-1a7b30
