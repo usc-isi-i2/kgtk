@@ -15,6 +15,8 @@ class TestVisualizeGraph(unittest.TestCase):
         self.ground_truth_color_node_missing = 'data/visualize_graph_example_color_by_node_column_log_missing.html'
         self.ground_truth_color_node_hex = 'data/visualize_graph_example_color_by_node_column_hex.html'
         self.ground_truth_color_edge = 'data/visualize_graph_example_color_edge.html'
+        self.ground_truth_color_edge_numbers = 'data/visualize_graph_example_color_edge_numbers.html'
+        self.ground_truth_color_edge_strings = 'data/visualize_graph_example_color_edge_strings.html'
         self.ground_truth_node_size = 'data/visualize_graph_example_node_size.html'
         self.ground_truth_edge_width = 'data/visualize_graph_example_edge_width.html'
         self.ground_truth_node_text = 'data/visualize_graph_example_node_text.html'
@@ -286,6 +288,41 @@ class TestVisualizeGraph(unittest.TestCase):
                   )
 
         f = open(self.ground_truth_node_text_number_colors)
+        f1 = set(f.readlines())
+        f.close()
+        with open(output) as f2:
+            for line in f2:
+                self.assertTrue(line in f1)
+
+    def test_color_by_edge_column_color_numbers(self):
+        output = f'{self.temp_dir}/test_15.html'
+        cli_entry("kgtk", "--debug",
+                  "visualize-graph",
+                  "-i", self.example_file,
+                  "-o", f'{output}',
+                  "--edge-color-column", "ordinal",
+                  "--edge-color-numbers", "as-is",
+                  "--edge-color-style", "d3.interpolateReds"
+                  )
+
+        f = open(self.ground_truth_color_edge_numbers)
+        f1 = set(f.readlines())
+        f.close()
+        with open(output) as f2:
+            for line in f2:
+                self.assertTrue(line in f1)
+
+    def test_color_by_edge_column_color_strings(self):
+        output = f'{self.temp_dir}/test_16.html'
+        cli_entry("kgtk", "--debug",
+                  "visualize-graph",
+                  "-i", self.example_file,
+                  "-o", f'{output}',
+                  "--edge-color-column", "label",
+                  "--edge-color-style", "d3.schemeDark2"
+                  )
+
+        f = open(self.ground_truth_color_edge_strings)
         f1 = set(f.readlines())
         f.close()
         with open(output) as f2:
