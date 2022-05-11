@@ -15,6 +15,7 @@ from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 from kgtk.kgtkformat import KgtkFormat
 import re
 from typing import List
+from kgtk.utils.color_styles import color_style_dict, GRADIENT, CATEGORICAL
 
 
 def parser():
@@ -27,9 +28,6 @@ def parser():
 kgtk_format = KgtkFormat()
 
 compiled_hex_color_regex = re.compile(r"^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$")
-
-GRADIENT = 'gradient'
-CATEGORICAL = 'categorical'
 
 
 class KgtkVisualize:
@@ -46,21 +44,19 @@ class KgtkVisualize:
             direction: str = None,
             edge_label: bool = False,
             edge_color_column: str = None,
-            edge_color_style: str = None,
+            edge_color_style: str = 'd3.interpolateRainbow',
             edge_color_default: str = '#000000',
             edge_width_column: str = None,
             edge_width_default: float = 1.0,
             edge_width_minimum: float = 1.0,
             edge_width_maximum: float = 5.0,
             edge_width_scale: str = None,
-            edge_color_numbers: bool = False,
+            edge_color_numbers: str = None,
             edge_color_hex: bool = False,
-            edge_color_scale: str = None,
             node_color_column: str = None,
-            node_color_style: str = None,
+            node_color_style: str = 'd3.interpolateRainbow',
             node_color_default: str = '#000000',
-            node_color_scale: str = None,
-            node_color_numbers: bool = False,
+            node_color_numbers: str = None,
             node_color_hex: bool = False,
             node_size_column: str = None,
             node_size_default: float = 2.0,
@@ -72,14 +68,19 @@ class KgtkVisualize:
             node_border_color: str = None,
             tooltip_column: str = None,
             show_text: str = None,
-            node_categorical_scale: str = 'd3.interpolateRainbow',
-            edge_categorical_scale: str = 'd3.interpolateRainbow',
-            node_gradient_scale: str = 'd3.interpolateRdBu',
-            edge_gradient_scale: str = 'd3.interpolateRdBu',
             show_blank_labels: bool = False,
             kwargs=None):
         if kwargs is None:
             kwargs = {'errors_to_stderr': True, 'show_options': False}
+
+        if node_color_style not in color_style_dict:
+            raise KGTKException(f'Unknown value: {node_color_style} for parameter: node_color_style. Please choose'
+                                f' one of the following: {", ".join(list(color_style_dict))}')
+
+        if edge_color_style not in color_style_dict:
+            raise KGTKException(f'Unknown value: {edge_color_style} for parameter: edge_color_style. Please choose'
+                                f' one of the following: {", ".join(list(color_style_dict))}')
+
         self.input_file = Path(input_file)
         self.output_file = Path(output_file)
         self.errors_to_stdout = errors_to_stdout
@@ -93,9 +94,8 @@ class KgtkVisualize:
         self.edge_color_column = edge_color_column
         self.edge_color_style = edge_color_style
         self.edge_color_default = edge_color_default
-        self.edge_color_numbers = edge_color_numbers
+        self.edge_color_numbers = edge_color_numbers.lower() if edge_color_numbers is not None else edge_color_numbers
         self.edge_color_hex = edge_color_hex
-        self.edge_color_scale = edge_color_scale
         self.edge_width_column = edge_width_column
         self.edge_width_default = edge_width_default
         self.edge_width_minimum = edge_width_minimum
@@ -104,7 +104,6 @@ class KgtkVisualize:
         self.node_color_column = node_color_column
         self.node_color_style = node_color_style
         self.node_color_default = node_color_default
-        self.node_color_scale = node_color_scale
         self.node_size_column = node_size_column
         self.node_size_default = node_size_default
         self.node_size_minimum = node_size_minimum
@@ -115,11 +114,7 @@ class KgtkVisualize:
         self.node_border_color = node_border_color
         self.tooltip_column = tooltip_column
         self.show_text = show_text
-        self.node_categorical_scale = node_categorical_scale
-        self.edge_categorical_scale = edge_categorical_scale
-        self.node_gradient_scale = node_gradient_scale
-        self.edge_gradient_scale = edge_gradient_scale
-        self.node_color_numbers = node_color_numbers
+        self.node_color_numbers = node_color_numbers.lower() if node_color_numbers is not None else node_color_numbers
         self.node_color_hex = node_color_hex
         self.show_blank_labels = show_blank_labels
         self.kwargs = kwargs
@@ -139,9 +134,9 @@ class KgtkVisualize:
 
         self.node_color_map = {}
 
-        self.node_color_choice = 0
-
         self.node_set = set()
+
+        self.node_color_choice = 0
 
         if self.node_size_minimum == 0.0 and self.node_size_scale == 'log':
             raise ValueError("node size cannot be 0 when using log scale")
@@ -156,7 +151,6 @@ class KgtkVisualize:
 
     def compute_visualization_graph(self):
         d = {}
-        nodes = []
         # Show the final option structures for debugging and documentation.
         try:
             edges, nodes_from_edge = self.process_edge_file()
@@ -168,7 +162,7 @@ class KgtkVisualize:
             d['links'] = edges
             d['nodes'] = nodes
         except SystemExit as e:
-            raise KGTKException("Exit requested")
+            raise KGTKException(f"Exit requested: {e}")
         except Exception as e:
             raise KGTKException(str(e))
         return d
@@ -250,7 +244,7 @@ class KgtkVisualize:
                 if self.edge_color_column is not None:
                     _edge_color = row[kr.column_name_map[self.edge_color_column]].strip()
 
-                    if self.edge_color_numbers:
+                    if self.edge_color_numbers is not None:
                         _edge_color = KgtkVisualize.convert_string_float(_edge_color)
                         if _edge_color is not None:
                             _edge_obj['orig_color'] = _edge_color
@@ -284,7 +278,6 @@ class KgtkVisualize:
                                          self.edge_color_hex,
                                          self.edge_color_numbers,
                                          self.edge_color_style,
-                                         self.edge_color_scale,
                                          self.edge_color_default,
                                          False)
 
@@ -369,7 +362,7 @@ class KgtkVisualize:
 
                     if self.node_color_column is not None:
                         _node_color = row[kr_node.column_name_map[self.node_color_column]]
-                        if self.node_color_numbers:
+                        if self.node_color_numbers is not None:
                             _node_color = KgtkVisualize.convert_string_float(_node_color)
                             if _node_color is not None:
                                 temp['orig_color'] = _node_color
@@ -400,7 +393,7 @@ class KgtkVisualize:
 
             for node_from_edge in nodes_from_edge:
                 if node_from_edge['id'] not in self.node_set:
-                    if self.node_color_numbers:
+                    if self.node_color_numbers is not None:
                         node_from_edge['orig_color'] = 0.0
                     else:
                         node_from_edge['orig_color'] = self.node_color_default
@@ -411,7 +404,6 @@ class KgtkVisualize:
                                              self.node_color_hex,
                                              self.node_color_numbers,
                                              self.node_color_style,
-                                             self.node_color_scale,
                                              self.node_color_default,
                                              True)
 
@@ -429,22 +421,25 @@ class KgtkVisualize:
     def calculate_color(self,
                         nodes: List[dict],
                         node_color_hex: bool,
-                        node_color_numbers: bool,
+                        node_color_numbers: str,
                         node_color_style: str,
-                        node_color_scale: str,
                         node_color_default: str,
                         process_nodes: bool) -> List[dict]:
 
+        categorical_color_scale = False
+        category_length = 1
         if node_color_hex:
+            self.node_color_choice = 0
             # all good, nothing to do here
             pass
         else:
+            self.node_color_choice = 1
             node_color_set = set()
             max_color = -1
             min_color = -1
             log_max_color = -1
             log_min_color = -1
-            if self.node_color_numbers:
+            if self.node_color_numbers is not None:
                 for x in nodes:
                     node_color_set.add(x['orig_color'])
 
@@ -458,13 +453,11 @@ class KgtkVisualize:
                     self.node_color_map[color] = i
             for node in nodes:
                 orig_color = node['orig_color']
-                if node_color_numbers:
-                    if node_color_style == GRADIENT:
-                        if process_nodes:
-                            self.node_color_choice = 1
-                        if node_color_scale == 'linear':
+                if node_color_numbers is not None:
+                    if color_style_dict[node_color_style]['style'] == GRADIENT:
+                        if node_color_numbers == 'linear':
                             node['color'] = (orig_color - min_color) / (max_color - min_color)
-                        elif node_color_scale == 'log':
+                        elif node_color_numbers == 'log':
                             if orig_color == 0.0 or log_max_color == log_min_color:
                                 node['color'] = node_color_default
                             else:
@@ -474,16 +467,24 @@ class KgtkVisualize:
                             node['color'] = orig_color if orig_color != 0.0 else node_color_default
 
                 if 'color' not in node:
+                    if color_style_dict[node_color_style]['style'] == CATEGORICAL:
+                        category_length = color_style_dict[node_color_style]['length']
+                        categorical_color_scale = True
                     if process_nodes:
-                        self.node_color_choice = 2
                         if orig_color not in self.node_color_map:
                             self.node_color_map[orig_color] = len(self.node_color_map)
 
-                        node['color'] = self.node_color_map[orig_color]
+                        if categorical_color_scale:
+                            node['color'] = self.node_color_map[orig_color] % category_length
+                        else:
+                            node['color'] = self.node_color_map[orig_color]
                     else:
                         if orig_color not in self.edge_color_map:
                             self.edge_color_map[orig_color] = len(self.edge_color_map)
-                        node['color'] = self.edge_color_map[orig_color]
+                        if categorical_color_scale:
+                            node['color'] = self.edge_color_map[orig_color] % category_length
+                        else:
+                            node['color'] = self.edge_color_map[orig_color] % category_length
                 del node['orig_color']
         return nodes
 
@@ -518,6 +519,19 @@ class KgtkVisualize:
         return nodes
 
     def to_html(self, d):
+        node_color_style = ''
+        edge_color_style = ''
+
+        if color_style_dict[self.node_color_style]['style'] == CATEGORICAL:
+            node_color_style = f"{self.node_color_style}[node.color]"
+        elif color_style_dict[self.node_color_style]['style'] == GRADIENT:
+            node_color_style = f"d3.scaleSequential().domain([0, {len(self.node_color_map) - 1}]).interpolator({self.node_color_style})(node.color)"
+
+        if color_style_dict[self.edge_color_style]['style'] == CATEGORICAL:
+            edge_color_style = f"{self.edge_color_style}[node.color]"
+        elif color_style_dict[self.edge_color_style]['style'] == GRADIENT:
+            edge_color_style = f"d3.scaleSequential().domain([0, {len(self.edge_color_map) - 1}]).interpolator({self.edge_color_style})(node.color)"
+
         output_kgtk_file: Path = KGTKArgumentParser.get_output_file(self.output_file)
 
         f = open(output_kgtk_file, 'w')
@@ -532,8 +546,7 @@ class KgtkVisualize:
             </head>
             <body>
             <div id="graph"></div>
-            <script>
-                rainbow = d3.scaleSequential().domain([0, {len(self.node_color_map) - 1}]).interpolator({self.node_categorical_scale});        
+            <script>        
                const j = ''')
         f.write(json.dumps(d, indent=4))
         f.write('''
@@ -544,23 +557,16 @@ class KgtkVisualize:
                 .nodeLabel('tooltip')
                 .nodeVal('size')''')
 
-        node_text_format = ''
         if self.node_color_choice == 0:
             f.write('''
-                .nodeAutoColorBy('group')
-                .linkWidth((link) => link.width)''')
-            node_text_format = '(node.color)'
-        elif self.node_color_choice == 1:
-            f.write(f'''
-                .nodeColor((node) => node.color[0] == "#" ? node.color : {self.node_gradient_scale}(node.color))
-                .linkWidth((link) => link.width)''')
-            node_text_format = self.node_gradient_scale + '(node.color)'
-        else:
-
-            f.write(f'''
-                        .nodeColor((node) => node.color[0] == "#" ? node.color : rainbow(node.color))
+                        .nodeAutoColorBy('group')
                         .linkWidth((link) => link.width)''')
-            node_text_format = f'rainbow(node.color)'
+            node_text_format = '(node.color)'
+        else:
+            f.write(f'''
+                    .nodeColor((node) => node.color[0] == "#" ? node.color : {node_color_style})
+                    .linkWidth((link) => link.width)''')
+            node_text_format = {node_color_style}
 
         if self.node_border_color is not None:
             node_text_format = "'" + self.node_border_color + "'"
@@ -613,11 +619,11 @@ class KgtkVisualize:
                 .linkColor((link) => link.color[0] == "#" ? link.color : d3.schemeCategory10[link.color])''')
             else:
                 f.write(f'''        
-                .linkColor((link) => link.color[0] == "#" ? link.color : {self.edge_categorical_scale}(link.color))''')
+                .linkColor((link) => link.color[0] == "#" ? link.color : {edge_color_style})''')
         elif self.edge_color_style == GRADIENT:
             f.write(
                 f'''        .linkColor((link) => link.color[0] == "#" ? link.color :
-                            {self.edge_gradient_scale}(link.color))''')
+                            {edge_color_style})''')
         else:
             f.write('''        .linkColor((link) => link.color)''')
         if self.edge_label:
