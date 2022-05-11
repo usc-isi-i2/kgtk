@@ -288,7 +288,8 @@ class KgtkVisualize:
                     'id': ele[0],
                     'label': ele[1],
                     'tooltip': ele[1],
-                    'size': self.node_size_default
+                    'size': self.node_size_default,
+                    'orig_size': self.node_size_default
                 })
 
         return edges, nodes_from_edge_file
@@ -341,7 +342,9 @@ class KgtkVisualize:
 
                     if 'label' in kr_node.column_name_map:
                         try:
-                            _node_label, _, _ = kgtk_format.destringify(row[kr_node.column_name_map['label']])
+                            _node_label = row[kr_node.column_name_map['label']]
+                            if _node_label.strip() != '':
+                                _node_label, _, _ = kgtk_format.destringify(_node_label)
                         except Exception as e:
                             print(e, file=self.error_file)
                             _node_label = row[kr_node.column_name_map['label']]
