@@ -9,8 +9,7 @@
             </head>
             <body>
             <div id="graph"></div>
-            <script>
-                rainbow = d3.scaleSequential().domain([0, -1]).interpolator(d3.interpolateRainbow);        
+            <script>        
                const j = {
     "links": [
         {
@@ -163,64 +162,64 @@
             "id": "Q1",
             "label": "Alice",
             "tooltip": "Alice",
-            "color": "#000000",
-            "size": 2.0
+            "size": 2.0,
+            "color": 3
         },
         {
             "id": "Q2",
             "label": "Susan",
             "tooltip": "Susan",
-            "color": "#000000",
-            "size": 2.0
+            "size": 2.0,
+            "color": 1
         },
         {
             "id": "Q3",
             "label": "John",
             "tooltip": "John",
-            "color": "#000000",
-            "size": 2.0
+            "size": 2.0,
+            "color": 0
         },
         {
             "id": "Q4",
             "label": "Claudia",
             "tooltip": "Claudia",
-            "color": "#000000",
-            "size": 2.0
+            "size": 2.0,
+            "color": 2
         },
         {
             "id": "Q5",
             "label": "Ulrich",
             "tooltip": "Ulrich",
-            "color": "#000000",
-            "size": 2.0
+            "size": 2.0,
+            "color": 6
         },
         {
             "id": "Q6",
             "label": "Fritz",
             "tooltip": "Fritz",
-            "color": "#000000",
-            "size": 2.0
+            "size": 2.0,
+            "color": 0
         },
         {
             "id": "Q7",
             "label": "USA",
             "tooltip": "USA",
-            "color": "#000000",
-            "size": 2.0
+            "size": 2.0,
+            "color": 4
         },
         {
             "id": "Q8",
             "label": "Germany",
             "tooltip": "Germany",
-            "color": "#000000",
-            "size": 2.0
+            "size": 2.0,
+            "color": 7
         },
         {
             "id": "Q9",
             "label": "Brazil",
             "tooltip": "Brazil",
-            "color": "#000000",
-            "size": 2.0
+            "size": 2.0,
+            "color": 5
         }
     ]
 }
@@ -230,6 +229,6 @@
                 .nodeId('id')
                 .nodeLabel('tooltip')
                 .nodeVal('size')
-                .nodeAutoColorBy('group')
-                .linkWidth((link) => link.width)        .linkColor((link) => link.color)  </script>
+                    .nodeColor((node) => node.color[0] == "#" ? node.color : d3.schemeDark2[node.color])
+                    .linkWidth((link) => link.width)        .linkColor((link) => link.color)  </script>
             </body>

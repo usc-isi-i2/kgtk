@@ -29,7 +29,7 @@ class TestVisualizeGraph(unittest.TestCase):
 
     def test_default_no_node_file(self):
         output = f'{self.temp_dir}/test_1.html'
-        cli_entry("kgtk", "visualize-graph", "-i", self.example_file, "-o", output)
+        cli_entry("kgtk", "--debug", "visualize-graph", "-i", self.example_file, "-o", output)
 
         f = open(self.ground_truth_default)
         f1 = set(f.readlines())
@@ -40,12 +40,12 @@ class TestVisualizeGraph(unittest.TestCase):
 
     def test_color_by_node_column(self):
         output = f'{self.temp_dir}/test_2.html'
-        cli_entry("kgtk", "visualize-graph",
+        cli_entry("kgtk", "--debug", "visualize-graph",
                   "-i", self.example_file,
                   "-o", f'{output}',
                   "--node-color-column", "is_country",
-                  "--node-categorical-scale", "d3.interpolateBlues",
-                  "--node-color-numbers",
+                  "--node-color-style", "d3.schemeCategory10",
+                  "--node-color-numbers", "as-is",
                   "--node-file", f'{self.node_file}'
                   )
         f = open(self.ground_truth_color_node)
@@ -62,9 +62,9 @@ class TestVisualizeGraph(unittest.TestCase):
                   "-i", self.example_file,
                   "-o", f'{output}',
                   "--node-color-column", "degree",
-                  "--node-color-numbers",
-                  "--node-file", f'{self.node_file}',
-                  "--node-color-scale", "log"
+                  "--node-color-style", "d3.schemePastel1",
+                  "--node-color-numbers", "log",
+                  "--node-file", f'{self.node_file}'
                   )
 
         f = open(self.ground_truth_color_node_log)
@@ -81,6 +81,7 @@ class TestVisualizeGraph(unittest.TestCase):
                   "-i", self.example_file,
                   "-o", f'{output}',
                   "--node-color-column", "type_missing",
+                  "--node-color-style", "d3.schemeSet3",
                   "--node-file", f'{self.node_file}'
                   )
 
@@ -159,7 +160,10 @@ class TestVisualizeGraph(unittest.TestCase):
                   "--edge-width-minimum", "2.0",
                   "--edge-width-maximum", "5.0",
                   "--edge-width-default", "2.0",
-                  "--edge-width-scale", "log"
+                  "--edge-width-scale", "log",
+                  "--node-color-column", "degree",
+                  "--node-color-style", "d3.schemeDark2",
+                  "--node-color-numbers", "linear"
                   )
 
         f = open(self.ground_truth_edge_width)
@@ -254,10 +258,10 @@ class TestVisualizeGraph(unittest.TestCase):
                   "visualize-graph",
                   "-i", self.example_file,
                   "-o", f'{output}',
-                  "--node-color-column", "degree",
-                  "--node-color-numbers",
+                  "--node-color-column", "ordinal",
+                  "--node-color-numbers", "as-is",
                   "--node-file", f'{self.node_file}',
-                  "--node-categorical-scale", "d3.interpolateGreens"
+                  "--node-color-style", "d3.interpolateGreens"
                   )
 
         f = open(self.ground_truth_color_node_custom_interpolator)
