@@ -137,6 +137,7 @@ class KgtkVisualize:
         self.node_set = set()
 
         self.node_color_choice = 0
+        self.edge_color_choice = 0
 
         if self.node_size_minimum == 0.0 and self.node_size_scale == 'log':
             raise ValueError("node size cannot be 0 when using log scale")
@@ -429,17 +430,23 @@ class KgtkVisualize:
         categorical_color_scale = False
         category_length = 1
         if node_color_hex:
-            self.node_color_choice = 0
+            if process_nodes:
+                self.node_color_choice = 0
+            else:
+                self.edge_color_choice = 0
             # all good, nothing to do here
             pass
         else:
-            self.node_color_choice = 1
+            if process_nodes:
+                self.node_color_choice = 1
+            else:
+                self.edge_color_choice = 1
             node_color_set = set()
             max_color = -1
             min_color = -1
             log_max_color = -1
             log_min_color = -1
-            if self.node_color_numbers is not None:
+            if node_color_numbers is not None:
                 for x in nodes:
                     node_color_set.add(x['orig_color'])
 
@@ -450,7 +457,10 @@ class KgtkVisualize:
                 log_min_color = math.log(min_color, self.base) if min_color > 0.0 else -1.0
 
                 for i, color in enumerate(sorted(node_color_set)):
-                    self.node_color_map[color] = i
+                    if process_nodes:
+                        self.node_color_map[color] = i
+                    else:
+                        self.edge_color_map[color] = i
             for node in nodes:
                 orig_color = node['orig_color']
                 if node_color_numbers is not None:
@@ -484,7 +494,7 @@ class KgtkVisualize:
                         if categorical_color_scale:
                             node['color'] = self.edge_color_map[orig_color] % category_length
                         else:
-                            node['color'] = self.edge_color_map[orig_color] % category_length
+                            node['color'] = self.edge_color_map[orig_color]
                 del node['orig_color']
         return nodes
 
@@ -528,9 +538,9 @@ class KgtkVisualize:
             node_color_style = f"d3.scaleSequential().domain([0, {len(self.node_color_map) - 1}]).interpolator({self.node_color_style})(node.color)"
 
         if color_style_dict[self.edge_color_style]['style'] == CATEGORICAL:
-            edge_color_style = f"{self.edge_color_style}[node.color]"
+            edge_color_style = f"{self.edge_color_style}[link.color]"
         elif color_style_dict[self.edge_color_style]['style'] == GRADIENT:
-            edge_color_style = f"d3.scaleSequential().domain([0, {len(self.edge_color_map) - 1}]).interpolator({self.edge_color_style})(node.color)"
+            edge_color_style = f"d3.scaleSequential().domain([0, {len(self.edge_color_map) - 1}]).interpolator({self.edge_color_style})(link.color)"
 
         output_kgtk_file: Path = KGTKArgumentParser.get_output_file(self.output_file)
 
@@ -613,19 +623,12 @@ class KgtkVisualize:
                       ctx.beginPath(); ctx.arc(node.x, node.y, node.size, 0, 2 * Math.PI, false);  ctx.fill();
                       node.__bckgDimensions = bckgDimensions; // to re-use in nodePointerAreaPaint
                       })''')
-        if self.edge_color_style == CATEGORICAL:
-            if len(self.edge_color_map) <= 10:
-                f.write(f'''        
-                .linkColor((link) => link.color[0] == "#" ? link.color : d3.schemeCategory10[link.color])''')
-            else:
-                f.write(f'''        
-                .linkColor((link) => link.color[0] == "#" ? link.color : {edge_color_style})''')
-        elif self.edge_color_style == GRADIENT:
-            f.write(
-                f'''        .linkColor((link) => link.color[0] == "#" ? link.color :
-                            {edge_color_style})''')
-        else:
+        if self.edge_color_choice == 0:
             f.write('''        .linkColor((link) => link.color)''')
+        else:
+            f.write(f'''        
+                .linkColor((link) => link.color[0] == "#" ? link.color : {edge_color_style})''')
+
         if self.edge_label:
             f.write('''                        .linkCanvasObjectMode(() => 'after')
                 .linkCanvasObject((link, ctx) => {
