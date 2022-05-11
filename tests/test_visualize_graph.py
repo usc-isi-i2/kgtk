@@ -18,6 +18,7 @@ class TestVisualizeGraph(unittest.TestCase):
         self.ground_truth_node_size = 'data/visualize_graph_example_node_size.html'
         self.ground_truth_edge_width = 'data/visualize_graph_example_edge_width.html'
         self.ground_truth_node_text = 'data/visualize_graph_example_node_text.html'
+        self.ground_truth_node_text_number_colors = 'data/visualize_graph_example_node_text_number_colors.html'
         self.ground_truth_edge_text = 'data/visualize_graph_example_edge_text.html'
         self.ground_truth_node_edge_text = 'data/visualize_graph_example_node_edge_text.html'
         self.ground_truth_node_text_blank_labels = 'data/visualize_graph_example_node_text_blank_labels.html'
@@ -265,6 +266,26 @@ class TestVisualizeGraph(unittest.TestCase):
                   )
 
         f = open(self.ground_truth_color_node_custom_interpolator)
+        f1 = set(f.readlines())
+        f.close()
+        with open(output) as f2:
+            for line in f2:
+                self.assertTrue(line in f1)
+
+    def test_node_text_numbers_colors(self):
+        output = f'{self.temp_dir}/test_14.html'
+        cli_entry("kgtk", "--debug",
+                  "visualize-graph",
+                  "-i", self.example_file,
+                  "--node-file", f'{self.node_file}',
+                  "-o", f'{output}',
+                  "--node-color-column", "ordinal",
+                  "--node-color-numbers", "as-is",
+                  "--node-color-style", "d3.interpolateGreens",
+                  "--show-text", "above"
+                  )
+
+        f = open(self.ground_truth_node_text_number_colors)
         f1 = set(f.readlines())
         f.close()
         with open(output) as f2:
