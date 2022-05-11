@@ -176,7 +176,7 @@ kgtk visualize-graph -i examples/docs/visualize_force_graph_example2.tsv -o defa
 ```
 This is the default version of this command, only producing a graph with default color, width and size
 
-<img src="https://github.com/usc-isi-i2/kgtk/blob/dev/docs/images/visualize-force-graph-examples/1.jpg" width="300"/>
+<img src="https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/1.jpg" width="300"/>
 
 
 ## 2. Color by `is_country` column in the node file
@@ -188,7 +188,7 @@ kgtk visualize-graph -i examples/docs/visualize_force_graph_example2.tsv \
 ```
 This customization uses `is_country` as columns for assigning colors.
 
-<img src="https://github.com/usc-isi-i2/kgtk/blob/dev/docs/images/visualize-force-graph-examples/2.jpg" width="300"/>
+<img src="https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/2.png" width="300"/>
 
 ## 3. Color by column `degree`, values as numbers, color scale: log
 ```
@@ -201,7 +201,7 @@ kgtk visualize-graph -i examples/docs/visualize_force_graph_example2.tsv \
 ```
 This customization uses type as columns for assigning colors. --node-color-style categorical indicates that we assign a unique color to each different string.
 
-<img src="https://github.com/usc-isi-i2/kgtk/blob/dev/docs/images/visualize-force-graph-examples/3.jpg" width="300"/>
+<img src="https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/3.png" width="300"/>
 
 ## 4. Handle missing values
 ```
