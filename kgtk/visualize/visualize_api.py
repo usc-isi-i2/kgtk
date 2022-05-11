@@ -566,7 +566,7 @@ class KgtkVisualize:
             f.write(f'''
                     .nodeColor((node) => node.color[0] == "#" ? node.color : {node_color_style})
                     .linkWidth((link) => link.width)''')
-            node_text_format = {node_color_style}
+            node_text_format = node_color_style
 
         if self.node_border_color is not None:
             node_text_format = "'" + self.node_border_color + "'"
