@@ -4,6 +4,10 @@ from argparse import Namespace
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
+from kgtk.utils.color_styles import color_style_dict, CATEGORICAL, GRADIENT
+
+gradient_color_styles = ', '.join([k for k, v in color_style_dict.items() if v['style'] == GRADIENT])
+categorical_color_styles = ', '.join([k for k, v in color_style_dict.items() if v['style'] == CATEGORICAL])
 
 
 def parser():
@@ -57,9 +61,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument('--edge-color-numbers',
                         dest='edge_color_numbers',
-                        action='store_true',
-                        default=False,
-                        help="Add this option if the values in the --edge-color-column are numbers")
+                        type=str,
+                        default=None,
+                        help="Indicate if the values in the --edge-color-column are numbers and specify how to "
+                             "scale the numbers. The valid choices are:linear|log|as-is. "
+                             "Default: None. "
+                             "The numbers will be scaled linearly, logarithmically, left as is respectively.")
 
     parser.add_argument('--edge-color-hex',
                         dest='edge_color_hex',
@@ -71,8 +78,11 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument('--edge-color-style',
                         dest='edge_color_style',
                         type=str,
-                        default=None,
-                        help="Edge color style for edge color: categorical|gradient. Default: None")
+                        default='d3.interpolateRainbow',
+                        help=f"Pick one of the following CATEGORICAL styles: \n{categorical_color_styles}\n"
+                             f"OR one of the following GRADIENT styles:  \n{gradient_color_styles}\n"
+                             f"Default: d3.interpolateRainbow."
+                             f"See https://github.com/d3/d3-scale-chromatic for more details.")
 
     parser.add_argument('--edge-color-default',
                         dest='edge_color_default',
@@ -120,8 +130,11 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument('--node-color-style',
                         dest='node_color_style',
                         type=str,
-                        default=None,
-                        help="Node color style: categorical|gradient. Default: None")
+                        default='d3.interpolateRainbow',
+                        help=f"Pick one of the following CATEGORICAL styles: \n{categorical_color_styles}\n"
+                             f"OR one of the following GRADIENT styles:  \n{gradient_color_styles}\n"
+                             f"Default: d3.interpolateRainbow."
+                             f"See https://github.com/d3/d3-scale-chromatic for more details.")
 
     parser.add_argument('--node-color-default',
                         dest='node_color_default',
@@ -129,17 +142,14 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         default='#000000',
                         help="Default node color. Default: '#000000'")
 
-    parser.add_argument('--node-color-scale',
-                        dest='node_color_scale',
-                        type=str,
-                        default=None,
-                        help="Node color scale: linear|log. Default: None")
-
     parser.add_argument('--node-color-numbers',
                         dest='node_color_numbers',
-                        action='store_true',
-                        default=False,
-                        help="Add this option if the values in the --node-color-column are numbers")
+                        type=str,
+                        default=None,
+                        help="Indicate if the values in the --node-color-column are numbers and specify how to "
+                             "scale the numbers. The valid choices are:linear|log|as-is. "
+                             "Default: None. "
+                             "The numbers will be scaled linearly, logarithmically, left as is respectively.")
 
     parser.add_argument('--node-color-hex',
                         dest='node_color_hex',
@@ -212,34 +222,6 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                              "--show-text-limit option, which is 500 by default, "
                              "then the text will not be shown in the visualization.")
 
-    parser.add_argument('--node-categorical-scale',
-                        dest='node_categorical_scale',
-                        type=str,
-                        default='d3.interpolateRainbow',
-                        help="Node color categorical interpolator from d3-scale-chromatic. "
-                             "The scale is always d3.scaleSequential. You can choose any interpolator from, "
-                             "https://github.com/d3/d3-scale-chromatic. Default: d3.interpolateRainbow")
-
-    parser.add_argument('--edge-categorical-scale',
-                        dest='edge_categorical_scale',
-                        type=str,
-                        default='d3.interpolateRainbow',
-                        help="Edge color categorical interpolator from d3-scale-chromatic. "
-                             "The scale is always d3.scaleSequential. You can choose any interpolator from, "
-                             "https://github.com/d3/d3-scale-chromatic. Default: d3.interpolateRainbow")
-
-    parser.add_argument('--node-gradient-scale',
-                        dest='node_gradient_scale',
-                        type=str,
-                        default='d3.interpolateRdBu',
-                        help="Node color gradient scale from d3-scale-chromatic. Default: d3.interpolateRdBu")
-
-    parser.add_argument('--edge-gradient-scale',
-                        dest='edge_gradient_scale',
-                        type=str,
-                        default='d3.interpolateRdBu',
-                        help="Edge color gradient scale from d3-scale-chromatic. Default: d3.interpolateRdBu")
-
     parser.add_argument('--show-blank-labels',
                         dest='show_blank_labels',
                         action='store_true',
@@ -264,8 +246,8 @@ def run(input_file: KGTKFiles,
         edge_label: bool = False,
         edge_color_column: str = None,
         edge_color_hex: bool = False,
-        edge_color_numbers: bool = False,
-        edge_color_style: str = None,
+        edge_color_numbers: str = None,
+        edge_color_style: str = 'd3.interpolateRainbow',
         edge_color_default: str = '#000000',
         edge_width_column: str = None,
         edge_width_default: float = 1.0,
@@ -273,11 +255,10 @@ def run(input_file: KGTKFiles,
         edge_width_maximum: float = 5.0,
         edge_width_scale: str = None,
         node_color_column: str = None,
-        node_color_numbers: bool = False,
+        node_color_numbers: str = None,
         node_color_hex: bool = False,
-        node_color_style: str = None,
+        node_color_style: str = 'd3.interpolateRainbow',
         node_color_default: str = '#000000',
-        node_color_scale: str = None,
         node_size_column: str = None,
         node_size_default: float = 2.0,
         node_size_minimum: float = 1.0,
@@ -288,13 +269,18 @@ def run(input_file: KGTKFiles,
         node_border_color: str = None,
         tooltip_column: str = None,
         show_text: str = None,
-        node_categorical_scale: str = 'd3.interpolateRainbow',
-        edge_categorical_scale: str = 'd3.interpolateRainbow',
-        node_gradient_scale: str = 'd3.interpolateRdBu',
-        edge_gradient_scale: str = 'd3.interpolateRdBu',
         show_blank_labels: bool = False,
         **kwargs  # Whatever KgtkFileOptions and KgtkValueOptions want.
         ) -> int:
+    from kgtk.exceptions import KGTKException
+    if node_color_style not in color_style_dict:
+        raise KGTKException(f'Unknown value: {node_color_style} for option: --node-color-style. Please choose'
+                            f' one of the following: {", ".join(list(color_style_dict))}')
+
+    if edge_color_style not in color_style_dict:
+        raise KGTKException(f'Unknown value: {edge_color_style} for option: --edge-color-style. Please choose'
+                            f' one of the following: {", ".join(list(color_style_dict))}')
+
     from kgtk.visualize.visualize_api import KgtkVisualize
     kv: KgtkVisualize = KgtkVisualize(
         input_file=input_file,
@@ -322,7 +308,6 @@ def run(input_file: KGTKFiles,
         node_color_numbers=node_color_numbers,
         node_color_style=node_color_style,
         node_color_default=node_color_default,
-        node_color_scale=node_color_scale,
         node_size_column=node_size_column,
         node_size_default=node_size_default,
         node_size_minimum=node_size_minimum,
@@ -333,10 +318,6 @@ def run(input_file: KGTKFiles,
         node_border_color=node_border_color,
         tooltip_column=tooltip_column,
         show_text=show_text,
-        node_categorical_scale=node_categorical_scale,
-        edge_categorical_scale=edge_categorical_scale,
-        node_gradient_scale=node_gradient_scale,
-        edge_gradient_scale=edge_gradient_scale,
         show_blank_labels=show_blank_labels,
         kwargs=kwargs
     )
