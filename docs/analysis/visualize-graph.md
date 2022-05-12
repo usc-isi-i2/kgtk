@@ -478,7 +478,7 @@ The values in the column are sequential values, small values will be mapped to l
 
 <img src="https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/15.png" width="300"/>
 
-## 16. Color edges by column `label`, values as strings, use `d3.d3.schemeDark2` style
+## 16. Color edges by column `label`, values as strings, use `d3.schemeDark2` style
 ```
 kgtk visualize-graph -i examples/docs/visualize_force_graph_example2.tsv \
                      --edge-color-column label \
