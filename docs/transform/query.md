@@ -2170,7 +2170,9 @@ TO DO
 
 | Function              | Description                                                                                |
 |-----------------------|--------------------------------------------------------------------------------------------|
-| kgtk_literal(x)       | Return True if 'x' is any KGTK literal.  This assumes valid literals and only tests the first character (except for booleans). |
+| kgtk_literal(x)       | Return True if `x` is any KGTK literal.  This assumes valid literals and only tests the first character (except for booleans). |
+| kgtk_symbol(x)        | Return True if `x` is a KGTK symbol.  This assumes valid literals and only tests the first character (except for booleans).    |
+| kgtk_type(x)          | Return a type for the KGTK literal or symbol `x`, which will be one of `string`, `lq_string`, `date_time`, `quantity`, `geo_coord`, `boolean`, `typed_literal` or `symbol`.  This assumes valid literals and only tests the first character (except for booleans). |
 | kgtk_regex(x, regex)  | Regex matcher that implements the Cypher `=~` semantics which must match the whole string. |
 | kgtk_null_to_empty(x) | If `x` is NULL map it onto the empty string, otherwise return `x` unmodified.              |
 | kgtk_empty_to_null(x) | If `x` is the empty string, map it onto NULL, otherwise return `x` unmodified.             |

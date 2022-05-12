@@ -9,8 +9,7 @@
             </head>
             <body>
             <div id="graph"></div>
-            <script>
-                rainbow = d3.scaleSequential().domain([0, 7]).interpolator(d3.interpolateRainbow);        
+            <script>        
                const j = {
     "links": [
         {
@@ -146,7 +145,7 @@
             "label": "Alice",
             "tooltip": "Alice",
             "size": 2.0,
-            "color": 0
+            "color": 3
         },
         {
             "id": "Q2",
@@ -160,49 +159,49 @@
             "label": "John",
             "tooltip": "John",
             "size": 2.0,
-            "color": 2
+            "color": 0
         },
         {
             "id": "Q4",
             "label": "Claudia",
             "tooltip": "Claudia",
             "size": 2.0,
-            "color": 3
+            "color": 2
         },
         {
             "id": "Q5",
             "label": "Ulrich",
             "tooltip": "Ulrich",
             "size": 2.0,
-            "color": 4
+            "color": 6
         },
         {
             "id": "Q6",
             "label": "Fritz",
             "tooltip": "Fritz",
             "size": 2.0,
-            "color": 2
+            "color": 0
         },
         {
             "id": "Q7",
             "label": "USA",
             "tooltip": "USA",
             "size": 2.0,
-            "color": 5
+            "color": 4
         },
         {
             "id": "Q8",
             "label": "Germany",
             "tooltip": "Germany",
             "size": 2.0,
-            "color": 6
+            "color": 7
         },
         {
             "id": "Q9",
             "label": "Brazil",
             "tooltip": "Brazil",
             "size": 2.0,
-            "color": 7
+            "color": 5
         }
     ]
 }
@@ -212,6 +211,6 @@
                 .nodeId('id')
                 .nodeLabel('tooltip')
                 .nodeVal('size')
-                        .nodeColor((node) => node.color[0] == "#" ? node.color : d3.schemeCategory10[node.color])
-                        .linkWidth((link) => link.width)        .linkColor((link) => link.color)  </script>
+                    .nodeColor((node) => node.color[0] == "#" ? node.color : d3.schemePastel1[node.color])
+                    .linkWidth((link) => link.width)        .linkColor((link) => link.color)  </script>
             </body>

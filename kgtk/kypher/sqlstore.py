@@ -2369,7 +2369,7 @@ SqliteStore.register_user_function('kgtk_geo_coords_lat', 1, kgtk_geo_coords_lat
 SqliteStore.register_user_function('kgtk_geo_coords_long', 1, kgtk_geo_coords_long, deterministic=True)
 
 
-# Literals:
+# Literals and symbols:
 
 literal_regex = re.compile(r'''^["'^@!0-9.+-]|^True$|^False$''')
 
@@ -2380,6 +2380,39 @@ def kgtk_literal(x):
     return isinstance(x, str) and literal_regex.match(x) is not None
 
 SqliteStore.register_user_function('kgtk_literal', 1, kgtk_literal, deterministic=True)
+
+def kgtk_symbol(x):
+    """Return True if 'x' is a KGTK symbol.  This assumes valid literals
+    and only tests the first character (except for booleans).
+    """
+    return isinstance(x, str) and literal_regex.match(x) is None
+
+SqliteStore.register_user_function('kgtk_symbol', 1, kgtk_symbol, deterministic=True)
+
+
+value_type_regex = re.compile(
+    '|'.join([r'(?P<string>^")',
+              r"(?P<lq_string>^')",
+              r'(?P<date_time>^\^)',
+              r'(?P<quantity>^[0-9.+-])',
+              r'(?P<geo_coord>^@)',
+              r'(?P<boolean>^(True$|False$))',
+              r'(?P<typed_literal>^!)',
+              r'(?P<symbol>.)',
+    ]))
+
+def kgtk_type(x):
+    """Return a type description for the KGTK literal or symbol 'x'.  The returned type
+    will be one of 'string', 'lq_string', 'date_time', 'quantity', 'geo_coord', 'boolean',
+    'typed_literal' or 'symbol'.  This assumes valid literals and only tests the first
+    character (except for booleans).
+    """
+    if isinstance(x, str):
+        m = value_type_regex.search(x)
+        if m:
+            return m.lastgroup
+
+SqliteStore.register_user_function('kgtk_type', 1, kgtk_type, deterministic=True)
 
 
 # NULL value utilities:

@@ -9,8 +9,7 @@
             </head>
             <body>
             <div id="graph"></div>
-            <script>
-                rainbow = d3.scaleSequential().domain([0, 1]).interpolator(d3.interpolateRainbow);        
+            <script>        
                const j = {
     "links": [
         {
@@ -212,6 +211,6 @@
                 .nodeId('id')
                 .nodeLabel('tooltip')
                 .nodeVal('size')
-                        .nodeColor((node) => node.color[0] == "#" ? node.color : d3.schemeCategory10[node.color])
-                        .linkWidth((link) => link.width)        .linkColor((link) => link.color)  </script>
+                    .nodeColor((node) => node.color[0] == "#" ? node.color : d3.schemeCategory10[node.color])
+                    .linkWidth((link) => link.width)        .linkColor((link) => link.color)  </script>
             </body>
