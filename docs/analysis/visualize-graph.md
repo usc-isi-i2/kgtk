@@ -119,7 +119,61 @@ optional arguments:
                         Print additional progress messages (default=False).
 ```
 
+## Node and Edge Color Style Options
 
+The following color styles are available for node and edge colors, the options `--node-color-style` and `--edge-color-style`, respectively.
+
+|Color Style|URL                                                                    |Image                                                                           |Type |
+|-----------|-----------------------------------------------------------------------|--------------------------------------------------------------------------------|-----|
+|d3.schemeCategory10|https://github.com/d3/d3-scale-chromatic#d3.schemeCategory10           |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/category10.png)|Categorical|
+|d3.schemeAccent|https://github.com/d3/d3-scale-chromatic#d3.schemeAccent               |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/Accent.png)|Categorical|
+|d3.schemeDark2|https://github.com/d3/d3-scale-chromatic#d3.schemeDark2                |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/Dark2.png)|Categorical|
+|d3.schemePaired|https://github.com/d3/d3-scale-chromatic#d3.schemePaired               |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/Paired.png)|Categorical|
+|d3.schemePastel1|https://github.com/d3/d3-scale-chromatic#d3.schemePastel1              |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/Pastel1.png)|Categorical|
+|d3.schemePastel2|https://github.com/d3/d3-scale-chromatic#d3.schemePastel2              |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/Pastel2.png)|Categorical|
+|d3.schemeSet1|https://github.com/d3/d3-scale-chromatic#d3.schemeSet1                 |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/Set1.png)|Categorical|
+|d3.schemeSet2|https://github.com/d3/d3-scale-chromatic#d3.schemeSet2                 |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/Set2.png)|Categorical|
+|d3.schemeSet3|https://github.com/d3/d3-scale-chromatic#d3.schemeSet3                 |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/Set3.png)|Categorical|
+|d3.schemeTableau10|https://github.com/d3/d3-scale-chromatic#d3.schemeTableau10            |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/Tableau10.png)|Categorical|
+|d3.interpolateBrBG|https://github.com/d3/d3-scale-chromatic#d3.interpolateBrBG            |![Image](https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/brbg.png)|Gradient|
+|d3.interpolatePRGn|https://github.com/d3/d3-scale-chromatic#d3.interpolatePRGn            |![Image](https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/prgn.png)|Gradient|
+|d3.interpolatePiYG|https://github.com/d3/d3-scale-chromatic#d3.interpolatePiYG            |![Image](https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/piyg.png)|Gradient|
+|d3.interpolatePuOr|https://github.com/d3/d3-scale-chromatic#d3.interpolatePuOr            |![Image](https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/puor.png)|Gradient|
+|d3.interpolateRdBu|https://github.com/d3/d3-scale-chromatic#d3.interpolateRdBu            |![Image](https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/rdbu.png)|Gradient|
+|d3.interpolateRdGy|https://github.com/d3/d3-scale-chromatic#d3.interpolateRdGy            |![Image](https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/rdgy.png)|Gradient|
+|d3.interpolateRdYlBu|https://github.com/d3/d3-scale-chromatic#d3.interpolateRdYlBu          |![Image](https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/rdylbu.png)|Gradient|
+|d3.interpolateRdYlGn|https://github.com/d3/d3-scale-chromatic#d3.interpolateRdYlGn          |![Image](https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/rdylgn.png)|Gradient|
+|d3.interpolateSpectral|https://github.com/d3/d3-scale-chromatic#d3.interpolateSpectral        |![Image](https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/spectral.png)|Gradient|
+|d3.interpolateBlues|https://github.com/d3/d3-scale-chromatic#d3.interpolateBlues           |![Image](https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/blues.png)|Gradient|
+|d3.interpolateGreens|https://github.com/d3/d3-scale-chromatic#d3.interpolateGreens          |![Image](https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/greens.png)|Gradient|
+|d3.interpolateOranges|https://github.com/d3/d3-scale-chromatic#d3.interpolateOranges         |![Image](https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/oranges.png)|Gradient|
+|d3.interpolatePurples|https://github.com/d3/d3-scale-chromatic#d3.interpolatePurples         |![Image](https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/purples.png)|Gradient|
+|d3.interpolateReds|https://github.com/d3/d3-scale-chromatic#d3.interpolateReds            |![Image](https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/reds.png)|Gradient|
+|d3.interpolateGreys|https://github.com/d3/d3-scale-chromatic#d3.interpolateGreys           |![Image](https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/greys.png)|Gradient|
+|d3.interpolateTurbo|https://github.com/d3/d3-scale-chromatic#d3.interpolateTurbo           |![Image](https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/turbo.png)|Gradient|
+|d3.interpolateViridis|https://github.com/d3/d3-scale-chromatic#d3.interpolateViridis         |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/viridis.png)|Gradient|
+|d3.interpolateInferno|https://github.com/d3/d3-scale-chromatic#d3.interpolateInferno         |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/inferno.png)|Gradient|
+|d3.interpolateMagma|https://github.com/d3/d3-scale-chromatic#d3.interpolateMagma           |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/magma.png)|Gradient|
+|d3.interpolatePlasma|https://github.com/d3/d3-scale-chromatic#d3.interpolatePlasma          |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/plasma.png)|Gradient|
+|d3.interpolateCividis|https://github.com/d3/d3-scale-chromatic#d3.interpolateCividis         |![Image](https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/cividis.png)|Gradient|
+|d3.interpolateWarm|https://github.com/d3/d3-scale-chromatic#d3.interpolateWarm            |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/warm.png)|Gradient|
+|d3.interpolateCool|https://github.com/d3/d3-scale-chromatic#d3.interpolateCool            |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/cool.png)|Gradient|
+|d3.interpolateCubehelixDefault|https://github.com/d3/d3-scale-chromatic#d3.interpolateCubehelixDefault|![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/cubehelix.png)|Gradient|
+|d3.interpolateBuGn|https://github.com/d3/d3-scale-chromatic#d3.interpolateBuGn            |![Image](https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/bugn.png)|Gradient|
+|d3.interpolateBuPu|https://github.com/d3/d3-scale-chromatic#d3.interpolateBuPu            |![Image](https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/bupu.png)|Gradient|
+|d3.interpolateGnBu|https://github.com/d3/d3-scale-chromatic#d3.interpolateGnBu            |![Image](https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/gnbu.png)|Gradient|
+|d3.interpolateOrRd|https://github.com/d3/d3-scale-chromatic#d3.interpolateOrRd            |![Image](https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/orrd.png)|Gradient|
+|d3.interpolatePuBuGn|https://github.com/d3/d3-scale-chromatic#d3.interpolatePuBuGn          |![Image](https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/pubugn.png)|Gradient|
+|d3.interpolatePuBu|https://github.com/d3/d3-scale-chromatic#d3.interpolatePuBu            |![Image](https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/pubu.png)|Gradient|
+|d3.interpolatePuRd|https://github.com/d3/d3-scale-chromatic#d3.interpolatePuRd            |![Image](https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/purd.png)|Gradient|
+|d3.interpolateRdPu|https://github.com/d3/d3-scale-chromatic#d3.interpolateRdPu            |![Image](https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/rdpu.png)|Gradient|
+|d3.interpolateYlGnBu|https://github.com/d3/d3-scale-chromatic#d3.interpolateYlGnBu          |![Image](https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/ylgnbu.png)|Gradient|
+|d3.interpolateYlGn|https://github.com/d3/d3-scale-chromatic#d3.interpolateYlGn            |![Image](https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/ylgn.png)|Gradient|
+|d3.interpolateYlOrBr|https://github.com/d3/d3-scale-chromatic#d3.interpolateYlOrBr          |![Image](https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/ylorbr.png)|Gradient|
+|d3.interpolateYlOrRd|https://github.com/d3/d3-scale-chromatic#d3.interpolateYlOrRd          |![Image](https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/ylorrd.png)|Gradient|
+|d3.interpolateRainbow|https://github.com/d3/d3-scale-chromatic#d3.interpolateRainbow         |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/rainbow.png)|Gradient|
+
+## Edge and Node file Format
 
 Edge File contains:
 - `node1`: the subject column (source node)
@@ -189,61 +243,6 @@ Node File
 |Q7 |'USA'@en|1         |country|50     |country     |300       |#FF1493  |6      |
 |Q8 |'Germany'@en|1         |country|500    |country     |50        |#FFD700  |7      |
 |Q9 |'Brazil'@en|1         |country|222    |country     |200       |#FF69B4  |8      |
-
-
-## Node and Edge Color Style Options
-
-|Color Style|URL                                                                    |Image                                                                           |
-|-----------|-----------------------------------------------------------------------|--------------------------------------------------------------------------------|
-|d3.schemeCategory10|https://github.com/d3/d3-scale-chromatic#d3.schemeCategory10           |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/category10.png)|
-|d3.schemeAccent|https://github.com/d3/d3-scale-chromatic#d3.schemeAccent               |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/Accent.png)|
-|d3.schemeDark2|https://github.com/d3/d3-scale-chromatic#d3.schemeDark2                |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/Dark2.png)|
-|d3.schemePaired|https://github.com/d3/d3-scale-chromatic#d3.schemePaired               |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/Paired.png)|
-|d3.schemePastel1|https://github.com/d3/d3-scale-chromatic#d3.schemePastel1              |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/Pastel1.png)|
-|d3.schemePastel2|https://github.com/d3/d3-scale-chromatic#d3.schemePastel2              |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/Pastel2.png)|
-|d3.schemeSet1|https://github.com/d3/d3-scale-chromatic#d3.schemeSet1                 |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/Set1.png)|
-|d3.schemeSet2|https://github.com/d3/d3-scale-chromatic#d3.schemeSet2                 |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/Set2.png)|
-|d3.schemeSet3|https://github.com/d3/d3-scale-chromatic#d3.schemeSet3                 |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/Set3.png)|
-|d3.schemeTableau10|https://github.com/d3/d3-scale-chromatic#d3.schemeTableau10            |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/Tableau10.png)|
-|d3.interpolateBrBG|https://github.com/d3/d3-scale-chromatic#d3.interpolateBrBG            |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/BrBG.png)|
-|d3.interpolatePRGn|https://github.com/d3/d3-scale-chromatic#d3.interpolatePRGn            |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/PRGn.png)|
-|d3.interpolatePiYG|https://github.com/d3/d3-scale-chromatic#d3.interpolatePiYG            |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/PiYG.png)|
-|d3.interpolatePuOr|https://github.com/d3/d3-scale-chromatic#d3.interpolatePuOr            |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/PuOr.png)|
-|d3.interpolateRdBu|https://github.com/d3/d3-scale-chromatic#d3.interpolateRdBu            |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/RdBu.png)|
-|d3.interpolateRdGy|https://github.com/d3/d3-scale-chromatic#d3.interpolateRdGy            |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/RdGy.png)|
-|d3.interpolateRdYlBu|https://github.com/d3/d3-scale-chromatic#d3.interpolateRdYlBu          |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/RdYlBu.png)|
-|d3.interpolateRdYlGn|https://github.com/d3/d3-scale-chromatic#d3.interpolateRdYlGn          |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/RdYlGn.png)|
-|d3.interpolateSpectral|https://github.com/d3/d3-scale-chromatic#d3.interpolateSpectral        |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/Spectral.png)|
-|d3.interpolateBlues|https://github.com/d3/d3-scale-chromatic#d3.interpolateBlues           |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/Blues.png)|
-|d3.interpolateGreens|https://github.com/d3/d3-scale-chromatic#d3.interpolateGreens          |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/Greens.png)|
-|d3.interpolateOranges|https://github.com/d3/d3-scale-chromatic#d3.interpolateOranges         |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/Oranges.png)|
-|d3.interpolatePurples|https://github.com/d3/d3-scale-chromatic#d3.interpolatePurples         |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/Purples.png)|
-|d3.interpolateReds|https://github.com/d3/d3-scale-chromatic#d3.interpolateReds            |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/Reds.png)|
-|d3.interpolateGreys|https://github.com/d3/d3-scale-chromatic#d3.interpolateGreys           |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/Greys.png)|
-|d3.interpolateTurbo|https://github.com/d3/d3-scale-chromatic#d3.interpolateTurbo           |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/turbo.png)|
-|d3.interpolateViridis|https://github.com/d3/d3-scale-chromatic#d3.interpolateViridis         |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/viridis.png)|
-|d3.interpolateInferno|https://github.com/d3/d3-scale-chromatic#d3.interpolateInferno         |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/inferno.png)|
-|d3.interpolateMagma|https://github.com/d3/d3-scale-chromatic#d3.interpolateMagma           |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/magma.png)|
-|d3.interpolatePlasma|https://github.com/d3/d3-scale-chromatic#d3.interpolatePlasma          |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/plasma.png)|
-|d3.interpolateCividis|https://github.com/d3/d3-scale-chromatic#d3.interpolateCividis         |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/cividis.png)|
-|d3.interpolateWarm|https://github.com/d3/d3-scale-chromatic#d3.interpolateWarm            |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/warm.png)|
-|d3.interpolateCool|https://github.com/d3/d3-scale-chromatic#d3.interpolateCool            |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/cool.png)|
-|d3.interpolateCubehelixDefault|https://github.com/d3/d3-scale-chromatic#d3.interpolateCubehelixDefault|![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/cubehelix.png)|
-|d3.interpolateBuGn|https://github.com/d3/d3-scale-chromatic#d3.interpolateBuGn            |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/BuGn.png)|
-|d3.interpolateBuPu|https://github.com/d3/d3-scale-chromatic#d3.interpolateBuPu            |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/BuPu.png)|
-|d3.interpolateGnBu|https://github.com/d3/d3-scale-chromatic#d3.interpolateGnBu            |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/GnBu.png)|
-|d3.interpolateOrRd|https://github.com/d3/d3-scale-chromatic#d3.interpolateOrRd            |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/OrRd.png)|
-|d3.interpolatePuBuGn|https://github.com/d3/d3-scale-chromatic#d3.interpolatePuBuGn          |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/PuBuGn.png)|
-|d3.interpolatePuBu|https://github.com/d3/d3-scale-chromatic#d3.interpolatePuBu            |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/PuBu.png)|
-|d3.interpolatePuRd|https://github.com/d3/d3-scale-chromatic#d3.interpolatePuRd            |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/PuRd.png)|
-|d3.interpolateRdPu|https://github.com/d3/d3-scale-chromatic#d3.interpolateRdPu            |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/RdPu.png)|
-|d3.interpolateYlGnBu|https://github.com/d3/d3-scale-chromatic#d3.interpolateYlGnBu          |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/YlGnBu.png)|
-|d3.interpolateYlGn|https://github.com/d3/d3-scale-chromatic#d3.interpolateYlGn            |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/YlGn.png)|
-|d3.interpolateYlOrBr|https://github.com/d3/d3-scale-chromatic#d3.interpolateYlOrBr          |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/YlOrBr.png)|
-|d3.interpolateYlOrRd|https://github.com/d3/d3-scale-chromatic#d3.interpolateYlOrRd          |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/YlOrRd.png)|
-|d3.interpolateRainbow|https://github.com/d3/d3-scale-chromatic#d3.interpolateRainbow         |![Image](https://raw.githubusercontent.com/d3/d3-scale-chromatic/master/img/rainbow.png)|
-
-
 
 
 ## 1. Default
