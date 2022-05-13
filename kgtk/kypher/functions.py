@@ -63,6 +63,13 @@ class SqlFunction(object):
         return self
 
     @staticmethod
+    def is_defined(name):
+        """Return True if a function with 'name' is already defined or forward-declared.
+        """
+        name = SqlFunction.normalize_name(name)
+        return SqlFunction._definitions.get(name) is not None
+
+    @staticmethod
     def declare(module_name, *func_name):
         """Declare module 'module_name' as the one containing definitions for all
         the listed function names 'func_name'.  This allows us to properly translate
@@ -74,11 +81,20 @@ class SqlFunction(object):
                 SqlFunction._definitions[func] = module_name
 
     @staticmethod
-    def is_defined(name):
-        """Return True if a function with 'name' is already defined or forward-declared.
+    def import_declared_function(name):
+        """Import the forward-declared function 'name' and return it.
+        Raise an error if the function is not forward-declared or cannot be found.
         """
-        name = SqlFunction.normalize_name(name)
-        return SqlFunction._definitions.get(name) is not None
+        nname = SqlFunction.normalize_name(name)
+        module = SqlFunction._definitions.get(nname)
+        if not isinstance(module, str):
+            raise KGTKException(f'not a forward-declared SQL function: {name}')
+        # we have a proper forward-declaration to a defining module, import it:
+        exec(f'import {module}')
+        fun = SqlFunction._definitions.get(nname)
+        if not isinstance(fun, SqlFunction):
+            raise KGTKException(f'missing definition for declared SQL function: {name}')
+        return fun
 
     @staticmethod
     def get_function(name, store=None, error=True, **kwargs):
@@ -95,19 +111,29 @@ class SqlFunction(object):
                 raise KGTKException(f'undefind SQL function: {name}')
             return None
         elif isinstance(fun, str):
-            # we have a forward-declaration to a defining module, import it:
-            exec(f'import {fun}')
-            fun = SqlFunction._definitions.get(SqlFunction.normalize_name(name))
-            if not isinstance(fun, SqlFunction):
-                # this is a real error, since somebody declared a function that
-                # is missing, so we are not considering the 'error' switch here:
-                raise KGTKException(f'missing definition for SQL function: {name}')
+            # we have a forward-declaration to a defining module, import it
+            # (any errors here are real and not subject to the 'error' flag):
+            fun = SqlFunction.import_declared_function(name)
         # create a copy of the definition with some additional values filled in:
         fun = copy.copy(fun)
         fun.store = store
         for key, value in kwargs.items():
             setattr(fun, key, value)
         return fun
+
+    @staticmethod
+    def is_aggregate(name):
+        """Return True if a function with 'name' is defined or forward-declared
+        as an aggregation function.
+        """
+        # we don't use an instance method for this test, since we need to be able
+        # to test this before we actually have an object in hand:
+        nname = SqlFunction.normalize_name(name)
+        fun = SqlFunction._definitions.get(nname)
+        if isinstance(fun, str):
+            # we have a forward-declaration to a defining module, import it:
+            fun = SqlFunction.import_declared_function(name)
+        return isinstance(fun, AggregateFunction)
 
     @staticmethod
     def normalize_name(name):
@@ -155,18 +181,12 @@ class SqlFunction(object):
         determ = self.get_deterministic()
         if self.uniquify:
             self.uniquify_name()
-        try:
-            self.store.get_conn().create_function(self.get_name(), self.get_num_params(), code, deterministic=determ)
-        except sqlite3.NotSupportedError:
-            # older SQLite, try without 'deterministic':
-            self.store.get_conn().create_function(self.get_name(), self.get_num_params(), code)
-        # link to old API for now:
-        self.store.user_functions.add(self.get_name())
+        self.store.load_user_function(self.get_name(), self.get_num_params(), code, deterministic=determ)
 
     def uniquify_name(self):
         """Generate a unique name for this function based on its current name.
         """
-        self.name = f'{self.get_name()}_{len(self.store.user_functions)}'
+        self.name = f'{self.get_name()}_{len(self.store.get_user_functions())}'
 
     def translate_call_to_sql(self, query, expr, state):
         """API method called by the query translator to translate function calls.
@@ -178,6 +198,36 @@ class SqlFunction(object):
         # so we can consider that in the function call translation generated below:
         self.load()
         return f'{self.get_name()}({distinct}{", ".join(args)})'
+
+
+class AggregateFunction(SqlFunction):
+    """Functions that implement aggregation operations.
+    """
+    def load(self):
+        # TO DO: generalize this to call 'self.store.load_aggregate_function()
+        #        to properly handle user-defined aggregate functions (see sqlite3 API)
+        super().load()
+
+class BuiltinFunction(SqlFunction):
+    """Functions that are supported directly by the underlying database.
+    These do not need to be defined or loaded.
+    """
+
+    def get_code(self):
+        """Return the code object of this function which will generally be None
+        for builtins, but not raise an error in this case.
+        """
+        return self.code
+
+    def load(self):
+        """Nothing to be done for builtins.
+        """
+        pass
+
+class BuiltinAggregateFunction(BuiltinFunction, AggregateFunction):
+    """Builtin functions that implement aggregation operations.
+    """
+    pass
 
 
 # Top-level definition API:
@@ -212,10 +262,10 @@ CosineSimilarity('kvec_cos_sim', num_params=2, deterministic=True).define()
 
 # Forward-declarations:
 
-"""
-# soon:
-declare('kgtk.kypher.funcbase',
+declare('kgtk.kypher.funccore',
         'kgtk_regex', 'kgtk_null_to_empty', 'kgtk_empty_to_null', 'pyeval', 'pycall',
+        'avg', 'count', 'group_concat', 'max', 'min', 'sum', 'total',
+        'cast', 'likelihood', 'concat',
         'kgtk_is_subnode',)
 
 declare('kgtk.kypher.funclit',
@@ -234,7 +284,6 @@ declare('kgtk.kypher.funcmath',
         'acos', 'acosh', 'asin', 'asinh', 'atan', 'atan2', 'atanh', 'ceil', 'ceiling', 'cos', 'cosh', 'degrees',
         'exp', 'floor', 'ln', 'log', 'log10', 'log2', 'logb', 'mod', 'pi', 'pow', 'power', 'radians',
         'sin', 'sinh', 'sqrt', 'tan', 'tanh', 'trunc',)
-"""
 
 declare('kgtk.kypher.funcvec',
         '_kvec_get_vector', 'kvec_dot', 'kvec_dot_product', 'kvec_cos_sim', 'kvec_cosine_similarity')
