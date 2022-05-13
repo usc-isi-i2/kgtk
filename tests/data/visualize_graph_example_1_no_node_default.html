@@ -9,8 +9,7 @@
             </head>
             <body>
             <div id="graph"></div>
-            <script>
-                rainbow = d3.scaleSequential().domain([0, -1]).interpolator(d3.interpolateRainbow);        
+            <script>        
                const j = {
     "links": [
         {
@@ -142,49 +141,67 @@
     ],
     "nodes": [
         {
-            "id": "Q1",
-            "label": "Q1",
-            "tooltip": "Q1"
-        },
-        {
-            "id": "Q9",
-            "label": "Q9",
-            "tooltip": "Q9"
-        },
-        {
             "id": "Q2",
             "label": "Q2",
-            "tooltip": "Q2"
-        },
-        {
-            "id": "Q5",
-            "label": "Q5",
-            "tooltip": "Q5"
-        },
-        {
-            "id": "Q8",
-            "label": "Q8",
-            "tooltip": "Q8"
+            "tooltip": "Q2",
+            "size": 2.0,
+            "orig_size": 2.0
         },
         {
             "id": "Q4",
             "label": "Q4",
-            "tooltip": "Q4"
+            "tooltip": "Q4",
+            "size": 2.0,
+            "orig_size": 2.0
+        },
+        {
+            "id": "Q8",
+            "label": "Q8",
+            "tooltip": "Q8",
+            "size": 2.0,
+            "orig_size": 2.0
         },
         {
             "id": "Q7",
             "label": "Q7",
-            "tooltip": "Q7"
+            "tooltip": "Q7",
+            "size": 2.0,
+            "orig_size": 2.0
+        },
+        {
+            "id": "Q9",
+            "label": "Q9",
+            "tooltip": "Q9",
+            "size": 2.0,
+            "orig_size": 2.0
         },
         {
             "id": "Q3",
             "label": "Q3",
-            "tooltip": "Q3"
+            "tooltip": "Q3",
+            "size": 2.0,
+            "orig_size": 2.0
+        },
+        {
+            "id": "Q1",
+            "label": "Q1",
+            "tooltip": "Q1",
+            "size": 2.0,
+            "orig_size": 2.0
+        },
+        {
+            "id": "Q5",
+            "label": "Q5",
+            "tooltip": "Q5",
+            "size": 2.0,
+            "orig_size": 2.0
         },
         {
             "id": "Q6",
             "label": "Q6",
-            "tooltip": "Q6"
+            "tooltip": "Q6",
+            "size": 2.0,
+            "orig_size": 2.0
         }
     ]
 }
@@ -194,6 +211,6 @@
                 .nodeId('id')
                 .nodeLabel('tooltip')
                 .nodeVal('size')
-                .nodeAutoColorBy('group')
-                .linkWidth((link) => link.width)        .linkColor((link) => link.color)  </script>
+                        .nodeAutoColorBy('group')
+                        .linkWidth((link) => link.width)        .linkColor((link) => link.color)  </script>
             </body>

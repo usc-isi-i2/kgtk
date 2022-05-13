@@ -15,12 +15,16 @@ class TestVisualizeGraph(unittest.TestCase):
         self.ground_truth_color_node_missing = 'data/visualize_graph_example_color_by_node_column_log_missing.html'
         self.ground_truth_color_node_hex = 'data/visualize_graph_example_color_by_node_column_hex.html'
         self.ground_truth_color_edge = 'data/visualize_graph_example_color_edge.html'
+        self.ground_truth_color_edge_numbers = 'data/visualize_graph_example_color_edge_numbers.html'
+        self.ground_truth_color_edge_strings = 'data/visualize_graph_example_color_edge_strings.html'
         self.ground_truth_node_size = 'data/visualize_graph_example_node_size.html'
         self.ground_truth_edge_width = 'data/visualize_graph_example_edge_width.html'
         self.ground_truth_node_text = 'data/visualize_graph_example_node_text.html'
+        self.ground_truth_node_text_number_colors = 'data/visualize_graph_example_node_text_number_colors.html'
         self.ground_truth_edge_text = 'data/visualize_graph_example_edge_text.html'
         self.ground_truth_node_edge_text = 'data/visualize_graph_example_node_edge_text.html'
         self.ground_truth_node_text_blank_labels = 'data/visualize_graph_example_node_text_blank_labels.html'
+        self.ground_truth_color_node_custom_interpolator = 'data/visualize_graph_example_color_by_node_column_interpolator.html'
         self.temp_dir = tempfile.mkdtemp()
 
     def tearDown(self) -> None:
@@ -28,7 +32,7 @@ class TestVisualizeGraph(unittest.TestCase):
 
     def test_default_no_node_file(self):
         output = f'{self.temp_dir}/test_1.html'
-        cli_entry("kgtk", "visualize-graph", "-i", self.example_file, "-o", output)
+        cli_entry("kgtk", "--debug", "visualize-graph", "-i", self.example_file, "-o", output)
 
         f = open(self.ground_truth_default)
         f1 = set(f.readlines())
@@ -39,10 +43,12 @@ class TestVisualizeGraph(unittest.TestCase):
 
     def test_color_by_node_column(self):
         output = f'{self.temp_dir}/test_2.html'
-        cli_entry("kgtk", "visualize-graph",
+        cli_entry("kgtk", "--debug", "visualize-graph",
                   "-i", self.example_file,
                   "-o", f'{output}',
                   "--node-color-column", "is_country",
+                  "--node-color-style", "d3.schemeCategory10",
+                  "--node-color-numbers", "as-is",
                   "--node-file", f'{self.node_file}'
                   )
         f = open(self.ground_truth_color_node)
@@ -59,9 +65,9 @@ class TestVisualizeGraph(unittest.TestCase):
                   "-i", self.example_file,
                   "-o", f'{output}',
                   "--node-color-column", "degree",
-                  "--node-color-numbers",
-                  "--node-file", f'{self.node_file}',
-                  "--node-color-scale", "log"
+                  "--node-color-style", "d3.schemePastel1",
+                  "--node-color-numbers", "log",
+                  "--node-file", f'{self.node_file}'
                   )
 
         f = open(self.ground_truth_color_node_log)
@@ -78,6 +84,7 @@ class TestVisualizeGraph(unittest.TestCase):
                   "-i", self.example_file,
                   "-o", f'{output}',
                   "--node-color-column", "type_missing",
+                  "--node-color-style", "d3.schemeSet3",
                   "--node-file", f'{self.node_file}'
                   )
 
@@ -156,7 +163,10 @@ class TestVisualizeGraph(unittest.TestCase):
                   "--edge-width-minimum", "2.0",
                   "--edge-width-maximum", "5.0",
                   "--edge-width-default", "2.0",
-                  "--edge-width-scale", "log"
+                  "--edge-width-scale", "log",
+                  "--node-color-column", "degree",
+                  "--node-color-style", "d3.schemeDark2",
+                  "--node-color-numbers", "linear"
                   )
 
         f = open(self.ground_truth_edge_width)
@@ -239,6 +249,80 @@ class TestVisualizeGraph(unittest.TestCase):
                   )
 
         f = open(self.ground_truth_node_text_blank_labels)
+        f1 = set(f.readlines())
+        f.close()
+        with open(output) as f2:
+            for line in f2:
+                self.assertTrue(line in f1)
+
+    def test_color_by_node_column_custom_interpolator(self):
+        output = f'{self.temp_dir}/test_13.html'
+        cli_entry("kgtk", "--debug",
+                  "visualize-graph",
+                  "-i", self.example_file,
+                  "-o", f'{output}',
+                  "--node-color-column", "ordinal",
+                  "--node-color-numbers", "as-is",
+                  "--node-file", f'{self.node_file}',
+                  "--node-color-style", "d3.interpolateGreens"
+                  )
+
+        f = open(self.ground_truth_color_node_custom_interpolator)
+        f1 = set(f.readlines())
+        f.close()
+        with open(output) as f2:
+            for line in f2:
+                self.assertTrue(line in f1)
+
+    def test_node_text_numbers_colors(self):
+        output = f'{self.temp_dir}/test_14.html'
+        cli_entry("kgtk", "--debug",
+                  "visualize-graph",
+                  "-i", self.example_file,
+                  "--node-file", f'{self.node_file}',
+                  "-o", f'{output}',
+                  "--node-color-column", "ordinal",
+                  "--node-color-numbers", "as-is",
+                  "--node-color-style", "d3.interpolateGreens",
+                  "--show-text", "above"
+                  )
+
+        f = open(self.ground_truth_node_text_number_colors)
+        f1 = set(f.readlines())
+        f.close()
+        with open(output) as f2:
+            for line in f2:
+                self.assertTrue(line in f1)
+
+    def test_color_by_edge_column_color_numbers(self):
+        output = f'{self.temp_dir}/test_15.html'
+        cli_entry("kgtk", "--debug",
+                  "visualize-graph",
+                  "-i", self.example_file,
+                  "-o", f'{output}',
+                  "--edge-color-column", "ordinal",
+                  "--edge-color-numbers", "as-is",
+                  "--edge-color-style", "d3.interpolateReds"
+                  )
+
+        f = open(self.ground_truth_color_edge_numbers)
+        f1 = set(f.readlines())
+        f.close()
+        with open(output) as f2:
+            for line in f2:
+                self.assertTrue(line in f1)
+
+    def test_color_by_edge_column_color_strings(self):
+        output = f'{self.temp_dir}/test_16.html'
+        cli_entry("kgtk", "--debug",
+                  "visualize-graph",
+                  "-i", self.example_file,
+                  "-o", f'{output}',
+                  "--edge-color-column", "label",
+                  "--edge-color-style", "d3.schemeDark2"
+                  )
+
+        f = open(self.ground_truth_color_edge_strings)
         f1 = set(f.readlines())
         f.close()
         with open(output) as f2:

@@ -1776,7 +1776,7 @@ def kgtk_literal(x):
 SqliteStore.register_user_function('kgtk_literal', 1, kgtk_literal, deterministic=True)
 
 def kgtk_symbol(x):
-    """Return True if 'x' is any KGTK symbol.  This assumes valid literals
+    """Return True if 'x' is a KGTK symbol.  This assumes valid literals
     and only tests the first character (except for booleans).
     """
     return isinstance(x, str) and literal_regex.match(x) is None
