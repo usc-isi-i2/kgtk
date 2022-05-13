@@ -643,7 +643,7 @@ class VectorIndex(TableIndex):
     NORM_L2        = 'l2'
     NN_INDEX_FAISS = 'faiss'
     STORE_INLINE   = 'inline'
-    STORE_NUMPY    = 'npy'
+    STORE_NUMPY    = 'numpy'
     STORE_HD5      = 'hd5'
 
     DEFAULT_COLUMN = 'node2'
@@ -662,7 +662,7 @@ class VectorIndex(TableIndex):
         # 'nn' controls whether a nearest neighbor index should be built, and of what kind:
         'nn':    (False, True, NN_INDEX_FAISS,),
         # 'store' controls how imported vectors should be stored (only 'inline' for now):
-        'store': (STORE_INLINE,),
+        'store': (STORE_INLINE, STORE_NUMPY, STORE_HD5,),
     }
 
     def parse_spec(self, index_spec):
