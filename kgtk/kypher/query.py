@@ -14,7 +14,6 @@ from   odictliteral import odict
 
 import kgtk.kypher.parser as parser
 import kgtk.kypher.sqlstore as ss
-from   kgtk.value.kgtkvalue import KgtkValue
 from   kgtk.kypher.utils import *
 import kgtk.kypher.indexspec as ispec
 from   kgtk.kypher.functions import SqlFunction
@@ -58,6 +57,7 @@ from   kgtk.kypher.functions import SqlFunction
 def dwim_to_string_para(x):
     """Try to coerce 'x' to a KGTK string value that can be passed as a query parameter.
     """
+    from kgtk.value.kgtkvalue import KgtkValue # expensive: 120ms
     x = str(x)
     m = KgtkValue.strict_string_re.match(x)
     if m is not None:
@@ -71,6 +71,7 @@ def dwim_to_string_para(x):
 def dwim_to_lqstring_para(x):
     """Try to coerce 'x' to a KGTK LQ-string value that can be passed as a query parameter.
     """
+    from kgtk.value.kgtkvalue import KgtkValue # expensive: 120ms
     x = str(x)
     m = KgtkValue.strict_language_qualified_string_re.match(x)
     if m is not None:
@@ -420,9 +421,10 @@ class KgtkQuery(object):
                 if not isinstance(proplook, parser.PropertyLookup):
                     break # error
                 prop = proplook.property
-                if self.is_kgtk_operator(prop) and self.store.is_user_function(prop):
-                    self.store.load_user_function(prop)
-                    sql = f'{prop}({sql})'
+                if self.is_kgtk_operator(prop) and SqlFunction.is_defined(prop):
+                    sqlfn = SqlFunction.get_function(prop, store=self.store)
+                    sqlfn.load()
+                    sql = f'{sqlfn.get_name()}({sql})'
                 elif column == self.get_id_column(graph):
                     # we are referring to the relation ID, subsitute it with the prop column:
                     sql = sql[:-(len(column)+1)] + prop + '"'
@@ -438,37 +440,18 @@ class KgtkQuery(object):
 
     def function_call_to_sql(self, expr, state):
         function = expr.function
-        normfun = function.upper()
-        if normfun == 'CAST':
-            # special-case SQLite CAST which isn't directly supported by Cypher:
-            if len(expr.args) == 2 and isinstance(expr.args[1], parser.Variable):
-                arg = self.expression_to_sql(expr.args[0], state)
-                typ = expr.args[1].name
-                return f'{function}({arg} AS {typ})'
-            else:
-                raise Exception("Illegal CAST expression")
-        elif normfun == 'LIKELIHOOD':
-            # special-case SQLite LIKELIHOOD which needs a compile-time constant for its probability argument:
-            if len(expr.args) == 2 and isinstance(expr.args[1], parser.Literal) and isinstance(expr.args[1].value, (int, float)):
-                arg = self.expression_to_sql(expr.args[0], state)
-                prob = expr.args[1].value
-                return f'{function}({arg}, {prob})'
-            else:
-                raise Exception("Illegal LIKELIHOOD expression")
-        elif is_text_match_operator(function):
+        if is_text_match_operator(function):
+            # TO DO: consider moving this into the function API as well:
             return translate_text_match_op_to_sql(self, expr, state)
         elif SqlFunction.is_defined(function):
-            # use generalized SQL function API v2:
+            # use generalized SQL function API:
             sqlfn = SqlFunction.get_function(function, store=self.store)
             return sqlfn.translate_call_to_sql(self, expr, state)
+        # otherwise, assume it is some non-special SQL built-in function,
+        # if it isn't, the database will complain later during execution:
         args = [self.expression_to_sql(arg, state) for arg in expr.args]
         distinct = expr.distinct and 'DISTINCT ' or ''
-        self.store.load_user_function(function, error=False)
-        if normfun == 'CONCAT':
-            # special-case Cypher's CONCAT function which is handled by SQLite's ||-operator:
-            return f'({" || ".join(args)})'
-        else:
-            return f'{function}({distinct}{", ".join(args)})'
+        return f'{function}({distinct}{", ".join(args)})'
 
     def expression_to_sql(self, expr, state):
         """Translate a Kypher expression 'expr' into its SQL equivalent.
@@ -539,8 +522,9 @@ class KgtkQuery(object):
             if op in ('IN'):
                 return '(%s %s %s)' % (arg1, op, arg2)
             elif op in ('REGEX'):
-                self.store.load_user_function('KGTK_REGEX')
-                return 'KGTK_REGEX(%s, %s)' % (arg1, arg2)
+                sqlfn = SqlFunction.get_function('KGTK_REGEX', store=self.store)
+                sqlfn.load()
+                return f'{sqlfn.get_name()}({arg1}, {arg2})'
             else:
                 raise Exception('Unhandled operator: %s' % str(op))
         else:
@@ -580,7 +564,7 @@ class KgtkQuery(object):
             # check if this item calls an aggregation function or not: if it does then preceding columns
             # that aren't aggregates are used for grouping, if it doesn't this column might be used for grouping:
             is_agg = parser.has_element(
-                item.expression, lambda x: isinstance(x, parser.Call) and self.store.is_aggregate_function(x.function))
+                item.expression, lambda x: isinstance(x, parser.Call) and SqlFunction.is_aggregate(x.function))
             if item.name is not None:
                 # we create an alias variable object here, so we can evaluate it for proper renaming:
                 alias_var = parser.Variable(item._query, item.name)
