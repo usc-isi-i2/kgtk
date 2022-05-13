@@ -313,7 +313,9 @@ class CosineSimilarity(DotProduct):
     def get_code(self):
         if self.code is None:
             if self.have_l2_normalized_vectors():
-                # both vectors are normalized with L2, simply run dot product:
+                # both vectors are normalized with L2, simply run dot product,
+                # we adapt the name for the benefit of --debug:
+                self.name = 'kvec_dot_product'
                 self.code = super().get_code()
             elif self.have_unnormalized_vectors():
                 # neither vector is (known to be) normalized:
