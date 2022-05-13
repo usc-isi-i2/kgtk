@@ -4,8 +4,8 @@
 
 import numpy as np
 
-from   kgtk.kypher.utils import *
 from   kgtk.exceptions import KGTKException
+from   kgtk.kypher.utils import *
 import kgtk.kypher.indexspec as ispec
 from   kgtk.kypher.functions import SqlFunction
 from   kgtk.kypher.vecstore import MasterVectorStore, InlineVectorStore
