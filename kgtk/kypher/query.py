@@ -17,6 +17,7 @@ import kgtk.kypher.sqlstore as ss
 from   kgtk.value.kgtkvalue import KgtkValue
 from   kgtk.kypher.utils import *
 import kgtk.kypher.indexspec as ispec
+from   kgtk.kypher.functions import SqlFunction
 
 
 ### TO DO:
@@ -456,6 +457,10 @@ class KgtkQuery(object):
                 raise Exception("Illegal LIKELIHOOD expression")
         elif is_text_match_operator(function):
             return translate_text_match_op_to_sql(self, expr, state)
+        elif SqlFunction.is_defined(function):
+            # use generalized SQL function API v2:
+            sqlfn = SqlFunction.get_function(function, store=self.store)
+            return sqlfn.translate_call_to_sql(self, expr, state)
         args = [self.expression_to_sql(arg, state) for arg in expr.args]
         distinct = expr.distinct and 'DISTINCT ' or ''
         self.store.load_user_function(function, error=False)
