@@ -251,8 +251,7 @@ kgtk visualize-graph -i examples/docs/visualize_force_graph_example2.tsv -o defa
 ```
 This is the default version of this command, only producing a graph with default color, width and size
 
-<img src="https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/1.jpg" width="300"/>
-
+<img src="https://github.com/usc-isi-i2/kgtk/raw/master/docs/images/visualize-force-graph-examples/1.jpg" width="300"/>
 
 ## 2. Color by `is_country` column in the node file, use `d3.schemeCategory10` to color nodes
 ```
@@ -264,6 +263,7 @@ kgtk visualize-graph -i examples/docs/visualize_force_graph_example2.tsv \
                      -o show_countries.html
 ```
 This command specifies `is_country` as column for assigning colors. 
+
 
 This command specifies that the values in the color column are numbers and should be left as is with the help of following option `--node-color-numbers as-
 is`.
@@ -282,12 +282,12 @@ kgtk visualize-graph -i examples/docs/visualize_force_graph_example2.tsv \
                      -o show_degrees.html
 ```
 
+
 This command specifies `degree` as column for assigning colors. 
 
 This command specifies that the values in the color column are numbers and should be scaled logarithmically with the help of following option `--node-color-numbers log`.
 
 Finally, we specify that nodes should be colored using the `d3.schemePastel1` style.
-
 
 <img src="https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/3.png" width="300"/>
 
@@ -301,6 +301,7 @@ kgtk visualize-graph -i examples/docs/visualize_force_graph_example2.tsv \
 ```
 
 This command uses the column `type_missing` as assigning colors. 
+
 
 Notice here there are missing values. 
 
@@ -331,7 +332,6 @@ This command uses the column `hex_color`, which contains valid hex colors, for a
 
 <img src="https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/6.png" width="300"/>
 
-
 ## 7. Show Node Size and Color
 ```
 kgtk visualize-graph -i examples/docs/visualize_force_graph_example2.tsv \
@@ -349,7 +349,6 @@ Colors nodes according to the column `hex_color`, which contains valid hex color
 Size of the nodes is proportional to the values in the column `population`, we scale the node size logarithmically
 
 <img src="https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/7.png" width="300"/>
-
 
 ## 8. Edge Width
 ```
@@ -370,7 +369,6 @@ Resulting edge width will be between 2.0 and 5.0 as specified by the options `--
 Any edge with no value in weight columns will be assigned the default size: 2.0
 
 Moreover, color the nodes using the numerical values in the column `degree`, scaling the values linearly, using the style `d3.schemeDark2`.
-
 <img src="https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/8.png" width="300"/>
 
 ## 9. Show text above nodes
@@ -385,7 +383,6 @@ kgtk visualize-graph -i examples/docs/visualize_force_graph_example2.tsv \
 Colors nodes by the column `hex_color` and shows labels above the nodes
 
 <img src="https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/9.png" width="300"/>
-
 
 ## 10. Show labels on edges, color edges using hex colors
 ```
@@ -489,3 +486,4 @@ kgtk visualize-graph -i examples/docs/visualize_force_graph_example2.tsv \
 This command maps strings in the column `label` to a categorical scale `d3.schemeDark2`
 
 <img src="https://github.com/usc-isi-i2/kgtk/raw/dev/docs/images/visualize-force-graph-examples/16.png" width="300"/>
+
