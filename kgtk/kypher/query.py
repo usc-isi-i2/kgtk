@@ -288,6 +288,8 @@ class KgtkQuery(object):
             return node1._graph_table
         graph = node1.graph
         if graph is not None:
+            # TO DO: register these graph variables so we can use them later to disambiguate
+            # graph-table-specific property expressions or rowid() calls on join variables:
             graph = graph.name
         else:
             graph = self.default_graph
