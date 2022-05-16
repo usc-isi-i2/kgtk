@@ -265,7 +265,7 @@ CosineSimilarity('kvec_cos_sim', num_params=2, deterministic=True).define()
 declare('kgtk.kypher.funccore',
         'kgtk_regex', 'kgtk_null_to_empty', 'kgtk_empty_to_null', 'pyeval', 'pycall',
         'avg', 'count', 'group_concat', 'max', 'min', 'sum', 'total',
-        'cast', 'likelihood', 'concat',
+        'cast', 'likelihood', 'concat', 'rowid',
         'kgtk_is_subnode',)
 
 declare('kgtk.kypher.funclit',

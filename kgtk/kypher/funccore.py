@@ -28,6 +28,7 @@ def _get_regex(regex):
 def kgtk_regex(x, regex):
     """Regex matcher that implements the Cypher '=~' semantics which must match the whole string.
     """
+    # TO DO: using the new API, we could create query-translation-time compilations of the regex
     m = isinstance(x, str) and _get_regex(regex).match(x) or None
     return m is not None and m.end() == len(x)
 
@@ -153,6 +154,25 @@ class Concat(BuiltinFunction):
         return f'({" || ".join(args)})'
 
 Concat(name='concat').define()
+
+class RowId(BuiltinFunction):
+    """Implement table.rowid lookup for Kypher query variables.
+    """
+
+    def translate_call_to_sql(self, query, expr, state):
+        """Translate ROWID(var) to SQL.  rowid's are 1-based and are an efficient
+        way to count the number of rows in a table, for example, via 'max(rowid(r))'.
+        If the 'var' argument is a join variable, it is ambiguous which graph table
+        it should be associated with, in which case the choice will be random and
+        might lead to unexpected results.
+        """
+        if len(expr.args) == 1 and isinstance(expr.args[0], parser.Variable):
+            graph, _, _ = query.variable_to_sql(expr.args[0], state)
+            return f'{graph}.rowid'
+        else:
+            raise KGTKException("Illegal ROWID expression")
+
+RowId(name='rowid').define()
 
 
 ### Experimental transitive taxonomy relation indexing:
