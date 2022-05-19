@@ -76,9 +76,14 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument('-m', '--metric-type', action='store', type=str, dest='metric_type', required=False,
                         help="A string denoting the Faiss metric to be used. This will be passed to " +
-                        "faiss.index_factory().", default="L2",
-                        choices=["Inner_product", "L2", "L1", "Linf", "Lp", "Canberra", "BrayCurtis", "JensenShannon"],
-                        metavar="Inner_product|L2|L1|Linf|Lp|Canberra|BrayCurtis|JensenShannon")
+                        "faiss.index_factory(). 'Cosine' may also be specified, in which case " +
+                        "we will use inner product and L2-normalize your vectors before training " +
+                        "and adding them to the index. When searching in the resulting index, you " +
+                        "will need to L2-normalize vectors before searching with them by calling " +
+                        "faiss.normalize_L2(vecs).", default="L2",
+                        choices=["Inner_product", "L2", "L1", "Linf", "Lp", "Canberra", "BrayCurtis",
+                                 "JensenShannon", "Cosine"],
+                        metavar="Inner_product|L2|L1|Linf|Lp|Canberra|BrayCurtis|JensenShannon|Cosine")
 
     parser.add_argument('-ma', '--metric-arg', action='store', type=float, dest='metric_arg', required=False,
                         help="If you choose Lp as your metric_type, this parameter should be used to " +

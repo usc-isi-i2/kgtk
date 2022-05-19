@@ -24,6 +24,7 @@ def build_faiss_index(embeddings_file, embeddings_format, no_input_header, index
 
     # validate metric type and translate to a faiss metric
     metrics = {
+        "cosine": faiss.METRIC_INNER_PRODUCT,  # Cosine is achieved via inner product + l2 normalization of vectors
         "inner_product": faiss.METRIC_INNER_PRODUCT,
         "l2": faiss.METRIC_L2,
         "l1": faiss.METRIC_L1,
@@ -96,6 +97,10 @@ def build_faiss_index(embeddings_file, embeddings_format, no_input_header, index
                 continue
             train_vecs.append(get_embedding_from_line(line, embeddings_format))
     train_vecs = np.array(train_vecs, dtype=np.float32)  # faiss requires input to be np.array of floats
+    if metric_type == "cosine":
+        if verbose:
+            print("Normalizing training vectors...")
+        faiss.normalize_L2(train_vecs)
 
     # Setting up untrained index instance...
     # Limit cpu usage
@@ -107,8 +112,8 @@ def build_faiss_index(embeddings_file, embeddings_format, no_input_header, index
     # Set metric arguement if relevant
     if metric_type == "lp":
         index.metric_arg = metric_arg
-    # TODO -- look more into what this is doing / if need to provide more options for it.
-#     index.set_direct_map_type(faiss.DirectMap.Array)
+    # allows calling index.reconstruct to get embedding for entity index
+    index.set_direct_map_type(faiss.DirectMap.Array)
 
     if verbose:
         print(f"Training index using {min(num_lines,max_train_examples)} examples...")
@@ -117,7 +122,7 @@ def build_faiss_index(embeddings_file, embeddings_format, no_input_header, index
     # Add all vecs to index
     if verbose:
         print("Adding all vectors to the trained index...")
-    # Start with alread-loaded vectors used for training.
+    # Start with already-loaded vectors used for training.
     if verbose:
         print("Adding training vectors...")
     index.add(train_vecs)
@@ -125,7 +130,10 @@ def build_faiss_index(embeddings_file, embeddings_format, no_input_header, index
     # Incrementally load and add any additional vectors in batches
     if num_lines_to_read_for_training < num_lines:
         if verbose:
-            print("Incrementally loading and adding remaining vectors...")
+            if metric_type == "cosine":
+                print("Incrementally loading, normalizing, and adding remaining vectors...")
+            else:
+                print("Incrementally loading and adding remaining vectors...")
         vecs = []
         batch_size = max_train_examples
         with open(embeddings_file, 'r') as f_in:
@@ -138,11 +146,17 @@ def build_faiss_index(embeddings_file, embeddings_format, no_input_header, index
 
                 # flush loaded vecs if we reach batch size
                 if len(vecs) == batch_size:
-                    index.add(np.array(vecs, dtype=np.float32))
+                    vecs = np.array(vecs, dtype=np.float32)
+                    if metric_type == "cosine":
+                        faiss.normalize_L2(vecs)
+                    index.add(vecs)
                     vecs = []
         # add the last batch if there is anything in it
         if len(vecs) > 0:
-            index.add(np.array(vecs, dtype=np.float32))
+            vecs = np.array(vecs, dtype=np.float32)
+            if metric_type == "cosine":
+                faiss.normalize_L2(vecs)
+            index.add(vecs)
 
     # Save index
     faiss.write_index(index, str(index_file_out))
