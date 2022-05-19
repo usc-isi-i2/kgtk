@@ -36,7 +36,7 @@ class TestBuildFaissIndex(unittest.TestCase):
     def test_build_faiss_index(self, fmt, no_input_header=False):
         self.create_emb_file(fmt, self.words, self.dim, kgtk_header=(not no_input_header))
         cli_entry("kgtk", "build-faiss-index", "-i", self.emb_file, "-o", self.idx_file_out, "-id2n", self.id2n_file_out,
-                  "-ef", fmt, "--no-input-header", str(no_input_header), '-te', str(self.max_train_examples),
+                  "-ef", fmt, "--no-kgtk-input-header", str(no_input_header), '-te', str(self.max_train_examples),
                   '-is', self.idx_str, '-m', self.metric_type_str)
         # validate idx2node output file
         with open(self.id2n_file_out, 'r') as f:
@@ -54,16 +54,16 @@ class TestBuildFaissIndex(unittest.TestCase):
         self.assertTrue(index.metric_type == self.faiss_metric)
 
     def test_w2v_format(self):
-        self.test_build_faiss("w2v")
+        self.test_build_faiss_index("w2v")
 
     def test_glove_format(self):
-        self.test_build_faiss("glove")
+        self.test_build_faiss_index("glove")
 
     def test_kgtk_format(self):
-        self.test_build_faiss("kgtk")
+        self.test_build_faiss_index("kgtk")
 
     def test_kgtk_no_header_format(self):
-        self.test_build_faiss("kgtk", no_input_header=True)
+        self.test_build_faiss_index("kgtk", no_input_header=True)
 
     def tearDown(self):
         shutil.rmtree(self.temp_dir)

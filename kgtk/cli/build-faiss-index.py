@@ -31,7 +31,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     # Related to input file
     parser.add_input_file(who="Input file containing the embeddings for which a Faiss index will be created.",
                           options=["-i", "--input-file", "--embeddings-file"],
-                          metavar="EMBEDDINGS_FILE")
+                          metavar="EMBEDDINGS_FILE", dest='embeddings_file')
     # parser.add_argument('-i', '--input_file', '--embeddings_file', action='store', dest='embeddings_file',
     #                     required=True, metavar="EMBEDDINGS_FILE",
     #                     help='Input file containing the embeddings for which a Faiss index will be created.')
@@ -39,14 +39,14 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     # Related to output
     parser.add_output_file(who="Output .idx file where the index fill be saved.",
                            options=['-o', '--output-file', '--index-file-out'],
-                           metavar="INDEX_FILE_OUT")
+                           metavar="INDEX_FILE_OUT", dest='index_file_out')
     # parser.add_argument('-o', '--output_file', '--index_file_out', action='store', dest='index_file_out',
     #                     required=True, help="Output .idx file where the index fill be saved.",
     #                     metavar="INDEX_FILE_OUT")
 
-    parser.add_argument('-id2n', '--index-to-node-file-out', action='store', dest='index_to_node_file_out',
+    parser.add_argument('-id2n', '--faiss-id-to-node-mapping-file', action='store', dest='index_to_node_file_out',
                         required=False, help="Output Kgtk-format file containing index --> node.",
-                        default=None, metavar="INDEX_TO_NODE_FILE_OUT")
+                        default=None, metavar="FAISS_ID_TO_NODE_MAPPING_FILE")
 
     # OPTIONAL #
     # Related to input file
@@ -55,7 +55,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         help='Format of the input embeddings [Default: w2v] Choice: kgtk | w2v | glove',
                         default="w2v", choices=["kgtk", "w2v", "glove"], metavar="kgtk|w2v|glove")
 
-    parser.add_argument('--no-input-header', action='store', type=optional_bool, dest="no_input_header",
+    parser.add_argument('--no-kgtk-input-header', action='store', type=optional_bool, dest="no_input_header",
                         required=False, help='If your input embeddings file is in KGTK format, this ' +
                         'allows you to specify if it has a header line or not.',
                         const=True, nargs='?', default=False, metavar='True|False')
@@ -96,18 +96,28 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 def run(**kwargs):
     from kgtk.exceptions import KGTKException
     from kgtk.graph_embeddings.build_faiss_index import build_faiss_index
+    from kgtk.io.kgtkreader import KgtkReaderOptions
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
+
+    # error_file: typing.TextIO = sys.stdout if args.errors_to_stdout else sys.stderr
+
+    # Build the option structures for kgtk reader
+    reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
+    value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
     try:
         build_faiss_index(kwargs['embeddings_file'],
-                    kwargs['embeddings_format'],
-                    kwargs['no_input_header'],
-                    kwargs['index_file_out'],
-                    kwargs['index_to_node_file_out'],
-                    kwargs['max_train_examples'],
-                    kwargs['workers'],
-                    kwargs['index_string'],
-                    kwargs['metric_type'],
-                    kwargs['metric_arg'],
-                    kwargs['verbose'])
+                          kwargs['embeddings_format'],
+                          kwargs['no_input_header'],
+                          kwargs['index_file_out'],
+                          kwargs['index_to_node_file_out'],
+                          kwargs['max_train_examples'],
+                          kwargs['workers'],
+                          kwargs['index_string'],
+                          kwargs['metric_type'],
+                          kwargs['metric_arg'],
+                          kwargs['verbose'],
+                          reader_options,
+                          value_options)
 
     except SystemExit as e:
         raise KGTKException("Exit requested")

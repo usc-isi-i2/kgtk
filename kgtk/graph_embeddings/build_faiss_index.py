@@ -13,7 +13,8 @@ from kgtk.exceptions import KGTKException
 
 
 def build_faiss_index(embeddings_file, embeddings_format, no_input_header, index_file_out, index_to_node_file_out,
-                max_train_examples, workers, index_string, metric_type, p=None, verbose=False):
+                      max_train_examples, workers, index_string, metric_type, metric_arg, verbose,
+                      kr_reader_options, kr_value_options):
 
     # validate input file path
     if not os.path.exists(embeddings_file):
@@ -23,21 +24,23 @@ def build_faiss_index(embeddings_file, embeddings_format, no_input_header, index
 
     # validate metric type and translate to a faiss metric
     metrics = {
-        "Inner_product": faiss.METRIC_INNER_PRODUCT,
-        "L2": faiss.METRIC_L2,
-        "L1": faiss.METRIC_L1,
-        "Linf": faiss.METRIC_Linf,
-        "Lp": faiss.METRIC_Lp,
-        "Canberra": faiss.METRIC_Canberra,
-        "BrayCurtis": faiss.METRIC_BrayCurtis,
-        "JensenShannon": faiss.METRIC_JensenShannon
+        "inner_product": faiss.METRIC_INNER_PRODUCT,
+        "l2": faiss.METRIC_L2,
+        "l1": faiss.METRIC_L1,
+        "linf": faiss.METRIC_Linf,
+        "lp": faiss.METRIC_Lp,
+        "canberra": faiss.METRIC_Canberra,
+        "braycurtis": faiss.METRIC_BrayCurtis,
+        "jensenshannon": faiss.METRIC_JensenShannon
     }
+    # make case insensitive
+    metric_type = metric_type.lower()
     if metric_type in metrics:
         faiss_metric = metrics[metric_type]
     else:
         raise KGTKException("Unrecognized value for metric_type parameter: {}.".format(metric_type) +
                             "Please choose one of {}.".format(" | ".join(list(metrics.keys()))))
-    if metric_type == "Lp" and p is None:
+    if metric_type == "lp" and metric_arg is None:
         raise KGTKException("When using the metric_type Lp, you must specify a value of p via " +
                             "the metric_arg parameter.")
 
@@ -102,8 +105,8 @@ def build_faiss_index(embeddings_file, embeddings_format, no_input_header, index
     index = faiss.index_factory(dim, index_string, faiss_metric)  # TODO -- add quantizer option / other options
     index.verbose = verbose
     # Set metric arguement if relevant
-    if metric_type == "Lp":
-        index.metric_arg = p
+    if metric_type == "lp":
+        index.metric_arg = metric_arg
     # TODO -- look more into what this is doing / if need to provide more options for it.
 #     index.set_direct_map_type(faiss.DirectMap.Array)
 
@@ -142,7 +145,7 @@ def build_faiss_index(embeddings_file, embeddings_format, no_input_header, index
             index.add(np.array(vecs, dtype=np.float32))
 
     # Save index
-    faiss.write_index(index, index_file_out)
+    faiss.write_index(index, str(index_file_out))
 
 
 # ASSUMPTIONS:
