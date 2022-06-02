@@ -33,16 +33,18 @@ P31P279star	P31	Q18647521	P31P279star-P31-Q18647521
 P31P279star	datatype	wikibase-item	P31P279star-datatype-643cc9
 Pdirected_pagerank	label	'pagerank (directed)'@en	Pdirected_pagerank-label-c415d3
 Pdirected_pagerank	alias	'page rank (directed)'@en	Pdirected_pagerank-alias-ffb26c
-Pdirected_pagerank	description	'pagerank calculated on the directed graph'@en	Pdirected_pagerank-description-73cf78
+Pdirected_pagerank	description	'pagerank calculated on the directed graph'@en	Pdirected_pagerank-description-e27151
 Pdirected_pagerank	P31	Q18616576	Pdirected_pagerank-P31-Q18616576
 Pdirected_pagerank	P31	Q47512165	Pdirected_pagerank-P31-Q47512165
+Pdirected_pagerank	P7482	Q108739856	Pdirected_pagerank-P7482-Q108739856
 Pdirected_pagerank	P1629	Q184316	Pdirected_pagerank-P1629-Q184316
 Pdirected_pagerank	datatype	quantity	Pdirected_pagerank-datatype-1a7b30
 Pundirected_pagerank	label	'pagerank (undirected)'@en	Pundirected_pagerank-label-75f812
 Pundirected_pagerank	alias	'page rank (undirected)'@en	Pundirected_pagerank-alias-ce271c
-Pundirected_pagerank	description	'pagerank calculated on the undirected graph'@en	Pundirected_pagerank-description-fc33dc
+Pundirected_pagerank	description	'pagerank calculated on the undirected graph'@en	Pundirected_pagerank-description-9bad0d
 Pundirected_pagerank	P31	Q18616576	Pundirected_pagerank-P31-Q18616576
 Pundirected_pagerank	P31	Q47512165	Pundirected_pagerank-P31-Q47512165
+Pundirected_pagerank	P7482	Q108739856	Pundirected_pagerank-P7482-Q108739856
 Pundirected_pagerank	P1629	Q184316	Pundirected_pagerank-P1629-Q184316
 Pundirected_pagerank	datatype	quantity	Pundirected_pagerank-datatype-1a7b30
 Pin_degree	label	'degree (incoming)'@en	Pin_degree-label-51d6f6
