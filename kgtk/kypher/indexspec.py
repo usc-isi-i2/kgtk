@@ -189,6 +189,8 @@ def parse_index_spec(index_spec, regex=INDEX_TOKENIZER_REGEX):
             opt, value = (token, True) if isinstance(token, str) else token
             try:
                 import ast
+                if value in ('true', 'TRUE', 'false', 'FALSE'):
+                    value = value.capitalize()
                 value = ast.literal_eval(value) # dwim booleans and numbers
             except:
                 pass                            # everything else is considered a string
@@ -311,6 +313,26 @@ class TableIndex(object):
         """Return a list of SQL statements required to delete this index.
         """
         raise KGTKException('not implemented')
+
+    def create_index(self, store, explain=False):
+        """Perform all actions needed to create this index on 'store'.
+        If 'explain' only describe what needs to be done without actually doing it.
+        """
+        loglevel = 0 if explain else 1
+        for index_stmt in self.get_create_script():
+            store.log(loglevel, index_stmt)
+            if not explain:
+                store.execute(index_stmt)
+                
+    def drop_index(self, store, explain=False):
+        """Perform all actions needed to delete this index on 'store'.
+        If 'explain' only describe what needs to be done without actually doing it.
+        """
+        loglevel = 0 if explain else 1
+        for index_stmt in self.get_drop_script():
+            store.log(loglevel, index_stmt)
+            if not explain:
+                store.execute(index_stmt)
 
     def has_primary_column(self, column):
         """Return True if this index has 'column' as its first indexed column.
@@ -658,11 +680,21 @@ class VectorIndex(TableIndex):
         # if 'norm' is requested, vectors will be normalized before they are stored, but the
         # norm will be stored as well so it can be used to unnormalize a vector if needed
         # (for now we only support the L2 norm):
-        'norm':  (True, False, NORM_L2,),
-        # 'nn' controls whether a nearest neighbor index should be built, and of what kind:
-        'nn':    (False, True, NN_INDEX_FAISS,),
+        'norm':  (None, True, False, NORM_L2,),
         # 'store' controls how imported vectors should be stored (only 'inline' for now):
         'store': (STORE_INLINE, STORE_NUMPY, STORE_HD5,),
+        # 'ext' specifies an external existing file to use for a Numpy store:
+        'ext': (None, str),
+        # 'nn' controls whether a nearest neighbor index should be built, and of what kind:
+        'nn':    (False, True, NN_INDEX_FAISS,),
+        # 'ram' specifies the maximum amount of RAM to use when training an NN index:
+        'ram': (None, str, int),
+        # 'nlist' is the number of inverted lists (or cells/centroids) to use for the NN index:
+        'nlist': (None, str, int),
+        # 'niter' specifies how many iterations to use when training the NN index quantizer:
+        'niter': (None, int),
+        # 'nprobe' specifies how many quantizer cells to search by default for NN-lookup:
+        'nprobe': (None, int),
     }
 
     def parse_spec(self, index_spec):
@@ -683,20 +715,30 @@ class VectorIndex(TableIndex):
                 if opt.lower() not in self.COLUMN_OPTIONS.keys():
                     raise KGTKException(f'unhandled vector index option: {opt}')
                 legal_values = self.COLUMN_OPTIONS[opt.lower()]
-                if val not in legal_values and str(val).lower() not in legal_values:
+                if val not in legal_values and str(val).lower() not in legal_values and type(val) not in legal_values:
                     raise KGTKException(f'unhandled vector option value for {opt}: {val}')
                 del options[opt]
-                options[opt.lower()] = val.lower() if isinstance(val, str) else val
+                if isinstance(val, str) and type(val) not in legal_values:
+                    val = val.lower()
+                options[opt.lower()] = val
             for opt in self.COLUMN_OPTIONS.keys():
                 if opt not in options:
                     options[opt] = self.COLUMN_OPTIONS[opt][0]
             # map True onto respective default values:
             if options['nn']:
                 options['nn'] = self.NN_INDEX_FAISS
-            if options['norm']:
-                options['norm'] = self.NORM_L2
+            # NOTE: normalization on NumPy external files is specially handled by the vector store
+            if options['ext'] and options['store'] != self.STORE_NUMPY:
+                raise KGTKException('external files only supported for NumPy vector stores')
+            for sopt in ('ram', 'nlist'):
+                if options[sopt]:
+                    options[sopt] = parse_memory_size(options[sopt])
             # convert column options to sdict so we can use property syntax:
             parse.columns[column] = sdict(options)
+        # we need to have exactly one vector index per indexed vector column,
+        # and we want separate index objects if there are multiple vector columns:
+        if len(parse.columns) != 1:
+            raise KGTKException('each vector index must specify exactly 1 column')
         return parse
 
     def get_name(self):
@@ -713,25 +755,62 @@ class VectorIndex(TableIndex):
 
     def get_create_script(self):
         """Return a list of SQL statements required to create this index.
-        Since this is not an SQL index, we return the empty list here.
+        Since this is not an SQL index, we return the empty list here
+        and instead do everything inside 'create_index()'.
         """
-        # TO DO: to build a FAISS index that can be used by the DB, we will
-        # have to add a column with cluster IDs and build an SQL index for that,
-        # so eventually these scripts might be non-empty:
         return []
 
     def get_drop_script(self):
         """Return a list of SQL statements required to delete this index.
-        Since this is not an SQL index, we return the empty list here.
+        Since this is not an SQL index, we return the empty list here
+        and instead do everything inside 'drop_index()'.
         """
         return []
 
+    def create_index(self, store, explain=False):
+        """Perform all actions needed to create this index on 'store'.
+        If 'explain' only describe what needs to be done without actually doing it.
+        """
+        loglevel = 0 if explain else 1
+        store.log(loglevel, f'CREATE VECTOR INDEX {self.index}...')
+        master_store = store.get_vector_store()
+        table = self.get_table_name()
+        column = list(self.index.columns.keys())[0]
+        # this will redefine 'vstore' in case the index spec changed in a redefinition:
+        vstore = master_store.get_vector_store(table, column, index_spec=self)
+        nnindex = vstore.get_nearest_neighbor_index()
+        if nnindex:
+            nnindex.create(force=False, explain=explain)
+                
+    def drop_index(self, store, explain=False):
+        """Perform all actions needed to delete this index on 'store'.
+        If 'explain' only describe what needs to be done without actually doing it.
+        """
+        loglevel = 0 if explain else 1
+        store.log(loglevel, f'DROP VECTOR INDEX {self.index}...')
+        master_store = store.get_vector_store()
+        table = self.get_table_name()
+        column = list(self.index.columns.keys())[0]
+        vstore = master_store.get_vector_store(table, column)
+        nnindex = vstore.get_nearest_neighbor_index()
+        if nnindex:
+            nnindex.drop(explain=explain)
+                
     def subsumes(self, index):
         """Return True if 'self' subsumes or is more general than 'index',
         that is it can handle a superset of lookup requests.
         """
-        return False
-    
+        # we require strict equivalence:
+        return self == index
+
+    def redefines(self, index):
+        """Return True if 'self' is different from 'index' and redefines it.
+        Vector indexes need to be about the same vector column for redefinition to occur.
+        """
+        return (isinstance(index, VectorIndex)
+                and self.index.columns.keys() == index.index.columns.keys()
+                and self != index)
+
 """
 >>> TableIndex('graph1', 'node1, label, node2')
 StandardIndex('graph1', sdict['type': 'index', 'columns': sdict['node1': {}, 'label': {}, 'node2': {}], 'options': {}])
@@ -751,8 +830,11 @@ SqlIndex('graph_1', sdict['type': 'sql', 'columns': sdict['node1': {}], 'options
 ['CREATE UNIQUE INDEX "graph_1_node1_idx" on graph_1 ("node1")',
  'ANALYZE "graph_1_node1_idx"']
 
->>> TableIndex('graph2', 'vector:node2/fmt=base64/nn=faiss/store=inline,node1;txtemb/dtype=float16/norm=False')
-VectorIndex('graph2', sdict['type': 'vector', 'columns': sdict['node2': sdict['fmt': 'base64', 'nn': 'faiss', 'store': 'inline', 'dtype': 'float32', 'norm': 'l2'], 'node1;txtemb': sdict['dtype': 'float16', 'norm': False, 'fmt': 'auto', 'nn': False, 'store': 'inline']], 'options': {}])
+>>> TableIndex('graph2', 'vector:node2/fmt=base64/nn=faiss/store=inline')
+VectorIndex('graph2', sdict['type': 'vector', 'columns': sdict['node2': sdict['fmt': 'base64', 'nn': 'faiss', 'store': 'inline', 'dtype': 'float32', 'norm': None, 'ext': None, 'ram': None, 'nlist': None, 'niter': None, 'nprobe': None]], 'options': {}])
+# we need a separate spec if we want to index a different column:
+>>> TableIndex('graph2', 'vector:node1;txtemb/dtype=float16/norm=False')
+VectorIndex('graph2', sdict['type': 'vector', 'columns': sdict['node1;txtemb': sdict['dtype': 'float16', 'norm': False, 'fmt': 'auto', 'store': 'inline', 'ext': None, 'nn': False, 'ram': None, 'nlist': None, 'niter': None, 'nprobe': None]], 'options': {}])
 >>> _.get_create_script()
 []
 >>> 
