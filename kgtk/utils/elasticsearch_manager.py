@@ -14,33 +14,38 @@ valid_context_types = {'i', 'q', 'e', 'm', 'd'}
 
 class ElasticsearchManager(object):
     @staticmethod
-    def build_kgtk_search_input(kgtk_file_path,
-                                label_fields,
-                                mapping_file_path,
-                                output_path,
-                                alias_fields=None,
-                                extra_alias_properties=None,
-                                pagerank_fields=None,
-                                add_text=False,
-                                description_properties=None,
-                                separate_languages=True,
-                                property_datatype_file=None,
-                                languages=None
+    def build_kgtk_search_input(kgtk_file_path: str,
+                                label_fields: str,
+                                mapping_file_path: str,
+                                output_path: str,
+                                alias_fields: str = None,
+                                extra_alias_properties: str = None,
+                                pagerank_fields: str = None,
+                                add_text: bool = False,
+                                description_properties: str = None,
+                                separate_languages: bool = True,
+                                property_datatype_file: str = None,
+                                languages: set = None
                                 ):
         """
         builds a json lines file and a mapping file to support retrieval of candidates
-        It is assumed that the file is sorted by subject and predicate, in order to be able to process it in a streaming fashion
+        It is assumed that the file is sorted by subject and predicate, in order to be able to process it in a
+        streaming fashion
 
         Args:
-            kgtk_file_path: a file in KGTK format
-            label_fields: field in the kgtk file to be used as labels
-            mapping_file_path: output mapping file path for elasticsearch
-            output_path: output json lines path, converted from the input kgtk file
-            alias_fields: field in the kgtk file to be used as aliases
-            pagerank_fields: field in the kgtk file to be used as pagerank
-            black_list_file_path: path to black list file
-        Returns: Nothing
-
+        :param kgtk_file_path: input KGTK edge file
+        :param label_fields: comma separated properties to be used as labels
+        :param mapping_file_path: output file path for mapping json file
+        :param output_path: output json lines file path
+        :param alias_fields: comma separated properties to be used as aliases
+        :param extra_alias_properties: additional properties to be used as aliases
+        :param pagerank_fields: comma separated properties to be used as pagerank
+        :param add_text: concatenate english labels, aliases and descriptions in one text field
+        :param description_properties: comma separated properties to be used as descriptions
+        :param separate_languages: flag to store text in separate languages in different fields
+        :param property_datatype_file: input file with property datatype information
+        :param languages: a set of languages, for labels, aliases and descriptions
+        :return: None
         """
 
         if languages is None:
@@ -340,7 +345,7 @@ class ElasticsearchManager(object):
                                                  external_identifiers=_external_identifiers,
                                                  external_identifiers_pairs=_external_identifiers_pairs
                                                  )
-        except:
+        except Exception:
             print(traceback.print_exc())
 
         mapping_dict = ElasticsearchManager.create_mapping_es(languages=list(all_langs))
@@ -505,7 +510,7 @@ class ElasticsearchManager(object):
     def to_float(input_str):
         try:
             return float(input_str)
-        except:
+        except Exception:
             return None
 
     @staticmethod
@@ -799,7 +804,7 @@ class ElasticsearchManager(object):
                                                                es_pass=es_pass)
                     if response.status_code >= 400:
                         print(response.text)
-                except:
+                except Exception:
                     print('Exception while loading a batch to es')
                     print(response.text)
                     print(response.status_code)
@@ -967,11 +972,11 @@ class ElasticsearchManager(object):
 
     @staticmethod
     def generate_abbreviations(name: str) -> List[str]:
-        '''
+        """
         Helper function to generate the abbreviation.
         Input: name_split: List of the words in a name
         Output: Abbreviated Name
-        '''
+        """
         name_split = name.split()
         abbreviated_names = set()
 
