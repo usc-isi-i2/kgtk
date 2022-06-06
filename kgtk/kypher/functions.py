@@ -136,6 +136,20 @@ class SqlFunction(object):
         return isinstance(fun, AggregateFunction)
 
     @staticmethod
+    def is_virtual_graph(name):
+        """Return True if a function with 'name' is defined or forward-declared
+        as a virtual graph function.
+        """
+        # we don't use an instance method for this test, since we need to be able
+        # to test this before we actually have an object in hand:
+        nname = SqlFunction.normalize_name(name)
+        fun = SqlFunction._definitions.get(nname)
+        if isinstance(fun, str):
+            # we have a forward-declaration to a defining module, import it:
+            fun = SqlFunction.import_declared_function(name)
+        return isinstance(fun, VirtualGraphFunction)
+    
+    @staticmethod
     def normalize_name(name):
         return name.lower()
     
@@ -229,6 +243,108 @@ class BuiltinAggregateFunction(BuiltinFunction, AggregateFunction):
     """
     pass
 
+class VirtualTableFunction(SqlFunction):
+    """Functions that return multiple rows of values per set of inputs and
+    operate like a virtual database table and not a scalar function.
+    """
+
+    # input parameters and output columns:
+    params = ['arg1', 'arg2']
+    columns = ['out1', 'out2']
+
+    @staticmethod
+    def initialize(vtfun, arg1, arg2='defarg2'):
+        """Called by the virtual table function API when a function is called with a set of
+        input parameters.  In our adaptation here, this static method becomes the implementation
+        of TableFunction.initialize() on the dynamic class we create in self.get_code() below.
+        """
+        vtfun.arg1 = arg1
+        vtfun.arg2 = arg2
+        vtfun._result_rows = None
+
+    @staticmethod
+    def iterate(vtfun, idx):
+        """Called by the virtual table function API when a new set of output values is requested.
+        In our adaptation here, this static method becomes the implementation of TableFunction.iterate()
+        on the dynamic class we create in self.get_code() below.  This just calls out to
+        'vtfun.compute_result_rows()' and should generally not require any specialization on subclasses.
+        """
+        if vtfun._result_rows is None:
+            vtfun._result_rows = vtfun.compute_result_rows()
+        return next(vtfun._result_rows)
+
+    @staticmethod
+    def compute_result_rows(vtfun):
+        """Compute an iterator that produces the result rows for a particular set of inputs.
+        Each result row must be a tuple that has values for all output 'columns' specified above.
+        Called by the default implementation of vtfun.iterate().
+        """
+        return iter([(vtfun.arg1, vtfun.arg2)])
+    
+    def get_num_params(self):
+        """Return the number of parameters expected by this function (-1 for variable).
+        If not previously specified, infer it from the code object via 'inspect'.
+        """
+        if self.num_params is None:
+            self.num_params = len(self.params)
+        return self.num_params
+
+    def get_code(self):
+        """Return the code object of this function.  This can return custom adaptations
+        relative to a particular function or call context.  For table-valued functions
+        the code object has to be represented as a class object subclassing
+        playhouse.sqlite_ext.TableFunction, so we create such subclasses dynamically here.
+        Custom adaptations can link to additional objects of interest such as vector stores.
+        """
+        if self.code is None:
+            try:
+                import playhouse.sqlite_ext as sqlext
+            except:
+                raise KGTKException(f"you need to 'pip install peewee' to use table-valued functions")
+            # multiple-inheritance breaks things, so we inherit the relevant information by hand:
+            self.code = type(self.get_name(), (sqlext.TableFunction,), {
+                'name': self.get_name(),
+                'params': self.params,
+                'columns': self.columns,
+                'initialize': getattr(type(self), 'initialize'),
+                'iterate': getattr(type(self), 'iterate'),
+                'compute_result_rows': getattr(type(self), 'compute_result_rows'),
+            })
+        return self.code
+    
+    def load(self):
+        """Register the code of this function into the connection object of the associated SQL store.
+        If self.uniquify is True, create a unique name derived from the functions current name.  This
+        means the translator needs to access that uniquified name after 'load' was called to create
+        a working translated query (see 'translate_call_to_sql').
+        """
+        self.uniquify_name()
+        code = self.get_code()
+        self.store.load_user_function(self.get_name(), self.get_num_params(), code)
+
+"""
+# minimal test that uses the dummy definition provided in VirtualTableFunction:
+>>> import kgtk.kypher.sqlstore as ss
+>>> import kgtk.kypher.functions as fns
+>>> sql_store = ss.SqliteStore('/tmp/test.sqlite3.db', loglevel=1)
+>>> class TestFun(fns.VirtualTableFunction):
+...     pass
+... 
+>>> TestFun('vtestfun').define()
+>>> testfun = fns.SqlFunction.get_function('vtestfun', sql_store)
+>>> testfun.load()
+>>> testfun.get_name()
+'vtestfun_0'
+>>> list(sql_store.execute('select * from vtestfun_0(42)'))
+[(42, 'defarg2')]
+"""
+
+class VirtualGraphFunction(VirtualTableFunction):
+    """Functions that return multiple rows of KGTK graph edges per set of inputs.
+    These functions should at a minimum take 'node1' as their input and produce
+    """
+
+
 
 # Top-level definition API:
 
@@ -286,4 +402,5 @@ declare('kgtk.kypher.funcmath',
         'sin', 'sinh', 'sqrt', 'tan', 'tanh', 'trunc',)
 
 declare('kgtk.kypher.funcvec',
-        '_kvec_get_vector', 'kvec_dot', 'kvec_dot_product', 'kvec_cos_sim', 'kvec_cosine_similarity')
+        '_kvec_get_vector', 'kvec_dot', 'kvec_dot_product', 'kvec_cos_sim', 'kvec_cosine_similarity',
+        'kvec_topk_cosine_similarity', 'kvec_topk_cos_sim',)
