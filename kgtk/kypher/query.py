@@ -319,6 +319,17 @@ class KgtkQuery(object):
         node1 = clause[0]
         rel = clause[1]
         node2 = clause[2]
+
+        if rel.labels is not None and SqlFunction.is_virtual_graph(rel.labels[0]):
+            # special-case translation of virtual graph pattern clauses:
+            vgraph = rel.labels[0]
+            vgraphfn = SqlFunction.get_function(vgraph, store=self.store)
+            vgraphfn.translate_call_to_sql(self, clause, state)
+            # in case the translator already called 'load':
+            state.register_vtable(vgraphfn.get_name(), vgraphfn)
+            vgraphfn.load()
+            state.register_vtable(vgraphfn.get_name(), vgraphfn)
+            return
         
         node1col = self.get_node1_column(graph)
         if node1.labels is not None:
@@ -827,12 +838,20 @@ class KgtkQuery(object):
             restrictions = state.get_match_clause_restrictions(match_clause)
             if len(joins) > 0:
                 for (g1, c1), (g2, c2) in joins:
-                    indexes.add((self.graph_alias_to_graph(g1), c1))
-                    indexes.add((self.graph_alias_to_graph(g2), c2))
+                    g1 = self.graph_alias_to_graph(g1)
+                    g2 = self.graph_alias_to_graph(g2)
+                    # do not create any indexes on virtual tables:
+                    if state.lookup_vtable(g1) is None:
+                        indexes.add((g1, c1))
+                    if state.lookup_vtable(g2) is None:
+                        indexes.add((g2, c2))
             if len(restrictions) > 0:
                 # even if we have joins, we might need additional indexes on restricted columns:
                 for (g, c), val in restrictions:
-                    indexes.add((self.graph_alias_to_graph(g), c))
+                    # do not create any indexes on virtual tables:
+                    if state.lookup_vtable(g) is None:
+                        g = self.graph_alias_to_graph(g)
+                    indexes.add((g, c))
         return indexes
 
     def get_explicit_graph_index_specs(self):
@@ -984,6 +1003,7 @@ class TranslationState(object):
         self.literal_map = {}         # maps Kypher literals onto parameter placeholders
         self.variable_map = {}        # maps Kypher variables onto representative (graph, col) SQL columns
         self.alias_map = {}           # maps tables to their aliases and vice versa
+        self.vtable_map = {}          # maps referenced virtual table names to their SqlFunction object
         self.match_clause = None      # match clause we are currently processing
         self.match_clause_info = {}   # maps match clauses onto joins, restrictions, etc. encountered
         self.sql = None               # final SQL translation of 'query'
@@ -1052,6 +1072,21 @@ class TranslationState(object):
             raise Exception('Internal error: alias map exhausted')
         else:
             raise Exception(f'No aliases defined for {table}')
+
+    def get_vtable_map(self):
+        return self.vtable_map
+
+    def register_vtable(self, vtable_name, sql_func):
+        """Register that the virtual table 'vtable_name' has been referenced and
+        is implemented by SqlFunction 'sql_func'.
+        """
+        self.vtable_map[vtable_name] = sql_func
+
+    def lookup_vtable(self, vtable_name):
+        """Lookup the SqlFunction implementing the virtual table 'vtable_name'.
+        Return None if 'vtable_name' is not a registered virtual table.
+        """
+        return self.vtable_map.get(vtable_name)
     
     def get_match_clause(self):
         """Return the current match clause."""
@@ -1196,6 +1231,7 @@ class TranslationState(object):
 ### Text match support
 
 # This is a bit messy and idiosyncratic, so we are keeping it outside the regular translator.
+# TO DO: see if we can refactor and package this better with the new SqlFunction API
 
 TEXTMATCH_OPERATORS = {'TEXTMATCH': 'match', 'TEXTLIKE': 'like', 'TEXTGLOB': 'glob',
                        'MATCHSCORE': 'score', 'BM25': 'score'}
