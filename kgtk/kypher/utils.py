@@ -5,6 +5,7 @@ SQLStore and Kypher utilities.
 import math
 from   odictliteral import odict
 import pprint
+import re
 
 import sh
 
@@ -76,14 +77,34 @@ def get_cat_command(file, _piped=False):
         return sh.cat.bake(file, _piped=_piped)
 
 def format_memory_size(bytes):
-    """Return a humanly readable formatting of 'bytes' using powers of 1024.
+    """Return a human-readable formatting of 'bytes' using powers of 1000.
     """
-    units = ('Bytes', 'KB', 'MB', 'GB', 'TB')
-    if bytes < 1024:
+    units = ('Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB')
+    factor = 1000
+    if bytes < factor:
         return '%d %s' % (bytes, units[0])
     else:
-        scale = min(math.floor(math.log(bytes, 1024)), len(units)-1)
-        return "%.2f %s" % (bytes / math.pow(1024, scale), units[scale])
+        scale = min(math.floor(math.log(bytes, factor)), len(units)-1)
+        return "%.2f %s" % (bytes / pow(factor, scale), units[scale])
+
+def parse_memory_size(size):
+    """Parse a human-readable 'size' spec into the corresponding number (of bytes).
+    If 'size' is already an integer, return it as is.
+    """
+    if isinstance(size, str):
+        try:
+            units = 'BKMGTPEZY'
+            m = re.match(f'^\s*([0-9.]+)\s*([{units}]?I?B?\s*)$', size.upper())
+            number, unit = m.group(1), m.group(2)
+            # K and KiB is 1024, KB is 1000 (and similar for other units):
+            factor = 1000 if 'B' in unit and 'I' not in unit else 1024
+            scale = units.find(unit) if len(unit) <= 1 else units.find(unit[0])
+            # only coerce to float if we have to to avoid precision issues:
+            number = float(number) if '.' in number else int(number)
+            size = number * pow(factor, scale)
+        except:
+            raise KGTKException(f'illegal size spec: {size}')
+    return int(size)
 
 def sql_quote_ident(ident, quote='"'):
     # - standard SQL quoting for identifiers such as table and column names is via double quotes
