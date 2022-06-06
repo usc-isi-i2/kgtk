@@ -7,7 +7,7 @@ import numpy as np
 from   kgtk.exceptions import KGTKException
 from   kgtk.kypher.utils import *
 import kgtk.kypher.indexspec as ispec
-from   kgtk.kypher.functions import SqlFunction
+from   kgtk.kypher.functions import SqlFunction, VirtualGraphFunction
 from   kgtk.kypher.vecstore import MasterVectorStore, InlineVectorStore
 import kgtk.kypher.parser as parser
 
@@ -74,6 +74,9 @@ class VectorFunction(SqlFunction):
         As the second return value, return the optimized reference that can
         be used for the vector for this type of vector store.
         """
+        # TO DO: figure out whether we need to worry about join-variables here
+        # that can't be linked unambiguously to a table, but then joins on 
+        # vector columns don't really make sense, do they?
         if isinstance(arg, parser.Variable):
             graph, column, sql = query.variable_to_sql(arg, state)
             table = query.graph_alias_to_graph(graph)
@@ -326,3 +329,123 @@ class CosineSimilarity(DotProduct):
 
 CosineSimilarity('kvec_cos_sim', num_params=2, deterministic=True).define()
 CosineSimilarity('kvec_cosine_similarity', num_params=2, deterministic=True).define()
+
+
+class TopKCosineSimilarity(VirtualGraphFunction, VectorFunction):
+    """Find the top-k vectors with highest cosine similarity to a source vector.
+    Requires the availability of an appropriate nearest-neighbor index on the
+    associated vector store.
+    """
+
+    # parameters needed by the 'VirtualTableFunction' API:
+    params = ['node1', 'k', 'nprobe']
+    columns = ['label', 'node2', 'vid', 'vrowid', 'vector', 'similarity']
+    name = 'kvec_topk_cosine_similarity'
+
+    @staticmethod
+    def initialize(vtfun, node1, k=10, nprobe=0):
+        """Called during the initialziation of the virtual table function for a set of input
+        parameters 'node1' (the source vector we are comparing against), 'k' (how many top-similar
+        results to compute), and 'nprobe' (how deeply to search in the nearest-neighbor index).
+        """
+        # TO DO: the optional arguments don't work as expected, we always have to supply them it seems,
+        #        otherwise the query breaks, figure out how to work around that...
+        vtfun.input_vector = node1
+        vtfun.input_k = k
+        vtfun.input_nprobe = nprobe
+        vtfun._result_rows = None
+
+    @staticmethod
+    def compute_result_rows(vtfun):
+        """Called to compute a set of 'k' result rows for the set of input parameters stored by 'initialize'.
+        Each row binds all output 'columns' specified above.  If no nearest-neighbor index is available
+        for the associated vector store, this simply fails with an empty result.
+        """
+        vector = vtfun.input_vector
+        k = vtfun.input_k
+        nprobe = vtfun.input_nprobe
+        vstore = vtfun.vector_store
+        nnindex = vstore.get_nearest_neighbor_index() if vstore is not None else None
+        if not nnindex or not nnindex.is_trained():
+            return iter([])
+        ndim = vstore.get_vector_ndim()
+        dtype = vstore.get_vector_dtype()
+        vector = np.frombuffer(vector, dtype=dtype)
+        # TO DO: possibly increase 'k' here to account for different L2 vs. cosine distance ordering:
+        D, V = nnindex.search(vector, k, nprobe=nprobe)
+        result = []
+        label = TopKCosineSimilarity.name
+        vx = vector
+        vxnorm = np.linalg.norm(vx)
+        for row in vstore.get_vector_rows_by_id(V[0]):
+            vy = row[4]
+            # ['label', 'node2', 'vid', 'vrowid', 'vector', 'similarity']
+            res = [label, row[1], row[0], row[3], vy.tobytes(), 0.0]
+            vynorm = np.linalg.norm(vy)
+            # make sure we don't return numpy floats:
+            sim = float(np.dot(vx, vy) / (vxnorm * vynorm))
+            res[-1] = sim
+            result.append(res)
+        result.sort(key=lambda x: x[-1], reverse=True)
+        return iter(result)
+
+    def get_code(self):
+        """Create the virtual table code object and associate the appropriate vector store
+        as determined by self.translate_call_to_sql().
+        """
+        if self.code is None:
+            super().get_code()
+            self.code.vector_store = self.xstore
+        return self.code
+
+    def translate_call_to_sql(self, query, clause, state):
+        """Called by query.pattern_clause_to_sql() to translate a clause
+        with a virtual graph pattern.  This primarily substitutes the
+        appropriate virtual graph tables to use and computes the associated
+        vector store.
+        """
+        node1 = clause[0]
+        rel = clause[1]
+        if rel.labels is None:
+            return
+        self.xstore, _ = self.get_argument_vector_store(query, node1.variable, state)
+        # load here so we get the uniquified name registered with the connection:
+        self.load()
+        old_graph = node1._graph_table
+        old_graph_alias = node1._graph_alias
+        new_graph = self.get_name()
+        new_graph_alias = old_graph_alias.replace(old_graph, new_graph)
+        node1._graph_table = new_graph
+        node1._graph_alias = new_graph_alias
+        # TO DO: support this in query.py:
+        #state.unregister_table_alias(old_graph, old_graph_alias)
+        state.register_table_alias(new_graph, new_graph_alias)
+        # prevent the generation of a label restriction based on the virtual graph name:
+        rel.labels = None
+        # now finish translation with standard translator:
+        query.pattern_clause_to_sql(clause, new_graph_alias, state)
+
+TopKCosineSimilarity('kvec_topk_cos_sim').define()
+TopKCosineSimilarity('kvec_topk_cosine_similarity').define()
+
+"""
+# Example query:
+> kgtk query --gc wikidata-20210215-dwd-v2-embeddings-test.sqlite3.db -i complexemb -i labels \
+       --match 'comp: (x:Q40)-[]->(xv), \
+                      (xv)-[r:kvec_topk_cos_sim {k: 20, nprobe: 8}]->(y), \
+                lab:  (x)-[]->(xl), (y)-[]->(yl)' \
+       --where 'x != y' \
+       --return 'x, xl, y, yl, r.similarity' \
+       --limit 10
+node1	node2	node2	node2	similarity
+Q40	'Austria'@en	Q28	'Hungary'@en	0.7745946049690247
+Q40	'Austria'@en	Q794	'Iran'@en	0.7634432315826416
+Q40	'Austria'@en	Q347	'Liechtenstein'@en	0.7329589128494263
+Q40	'Austria'@en	Q155	'Brazil'@en	0.7318835854530334
+Q40	'Austria'@en	Q79	'Egypt'@en	0.7268905639648438
+Q40	'Austria'@en	Q35	'Denmark'@en	0.7170709371566772
+Q40	'Austria'@en	Q212	'Ukraine'@en	0.7160522937774658
+Q40	'Austria'@en	Q865	'Taiwan'@en	0.7146331071853638
+Q40	'Austria'@en	Q928	'Philippines'@en	0.7101161479949951
+Q40	'Austria'@en	Q298	'Chile'@en	0.7095608711242676
+"""
