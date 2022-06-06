@@ -18,6 +18,7 @@ import sh
 from   kgtk.exceptions import KGTKException
 from   kgtk.kypher.utils import *
 import kgtk.kypher.indexspec as ispec
+from   kgtk.kypher.functions import SqlFunction
 
 
 ### TO DO:
@@ -100,6 +101,7 @@ class SqliteStore(SqlStore):
             'comment': sdict['_name_': 'comment', 'type': 'TEXT', 'doc': 'comment describing the data of this file'],
         ],
         'without_rowid': False, # just for illustration
+        'temporary': False,     # just for illustration
     ]
 
     GRAPH_TABLE = sdict[
@@ -113,6 +115,7 @@ class SqliteStore(SqlStore):
             'indexes': sdict['_name_': 'indexes', 'type': 'TEXT',  'doc': 'list of sdicts for indexes defined on this graph'],
         ],
         'without_rowid': False,
+        'temporary': False,
     ]
 
     def __init__(self, dbfile=None, create=False, loglevel=0, conn=None, readonly=False):
@@ -273,7 +276,10 @@ class SqliteStore(SqlStore):
         """
         conn = self.get_conn()
         try:
-            if not deterministic:
+            if isinstance(func, type) and hasattr(func, 'register'):
+                # we have a table-valued function described by a class object:
+                func.register(conn)
+            elif not deterministic:
                 # try to avoid an error by not using the deterministic flag:
                 conn.create_function(name, num_params, func)
             else:
@@ -298,7 +304,7 @@ class SqliteStore(SqlStore):
         return self.user_functions
 
 
-    ### DB properties:
+    ### DB properties and operations:
     
     def get_db_size(self):
         """Return the size of all currently allocated data pages in bytes.  This maybe smaller than
@@ -330,10 +336,76 @@ class SqliteStore(SqlStore):
         return [col[0] for col in result.description]
 
     def get_table_row_count(self, table_name):
-        for (cnt,) in self.execute('SELECT COUNT(*) FROM %s' % table_name):
-            return cnt
+        for (cnt,) in self.execute('SELECT MAX(rowid) FROM %s' % table_name):
+            return cnt or 0  # need to handle case of empty table without any rowids
         return 0
-    
+
+    def has_table_column(self, table_name, column_name):
+        """Return True if table 'table_name' exists and has a column 'column_name'.
+        """
+        return self.has_table(table_name) and column_name in self.get_table_header(table_name)
+
+    def get_table_definition_sql(self, table_name):
+        """Return the 'CREATE TABLE <table_name> ...' statement used to create this table.
+        """
+        master = self.MASTER_TABLE._name_
+        mcols = self.MASTER_TABLE.columns
+        query = f"""SELECT {mcols.sql._name_} FROM {master} 
+                    WHERE {mcols.type._name_}='table' AND {mcols.name._name_}=?"""
+        for (stmt,) in self.execute(query, (table_name,)):
+            return stmt
+        return None
+
+    def get_table_indexes_sql(self, table_name):
+        """Return the 'CREATE INDEX ... ON <table_name> ...' statements used to index this table.
+        """
+        master = self.MASTER_TABLE._name_
+        mcols = self.MASTER_TABLE.columns
+        query = f"""SELECT {mcols.sql._name_} FROM {master} 
+                    WHERE {mcols.type._name_}='index' AND {mcols.tbl_name._name_}=?"""
+        return [stmt for (stmt,) in self.execute(query, (table_name,))]
+
+    def sort_table(self, table_name, columns):
+        """Sort the rows in table 'table_name' along one or more 'columns'.  Each column can be a simple
+        column name or a full spec such as 'cast(node2 as int) desc' containing optional type coercion
+        and sort directions (in which case the column name should be properly quoted if necessary).  This 
+        creates a copy of 'table_name' into which the sorted rows will be inserted.  All indexes existing
+        on the original table will also be recreated.  After sorting the freed up space from the original
+        table and indexes is NOT automatically reclaimed.  To use it or free it either add additional
+        data to the database or run the VACUUM command.  The value of sorting a table is primarily to
+        create better data locality on disk, the sorted table will otherwise be identical to the original.
+        """
+        # we look up the actual definition statement to get all the types and column features correct:
+        table_def = self.get_table_definition_sql(table_name)
+        if table_def is None:
+            raise KGTKException(f"table '{table_name}' does not exist")
+        index_defs = self.get_table_indexes_sql(table_name)
+        table_columns = self.get_table_header(table_name)
+        sorted_table = f'{table_name}_sortEd_'
+        sorted_def = re.sub(r"""(?i)^\s*(CREATE\s+TABLE\s+)['"`]?""" + re.escape(table_name) + r"""['"`]?(\s+.*)""",
+                            f'\\1{sql_quote_ident(sorted_table)}\\2', table_def)
+        if sorted_def == table_def:
+            raise KGTKException(f"failed to sort '{table_name}', unexpected definition statement")
+        sort_columns = [sql_quote_ident(col) if not re.search("""["` ]""", col) else col for col in listify(columns)]
+        sort_stmt = f"""INSERT INTO {sql_quote_ident(sorted_table)} 
+                        SELECT {', '.join(map(sql_quote_ident, table_columns))}
+                        FROM {sql_quote_ident(table_name)}
+                        ORDER BY {', '.join(sort_columns)}"""
+        self.log(1, f"SORT table '{table_name}'...")
+        self.execute(sorted_def)
+        self.execute(sort_stmt)
+        # ensure these counts are the same:
+        if self.get_table_row_count(table_name) != self.get_table_row_count(sorted_table):
+            raise KGTKException(f"something went wrong during sorting of '{table_name}' into '{sorted_table}'")
+        self.log(1, f"DROP unsorted table '{table_name}'...")
+        self.execute(f'DROP table {sql_quote_ident(table_name)}')
+        # this can take some time on large tables:
+        self.execute(f'ALTER TABLE {sql_quote_ident(sorted_table)} RENAME TO {sql_quote_ident(table_name)}')
+        for index_def in index_defs:
+            self.log(1, f"RE-CREATE index '{index_def}'...")
+            self.execute(index_def)
+        self.commit()
+
 
     ### Schema manipulation:
     
@@ -380,8 +452,9 @@ class SqliteStore(SqlStore):
             keys.sort(key=lambda x: x[1])
             keys = 'PRIMARY KEY (%s)' % ', '.join(map(lambda x: x[0], keys))
             colspecs.append(keys)
-        without_rowid = table_schema.get('without_rowid') and ' WITHOUT ROWID' or ''
-        return 'CREATE TABLE %s (%s)%s' % (table_schema._name_, ', '.join(colspecs), without_rowid)
+        temp = table_schema.get('temporary') and ' TEMPORARY' or ''
+        norowid = table_schema.get('without_rowid') and ' WITHOUT ROWID' or ''
+        return f'CREATE{temp} TABLE {table_schema._name_} ({", ".join(colspecs)}){norowid}'
 
     def get_table_index(self, table_or_schema, columns, unique=False):
         """Return a TableIndex object for an index on 'columns' for 'table_or_schema'.
@@ -573,6 +646,11 @@ class SqliteStore(SqlStore):
         but will also be backwards-compatible and use the SQLite master table if needed.
         """
         info = self.get_graph_info(table_name)
+        if info is None:
+            # see if 'table_name' is a defined or loaded virtual table function:
+            if SqlFunction.is_virtual_graph(table_name) or table_name in self.get_user_functions():
+                return []
+            raise KGTKException(f"INTERNAL ERROR: missing graph info for '{table_name}'")
         indexes = info.indexes
         if indexes is None:
             # we have an old-style graph info table that just got updated, retrieve index definitions
@@ -599,6 +677,11 @@ class SqliteStore(SqlStore):
         """Return the list of vector indexes currently defined for graph 'table_name'.
         """
         info = self.get_graph_info(table_name)
+        if info is None:
+            # see if 'table_name' is a defined or loaded virtual table function:
+            if SqlFunction.is_virtual_graph(table_name) or table_name in self.get_user_functions():
+                return []
+            raise KGTKException(f"INTERNAL ERROR: missing graph info for '{table_name}'")
         indexes = info.indexes
         return [idx for idx in ispec.TableIndex.decode(indexes) if isinstance(idx, ispec.VectorIndex)]
 
@@ -617,10 +700,10 @@ class SqliteStore(SqlStore):
         example, an existing index on columns (node1, node2) will qualify even if 'index'
         has 'node1' as its only column.
         """
-        if not self.has_graph_index(table_name, index) and not isinstance(index, ispec.VectorIndex):
+        if not self.has_graph_index(table_name, index):
             if self.readonly:
                 return
-            loglevel = explain and 0 or 1
+            loglevel = 0 if explain else 1
             indexes = self.get_graph_indexes(table_name)
             # delete anything that is redefined by this 'index':
             for idx in indexes[:]:
@@ -629,14 +712,13 @@ class SqliteStore(SqlStore):
             indexes = self.get_graph_indexes(table_name)
             # we also measure the increase in allocated disk space here:
             oldsize = self.get_db_size()
-            for index_stmt in index.get_create_script():
-                self.log(loglevel, index_stmt)
-                if not explain:
-                    self.execute(index_stmt)
+            index.create_index(self, explain=explain)
             idxsize = self.get_db_size() - oldsize
             ginfo = self.get_graph_info(table_name)
             ginfo.size += idxsize
             if not explain:
+                # we may have added/deleted some, so recompute the list:
+                indexes = self.get_graph_indexes(table_name)
                 indexes = ispec.TableIndex.encode(indexes + [index])
                 self.update_graph_info(table_name, indexes=indexes)
                 self.update_graph_info(table_name, size=ginfo.size)
@@ -774,6 +856,9 @@ class SqliteStore(SqlStore):
             self.set_file_info(file, size=0, modtime=time.time(), graph=table)
         else:
             self.set_file_info(file, size=os.path.getsize(file), modtime=os.path.getmtime(file), graph=table)
+        # FIXME: this is incorrect, since the vector index hasn't been (completely) created yet, but for
+        # now we need it to get correct query translations; but this needs a more general approach, since
+        # it also doesn't do the right thing for redefinitions of vector indexes
         indexes = ispec.TableIndex.encode(indexes)
         self.set_graph_info(table, header=header, size=graphsize, acctime=time.time(), indexes=indexes)
         if alias is not None:
@@ -804,10 +889,10 @@ class SqliteStore(SqlStore):
         if index not in indexes:
             raise KGTKException(f'No such index for {table_name}: {index}]')
         oldsize = self.get_db_size()
-        for index_stmt in index.get_drop_script():
-            self.log(1, index_stmt)
-            self.execute(index_stmt)
+        index.drop_index(self, explain=False)
         idxsize = oldsize - self.get_db_size()
+        # we might have updated them, so recompute the list:
+        indexes = self.get_graph_indexes(table_name)
         indexes.remove(index)
         ginfo.size -= idxsize
         self.update_graph_info(table_name, indexes=ispec.TableIndex.encode(indexes), size=ginfo.size)
