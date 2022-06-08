@@ -80,7 +80,7 @@ P279dwdstar	P31	Q18616576	P279dwdstar-P31-Q18616576
 P279dwdstar	P31	Q28326461	P279dwdstar-P31-Q28326461
 P279dwdstar	P31	Q18647519	P279dwdstar-P31-Q18647519
 P279dwdstar	datatype	wikibase-item	P279dwdstar-datatype-643cc9
-P1963computed	label	'properties for this type'@en	P1963computed-label-813bce
+P1963computed	label	'properties in instances of this class'@en	P1963computed-label-c451a6
 P1963computed	description	'The properties defined for a class, computed based on its instances'@en	P1963computed-description-2e5ab8
 P1963computed	P31	Q19820110	P1963computed-P31-Q19820110
 P1963computed	P279	Q22582645	P1963computed-P279-Q22582645
@@ -139,7 +139,7 @@ Pshort_abstract	label	'short abstract from Wikipedia articles'@en	Pshort_abstrac
 Pshort_abstract	description	'text before the table of contents from Wikipedia articles shortened to 2-3 sentences'@en	Pshort_abstract-description-d251e5
 Pshort_abstract	P31	Q18616576	Pshort_abstract-P31-Q18616576
 Pshort_abstract	datatype	string	Pshort_abstract-datatype-473287
-P1963computed_star	label	'properties for this type including instances of subclasses'@en	P1963computed_star-label-c1ae81
+P1963computed_star	label	'properties in instances and subclasses of this class'@en	P1963computed_star-label-10788b
 P1963computed_star	description	'The properties defined for a class, computed based on its instances and instances of all subclasses'@en	P1963computed_star-description-fd0dc9
 P1963computed_star	P31	Q19820110	P1963computed_star-P31-Q19820110
 P1963computed_star	P279	Q22582645	P1963computed_star-P279-Q22582645
