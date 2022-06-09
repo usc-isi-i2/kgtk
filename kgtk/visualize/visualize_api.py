@@ -211,19 +211,22 @@ class KgtkVisualize:
                 node1_label = row[node1_label_idx]
                 node2_label = row[node2_label_idx]
                 if '@' in node1_label:
-                    clean_node1_label, _, _ = kgtk_format.destringify(node1_label)
+                    # clean_node1_label, _, _ = kgtk_format.destringify(node1_label)
+                    clean_node1_label = node1_label.split('@')[0]
                 else:
                     clean_node1_label = node1_label
                 nodes.add((row[node1_idx], clean_node1_label))
 
                 if '@' in node2_label:
-                    clean_node2_label, _, _ = kgtk_format.destringify(node2_label)
+                    # clean_node2_label, _, _ = kgtk_format.destringify(node2_label)
+                    clean_node2_label = node2_label.split('@')[0]
                 else:
                     clean_node2_label = node2_label
                 nodes.add((row[node2_idx], clean_node2_label))
 
                 if '@' in row[label_label_idx]:
-                    _label_label, _, _ = kgtk_format.destringify(row[label_label_idx])
+                    # _label_label, _, _ = kgtk_format.destringify(row[label_label_idx])
+                    _label_label = row[label_label_idx].split('@')[0]
                 else:
                     _label_label = row[label_label_idx]
 

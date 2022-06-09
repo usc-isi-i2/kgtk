@@ -24,6 +24,7 @@ always_print_env_variables = {
 class ConfigureKGTK(object):
     def __init__(self, file_list: List[str], kgtk_path: str = None, input_files_url: str = None):
 
+        self.graph_files = files_config
         self.files = file_list
         self.INPUT_FILES_URL = "https://github.com/usc-isi-i2/kgtk-tutorial-files/raw/main/datasets/arnold" \
             if input_files_url is None else input_files_url
@@ -64,6 +65,8 @@ class ConfigureKGTK(object):
                        debug=False):
         """
         configures the environment for a jupyter notebook.
+        :param debug: add --debug flag in the kypher command
+        :param additional_files: additional files in dict format to be used
         :param input_graph_path: path to the input graph files. By default it'll create a folder "isi-kgtk-tutorial" in
         user home and download files from github
         :param output_path: path where the output and temp files will be created. By default, "isi-kgtk-tutorial-out" in
@@ -75,8 +78,6 @@ class ConfigureKGTK(object):
         default, read a file from kgtk repo
         :return:
         """
-
-        self.graph_files = files_config
 
         if json_config_file is not None:
             try:
@@ -139,7 +140,7 @@ class ConfigureKGTK(object):
         os.environ['kypher'] = kypher
         self.kgtk_environment_variables.add('kypher')
 
-    def download_tutorial_files(self, graph_path):
+    def download_tutorial_files(self, graph_path: str):
         if not graph_path.endswith('/'):
             graph_path += '/'
 
@@ -159,20 +160,23 @@ class ConfigureKGTK(object):
         for key in self.files:
             print(f"{key}: {os.environ[key]}")
 
-    def load_files_into_cache(self):
+    def load_files_into_cache(self, files: List[str] = None):
         """
         Loads files into graph cache. The keys in this list should be in json_config_file
         :return:
         """
         kypher_command = f"{os.environ['kypher']}"
 
-        for f_key in self.files:
+        if files is None:
+            files = self.files
+
+        for f_key in files:
             kypher_command += f" -i \"{os.environ[f_key]}\" --as {f_key} "
         kypher_command += " --limit 3"
         print(kypher_command)
         print(subprocess.getoutput(kypher_command))
 
-    def print_kgtk_file_names(self, file_names=None):
+    def print_kgtk_file_names(self, file_names: List[str] = None):
         if file_names is not None:
             if not type(file_names) == list:
                 file_names = [file_names]
