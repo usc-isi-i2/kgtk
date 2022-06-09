@@ -210,9 +210,6 @@ class KgtkVisualize:
                 # incase node file is not present or a node is missing from the node file
                 node1_label = row[node1_label_idx]
                 node2_label = row[node2_label_idx]
-                print(row)
-                print(node1_label_idx)
-                print(node2_label_idx)
                 if '@' in node1_label:
                     # clean_node1_label, _, _ = kgtk_format.destringify(node1_label)
                     clean_node1_label = node1_label.split('@')[0]
