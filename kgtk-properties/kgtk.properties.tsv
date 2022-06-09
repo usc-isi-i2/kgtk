@@ -158,3 +158,6 @@ P1963subclass_star	P279	Q22582645	P1963subclass_star-P279-Q22582645
 P1963subclass_star	P1659	P1963	P1963subclass_star-P1659-P1963
 P1963subclass_star	P7482	Q108739856	P1963subclass_star-P7482-Q108739856
 P1963subclass_star	datatype	wikibase-item	P1963subclass_star-datatype-643cc9
+wikipedia_sitelink	label	'wikipedia url'@en	wikipedia_sitelink-label-0b615f
+wikipedia_sitelink	description	'wikipedia url in all languages'@en	wikipedia_sitelink-description-341c82
+wikipedia_sitelink	datatype	string	wikipedia_sitelink-datatype-473287
