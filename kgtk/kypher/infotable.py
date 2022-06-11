@@ -8,6 +8,33 @@ from   kgtk.exceptions import KGTKException
 from   kgtk.kypher.utils import *
 
 
+FILE_TABLE = sdict[
+    '_name_': 'fileinfo',
+    'columns': sdict[
+        'file':    sdict['_name_': 'file',    'type': 'TEXT', 'key': True, 'doc': 'real path of the file containing the data'],
+        'size':    sdict['_name_': 'size',    'type': 'INTEGER'],
+        'modtime': sdict['_name_': 'modtime', 'type': 'FLOAT'],
+        'md5sum':  sdict['_name_': 'md5sum',  'type': 'TEXT', 'default': None], # just for illustration of defaults
+        'graph':   sdict['_name_': 'graph',   'type': 'TEXT', 'doc': 'the graph defined by the data of this file'],
+        'comment': sdict['_name_': 'comment', 'type': 'TEXT', 'doc': 'comment describing the data of this file'],
+    ],
+]
+
+GRAPH_TABLE = sdict[
+    '_name_': 'graphinfo',
+    'columns': sdict[
+        'name':    sdict['_name_': 'name',    'type': 'TEXT', 'key': True, 'doc': 'name of the table representing this graph'],
+        'shasum':  sdict['_name_': 'shasum',  'type': 'TEXT', 'doc': 'table hash computed by sqlite shasum command'],
+        'header':  sdict['_name_': 'header',  'type': 'TEXT'],
+        'size':    sdict['_name_': 'size',    'type': 'INTEGER', 'doc': 'total size in bytes used by this graph including indexes'],
+        'acctime': sdict['_name_': 'acctime', 'type': 'FLOAT', 'doc': 'last time this graph was accessed'],
+        'indexes': sdict['_name_': 'indexes', 'type': 'TEXT',  'doc': 'list of sdicts for indexes defined on this graph'],
+    ],
+    'without_rowid': False,
+    'temporary': False,
+]
+
+
 class InfoTable(object):
     """Obsolete info table API for access to file and graph info tables.
     """
