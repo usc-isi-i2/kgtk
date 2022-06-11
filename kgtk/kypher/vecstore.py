@@ -1349,8 +1349,7 @@ class FaissIndex(NearestNeighborIndex):
                 FROM {temp_table}
                 WHERE {vstable}.rowid = {temp_table}.rowid""")
         self.sort_vectors()
-        sstore.ensure_graph_index(vstable, qcell_index_spec)
-        sstore.commit()
+        sstore.ensure_graph_index(vstable, qcell_index_spec, commit=False)
 
     def sort_vectors(self):
         """Sort the vectors in the associated vector store by q-cell ID for improved locality during search.
