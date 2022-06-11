@@ -12,12 +12,13 @@ import io
 import re
 from   functools import lru_cache
 import itertools
+import copy
 
 import sh
 
 from   kgtk.exceptions import KGTKException
 from   kgtk.kypher.utils import *
-import kgtk.kypher.infotable as oldit
+from   kgtk.kypher.kgtkinfo import KgtkInfoTable
 import kgtk.kypher.indexspec as ispec
 from   kgtk.kypher.functions import SqlFunction
 
@@ -85,38 +86,20 @@ class SqliteStore(SqlStore):
     # They are represented as separate object types, but for now the association is 1-1 where each
     # file points to the graph it defines and each graph is named by its associated file.
     # However, in the future we might redefine this association, e.g., multiple files could define
-    # a graph, in which case graphs should have their own external names.  This is the main reason
-    # these object types are represented in separate tables, even though we could use just a single one.
-    # Over time we will need to store additional information in these tables.  The current implementation
-    # allows for transparent addition of new columns without invalidating existing graph cache DBs.
-    # No other changes such as renaming or deleting columns are supported (see 'InfoTable.handle_schema_update()').
+    # a graph, in which case graphs should have their own external names.  The latest implementation
+    # of INFO_TABLE as a schema-free KGTK table makes it easy to add new kinds of information over
+    # time without invalidating the information stored in existing graph caches.
 
-    FILE_TABLE = sdict[
-        '_name_': 'fileinfo',
+    INFO_TABLE = sdict[
+        '_name_': 'kypher_master',
         'columns': sdict[
-            'file':    sdict['_name_': 'file',    'type': 'TEXT', 'key': True, 'doc': 'real path of the file containing the data'],
-            'size':    sdict['_name_': 'size',    'type': 'INTEGER'],
-            'modtime': sdict['_name_': 'modtime', 'type': 'FLOAT'],
-            'md5sum':  sdict['_name_': 'md5sum',  'type': 'TEXT', 'default': None], # just for illustration of defaults
-            'graph':   sdict['_name_': 'graph',   'type': 'TEXT', 'doc': 'the graph defined by the data of this file'],
-            'comment': sdict['_name_': 'comment', 'type': 'TEXT', 'doc': 'comment describing the data of this file'],
+            'node1': sdict['_name_': 'node1', 'type': 'TEXT'],
+            'label': sdict['_name_': 'label', 'type': 'TEXT'],
+            'node2': sdict['_name_': 'node2', 'type': 'TEXT'],
+            'id':    sdict['_name_': 'id',    'type': 'TEXT'],
         ],
         'without_rowid': False, # just for illustration
         'temporary': False,     # just for illustration
-    ]
-
-    GRAPH_TABLE = sdict[
-        '_name_': 'graphinfo',
-        'columns': sdict[
-            'name':    sdict['_name_': 'name',    'type': 'TEXT', 'key': True, 'doc': 'name of the table representing this graph'],
-            'shasum':  sdict['_name_': 'shasum',  'type': 'TEXT', 'doc': 'table hash computed by sqlite shasum command'],
-            'header':  sdict['_name_': 'header',  'type': 'TEXT'],
-            'size':    sdict['_name_': 'size',    'type': 'INTEGER', 'doc': 'total size in bytes used by this graph including indexes'],
-            'acctime': sdict['_name_': 'acctime', 'type': 'FLOAT', 'doc': 'last time this graph was accessed'],
-            'indexes': sdict['_name_': 'indexes', 'type': 'TEXT',  'doc': 'list of sdicts for indexes defined on this graph'],
-        ],
-        'without_rowid': False,
-        'temporary': False,
     ]
 
     def __init__(self, dbfile=None, create=False, loglevel=0, conn=None, readonly=False):
@@ -156,10 +139,7 @@ class SqliteStore(SqlStore):
             sys.stderr.flush()
 
     def init_meta_tables(self):
-        self.fileinfo = oldit.InfoTable(self, self.FILE_TABLE)
-        self.graphinfo = oldit.InfoTable(self, self.GRAPH_TABLE)
-        self.fileinfo.init_table()
-        self.graphinfo.init_table()
+        self.infotable = InfoTable(self, self.INFO_TABLE._name_)
 
     def describe_meta_tables(self, out=sys.stderr):
         """Describe the current content of the internal bookkeeping tables to 'out'.
@@ -248,6 +228,13 @@ class SqliteStore(SqlStore):
             return self.get_conn().executemany(*args, **kwargs)
 
     def commit(self):
+        """Commit all updates of the current transaction to the database.
+        This should only be called after complete and internally consistent
+        top-level operations.
+        """
+        self.log(2, 'COMMIT updates to database...')
+        if self.vector_store is not None:
+            self.vector_store.commit()
         self.get_conn().commit()
 
     def pragma(self, expression):
@@ -405,7 +392,6 @@ class SqliteStore(SqlStore):
         for index_def in index_defs:
             self.log(1, f"RE-CREATE index '{index_def}'...")
             self.execute(index_def)
-        self.commit()
 
 
     ### Schema manipulation:
@@ -509,12 +495,12 @@ class SqliteStore(SqlStore):
         will match the entry for '/data/graph' (if that is its full name) before it
         matches an entry named by the alias 'mygraph', for example.
         """
-        info = self.fileinfo.get_info(file)
+        info = self.infotable.get_file_info(file)
         if info is None and not exact:
             file = self.normalize_file_path(file)
-            info = self.fileinfo.get_info(file)
+            info = self.infotable.get_file_info(file)
         if info is None and alias is not None:
-            info = self.fileinfo.get_info(alias)
+            info = self.infotable.get_file_info(alias)
         return info
 
     def get_normalized_file(self, file, alias=None, exact=False):
@@ -526,32 +512,32 @@ class SqliteStore(SqlStore):
         
     def set_file_info(self, _file, **kwargs):
         # TRICKY: we use '_file' so we can also use and update 'file' in 'kwargs'
-        self.fileinfo.set_info(_file, kwargs)
+        self.infotable.set_file_info(_file, kwargs)
 
     def update_file_info(self, _file, **kwargs):
-        self.fileinfo.update_info(_file, kwargs)
+        self.infotable.update_file_info(_file, kwargs)
         
     def drop_file_info(self, file):
         """Delete the file info record for 'file'.
         IMPORTANT: this does not delete any graph data associated with 'file'.
         """
-        self.fileinfo.drop_info(file)
+        self.infotable.drop_file_info(file)
         
     def describe_file_info(self, file, out=sys.stderr):
         """Describe a single 'file' (or its info) to 'out'.
         """
         info = isinstance(file, dict) and file or self.get_file_info(file)
         out.write('%s:\n' % info.file)
-        out.write('  size:  %s' % (info.size and format_memory_size(info.size) or '???   '))
-        out.write('   \tmodified:  %s' % time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(info.modtime)))
+        out.write('  size:  %s' % (info.size and format_memory_size(int(info.size)) or '???   '))
+        out.write('   \tmodified:  %s' % time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(float(info.modtime))))
         out.write('   \tgraph:  %s\n' % info.graph)
         if info.comment:
             out.write('  comment:  %s\n' % info.comment)
 
     def describe_file_info_table(self, out=sys.stderr):
-        """Describe all files in the FILE_TABLE to 'out'.
+        """Describe all files in the INFO_TABLE to 'out'.
         """
-        for info in self.fileinfo.get_all_infos():
+        for info in self.infotable.get_all_file_infos():
             self.describe_file_info(info, out=out)
 
     def set_file_alias(self, file, alias):
@@ -587,12 +573,8 @@ class SqliteStore(SqlStore):
         of a file (e.g., compressed vs. uncompressed) created the same underlying data
         which we could detect by running a sha hash command on the resulting tables.
         """
-        schema = self.FILE_TABLE
-        table = schema._name_
-        cols = schema.columns
-        keycol = self.get_key_column(schema)
-        query = 'SELECT %s FROM %s WHERE %s=?' % (cols.file._name_, table, cols.graph._name_)
-        return [file for (file,) in self.execute(query, (table_name,))]
+        files = self.infotable.get_objects(table_name, InfoTable.graph)
+        return [self.infotable.get_value(f, InfoTable.file) for f in files]
 
 
     ### Graph information and access:
@@ -605,33 +587,33 @@ class SqliteStore(SqlStore):
         or None if this graph does not exist in the graph table.  All column keys will be set
         although some values may be None.
         """
-        return self.graphinfo.get_info(table_name)
+        return self.infotable.get_graph_info(table_name)
 
     def set_graph_info(self, table_name, **kwargs):
-        self.graphinfo.set_info(table_name, kwargs)
+        self.infotable.set_graph_info(table_name, kwargs)
     
     def update_graph_info(self, table_name, **kwargs):
-        self.graphinfo.update_info(table_name, kwargs)
+        self.infotable.update_graph_info(table_name, kwargs)
         
     def drop_graph_info(self, table_name):
         """Delete the graph info record for 'table_name'.
         IMPORTANT: this does not delete any graph data stored in 'table_name'.
         """
-        self.graphinfo.drop_info(table_name)
+        self.infotable.drop_graph_info(table_name)
 
     def describe_graph_info(self, graph, out=sys.stderr):
         """Describe a single 'graph' (or its info) to 'out'.
         """
         info = isinstance(graph, dict) and graph or self.get_graph_info(graph)
         out.write('%s:\n' % info.name)
-        out.write('  size:  %s' % format_memory_size(info.size))
-        out.write('   \tcreated:  %s\n' % time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(info.acctime)))
+        out.write('  size:  %s' % format_memory_size(int(info.size)))
+        out.write('   \tcreated:  %s\n' % time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(float(info.acctime))))
         out.write('  header:  %s\n' % info.header)
 
     def describe_graph_info_table(self, out=sys.stderr):
-        """Describe all graphs in the GRAPH_TABLE to 'out'.
+        """Describe all graphs in the INFO_TABLE to 'out'.
         """
-        for info in self.graphinfo.get_all_infos():
+        for info in self.infotable.get_all_graph_infos():
             self.describe_graph_info(info, out=out)
 
     def get_graph_table_schema(self, table_name):
@@ -643,8 +625,6 @@ class SqliteStore(SqlStore):
 
     def get_graph_indexes(self, table_name):
         """Return the list of indexes currently defined for graph 'table_name'.
-        This will lookup from the 'indexes' column of the corresponding graph info,
-        but will also be backwards-compatible and use the SQLite master table if needed.
         """
         info = self.get_graph_info(table_name)
         if info is None:
@@ -652,18 +632,8 @@ class SqliteStore(SqlStore):
             if SqlFunction.is_virtual_graph(table_name) or table_name in self.get_user_functions():
                 return []
             raise KGTKException(f"INTERNAL ERROR: missing graph info for '{table_name}'")
-        indexes = info.indexes
-        if indexes is None:
-            # we have an old-style graph info table that just got updated, retrieve index definitions
-            # from the master table and store them (maybe the 'sql:...' mode should support parsing those):
-            schema = self.MASTER_TABLE
-            columns = schema.columns
-            query = (f"""SELECT {columns.name._name_}, {columns.sql._name_} FROM {schema._name_}""" +
-                     f""" WHERE {columns.type._name_}="index" and {columns.tbl_name._name_}=?""")
-            indexes = [ispec.TableIndex(table_name, 'sql: ' + idx_sql) for _, idx_sql in self.execute(query, (table_name,))]
-            indexes = ispec.TableIndex.encode(indexes)
-            self.set_graph_info(table_name, indexes=indexes)
-        return ispec.TableIndex.decode(indexes)
+        indexes = [ispec.TableIndex.decode(idx) for idx in listify(info.index)]
+        return indexes
 
     def has_graph_index(self, table_name, index):
         """Return True if graph 'table_name' has an index that subsumes 'index'.
@@ -677,14 +647,7 @@ class SqliteStore(SqlStore):
     def get_vector_indexes(self, table_name):
         """Return the list of vector indexes currently defined for graph 'table_name'.
         """
-        info = self.get_graph_info(table_name)
-        if info is None:
-            # see if 'table_name' is a defined or loaded virtual table function:
-            if SqlFunction.is_virtual_graph(table_name) or table_name in self.get_user_functions():
-                return []
-            raise KGTKException(f"INTERNAL ERROR: missing graph info for '{table_name}'")
-        indexes = info.indexes
-        return [idx for idx in ispec.TableIndex.decode(indexes) if isinstance(idx, ispec.VectorIndex)]
+        return [idx for idx in self.get_graph_indexes(table_name) if isinstance(idx, ispec.VectorIndex)]
 
     def is_vector_column(self, table_name, column):
         """Return True if 'column' in 'table_name' is a vector column.
@@ -695,7 +658,7 @@ class SqliteStore(SqlStore):
         else:
             return False
 
-    def ensure_graph_index(self, table_name, index, explain=False):
+    def ensure_graph_index(self, table_name, index, explain=False, commit=True):
         """Ensure a qualifying 'index' for 'table_name' already exists or gets created.
         Checks whether the existing index is at least as selective as requested, for
         example, an existing index on columns (node1, node2) will qualify even if 'index'
@@ -716,27 +679,29 @@ class SqliteStore(SqlStore):
             index.create_index(self, explain=explain)
             idxsize = self.get_db_size() - oldsize
             ginfo = self.get_graph_info(table_name)
-            ginfo.size += idxsize
+            ginfo.size = int(ginfo.size) + idxsize
             if not explain:
                 # we may have added/deleted some, so recompute the list:
-                indexes = self.get_graph_indexes(table_name)
-                indexes = ispec.TableIndex.encode(indexes + [index])
-                self.update_graph_info(table_name, indexes=indexes)
+                indexes = self.get_graph_indexes(table_name) + [index]
+                indexes = [ispec.TableIndex.encode(idx) for idx in indexes]
+                self.update_graph_info(table_name, index=indexes)
                 self.update_graph_info(table_name, size=ginfo.size)
-                self.commit()
+                if commit:
+                    # top-level OP, commit DB and info updates:
+                    self.commit()
 
-    def ensure_graph_index_for_columns(self, table_name, columns, unique=False, explain=False):
+    def ensure_graph_index_for_columns(self, table_name, columns, unique=False, explain=False, commit=True):
         """Ensure an index for 'table_name' on 'columns' already exists or gets created.
         Checks whether the existing index is at least as selective as requested, for example,
         an existing index on columns (node1, node2) will qualify even if only node1 is requested.
         """
         index = self.get_table_index(table_name, columns, unique=unique)
-        self.ensure_graph_index(table_name, index, explain=explain)
+        self.ensure_graph_index(table_name, index, explain=explain, commit=commit)
 
     def number_of_graphs(self):
         """Return the number of graphs currently stored in 'self'.
         """
-        return self.get_table_row_count(self.GRAPH_TABLE._name_)
+        return len(self.infotable.get_objects('graph', InfoTable.type))
 
     def new_graph_table(self):
         """Return a new table name to be used for representing a graph.
@@ -801,9 +766,9 @@ class SqliteStore(SqlStore):
                                         f"to replace use explicit '--as {info.file}'")
                 else:
                     return 'error'
-            if info.size !=  os.path.getsize(file):
+            if int(info.size) !=  os.path.getsize(file):
                 return 'replace'
-            if info.modtime != os.path.getmtime(file):
+            if float(info.modtime) != os.path.getmtime(file):
                 return 'replace'
             # don't check md5sum for now
         return 'reuse'
@@ -814,7 +779,7 @@ class SqliteStore(SqlStore):
         """
         return self.determine_graph_action(file, alias=alias, error=False) == 'reuse'
 
-    def add_graph(self, file, alias=None, index_specs=None):
+    def add_graph(self, file, alias=None, index_specs=None, commit=True):
         """Import a graph from 'file' (and optionally named by 'alias') unless a matching
         graph has already been imported earlier according to 'has_graph' (which see).
         'index_specs' is a list of index specifications relevant to the import of this graph.
@@ -860,10 +825,13 @@ class SqliteStore(SqlStore):
         # FIXME: this is incorrect, since the vector index hasn't been (completely) created yet, but for
         # now we need it to get correct query translations; but this needs a more general approach, since
         # it also doesn't do the right thing for redefinitions of vector indexes
-        indexes = ispec.TableIndex.encode(indexes)
-        self.set_graph_info(table, header=header, size=graphsize, acctime=time.time(), indexes=indexes)
+        indexes = [ispec.TableIndex.encode(idx) for idx in indexes]
+        self.set_graph_info(table, header=header, size=graphsize, acctime=time.time(), index=indexes)
         if alias is not None:
             self.set_file_alias(file, alias)
+        if commit:
+            # top-level OP, commit DB and info updates:
+            self.commit()
 
     def drop_graph(self, table_name):
         """Delete the graph 'table_name' and all its associated info records.
@@ -895,10 +863,11 @@ class SqliteStore(SqlStore):
         # we might have updated them, so recompute the list:
         indexes = self.get_graph_indexes(table_name)
         indexes.remove(index)
-        ginfo.size -= idxsize
-        self.update_graph_info(table_name, indexes=ispec.TableIndex.encode(indexes), size=ginfo.size)
+        indexes = [ispec.TableIndex.encode(idx) for idx in indexes]
+        ginfo.size = int(ginfo.size) - idxsize
+        self.update_graph_info(table_name, index=indexes, size=ginfo.size)
 
-    def drop_graph_indexes(self, table_name, index_type=None):
+    def drop_graph_indexes(self, table_name, index_type=None, commit=True):
         """Delete all indexes for graph 'table_name'.  If 'index_type' is not None,
         restrict to indexes of that type (can be a short name or a class).
         """
@@ -907,6 +876,9 @@ class SqliteStore(SqlStore):
         for index in self.get_graph_indexes(table_name)[:]:
             if index_type is None or isinstance(index, index_type):
                 self.drop_graph_index(table_name, index)
+        if commit:
+            # top-level OP, commit DB and info updates:
+            self.commit()
 
 
     ### Data import:
@@ -927,7 +899,6 @@ class SqliteStore(SqlStore):
             self.execute(self.get_table_definition(schema))
             insert = 'INSERT INTO %s VALUES (%s)' % (table, ','.join(['?'] * len(header)))
             self.executemany(insert, csvreader)
-            self.commit()
 
     def import_graph_data_via_import(self, table, file):
         """Use the sqlite shell and its import command to import 'file' into 'table'.
@@ -968,7 +939,6 @@ class SqliteStore(SqlStore):
             header = header[:-1].split('\t')
             schema = self.kgtk_header_to_graph_table_schema(table, header)
             self.execute(self.get_table_definition(schema))
-            self.commit()
         
         separators = '\\t \\n'
         args = ['-cmd', '.mode ascii', '-cmd', '.separator ' + separators,
@@ -1073,8 +1043,6 @@ class SqliteStore(SqlStore):
                 if schema is not None:
                     self.executemany(insert, chunk)
 
-        vstore.commit()
-        self.commit()
         return [vector_spec]
 
     def vector_column_to_sql(self, table, column, table_alias=None):
@@ -1165,6 +1133,187 @@ class SqliteStore(SqlStore):
                 columns = split_regex.split(columns)
                 indexes.append((name, table, columns))
         return indexes
+
+
+class InfoTable(KgtkInfoTable):
+    """Schema-free info table using a fine-grained KGTK edge data model.
+    All node1/label/node2/id values are stored as strings, so any conversions
+    of numbers, etc. need to be handled explicitly by the user of this table.
+    """
+
+    # we mostly use the old column headers as labels for simplicity:
+    acctime = 'acctime'
+    comment = 'comment'
+    file = 'file'
+    graph = 'graph'
+    header = 'header'
+    index = 'index'
+    md5sum = 'md5sum'
+    modtime = 'modtime'
+    name = 'name'
+    shasum = 'shasum'
+    size = 'size'
+    type = 'type'
+
+    # info object templates:
+    FILE_INFO = sdict([(key, None) for key in [type, file, size, modtime, graph, comment]])
+    GRAPH_INFO = sdict([(key, None) for key in [type, name, header, size, acctime, index]])
+
+    def init_table(self):
+        """If the info table doesn't exist yet, define it from its schema.
+        """
+        if not self.store.has_table(self.table):
+            super().init_table()
+            self.transfer_fileinfo()
+            self.transfer_graphinfo()
+            self.store.commit()
+
+    def make_file_id(self, path):
+        """Create a file object ID uniquely based on a file's 'path'.
+        """
+        return self.make_object_id('file-', path)
+
+    def transfer_fileinfo(self):
+        """Transfer information from an old-style fileinfo table.
+        """
+        store = self.store
+        import kgtk.kypher.infotable as oldit
+        if store.has_table(oldit.FILE_TABLE._name_):
+            fileinfo = oldit.InfoTable(store, oldit.FILE_TABLE)
+            for info in fileinfo.get_all_infos():
+                self.set_file_info(info.file, info)
+
+    def transfer_graphinfo(self):
+        """Transfer information from an old-style graphinfo table.
+        """
+        store = self.store
+        import kgtk.kypher.infotable as oldit
+        if store.has_table(oldit.GRAPH_TABLE._name_):
+            graphinfo = oldit.InfoTable(store, oldit.GRAPH_TABLE)
+            for info in graphinfo.get_all_infos():
+                # translate index list into multi-valued edge:
+                info[InfoTable.index] = [ispec.TableIndex.encode(idx) for idx in ispec.TableIndex.decode(info.indexes)]
+                del info['indexes']
+                self.set_graph_info(info.name, info)
+
+    # TO DO: add LRU caching and maintenance
+    def get_info(self, obj, info=None):
+        """Retrieve all edges that start with 'obj' and create a dict from their
+        'label/node2' value pairs.  Multi-valued labels will be converted into lists.
+        If 'info' is provided, populate it instead of creating a new dict.
+        """
+        info = info if info is not None else sdict()
+        for _, key, value, _ in self.get_edges(obj):
+            if info.get(key) is not None:
+                info[key] = listify(info[key]) + [value]
+            else:
+                info[key] = value
+        return info if len(info) > 0 else None
+
+    def set_info(self, obj, info):
+        """Set edge values for 'obj' based on non-null key/value pairs in 'info'.
+        List values will automatically be translated into multi-valued edges.
+        This coerces all values to strings to avoid precision issues with floats.
+        """
+        for key, value in info.items():
+            if value is None:
+                continue
+            if not isinstance(value, str) and hasattr(value, '__iter__'):
+                # we have a multi-valued attribute:
+                for i, val in enumerate(value):
+                    if i == 0:
+                        self.set_value(obj, key, str(val))
+                    else:
+                        self.add_value(obj, key, str(val))
+            else:
+                self.set_value(obj, key, str(value))
+    
+    def update_info(self, obj, info):
+        """Just like 'set_info' but a no-op if 'obj' does not exist in the table.
+        """
+        for edge in self.get_edges(obj):
+            self.set_info(obj, info)
+            return
+    
+    def drop_info(self, obj):
+        """Delete all edges that have 'obj' as their node1.
+        """
+        self.delete_edges(obj)
+        
+
+    def get_file_info(self, path):
+        """Return a dict info structure for the file with 'path' (there can only be one),
+        or None if this file does not exist in the info table.  All supported keys will
+        be set although some values may be None.
+        """
+        file = self.get_object(path, InfoTable.file)
+        return self.get_info(file, info=copy.deepcopy(self.FILE_INFO)) if file is not None else None
+
+    def set_file_info(self, path, info):
+        """Set all 'info' for the file with 'path'.  Create a new file ID if necessary.
+        """
+        file = self.get_object(path, InfoTable.file)
+        if file is None:
+            # new file, generate an ID for it:
+            file = self.make_file_id(path)
+            info[InfoTable.file] = path
+            # also report the type:
+            info[InfoTable.type] = 'file'
+        self.set_info(file, info)
+    
+    def update_file_info(self, path, info):
+        file = self.get_object(path, InfoTable.file)
+        if file is not None:
+            self.update_info(file, info)
+    
+    def drop_file_info(self, path):
+        """Delete the graph info record for the file with 'path'.
+        """
+        file = self.get_object(path, InfoTable.file)
+        if file is not None:
+            self.drop_info(file)
+
+            
+    def get_graph_info(self, graph):
+        """Return a dict info structure for 'graph' (there can only be one), or None
+        if this graph does not exist in the info table.  All supported keys will be set
+        although some values may be None.
+        """
+        return self.get_info(graph, info=copy.deepcopy(self.GRAPH_INFO))
+
+    def set_graph_info(self, graph, info):
+        info[InfoTable.type] = 'graph'
+        # add a default 'name' attribute:
+        info[InfoTable.name] = info.get(InfoTable.name, graph)
+        self.set_info(graph, info)
+    
+    def update_graph_info(self, graph, info):
+        self.update_info(graph, info)
+        
+    def drop_graph_info(self, graph):
+        """Delete the graph info record for 'table_name'.
+        """
+        self.drop_info(graph)
+        
+    
+    def get_all_infos(self, type=None):
+        infos = []
+        for obj in self.get_all_objects():
+            info = None
+            if type == 'file':
+                info = copy.deepcopy(self.FILE_INFO)
+            elif type == 'graph':
+                info = copy.deepcopy(self.GRAPH_INFO)
+            info = self.get_info(obj, info=info)
+            if type == None or info.type == type:
+                infos.append(info)
+        return infos
+
+    def get_all_file_infos(self):
+        return self.get_all_infos(type='file')
+
+    def get_all_graph_infos(self):
+        return self.get_all_infos(type='graph')
 
 
 ### Experiments:
