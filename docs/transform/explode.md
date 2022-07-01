@@ -100,7 +100,7 @@ usage: kgtk explode [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                     [--expand [True|False]] [--show-data-types [True|False]]
                     [--show-field-names [True|False]]
                     [--show-field-formats [True|False]]
-                    [--output-format {csv,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}]
+                    [--output-format {csv,html,html-compact,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,table,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}]
                     [-v [optional True|False]]
 
 Copy a KGTK file, exploding one column (usually node2) into seperate columns for each subfield. If a cell in the column being exploded contains a list, that record is optionally expanded into multiple records before explosion, with all other columns copied-as is.
@@ -141,7 +141,7 @@ optional arguments:
   --show-field-formats [True|False]
                         Print the list of field names and formats, then exit.
                         (default=False).
-  --output-format {csv,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}
+  --output-format {csv,html,html-compact,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,table,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}
                         The file format (default=kgtk)
 
   -v [optional True|False], --verbose [optional True|False]
@@ -160,7 +160,7 @@ usage: kgtk explode [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                     [--expand [True|False]] [--show-data-types [True|False]]
                     [--show-field-names [True|False]]
                     [--show-field-formats [True|False]]
-                    [--output-format {csv,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}]
+                    [--output-format {csv,html,html-compact,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,table,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}]
                     [--errors-to-stdout [optional True|False] |
                     --errors-to-stderr [optional True|False]]
                     [--show-options [optional True|False]]
@@ -174,10 +174,15 @@ usage: kgtk explode [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                     [--mgzip-threads MGZIP_THREADS]
                     [--gzip-in-parallel [optional True|False]]
                     [--gzip-queue-size GZIP_QUEUE_SIZE]
+                    [--implied-label IMPLIED_LABEL]
+                    [--use-graph-cache-envar [optional True|False]]
+                    [--graph-cache GRAPH_CACHE]
+                    [--graph-cache-fetchmany-size GRAPH_CACHE_FETCHMANY_SIZE]
+                    [--graph-cache-filter-batch-size GRAPH_CACHE_FILTER_BATCH_SIZE]
                     [--mode {NONE,EDGE,NODE,AUTO}]
-                    [--force-column-names FORCE_COLUMN_NAMES [FORCE_COLUMN_NAMES ...]]
+                    [--input-column-names FORCE_COLUMN_NAMES [FORCE_COLUMN_NAMES ...]]
+                    [--no-input-header [optional True|False]]
                     [--header-error-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                    [--skip-header-record [optional True|False]]
                     [--unsafe-column-name-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
                     [--prohibit-whitespace-in-column-names [optional True|False]]
                     [--initial-skip-count INITIAL_SKIP_COUNT]
@@ -268,7 +273,7 @@ optional arguments:
   --show-field-formats [True|False]
                         Print the list of field names and formats, then exit.
                         (default=False).
-  --output-format {csv,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}
+  --output-format {csv,html,html-compact,json,json-map,json-map-compact,jsonl,jsonl-map,jsonl-map-compact,kgtk,md,table,tsv,tsv-csvlike,tsv-unquoted,tsv-unquoted-ep}
                         The file format (default=kgtk)
 
 Error and feedback messages:
@@ -307,27 +312,48 @@ File options:
                         Execute gzip in parallel. (default=False).
   --gzip-queue-size GZIP_QUEUE_SIZE
                         Queue size for parallel gzip. (default=1000).
+  --implied-label IMPLIED_LABEL
+                        When specified, imply a label colum with the specified
+                        value (default=None).
+  --use-graph-cache-envar [optional True|False]
+                        use KGTK_GRAPH_CACHE if --graph-cache is not
+                        specified. (default=True).
+  --graph-cache GRAPH_CACHE
+                        When specified, look for input files in a graph cache.
+                        (default=None).
+  --graph-cache-fetchmany-size GRAPH_CACHE_FETCHMANY_SIZE
+                        Graph cache transfer buffer size. (default=1000).
+  --graph-cache-filter-batch-size GRAPH_CACHE_FILTER_BATCH_SIZE
+                        Graph cache filter batch size. (default=1000).
   --mode {NONE,EDGE,NODE,AUTO}
                         Determine the KGTK file mode
                         (default=KgtkReaderMode.AUTO).
-  --prohibit-whitespace-in-column-names [optional True|False]
-                        Prohibit whitespace in column names. (default=False).
 
 Header parsing:
   Options affecting header parsing.
 
-  --force-column-names FORCE_COLUMN_NAMES [FORCE_COLUMN_NAMES ...]
-                        Force the column names (default=None).
+  --input-column-names FORCE_COLUMN_NAMES [FORCE_COLUMN_NAMES ...], --force-column-names FORCE_COLUMN_NAMES [FORCE_COLUMN_NAMES ...]
+                        Supply input column names when the input file does not
+                        have a header record (--no-input-header=True), or
+                        forcibly override the column names when a header row
+                        exists (--no-input-header=False) (default=None).
+  --no-input-header [optional True|False]
+                        When the input file does not have a header record,
+                        specify --no-input-header=True and --input-column-
+                        names. When the input file does have a header record
+                        that you want to forcibly override, specify --input-
+                        column-names and --no-input-header=False. --no-input-
+                        header has no effect when --input-column-names has not
+                        been specified. (default=False).
   --header-error-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
                         The action to take when a header error is detected.
                         Only ERROR or EXIT are supported
                         (default=ValidationAction.EXIT).
-  --skip-header-record [optional True|False]
-                        Skip the first record when forcing column names
-                        (default=False).
   --unsafe-column-name-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
                         The action to take when a column name is unsafe
                         (default=ValidationAction.REPORT).
+  --prohibit-whitespace-in-column-names [optional True|False]
+                        Prohibit whitespace in column names. (default=False).
 
 Pre-validation sampling:
   Options affecting pre-validation data line sampling.
@@ -428,7 +454,7 @@ Data value parsing:
   --ignore-maximum-year [IGNORE_MAXIMUM_YEAR]
                         Ignore the maximum year constraint. (default=False).
   --validate-fromisoformat [VALIDATE_FROMISOFORMAT]
-                        Validate that datetim.fromisoformat(...) can parse
+                        Validate that datetime.fromisoformat(...) can parse
                         this date and time. This checks that the
                         year/month/day combination is valid. The year must be
                         in the range 1..9999, inclusive. (default=False).

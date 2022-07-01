@@ -43,6 +43,7 @@ usage: kgtk import-ntriples [-h] [-i INPUT_FILE [INPUT_FILE ...]]
                             [--datatype-column-name DATATYPE_COLUMN_NAME]
                             [--validate [VALIDATE]] [--summary [SUMMARY]]
                             [--override-uuid OVERRIDE_UUID]
+                            [--write-namespaces WRITE_NAMESPACES]
                             [--overwrite-id [optional true|false]]
                             [--verify-id-unique [optional true|false]]
                             [--value-hash-width VALUE_HASH_WIDTH]
@@ -156,6 +157,9 @@ optional arguments:
   --override-uuid OVERRIDE_UUID
                         When specified, override UUID generation for
                         debugging. (default=None).
+  --write-namespaces WRITE_NAMESPACES
+                        When true, append namespaces to the output file.
+                        (default=True).
   --overwrite-id [optional true|false]
                         When true, replace existing ID values. When false,
                         copy existing ID values. When --overwrite-id is
@@ -226,48 +230,51 @@ _:g14 <https://tac.nist.gov/tracks/SM-KBP/2019/ontologies/InterchangeOntology#pr
 
 The output file contains data records have been converted into KGTK File Format.  Here is a sample of an output file:
 
-```
-XoBugQcoEt6xNnqGsHDXfTA:g12     rdf:type        ont:CompoundJustification
-XoBugQcoEt6xNnqGsHDXfTA:g12     ont:confidence  XoBugQcoEt6xNnqGsHDXfTA:g13
-XoBugQcoEt6xNnqGsHDXfTA:g13     rdf:type        ont:Confidence
-XoBugQcoEt6xNnqGsHDXfTA:g13     ont:confidenceValue     0.960368
-XoBugQcoEt6xNnqGsHDXfTA:g13     ont:system      noBugQcoEt6xNnqGsHDXfTA-4:compoundJustificationWrapper
-XoBugQcoEt6xNnqGsHDXfTA:g12     ont:containedJustification      XoBugQcoEt6xNnqGsHDXfTA:g14
-XoBugQcoEt6xNnqGsHDXfTA:g14     rdf:type        ont:TextJustification
-XoBugQcoEt6xNnqGsHDXfTA:g14     ont:confidence  XoBugQcoEt6xNnqGsHDXfTA:g15
-XoBugQcoEt6xNnqGsHDXfTA:g15     rdf:type        ont:Confidence
-XoBugQcoEt6xNnqGsHDXfTA:g15     ont:confidenceValue     9.60368e-01
-XoBugQcoEt6xNnqGsHDXfTA:g15     ont:system      noBugQcoEt6xNnqGsHDXfTA-1:
-XoBugQcoEt6xNnqGsHDXfTA:g14     ont:endOffsetInclusive  4076
-XoBugQcoEt6xNnqGsHDXfTA:g14     ont:privateData XoBugQcoEt6xNnqGsHDXfTA:g16
-XoBugQcoEt6xNnqGsHDXfTA:g16     rdf:type        ont:PrivateData
-XoBugQcoEt6xNnqGsHDXfTA:g16     ont:jsonContent "{\"fileType\":\"en\"}"
-XoBugQcoEt6xNnqGsHDXfTA:g16     ont:system      rpi:fileType
-XoBugQcoEt6xNnqGsHDXfTA:g14     ont:source      "HC00002Z8"
-XoBugQcoEt6xNnqGsHDXfTA:g14     ont:sourceDocument      "HC00001DO"
-XoBugQcoEt6xNnqGsHDXfTA:g14     ont:startOffset 4037
-XoBugQcoEt6xNnqGsHDXfTA:g14     ont:system      noBugQcoEt6xNnqGsHDXfTA-1:
-XoBugQcoEt6xNnqGsHDXfTA:g12     ont:system      noBugQcoEt6xNnqGsHDXfTA-4:compoundJustificationWrapper
 
-```
+|node1|label|node2|
+|-------|-------|------------------------------------------------------|
+|XoBugQcoEt6xNnqGsHDXfTA:g12|rdf:type|ont:CompoundJustification                             |
+|XoBugQcoEt6xNnqGsHDXfTA:g12|ont:confidence|XoBugQcoEt6xNnqGsHDXfTA:g13                           |
+|XoBugQcoEt6xNnqGsHDXfTA:g13|rdf:type|ont:Confidence                                        |
+|XoBugQcoEt6xNnqGsHDXfTA:g13|ont:confidenceValue|0.960368                                              |
+|XoBugQcoEt6xNnqGsHDXfTA:g13|ont:system|noBugQcoEt6xNnqGsHDXfTA-4:compoundJustificationWrapper|
+|XoBugQcoEt6xNnqGsHDXfTA:g12|ont:containedJustification|XoBugQcoEt6xNnqGsHDXfTA:g14                           |
+|XoBugQcoEt6xNnqGsHDXfTA:g14|rdf:type|ont:TextJustification                                 |
+|XoBugQcoEt6xNnqGsHDXfTA:g14|ont:confidence|XoBugQcoEt6xNnqGsHDXfTA:g15                           |
+|XoBugQcoEt6xNnqGsHDXfTA:g15|rdf:type|ont:Confidence                                        |
+|XoBugQcoEt6xNnqGsHDXfTA:g15|ont:confidenceValue|9.60368e-01                                           |
+|XoBugQcoEt6xNnqGsHDXfTA:g15|ont:system|noBugQcoEt6xNnqGsHDXfTA-1:                            |
+|XoBugQcoEt6xNnqGsHDXfTA:g14|ont:endOffsetInclusive|4076                                                  |
+|XoBugQcoEt6xNnqGsHDXfTA:g14|ont:privateData|XoBugQcoEt6xNnqGsHDXfTA:g16                           |
+|XoBugQcoEt6xNnqGsHDXfTA:g16|rdf:type|ont:PrivateData                                       |
+|XoBugQcoEt6xNnqGsHDXfTA:g16|ont:jsonContent|{\                                                    |
+|XoBugQcoEt6xNnqGsHDXfTA:g16|ont:system|rpi:fileType                                          |
+|XoBugQcoEt6xNnqGsHDXfTA:g14|ont:source|HC00002Z8                                             |
+|XoBugQcoEt6xNnqGsHDXfTA:g14|ont:sourceDocument|HC00001DO                                             |
+|XoBugQcoEt6xNnqGsHDXfTA:g14|ont:startOffset|4037                                                  |
+|XoBugQcoEt6xNnqGsHDXfTA:g14|ont:system|noBugQcoEt6xNnqGsHDXfTA-1:                            |
+|XoBugQcoEt6xNnqGsHDXfTA:g12|ont:system|noBugQcoEt6xNnqGsHDXfTA-4:compoundJustificationWrapper|
+
 
 At the end of the converted file:
 
-```
-gaia    prefix_expansion        "http://www.isi.edu/gaia/"
-noBugQcoEt6xNnqGsHDXfTA-1       prefix_expansion        "http://www.rpi.edu"
-noBugQcoEt6xNnqGsHDXfTA-2       prefix_expansion        "http://www.rpi.edu-projectToSingleton"
-noBugQcoEt6xNnqGsHDXfTA-3       prefix_expansion        "https://tac.nist.gov/tracks/SM-KBP/2019/ontologies/LDCOntology#"
-noBugQcoEt6xNnqGsHDXfTA-4       prefix_expansion        "http://www.isi.edu/"
-noBugQcoEt6xNnqGsHDXfTA-5       prefix_expansion        "http://www.columbia.edu/ColumbiaSentiment/"
-noBugQcoEt6xNnqGsHDXfTA-6       prefix_expansion        "http://www.columbia.edu/"
-noBugQcoEt6xNnqGsHDXfTA-7       prefix_expansion        "www.isi.edu/"
-noBugQcoEt6xNnqGsHDXfTA-8       prefix_expansion        "http://www.usc.edu/AIDA/IRIS/Systems/"
-ont     prefix_expansion        "https://tac.nist.gov/tracks/SM-KBP/2019/ontologies/InterchangeOntology#"
-rdf     prefix_expansion        "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-rpi     prefix_expansion        "http://www.rpi.edu/"
-xml-schema-type prefix_expansion        "http://www.w3.org/2001/XMLSchema#"
-```
+| node1 | label | node2 |
+|---|---|---|
+| gaia | prefix_expansion | http://www.isi.edu/gaia/ |
+| noBugQcoEt6xNnqGsHDXfTA-1 | prefix_expansion | http://www.rpi.edu |
+| noBugQcoEt6xNnqGsHDXfTA-2 | prefix_expansion | http://www.rpi.edu-projectToSingleton |
+| noBugQcoEt6xNnqGsHDXfTA-3 | prefix_expansion | https://tac.nist.gov/tracks/SM-KBP/2019/ontologies/LDCOntology# |
+| noBugQcoEt6xNnqGsHDXfTA-4 | prefix_expansion | http://www.isi.edu/ |
+| noBugQcoEt6xNnqGsHDXfTA-5 | prefix_expansion | http://www.columbia.edu/ColumbiaSentiment/ |
+| noBugQcoEt6xNnqGsHDXfTA-6 | prefix_expansion | http://www.columbia.edu/ |
+| noBugQcoEt6xNnqGsHDXfTA-7 | prefix_expansion | www.isi.edu/ |
+| noBugQcoEt6xNnqGsHDXfTA-8 | prefix_expansion | http://www.usc.edu/AIDA/IRIS/Systems/ |
+| ont | prefix_expansion | https://tac.nist.gov/tracks/SM-KBP/2019/ontologies/InterchangeOntology# |
+| rdf | prefix_expansion | http://www.w3.org/1999/02/22-rdf-syntax-ns# |
+| rpi | prefix_expansion | http://www.rpi.edu/ |
+| xml-schema-type | prefix_expansion | http://www.w3.org/2001/XMLSchema# |
+
+
  * The ntriples entries hav been converted into KGTK File Format.
  * Certain ntriples data types, such as numbers and some date/time formats, have been converted into KGTK data types.
  * The file-local IDs have had the "_ in replaced with a file-local UUID.
@@ -358,6 +365,9 @@ prefixes.
   --build-new-namespaces [BUILD_NEW_NAMESPACES]
                         When True, create new namespaces. When False, use only
                         existing namespaces. (default=True).
+  --write-namespaces WRITE_NAMESPACES
+                        When true, append namespaces to the output file.
+                        (default=True).
 ```
 
 The order is <prefix><uuid>-<counter>, such as `noBugQcoEt6xNnqGsHDXfTA-7`.   By default,
@@ -366,6 +376,9 @@ the UUID is omitted, but the examples shown above were generated using the UUID.
 When `--build-new-namespaces=FALSE`, new namespaces will not be generated.  If
 the namespace file (`--namespace-file NAMESPACE_FILE`) is not specified or
 is empty, URI prefixes will not be generated.
+
+When `--write-namespaces=FALSE`, namespaces will not be written to the primary
+output file.
 
 ### Language-Qualified Strings
 
@@ -452,28 +465,32 @@ _:g38 <https://tac.nist.gov/tracks/SM-KBP/2019/ontologies/InterchangeOntology#ye
 ```
 
 Then the output might look like this when `--build-datatype-colum=False`:
-```
-JAABmv8vGfJZZasjV6DAXY:g38     rdf:type        ont:LDCTimeComponent
-kgtk:nodeJAABmv8vGfJZZasjV6DAXY-1       kgtk:structured_value   "---19"
-kgtk:nodeJAABmv8vGfJZZasjV6DAXY-1       kgtk:structured_uri     xml-schema-type:gDay
-XJAABmv8vGfJZZasjV6DAXY:g38     ont:day kgtk:nodeJAABmv8vGfJZZasjV6DAXY-1
-kgtk:nodeJAABmv8vGfJZZasjV6DAXY-2       kgtk:structured_value   "--04"
-kgtk:nodeJAABmv8vGfJZZasjV6DAXY-2       kgtk:structured_uri     xml-schema-type:gMonth
-XJAABmv8vGfJZZasjV6DAXY:g38     ont:month       kgtk:nodeJAABmv8vGfJZZasjV6DAXY-2
-XJAABmv8vGfJZZasjV6DAXY:g38     ont:timeType    "ON"
-kgtk:nodeJAABmv8vGfJZZasjV6DAXY-3       kgtk:structured_value   "2014"
-kgtk:nodeJAABmv8vGfJZZasjV6DAXY-3       kgtk:structured_uri     xml-schema-type:gYear
-XJAABmv8vGfJZZasjV6DAXY:g38     ont:year        kgtk:nodeJAABmv8vGfJZZasjV6DAXY-3
-```
+
+| node1 | label | node2 |
+|---|---|---|
+| JAABmv8vGfJZZasjV6DAXY:g38 | rdf:type | ont:LDCTimeComponent |
+| kgtk:nodeJAABmv8vGfJZZasjV6DAXY-1 | kgtk:structured_value | ---19 |
+| kgtk:nodeJAABmv8vGfJZZasjV6DAXY-1 | kgtk:structured_uri | xml-schema-type:gDay |
+| XJAABmv8vGfJZZasjV6DAXY:g38 | ont:day | kgtk:nodeJAABmv8vGfJZZasjV6DAXY-1 |
+| kgtk:nodeJAABmv8vGfJZZasjV6DAXY-2 | kgtk:structured_value | --04 |
+| kgtk:nodeJAABmv8vGfJZZasjV6DAXY-2 | kgtk:structured_uri | xml-schema-type:gMonth |
+| XJAABmv8vGfJZZasjV6DAXY:g38 | ont:month | kgtk:nodeJAABmv8vGfJZZasjV6DAXY-2 |
+| XJAABmv8vGfJZZasjV6DAXY:g38 | ont:timeType | ON |
+| kgtk:nodeJAABmv8vGfJZZasjV6DAXY-3 | kgtk:structured_value | 2014 |
+| kgtk:nodeJAABmv8vGfJZZasjV6DAXY-3 | kgtk:structured_uri | xml-schema-type:gYear |
+| XJAABmv8vGfJZZasjV6DAXY:g38 | ont:year | kgtk:nodeJAABmv8vGfJZZasjV6DAXY-3 |
+
 
 Then the output might look like this when `--build-datatype-colum=True`:
-```
-JAABmv8vGfJZZasjV6DAXY:g38     rdf:type        ont:LDCTimeComponent	
-XJAABmv8vGfJZZasjV6DAXY:g38     ont:day "---19"	xml-schema-type:gDay
-XJAABmv8vGfJZZasjV6DAXY:g38     ont:month       "--04"	xml-schema-type:gMonth
-XJAABmv8vGfJZZasjV6DAXY:g38     ont:timeType    "ON"	xml-schema-type:string
-XJAABmv8vGfJZZasjV6DAXY:g38     ont:year        "2014"	xml-schema-type:gYear
-```
+
+| node1 | label | node2 |
+|---|---|---|
+| JAABmv8vGfJZZasjV6DAXY:g38 | rdf:type | ont:LDCTimeComponent |
+| XJAABmv8vGfJZZasjV6DAXY:g38 | ont:day | ---19 |
+| XJAABmv8vGfJZZasjV6DAXY:g38 | ont:month | --04 |
+| XJAABmv8vGfJZZasjV6DAXY:g38 | ont:timeType | ON |
+| XJAABmv8vGfJZZasjV6DAXY:g38 | ont:year | 2014 |
+
 
 This process is controlled by the following command line options:
 ```
@@ -924,7 +941,7 @@ kgtk import-ntriples \
 | -- | -- | -- |
 | http://example.org/vocab/show/218 | http://www.w3.org/2000/01/rdf-schema#label | ^2021-01-21T23:04:00 |
 
-Here is a namespace file with oneentry for the `rdf-schema` namespace:
+Here is a namespace file with one entry for the `rdf-schema` namespace:
 
 ```
 kgtk cat -i ./examples/docs/import-ntriples-rdf-schema-namespace.tsv
@@ -949,6 +966,48 @@ kgtk import-ntriples \
 | http://example.org/vocab/show/218 | rdf-schema:label | ^2021-01-21T23:04:00 |
 | rdf-schema | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
 
+
+### Importing Without Writing Namespace Prefixes
+
+When `--write-namespaces=False`, namespace prefixes will not be written to the
+primary output file.
+
+Reusing the date/times input N-Triples file:
+
+```bash
+cat examples/docs/import-ntriples-dates.nt
+```
+
+~~~
+<http://example.org/vocab/show/218> <http://www.w3.org/2000/01/rdf-schema#label> "2021-01-21T23:04:00"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+~~~
+
+Import this file, writing namespace prefixes (the default setting):
+
+```
+kgtk import-ntriples \
+     -i ./examples/docs/import-ntriples-dates.nt
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| n1:218 | n2:label | ^2021-01-21T23:04:00 |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
+
+Import this file, without writing namespace prefixes:
+
+```
+kgtk import-ntriples \
+     -i ./examples/docs/import-ntriples-dates.nt \
+     --write-namespaces=False
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| n1:218 | n2:label | ^2021-01-21T23:04:00 |
+| n1 | prefix_expansion | "http://example.org/vocab/show/" |
+| n2 | prefix_expansion | "http://www.w3.org/2000/01/rdf-schema#" |
 
 ### Importing with `--summary`
 

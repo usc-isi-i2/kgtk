@@ -7,6 +7,9 @@ However, there are instances in which the output of this command is more
 readable than a KGTK TSV file, so this command can also be used as a debugging
 aid.
 
+This command defaults to `--mode=NONE` since it doesn't attach special meaning
+to particular columns.
+                                                                                                                                                                     
 This comand is equivalent to `kgtk cat --MODE=NONE --output-format=md`.
 However, it is a lot shorter and easier to type.
 
@@ -25,6 +28,8 @@ kgtk xxx / md
 Use it to convert a KGTK file to a GitHub Markdown table in a file: 
 
 kgtk md -i file.tsv -o file.md
+
+This command defaults to --mode=NONE so it will work with TSV files that do not follow KGTK column naming conventions.
 
 Additional options are shown in expert help.
 kgtk --expert md --help

@@ -1,0 +1,10 @@
+id	label	is_country	type	degree	type_missing	population	hex_color	ordinal
+Q1	'Alice'@en	0	human	40	""	""	#00FFFF	0
+Q2	'Susan'@en	0	human	14	""	""	#8A2BE2	1
+Q3	'John'@en	0	human	4	""	""	#FF4040	2
+Q4	'Claudia'@en	0	human	32	""	""	#7FFF00	3
+Q5	'Ulrich'@en	0	human	422	""	""	#FFB90F	4
+Q6	'Fritz'@en	0	human	4	""	""	#C1FFC1	5
+Q7	'USA'@en	1	country	50	country	300	#FF1493	6
+Q8	'Germany'@en	1	country	500	country	50	#FFD700	7
+Q9	'Brazil'@en	1	country	222	country	200	#FF69B4	8

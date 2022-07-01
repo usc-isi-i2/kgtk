@@ -143,6 +143,13 @@ no option to override this constraint.
 
 Note: `--inverted` and `--inverted-props` may not be used together.
 
+Note: If you want only certain props to be considered, and you want them inverted, then you need
+to specify *both* `--props` (and/or `--props-file`) and `--inverted-props` (and/or `--inverted-props-file`).  
+
+- `--props P249 --inverted-props P249` # Consider only P249, an inverted prop.
+- `--props P249 P731 --inverted-props P249` # Consider both P249 and P731, with P249 inverted.
+- `--inverted-props P249` # Since `--props` was not specified, *all* properties are used, with P249 inverted.
+
 `--inverted-props-file INVERTED_PROPS_FILE` can be used to read a file containing a list of
 properties to invert.   It should be a valid KGTK file.
 
@@ -231,6 +238,9 @@ usage: kgtk reachable-nodes [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                             [--label LABEL] [--selflink [True|False]]
                             [--show-properties [True|False]]
                             [--breadth-first [True|False]]
+                            [--depth-limit DEPTH_LIMIT]
+                            [--show-distance [True|False]]
+                            [--dist-col-name DIST_COL_NAME]
                             [-v [optional True|False]]
 
 optional arguments:
@@ -307,9 +317,19 @@ optional arguments:
   --breadth-first [True|False]
                         When True, search the graph breadth first. When false,
                         search depth first. (default=False)
+  --depth-limit DEPTH_LIMIT
+                        An optional depth limit for breadth-first searches.
+                        (default=None)
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).
+                        
+  --show-distance [True|False]
+                        When True, also given breadth first true, append
+                        another column showing the shortest distance, default
+                        col name is distance
+  --dist-col-name DIST_COL_NAME
+                        The column name for distance, default is distance
 ```
 
 ## Examples
@@ -322,7 +342,7 @@ Command is run on P279.tsv (subclass of) file, a KGTK Edge file.
 The output is  P279-star.tsv. 
 
 ```
-kgtk -i reachable-nodes P279.tsv --rootfile P31.tsv --rootfilecolumn node2 -o P279-star.tsv
+kgtk reachable-nodes -i P279.tsv --rootfile P31.tsv --rootfilecolumn node2 -o P279-star.tsv
 ```
 
 ### Nonstandard Root File
@@ -331,7 +351,7 @@ Suppose that the root file has only a `node1` column, making it neither a KGTK E
 The following command may be used to process it:
 
 ```
-kgtk -i reachable-nodes P279.tsv --rootfile P31.tsv --rootfilecolumn node2 -o P279-star.tsv \
+kgtk reachable-nodes -i P279.tsv --rootfile P31.tsv --rootfilecolumn node2 -o P279-star.tsv \
      --root-mode=NONE --rootfilecolumn node1
 ```
 
@@ -435,6 +455,7 @@ In this example, the root file is a KGTK Node file.
 ```bash
 kgtk cat -i examples/docs/reachable-nodes-metal-blocks.tsv
 ```
+
 | id |
 | -- |
 | gold-block |
@@ -793,10 +814,10 @@ kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
 
 Here is the additional graph properties output:
 
-    Graph name=<VertexPropertyMap object with value type 'string', for Graph 0x7fe263d7d640, at 0x7fe263d7d9a0>
+    Graph name=<VertexPropertyMap object with value type 'string', for Graph 0x7f6b6c8ec760, at 0x7f6b6c8ecac0>
     Graph properties:
-        ('v', 'name'): <VertexPropertyMap object with value type 'string', for Graph 0x7fe263d7d640, at 0x7fe263d7d9a0>
-        ('e', 'label'): <EdgePropertyMap object with value type 'string', for Graph 0x7fe263d7d640, at 0x7fe263d7d910>
+        ('v', 'name'): <VertexPropertyMap object with value type 'string', for Graph 0x7f6b6c8ec760, at 0x7f6b6c8ecac0>
+        ('e', 'label'): <EdgePropertyMap object with value type 'string', for Graph 0x7f6b6c8ec760, at 0x7f6b6c8eca30>
 
 ### Expert Example: Breadth-first Search
 
@@ -818,3 +839,68 @@ kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
 | silver-block | reachable | block |
 | silver-block | reachable | thing |
 
+### Expert Example: Depth Limited Breadth-first Search
+
+Consider the following graph:
+
+```bash
+kgtk cat -i examples/docs/reachable-nodes-depth-limit.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| red_top | is-connected-to | red_one |
+| red_one | is-connected-to | red_two |
+| red_two | is-connected-to | red_three |
+| red_three | is-connected-to | red_four |
+| red_four | is-connected-to | red_five |
+
+Let's look at connections breadth-first:
+
+```bash
+kgtk reachable-nodes -i examples/docs/reachable-nodes-depth-limit.tsv \
+     --root red_top --prop is-connected-to \
+     --breadth-first --depth-limit 10
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| red_top | reachable | red_one |
+| red_top | reachable | red_two |
+| red_top | reachable | red_three |
+| red_top | reachable | red_four |
+| red_top | reachable | red_five |
+
+```bash
+kgtk reachable-nodes -i examples/docs/reachable-nodes-depth-limit.tsv \
+     --root red_top --prop is-connected-to \
+     --breadth-first --depth-limit 3
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| red_top | reachable | red_one |
+| red_top | reachable | red_two |
+| red_top | reachable | red_three |
+
+```bash
+kgtk reachable-nodes -i examples/docs/reachable-nodes-depth-limit.tsv \
+     --root red_top --prop is-connected-to \
+     --breadth-first --depth-limit 1
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| red_top | reachable | red_one |
+
+
+```bash
+kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv  --root metal-block \
+--prop isa --breadth-first True --show-distance True --depth-limit 1 --undirected
+```
+
+| node1 | label | node2 | distance |
+| -- | -- | -- | -- |
+| metal-block | reachable | block | 1 |
+| metal-block | reachable | gold-block | 1 |
+| metal-block | reachable | silver-block | 1 |

@@ -19,11 +19,11 @@
 @prefix prov: <http://www.w3.org/ns/prov#> .
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix schema: <http://schema.org/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
 wd:P10 a wikibase:Property ;
     rdfs:label "video"@en ;
-    schema:description "relevant video. For images, use the property P18. For film trailers, qualify with object has role (P3831)=trailer (Q622550)"@en ;
-    schema:name "video"@en ;
     wikibase:claim p:P10 ;
     wikibase:directClaim wdt:P10 ;
     wikibase:directClaimNormalized wdtn:P10 ;
@@ -72,7 +72,9 @@ wd:P10 a wikibase:Property ;
     wdt:P2302 wd:Q21502404,
         wd:Q21510851,
         wd:Q21510852 ;
-    wdt:P31 wd:Q18610173 .
+    wdt:P31 wd:Q18610173 ;
+    schema:description "relevant video. For images, use the property P18. For film trailers, qualify with object has role (P3831)=trailer (Q622550)"@en ;
+    schema:name "video"@en .
 
 wds:P10-P10-P1628-1 a wikibase:Statement ;
     wikibase:rank wikibase:BestRank ;

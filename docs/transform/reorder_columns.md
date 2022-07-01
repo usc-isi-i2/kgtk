@@ -21,6 +21,10 @@ You provide a list of column names in the order in which they should appear in t
 
     See [`kgtk rename-columns`](../rename_columns) if you wish to rename columns.
 
+    See [`kgtk select-columns`](../select_columns) if you wish to select a subset of
+    columns, dropping unmentioned columns.  This provides the same functionality as
+    `kgtk reorder-columns --trim`.
+
 ### List of Column Names
 
 When you use this command, you supply the `--columns` option with
@@ -66,6 +70,7 @@ from the output file.
 ```
 usage: kgtk reorder-columns [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] -c
                             COLUMN_NAME [COLUMN_NAME ...]
+                            [--as COLUMN_NAME [COLUMN_NAME ...]]
                             [--trim [True|False]] [-v [optional True|False]]
 
 This command reorders one or more columns in a KGTK file. 
@@ -89,10 +94,12 @@ optional arguments:
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
                         The KGTK output file. (May be omitted or '-' for
                         stdout.)
-  -c COLUMN_NAME [COLUMN_NAME ...], --columns COLUMN_NAME [COLUMN_NAME ...]
+  -c COLUMN_NAME [COLUMN_NAME ...], --columns COLUMN_NAME [COLUMN_NAME ...], --column COLUMN_NAME [COLUMN_NAME ...]
                         The list of reordered column names, optionally
                         containing '...' for column names not explicitly
                         mentioned.
+  --as COLUMN_NAME [COLUMN_NAME ...], --as-columns COLUMN_NAME [COLUMN_NAME ...], --as-column COLUMN_NAME [COLUMN_NAME ...]
+                        Replacement column names.
   --trim [True|False]   If true, omit unmentioned columns. (default=False).
 
   -v [optional True|False], --verbose [optional True|False]

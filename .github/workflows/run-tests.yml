@@ -11,25 +11,25 @@ jobs:
       - name: Install Python
         uses: actions/setup-python@v2
         with:
-          python-version: '3.7'
-      - name: Add conda to system path
-        run: |
-          echo $CONDA/bin >> $GITHUB_PATH
+          python-version: '3.8'
+      - name: Setup conda
+        uses: s-weigand/setup-conda@v1
+        with:
+          update-conda: true
+          python-version: '3.8'
+          conda-channels: anaconda, conda-forge
       - name: Setup env
         run: |
           pip install --upgrade pip
           pip install -e .
           pip install coveralls
-          python -m spacy download en_core_web_sm
           conda install -c conda-forge graph-tool
-          pip uninstall -y rdflib
-          pip install git+https://github.com/RDFLib/rdflib.git@master
       - name: Run Tests
         run: |
           cd tests
-          coverage run --source=kgtk -m unittest discover      
-      - name: Coveralls Finished
-        uses: coverallsapp/github-action@master
-        with:
-          github-token: ${{ secrets.COVERALLS_TOKEN }}
-          parallel-finished: true
+          coverage run --source=kgtk --debug=trace -m unittest discover      
+      - name: Coverage
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          coveralls --service=github

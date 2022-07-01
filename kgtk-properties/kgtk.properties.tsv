@@ -1,61 +1,163 @@
 node1	label	node2	id
-isa	label	"is a"@en	isa-label-e79b73
-isa	alias	"isa"@en	isa-alias-7773c5
-isa	description	"Instance or subclass relationship"@en	isa-description-0b5cdc
-isa	P31	Q18616576	isa-P31-Q18616576
-isa	P31	Q28326461	isa-P31-Q28326461
-isa	P31	Q18647519	isa-P31-Q18647519
-isa	data_type	wikibase-item	isa-data_type-643cc9
-P279star	label	"is a"@en	P279star-label-e79b73
-P279star	alias	"isa"@en	P279star-alias-7773c5
-P279star	description	"Instance or subclass relationship (P279*)"@en	P279star-description-0b5cdc
+Pisa	label	'is a'@en	Pisa-label-2ff89b
+Pisa	alias	'isa'@en	Pisa-alias-8b0943
+Pisa	description	'Instance or subclass relationship'@en	Pisa-description-a7d9ed
+Pisa	P31	Q18616576	Pisa-P31-Q18616576
+Pisa	P31	Q28326461	Pisa-P31-Q28326461
+Pisa	P31	Q18647519	Pisa-P31-Q18647519
+Pisa	datatype	wikibase-item	Pisa-datatype-643cc9
+P279star	label	'subclass of (transitive)'@en	P279star-label-bfb684
+P279star	alias	'subclass of (reachable)'@en	P279star-alias-9fb8e3
+P279star	description	'All items reachable via P279 starting from a specific item, including itself.'@en	P279star-description-421c9e
 P279star	P31	Q18616576	P279star-P31-Q18616576
 P279star	P31	Q28326461	P279star-P31-Q28326461
 P279star	P31	Q18647519	P279star-P31-Q18647519
-P279star	data_type	wikibase-item	P279star-data_type-wikibase-item
-isa_star	P31	Q18647521	isa_star-P31-Q18647521
-isa_star	label	"is star"@en	isa_star-label
-isa_star	alias	"isa star"@en	isa_star-alias
-isa_star	description	"Relationship between items defined by isa/P279*"@en	isa_star-description
-isa_star	P31	Q18616576	isa_star-P31-Q18616576
-isa_star	P31	Q28326461	isa_star-P31-Q28326461
-isa_star	P31	Q18647519	isa_star-P31-Q18647519
-isa_star	P31	Q18647521	isa_star-P31-Q18647521
-isa_star	data_type	wikibase-item	isa_star-data_type
+P279star	datatype	wikibase-item	P279star-datatype-643cc9
+Pisa_star	P31	Q18647521	Pisa_star-P31-Q18647521
+Pisa_star	label	'is star'@en	Pisa_star-label-fdf7b7
+Pisa_star	alias	'isa star'@en	Pisa_star-alias-a4d0cc
+Pisa_star	description	'Relationship between items defined by isa/P279*'@en	Pisa_star-description-e0be2d
+Pisa_star	P31	Q18616576	Pisa_star-P31-Q18616576
+Pisa_star	P31	Q28326461	Pisa_star-P31-Q28326461
+Pisa_star	P31	Q18647519	Pisa_star-P31-Q18647519
+Pisa_star	P31	Q18647521	Pisa_star-P31-Q18647521
+Pisa_star	datatype	wikibase-item	Pisa_star-datatype-643cc9
 P31P279star	P31	Q18647521	P31P279star-P31-Q18647521
-P31P279star	label	"is star"@en	isa_star-label
-P31P279star	alias	"isa star"@en	P31P279star-alias
-P31P279star	description	"Relationship between items defined by P31/P279*"@en	P31P279star-description
+P31P279star	label	'is star'@en	P31P279star-label-fdf7b7
+P31P279star	alias	'isa star'@en	P31P279star-alias-a4d0cc
+P31P279star	description	'Relationship between items defined by P31/P279*'@en	P31P279star-description-03ceea
 P31P279star	P31	Q18616576	P31P279star-P31-Q18616576
 P31P279star	P31	Q28326461	P31P279star-P31-Q28326461
 P31P279star	P31	Q18647519	P31P279star-P31-Q18647519
 P31P279star	P31	Q18647521	P31P279star-P31-Q18647521
-P31P279star	data_type	wikibase-item	P31P279star-data_type
-directed_pagerank	label	"pagerank"@en	directed_pagerank-label-d3bd07
-directed_pagerank	alias	"page rank"@en	directed_pagerank-alias-9d4733
-directed_pagerank	description	"pagerank canculated on the directed graph"@en	directed_pagerank-description-b62fff
-directed_pagerank	P31	Q18616576	directed_pagerank-P31-Q18616576
-directed_pagerank	P31	Q47512165	directed_pagerank-P31-Q47512165
-directed_pagerank	P1629	Q184316	directed_pagerank-P1629-Q184316
-directed_pagerank	data_type	quantity	directed_pagerank-data_type-1a7b30
-undirected_pagerank	label	"pagerank"@en	undirected_pagerank-label-d3bd07
-undirected_pagerank	alias	"page rank"@en	undirected_pagerank-alias-9d4733
-undirected_pagerank	description	"pagerank canculated on the undirected graph"@en	undirected_pagerank-description-ee8b1c
-undirected_pagerank	P31	Q18616576	undirected_pagerank-P31-Q18616576
-undirected_pagerank	P31	Q47512165	undirected_pagerank-P31-Q47512165
-undirected_pagerank	P1629	Q184316	undirected_pagerank-P1629-Q184316
-undirected_pagerank	data_type	quantity	undirected_pagerank-data_type-1a7b30
-in_degree	label	"in degree"@en	in_degree-label-aa295d
-in_degree	alias	"degree"@en	in_degree-alias-b5846a
-in_degree	description	"in degree of a node in a graph"@en	in_degree-description-642be1
-in_degree	P31	Q18616576	in_degree-P31-Q18616576
-in_degree	P31	Q47512165	in_degree-P31-Q47512165
-in_degree	P1629	Q383444	in_degree-P1629-Q383444
-in_degree	data_type	quantity	in_degree-data_type-1a7b30
-out_degree	label	"out degree"@en	out_degree-label-6deeae
-out_degree	alias	"degree"@en	out_degree-alias-b5846a
-out_degree	description	"out degree of a node in a graph"@en	out_degree-description-c7e312
-out_degree	P31	Q18616576	out_degree-P31-Q18616576
-out_degree	P31	Q47512165	out_degree-P31-Q47512165
-out_degree	P1629	Q383444	out_degree-P1629-Q383444
-out_degree	data_type	quantity	out_degree-data_type-1a7b30
+P31P279star	datatype	wikibase-item	P31P279star-datatype-643cc9
+Pdirected_pagerank	label	'pagerank (directed)'@en	Pdirected_pagerank-label-c415d3
+Pdirected_pagerank	alias	'page rank (directed)'@en	Pdirected_pagerank-alias-ffb26c
+Pdirected_pagerank	description	'pagerank calculated on the directed graph'@en	Pdirected_pagerank-description-e27151
+Pdirected_pagerank	P31	Q18616576	Pdirected_pagerank-P31-Q18616576
+Pdirected_pagerank	P31	Q47512165	Pdirected_pagerank-P31-Q47512165
+Pdirected_pagerank	P7482	Q108739856	Pdirected_pagerank-P7482-Q108739856
+Pdirected_pagerank	P1629	Q184316	Pdirected_pagerank-P1629-Q184316
+Pdirected_pagerank	datatype	quantity	Pdirected_pagerank-datatype-1a7b30
+Pundirected_pagerank	label	'pagerank (undirected)'@en	Pundirected_pagerank-label-75f812
+Pundirected_pagerank	alias	'page rank (undirected)'@en	Pundirected_pagerank-alias-ce271c
+Pundirected_pagerank	description	'pagerank calculated on the undirected graph'@en	Pundirected_pagerank-description-9bad0d
+Pundirected_pagerank	P31	Q18616576	Pundirected_pagerank-P31-Q18616576
+Pundirected_pagerank	P31	Q47512165	Pundirected_pagerank-P31-Q47512165
+Pundirected_pagerank	P7482	Q108739856	Pundirected_pagerank-P7482-Q108739856
+Pundirected_pagerank	P1629	Q184316	Pundirected_pagerank-P1629-Q184316
+Pundirected_pagerank	datatype	quantity	Pundirected_pagerank-datatype-1a7b30
+Pin_degree	label	'degree (incoming)'@en	Pin_degree-label-51d6f6
+Pin_degree	alias	'in degree'@en	Pin_degree-alias-300d5a
+Pin_degree	description	'in degree of a node in a graph'@en	Pin_degree-description-6d77d7
+Pin_degree	P31	Q18616576	Pin_degree-P31-Q18616576
+Pin_degree	P31	Q47512165	Pin_degree-P31-Q47512165
+Pin_degree	P1629	Q383444	Pin_degree-P1629-Q383444
+Pin_degree	datatype	quantity	Pin_degree-datatype-1a7b30
+Pout_degree	label	'degree (outgoing)'@en	Pout_degree-label-599683
+Pout_degree	alias	'out degree'@en	Pout_degree-alias-68b5b8
+Pout_degree	description	'out degree of a node in a graph'@en	Pout_degree-description-11bdd0
+Pout_degree	P31	Q18616576	Pout_degree-P31-Q18616576
+Pout_degree	P31	Q47512165	Pout_degree-P31-Q47512165
+Pout_degree	P1629	Q383444	Pout_degree-P1629-Q383444
+Pout_degree	datatype	quantity	Pout_degree-datatype-1a7b30
+P31dwd	label	'instance of (extended)'@en	P31dwd-label-291095
+P31dwd	description	'Considers items related via P106 (occupation) and P39 (position held) as instance of'@en	P31dwd-description-02204d
+P31dwd	P31	Q18616576	P31dwd-P31-Q18616576
+P31dwd	P31	Q28326461	P31dwd-P31-Q28326461
+P31dwd	P31	Q18647519	P31dwd-P31-Q18647519
+P31dwd	datatype	wikibase-item	P31dwd-datatype-643cc9
+P31x	label	'instance of (extended)'@en	P31x-label-291095
+P31x	description	'Considers items related via P106 (occupation) and P39 (position held) as instance of'@en	P31x-description-02204d
+P31x	P31	Q18616576	P31x-P31-Q18616576
+P31x	P31	Q28326461	P31x-P31-Q28326461
+P31x	P31	Q18647519	P31x-P31-Q18647519
+P31x	datatype	wikibase-item	P31x-datatype-643cc9
+P279dwdstar	label	'extended subclass of (transitive)'@en	P279dwdstar-label-0be149
+P279dwdstar	alias	'extended subclass of (reachable)'@en	P279dwdstar-alias-c8b653
+P279dwdstar	description	'All items reachable via P279, defined for all nodes that have P31dwd, including itself.'@en	P279dwdstar-description-3f7013
+P279dwdstar	P31	Q18616576	P279dwdstar-P31-Q18616576
+P279dwdstar	P31	Q28326461	P279dwdstar-P31-Q28326461
+P279dwdstar	P31	Q18647519	P279dwdstar-P31-Q18647519
+P279dwdstar	datatype	wikibase-item	P279dwdstar-datatype-643cc9
+P1963computed	label	'properties in instances of this class'@en	P1963computed-label-c451a6
+P1963computed	description	'The properties defined for a class, computed based on its instances'@en	P1963computed-description-2e5ab8
+P1963computed	P31	Q19820110	P1963computed-P31-Q19820110
+P1963computed	P279	Q22582645	P1963computed-P279-Q22582645
+P1963computed	P1659	P1963	P1963computed-P1659-P1963
+P1963computed	P7482	Q108739856	P1963computed-P7482-Q108739856
+P1963computed	datatype	wikibase-item	P1963computed-datatype-643cc9
+Pproperty_domain	label	'entity types used (computed)'@en	Pproperty_domain-label-4ffb8a
+Pproperty_domain	description	'List the classes that appear as values of a property'@en	Pproperty_domain-description-7eb869
+Pproperty_domain	P31	Q19820110	Pproperty_domain-P31-Q19820110
+Pproperty_domain	P279	Q22582645	Pproperty_domain-P279-Q22582645
+Pproperty_domain	P1659	P1963	Pproperty_domain-P1659-P1963
+Pproperty_domain	P7482	Q108739856	Pproperty_domain-P7482-Q108739856
+Pproperty_domain	datatype	wikibase-item	Pproperty_domain-datatype-643cc9
+Pproperty_units_used	label	'units used (computed)'@en	Pproperty_units_used-label-9b6df6
+Pproperty_units_used	description	'The units used in quantity properties'@en	Pproperty_units_used-description-8cb3de
+Pproperty_units_used	P31	Q19820110	Pproperty_units_used-P31-Q19820110
+Pproperty_units_used	P279	Q22582645	Pproperty_units_used-P279-Q22582645
+Pproperty_units_used	datatype	wikibase-item	Pproperty_units_used-datatype-643cc9
+Paward_count	label	'number of recipients (computed)'@en	Paward_count-label-1d31ec
+Paward_count	description	'The number of recipients of an award'@en	Paward_count-description-ecff99
+Paward_count	P31	Q19820110	Paward_count-P31-Q19820110
+Paward_count	P279	Q22582645	Paward_count-P279-Q22582645
+Paward_count	P1659	P1963	Paward_count-P1659-P1963
+Paward_count	datatype	quantity	Paward_count-datatype-1a7b30
+P131admin1	label	'located in the administrative territorial entity (admin1)'@en	P131admin1-label-721854
+P131admin1	description	'the item is located on the territory of the following administrative level 1 entity'@en	P131admin1-description-850656
+P131admin1	P31	Q18647519	P131admin1-P31-Q18647519
+P131admin1	P31	Q18647515	P131admin1-P31-Q18647515
+P131admin1	P31	Q18615777	P131admin1-P31-Q18615777
+P131admin1	P31	Q70564278	P131admin1-P31-Q70564278
+P131admin2	label	'located in the administrative territorial entity (admin2)'@en	P131admin2-label-9d4e56
+P131admin2	description	'the item is located on the territory of the following administrative level 2 entity'@en	P131admin2-description-61cf95
+P131admin2	P31	Q18647519	P131admin2-P31-Q18647519
+P131admin2	P31	Q18647515	P131admin2-P31-Q18647515
+P131admin2	P31	Q18615777	P131admin2-P31-Q18615777
+P131admin2	P31	Q70564278	P131admin2-P31-Q70564278
+P131country	label	'located in the administrative territorial entity (country)'@en	P131country-label-4757e1
+P131country	description	'the item is located on the territory of the following administrative level country entity'@en	P131country-description-90ac2d
+P131country	P31	Q18647519	P131country-P31-Q18647519
+P131country	P31	Q18647515	P131country-P31-Q18647515
+P131country	P31	Q18615777	P131country-P31-Q18615777
+P131country	P31	Q70564278	P131country-P31-Q70564278
+Pinstance_count	label	'# instances'@en	Pinstance_count-label-34ffab
+Pinstance_count	description	'The number of P31/P31x instances of a class'@en	Pinstance_count-description-b06abb
+Pinstance_count	P31	Q18616576	Pinstance_count-P31-Q18616576
+Pinstance_count	datatype	quantity	Pinstance_count-datatype-1a7b30
+Pinstance_count_star	label	'# instances including subclasses'@en	Pinstance_count_star-label-b3a90f
+Pinstance_count_star	description	'The number of P31/P31x instances of a class and its subclasses'@en	Pinstance_count_star-description-bceb9a
+Pinstance_count_star	P31	Q18616576	Pinstance_count_star-P31-Q18616576
+Pinstance_count_star	datatype	quantity	Pinstance_count_star-datatype-1a7b30
+Plong_abstract	label	'abstract from Wikipedia articles'@en	Plong_abstract-label-cb8792
+Plong_abstract	description	'text before the table of contents from Wikipedia articles'@en	Plong_abstract-description-687f33
+Plong_abstract	P31	Q18616576	Plong_abstract-P31-Q18616576
+Plong_abstract	datatype	string	Plong_abstract-datatype-473287
+Pshort_abstract	label	'short abstract from Wikipedia articles'@en	Pshort_abstract-label-45e53b
+Pshort_abstract	description	'text before the table of contents from Wikipedia articles shortened to 2-3 sentences'@en	Pshort_abstract-description-d251e5
+Pshort_abstract	P31	Q18616576	Pshort_abstract-P31-Q18616576
+Pshort_abstract	datatype	string	Pshort_abstract-datatype-473287
+P1963computed_star	label	'properties in instances and subclasses of this class'@en	P1963computed_star-label-10788b
+P1963computed_star	description	'The properties defined for a class, computed based on its instances and instances of all subclasses'@en	P1963computed_star-description-fd0dc9
+P1963computed_star	P31	Q19820110	P1963computed_star-P31-Q19820110
+P1963computed_star	P279	Q22582645	P1963computed_star-P279-Q22582645
+P1963computed_star	P1659	P1963	P1963computed_star-P1659-P1963
+P1963computed_star	P7482	Q108739856	P1963computed_star-P7482-Q108739856
+P1963computed_star	datatype	wikibase-item	P1963computed_star-datatype-643cc9
+Psubclass_count_star	label	'# subclasses'@en	Psubclass_count_star-label-0ea3bb
+Psubclass_count_star	description	'The number of P279* subclasses of a class'@en	Psubclass_count_star-description-732aef
+Psubclass_count_star	P31	Q18616576	Psubclass_count_star-P31-Q18616576
+Psubclass_count_star	datatype	quantity	Psubclass_count_star-datatype-1a7b30
+Psubclass_count_star	P7482	Q108739856	Psubclass_count_star-P7482-Q108739856
+P1963subclass_star	label	'properties for this type including subclasses'@en	P1963subclass_star-label-173efe
+P1963subclass_star	description	'The properties defined for a class, computed based on its subclasses'@en	P1963subclass_star-description-8f67d8
+P1963subclass_star	P31	Q19820110	P1963subclass_star-P31-Q19820110
+P1963subclass_star	P279	Q22582645	P1963subclass_star-P279-Q22582645
+P1963subclass_star	P1659	P1963	P1963subclass_star-P1659-P1963
+P1963subclass_star	P7482	Q108739856	P1963subclass_star-P7482-Q108739856
+P1963subclass_star	datatype	wikibase-item	P1963subclass_star-datatype-643cc9
+wikipedia_sitelink	label	'wikipedia url'@en	wikipedia_sitelink-label-0b615f
+wikipedia_sitelink	description	'wikipedia url in all languages'@en	wikipedia_sitelink-description-341c82
+wikipedia_sitelink	datatype	string	wikipedia_sitelink-datatype-473287

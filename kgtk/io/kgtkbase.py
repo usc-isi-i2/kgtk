@@ -110,14 +110,19 @@ class KgtkBase(KgtkFormat):
                            who: str,
                            error_action: ValidationAction,
                            error_file: typing.TextIO = sys.stderr,
-                           prohibit_whitespace_in_column_names=False,
+                           prohibit_whitespace_in_column_names: bool = False,
+                           supply_missing_column_names: bool = False
                            )->bool:
         """
         Returns True if the column names are OK.
         """
         complaints: typing.List[str] = [ ]
+        column_idx: int
         column_name: str
-        for column_name in column_names:
+        for column_idx, column_name in enumerate(column_names):
+            if supply_missing_column_names and (column_name is None or len(column_name) == 0):
+                column_name = 'COL' + str(column_idx + 1)
+                column_names[column_idx] = column_name
             gripes: typing.List[str] = cls.check_column_name(column_name, header_line, error_action, error_file,
                                                              prohibit_whitespace_in_column_names=prohibit_whitespace_in_column_names)
             complaints.extend(gripes)

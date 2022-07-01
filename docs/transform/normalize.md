@@ -82,9 +82,9 @@ Would be transformed by `kgtk normalize-edges` to:
 |    | E1 | reference  | Wikidata |
 
 !!! note
-    The newly generated secondary edges do not themselves have `id` fields.
-    In the future, there may be an option to generate `id` values on output edges as needed.
-    Until then, use the [`kgtk add-id`](../add_id) command to generate
+    The newly generated secondary edges do not themselves have `id` fields unless the `--add-id`
+    option is specified.
+    You may also use the [`kgtk add-id`](../add_id) command to generate
     `id` field values after `kgtk normalize-edges`.
 
 ### Selecting the Additional Columns to Normalize
@@ -131,6 +131,13 @@ edges for each nonempty element of the list.
     This is required by the [KGTK File Format v2.0](../../specification),
     which prohibits lists in the `node2` column.
 
+### Generating ID Values
+
+`kgtk normalize` will generate ID values for output
+edges that were generated as a result of normalization.  This code
+is somewhat experimental, and may be revised in the future.  Alternatively,
+the output from `kgtk normalize` may be piped to `kgtk add-id`.
+
 
 ## Usage
 
@@ -138,9 +145,15 @@ edges for each nonempty element of the list.
 usage: kgtk normalize [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                       [--new-edges-file NEW_EDGES_FILE]
                       [--columns COLUMNS_TO_LOWER [COLUMNS_TO_LOWER ...]]
-                      [--lower [True|False]] [--normalize [True|False]]
+                      [--add-id [True|False]] [--lower [True|False]]
+                      [--normalize [True|False]]
                       [--deduplicate-new-edges [True|False]]
-                      [-v [optional True|False]]
+                      [--overwrite-id [optional true|false]]
+                      [--verify-id-unique [optional true|false]]
+                      [--value-hash-width VALUE_HASH_WIDTH]
+                      [--claim-id-hash-width CLAIM_ID_HASH_WIDTH]
+                      [--claim-id-column-name CLAIM_ID_COLUMN_NAME]
+                      [--id-separator ID_SEPARATOR] [-v [optional True|False]]
 
 Normalize a KGTK edge file by removing columns that match a "lift" pattern and converting remaining additional columns to new edges.
 
@@ -159,6 +172,9 @@ optional arguments:
   --columns COLUMNS_TO_LOWER [COLUMNS_TO_LOWER ...], --columns-to-lower COLUMNS_TO_LOWER [COLUMNS_TO_LOWER ...], --columns-to-remove COLUMNS_TO_LOWER [COLUMNS_TO_LOWER ...]
                         Columns to lower and remove as a space-separated list.
                         (default=all columns other than key columns)
+  --add-id [True|False]
+                        When True, add an id column to the output (if not
+                        already present). (default=False)
   --lower [True|False]  When True, lower columns that match a lift pattern.
                         (default=True)
   --normalize [True|False]
@@ -167,6 +183,26 @@ optional arguments:
   --deduplicate-new-edges [True|False]
                         When True, deduplicate new edges. Not suitable for
                         large files. (default=True).
+  --overwrite-id [optional true|false]
+                        When true, replace existing ID values. When false,
+                        copy existing ID values. When --overwrite-id is
+                        omitted, it defaults to False. When --overwrite-id is
+                        supplied without an argument, it is True.
+  --verify-id-unique [optional true|false]
+                        When true, verify ID uniqueness using an in-memory set
+                        of IDs. When --verify-id-unique is omitted, it
+                        defaults to False. When --verify-id-unique is supplied
+                        without an argument, it is True.
+  --value-hash-width VALUE_HASH_WIDTH
+                        How many characters should be used in a value hash?
+                        (default=6)
+  --claim-id-hash-width CLAIM_ID_HASH_WIDTH
+                        How many characters should be used to hash the claim
+                        ID? 0 means do not hash the claim ID. (default=8)
+  --claim-id-column-name CLAIM_ID_COLUMN_NAME
+                        The name of the claim_id column. (default=claim_id)
+  --id-separator ID_SEPARATOR
+                        The separator user between ID subfields. (default=-)
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).
@@ -198,6 +234,7 @@ kgtk cat -i examples/docs/normalize-file1.tsv
 ```bash
 kgtk lower -i examples/docs/normalize-file1.tsv
 ```
+
 | node1 | label | node2 |
 | -- | -- | -- |
 | Q1 | P1 | Q5 |
@@ -225,6 +262,7 @@ kgtk lower -i examples/docs/normalize-file1.tsv
 kgtk lower -i examples/docs/normalize-file1.tsv \
            --deduplicate-new-edges False
 ```
+
 | node1 | label | node2 |
 | -- | -- | -- |
 | Q1 | P1 | Q5 |
@@ -251,6 +289,7 @@ kgtk lower -i examples/docs/normalize-file1.tsv \
    / sort \
    / compact
 ```
+
 | node1 | label | node2 |
 | -- | -- | -- |
 | P1 | label | "instance of" |
@@ -385,7 +424,7 @@ kgtk normalize-edges -i examples/docs/normalize-file2.tsv \
     Its contents appear as new secondary edges.
 
 
-### Normalizing a Non-lift Additional Column and Adding IDs
+### Normalizing a Non-lift Additional Column and Adding IDs Externally
 
 Let's normalize just the non-lift additional column:
 To avoid generating the same ID values as existing IDs,
@@ -407,7 +446,7 @@ kgtk normalize-edges -i examples/docs/normalize-file2.tsv \
 | E3 | confidence | 0.8 |  |  |  | N3 |
 
 
-### Normalizing a Non-lift Additional Column and Adding IDs with an Initial ID
+### Normalizing a Non-lift Additional Column and Adding IDs Externally with an Initial ID
 
 Let's normalize just the non-lift additional column.
 To avoid generating the same ID values as existing IDs,
@@ -427,6 +466,56 @@ kgtk normalize-edges -i examples/docs/normalize-file2.tsv \
 | E2 | confidence | 0.9 |  |  |  | E101 |
 | Q6 | P1 | Q5 | "Fred" | "instance of" | "homo sapiens"\|"human" | E3 |
 | E3 | confidence | 0.8 |  |  |  | E102 |
+
+
+### Normalizing a Non-lift Additional Column and Adding IDs Externally with node1-label-node2-num
+
+Let's normalize just the non-lift additional column.
+To avoid generating the same ID values as existing IDs,
+the newly generated edge IDs are generated with the initial value `E100`.
+
+```bash
+kgtk normalize-edges -i examples/docs/normalize-file2.tsv \
+                     --columns-to-remove confidence \
+  / add-id --id-style node1-label-node2-num
+```
+
+| node1 | label | node2 | node1;label | label;label | node2;label | id |
+| -- | -- | -- | -- | -- | -- | -- |
+| Q1 | P1 | Q5 | "Elmo" | "instance of" | "homo sapiens"\|"human" | E1 |
+| E1 | confidence | 0.3 |  |  |  | E1-confidence-0.3-0000 |
+| Q1 | P2 | Q6 | "Elmo" | "amigo"\|"friend" | "Fred" | E2 |
+| E2 | confidence | 0.9 |  |  |  | E2-confidence-0.9-0000 |
+| Q6 | P1 | Q5 | "Fred" | "instance of" | "homo sapiens"\|"human" | E3 |
+| E3 | confidence | 0.8 |  |  |  | E3-confidence-0.8-0000 |
+
+
+### Normalizing a Non-lift Additional Column and Adding IDs Internally
+
+Let's normalize just the non-lift additional column, using the internal
+option to add IDs with its default settings.  This avoids the need to
+use a KGTK pipe.
+
+```bash
+kgtk normalize-edges -i examples/docs/normalize-file2.tsv \
+                     --columns-to-remove confidence \
+		     --add-id
+```
+
+| node1 | label | node2 | node1;label | label;label | node2;label | id |
+| -- | -- | -- | -- | -- | -- | -- |
+| Q1 | P1 | Q5 | "Elmo" | "instance of" | "homo sapiens"\|"human" | E1 |
+| E1 | confidence | 0.3 |  |  |  | E1-confidence-0.3-0000 |
+| Q1 | P2 | Q6 | "Elmo" | "amigo"\|"friend" | "Fred" | E2 |
+| E2 | confidence | 0.9 |  |  |  | E2-confidence-0.9-0000 |
+| Q6 | P1 | Q5 | "Fred" | "instance of" | "homo sapiens"\|"human" | E3 |
+| E3 | confidence | 0.8 |  |  |  | E3-confidence-0.8-0000 |
+
+!!! note
+    The sequence number generated by the internal ID generation code
+    may be different from the sequence number generated by an external `kgtk add-id`
+    pipe. That potential difference is not illustrated here.
+
 
 ### Reversing `kgtk lift` with Other Labels
 
@@ -489,6 +578,7 @@ kgtk lower -i examples/docs/normalize-file4.tsv \
            --columns      color material size \
 	   --base-columns node1  node1   node1
 ```
+
 | node1 | label | node2 |
 | -- | -- | -- |
 | block1 | isa | cube |
@@ -540,6 +630,7 @@ kgtk lower -i examples/docs/normalize-file4.tsv \
 	   --base-columns node1  node1   node1 \
 	   --label-values COLOR MATERIAL SIZE
 ```
+
 | node1 | label | node2 |
 | -- | -- | -- |
 | block1 | isa | cube |

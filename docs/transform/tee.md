@@ -3,6 +3,9 @@
 `kgtk tee` copies its input file (standard input by default) to its primary output file (stdout by default)
 and to a secondary output file (specified by `--into-file`).
 
+This command defaults to `--mode=NONE` since it doesn't attach special meaning
+to particular columns.
+
 ## Debugging Pipes
 
 The primary use envisioned for this command is as a tap in complex pipes,
@@ -30,7 +33,9 @@ primary intended purpose.
 usage: kgtk tee [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] --into-file INTO_FILE
                 [--enable [ENABLE]] [-v [optional True|False]]
 
-Remove specific columns from a KGTK file.
+Copy the primary input to the primary output, making a copy to a specified file. This can be used to make a copy of a pipe's data.
+
+This command defaults to --mode=NONE so it will work with TSV files that do not follow KGTK column naming conventions.
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -80,6 +85,7 @@ kgtk cat -i examples/docs/tee-file1.tsv
 kgtk cat -i examples/docs/tee-file1.tsv \
    / tee --into-file tee-out.tsv
 ```
+
 | node1 | label | node2 | location | years |
 | -- | -- | -- | -- | -- |
 | john | zipcode | 12345 | home | 10 |
@@ -120,6 +126,7 @@ kgtk cat -i tee-out.tsv
 kgtk tee -i examples/docs/tee-file1.tsv \
          --into-file tee-out.tsv
 ```
+
 | node1 | label | node2 | location | years |
 | -- | -- | -- | -- | -- |
 | john | zipcode | 12345 | home | 10 |

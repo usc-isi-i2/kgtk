@@ -33,8 +33,32 @@ class KGTKSyntaxException(KGTKException):
     return_code = 900
 
 
-# class KGTKExampleException(KGTKException):
-#     return_code = 1000  # please allocate a value which is gte 1000
+class InvalidParameter(Exception):
+    pass
+
+
+class WrongFormatURIException(Exception):
+    pass
+
+
+class PrefixNotFoundException(Exception):
+    pass
+
+
+class PrefixAlreadyUsedException(Exception):
+    pass
+
+
+class SplitURIWithUnknownPrefix(Exception):
+    pass
+
+
+class InvalidGraphNodeValueError(Exception):
+    pass
+
+
+class UnknownLiteralType(Exception):
+    pass
 
 
 class KGTKExceptionHandler(object):
@@ -64,7 +88,7 @@ class KGTKExceptionHandler(object):
             return exc_val.return_code
 
         warnings.warn('Please raise KGTKException instead of {}'.format(type_))
-        print("%s" %KGTKException.message, file=sys.stderr)
+        print("%s" % KGTKException.message, file=sys.stderr)
         return KGTKException.return_code
 
 

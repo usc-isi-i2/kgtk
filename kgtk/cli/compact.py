@@ -34,7 +34,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
-    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
     from kgtk.reshape.kgtkidbuilder import KgtkIdBuilder, KgtkIdBuilderOptions
     from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
@@ -64,7 +64,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
         parser.add_argument(      "--columns", dest="key_column_names",
                                   help=h("The key columns to identify records for compaction. " +
-                                  "(default=id for node files, (node1, label, node2, id) for edge files)."), nargs='+', default=[ ])
+                                  "(default=all columns)."), nargs='+', default=[ ])
     
         parser.add_argument(      "--compact-id", dest="compact_id",
                                   help=h("Indicate that the ID column in KGTK edge files should be compacted. " +
@@ -82,6 +82,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                                   help=h("Assume that the input file may contain lists (disable when certain it does not). (default=%(default)s)."),
                                   type=optional_bool, nargs='?', const=True, default=True)
 
+        parser.add_argument(      "--keep-first", dest="keep_first_names",
+                                  help=h("If compaction results in a list of values for any column on this list, keep only the first value after sorting. " +
+                                  "(default=none)."), nargs='+', default=[ ])
     else:
         parser.add_argument(      "--columns", dest="key_column_names",
                                   help="The key columns to identify records for compaction. " +
@@ -102,6 +105,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         parser.add_argument(      "--lists-in-input", dest="lists_in_input",
                                   help="Assume that the input file may contain lists (disable when certain it does not). (default=%(default)s).",
                                   type=optional_bool, nargs='?', const=True, default=True)
+
+        parser.add_argument(      "--keep-first", dest="keep_first_names",
+                                  help="If compaction results in a list of values for any column on this list, keep only the first value after sorting. " +
+                                  "(default=none).", nargs='+', default=[ ])
 
     parser.add_argument(      "--presorted", dest="sorted_input",
                               help="Indicate that the input has been presorted (or at least pregrouped) (default=%(default)s).",
@@ -129,13 +136,17 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     
     KgtkIdBuilderOptions.add_arguments(parser, expert=_expert)
     KgtkReader.add_debug_arguments(parser, expert=_expert)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser,
+                                    mode_options=True,
+                                    default_mode=KgtkReaderMode[parsed_shared_args._mode],
+                                    expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
 def run(input_file: KGTKFiles,
         output_file: KGTKFiles,
         list_output_file: KGTKFiles,
         key_column_names: typing.List[str],
+        keep_first_names: typing.List[str],
         compact_id: bool,
         deduplicate: bool,
         sorted_input: bool,
@@ -184,6 +195,7 @@ def run(input_file: KGTKFiles,
         if list_output_kgtk_file is not None:
             print("--list-output-file=%s" % str(list_output_kgtk_file), file=error_file, flush=True)
         print("--columns=%s" % " ".join(key_column_names), file=error_file)
+        print("--keep-first=%s" % " ".join(keep_first_names), file=error_file)
         print("--compact-id=%s" % str(compact_id), file=error_file, flush=True)
         print("--deduplicate=%s" % str(deduplicate), file=error_file, flush=True)
         print("--presorted=%s" % str(sorted_input), file=error_file, flush=True)
@@ -213,6 +225,7 @@ def run(input_file: KGTKFiles,
             output_file_path=output_kgtk_file,
             list_output_file_path=list_output_kgtk_file,
             key_column_names=key_column_names,
+            keep_first_names=keep_first_names,
             compact_id=compact_id,
             deduplicate=deduplicate,
             sorted_input=sorted_input,

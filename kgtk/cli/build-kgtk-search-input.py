@@ -22,6 +22,14 @@ def add_arguments(parser):
     parser.add_argument('--alias-properties', action='store', type=str, dest='alias_properties', default=None,
                         help='the name of property which has aliases for the node1')
 
+    parser.add_argument('--extra-alias-properties', action='store', type=str, dest='extra_alias_properties',
+                        default="P1448,P1705,P1477,P1810",
+                        help='comma separated list of properties to be used as additional aliases.')
+    # P1448: official name
+    # P1705: native label
+    # P1477: official name
+    # P1810: named as
+
     parser.add_argument('--description-properties', action='store', type=str, dest='description_properties',
                         default=None,
                         help='the name of property which has descriptions for the node1')
@@ -43,19 +51,25 @@ def add_arguments(parser):
 
     parser.add_argument('--property-datatype-file', action='store', dest='property_datatype_file', default=None,
                         help='A file in KGTK edge file format with data types for properties')
+    parser.add_argument('--languages', action='store', type=str, dest='languages',
+                        default="en",
+                        help='a comma separated list of languages for labels, aliases and descriptions')
 
 
 def run(**kwargs):
     from kgtk.utils.elasticsearch_manager import ElasticsearchManager
+    languages = set(kwargs['languages'].split(","))
     try:
 
         ElasticsearchManager.build_kgtk_search_input(kwargs['input_file_path'], kwargs['label_properties'],
                                                      kwargs['mapping_file_path'], kwargs['output_file_path'],
                                                      alias_fields=kwargs['alias_properties'],
+                                                     extra_alias_properties=kwargs['extra_alias_properties'],
                                                      pagerank_fields=kwargs['pagerank_properties'],
                                                      description_properties=kwargs['description_properties'],
                                                      add_text=kwargs['add_text'],
-                                                     property_datatype_file=kwargs['property_datatype_file']
+                                                     property_datatype_file=kwargs['property_datatype_file'],
+                                                     languages=languages
                                                      )
     except:
         message = 'Command: build-kgtk-search-input\n'

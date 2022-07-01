@@ -17,4 +17,4 @@ kgtk ${KGTK_FLAGS} \
      --gzip-command ${GZIP_CMD} \
      --extra "${SORT_EXTRAS}" \
      --output-file ${DATADIR}/all.${SORTED_KGTK} \
-|& tee ${LOGDIR}/build-all-edges.log
+| tee ${LOGDIR}/build-all-edges.log

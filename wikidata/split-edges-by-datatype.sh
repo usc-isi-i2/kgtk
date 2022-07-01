@@ -49,4 +49,4 @@ kgtk ${KGTK_FLAGS} \
      --output-file ${DATADIR}/claims.wikibase-sense.${SORTED_KGTK} \
      --reject-file ${DATADIR}/claims.other.${SORTED_KGTK} \
      --use-mgzip ${USE_MGZIP} \
-    |& tee ${LOGDIR}/edge-datatype-split.log
+    | tee ${LOGDIR}/edge-datatype-split.log

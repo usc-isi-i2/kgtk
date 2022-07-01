@@ -1,0 +1,6 @@
+node1	label	node2
+red_top	is-connected-to	red_one
+red_one	is-connected-to	red_two
+red_two	is-connected-to	red_three
+red_three	is-connected-to	red_four
+red_four	is-connected-to	red_five

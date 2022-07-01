@@ -183,10 +183,15 @@ usage: kgtk validate [-h] [-i INPUT_FILE [INPUT_FILE ...]]
                      [--mgzip-threads MGZIP_THREADS]
                      [--gzip-in-parallel [optional True|False]]
                      [--gzip-queue-size GZIP_QUEUE_SIZE]
+                     [--implied-label IMPLIED_LABEL]
+                     [--use-graph-cache-envar [optional True|False]]
+                     [--graph-cache GRAPH_CACHE]
+                     [--graph-cache-fetchmany-size GRAPH_CACHE_FETCHMANY_SIZE]
+                     [--graph-cache-filter-batch-size GRAPH_CACHE_FILTER_BATCH_SIZE]
                      [--mode {NONE,EDGE,NODE,AUTO}]
-                     [--force-column-names FORCE_COLUMN_NAMES [FORCE_COLUMN_NAMES ...]]
+                     [--input-column-names FORCE_COLUMN_NAMES [FORCE_COLUMN_NAMES ...]]
+                     [--no-input-header [optional True|False]]
                      [--header-error-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                     [--skip-header-record [optional True|False]]
                      [--unsafe-column-name-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
                      [--prohibit-whitespace-in-column-names [optional True|False]]
                      [--initial-skip-count INITIAL_SKIP_COUNT]
@@ -291,6 +296,19 @@ File options:
                         Execute gzip in parallel. (default=False).
   --gzip-queue-size GZIP_QUEUE_SIZE
                         Queue size for parallel gzip. (default=1000).
+  --implied-label IMPLIED_LABEL
+                        When specified, imply a label colum with the specified
+                        value (default=None).
+  --use-graph-cache-envar [optional True|False]
+                        use KGTK_GRAPH_CACHE if --graph-cache is not
+                        specified. (default=True).
+  --graph-cache GRAPH_CACHE
+                        When specified, look for input files in a graph cache.
+                        (default=None).
+  --graph-cache-fetchmany-size GRAPH_CACHE_FETCHMANY_SIZE
+                        Graph cache transfer buffer size. (default=1000).
+  --graph-cache-filter-batch-size GRAPH_CACHE_FILTER_BATCH_SIZE
+                        Graph cache filter batch size. (default=1000).
   --mode {NONE,EDGE,NODE,AUTO}
                         Determine the KGTK file mode
                         (default=KgtkReaderMode.AUTO).
@@ -298,15 +316,23 @@ File options:
 Header parsing:
   Options affecting header parsing.
 
-  --force-column-names FORCE_COLUMN_NAMES [FORCE_COLUMN_NAMES ...]
-                        Force the column names (default=None).
+  --input-column-names FORCE_COLUMN_NAMES [FORCE_COLUMN_NAMES ...], --force-column-names FORCE_COLUMN_NAMES [FORCE_COLUMN_NAMES ...]
+                        Supply input column names when the input file does not
+                        have a header record (--no-input-header=True), or
+                        forcibly override the column names when a header row
+                        exists (--no-input-header=False) (default=None).
+  --no-input-header [optional True|False]
+                        When the input file does not have a header record,
+                        specify --no-input-header=True and --input-column-
+                        names. When the input file does have a header record
+                        that you want to forcibly override, specify --input-
+                        column-names and --no-input-header=False. --no-input-
+                        header has no effect when --input-column-names has not
+                        been specified. (default=False).
   --header-error-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
                         The action to take when a header error is detected.
                         Only ERROR or EXIT are supported
                         (default=ValidationAction.EXIT).
-  --skip-header-record [optional True|False]
-                        Skip the first record when forcing column names
-                        (default=False).
   --unsafe-column-name-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
                         The action to take when a column name is unsafe
                         (default=ValidationAction.REPORT).
@@ -412,7 +438,7 @@ Data value parsing:
   --ignore-maximum-year [IGNORE_MAXIMUM_YEAR]
                         Ignore the maximum year constraint. (default=False).
   --validate-fromisoformat [VALIDATE_FROMISOFORMAT]
-                        Validate that datetim.fromisoformat(...) can parse
+                        Validate that datetime.fromisoformat(...) can parse
                         this date and time. This checks that the
                         year/month/day combination is valid. The year must be
                         in the range 1..9999, inclusive. (default=False).
@@ -511,10 +537,10 @@ This results in the following output:
 
 ====================================================
 Validating 'examples/docs/validate-date-with-day-zero.tsv'
+input format: kgtk
 KgtkReader: File_path.suffix: .tsv
 KgtkReader: reading file examples/docs/validate-date-with-day-zero.tsv
 header: node1	label	node2
-input format: kgtk
 node1 column found, this is a KGTK edge file
 KgtkReader: Special columns: node1=0 label=1 node2=2 id=-1
 KgtkReader: Reading an edge file.
@@ -579,7 +605,8 @@ Validate an empty input file, supplying a header line:
 
 ```bash
 kgtk validate -i examples/docs/validate-empty-file.tsv \
-              --force-column-names node1 label node2
+              --force-column-names node1 label node2 \
+	      --no-input-header
 ```
 
 This generates the following message on standard output:
@@ -598,8 +625,7 @@ Validate an empty input file, skipping a nonexistant header line.
 
 ```bash
 kgtk validate -i examples/docs/validate-empty-file.tsv \
-              --force-column-names node1 label node2 \
-	      --skip-header-record 
+              --force-column-names node1 label node2
 ```
 
 This generates the following message on standard output:
@@ -619,9 +645,9 @@ Validate an input file with an empty column name:
 ```bash
 cat examples/docs/validate-empty-column-name.tsv
 ```
-~~~
-	label	node2
-~~~
+
+|    | label | node2 |
+| -- | -- | -- |
 
 ```bash
 kgtk validate -i examples/docs/validate-empty-column-name.tsv
@@ -646,9 +672,10 @@ messages, use `--header-error-action COMPLAIN` to continue processing.
 ```bash
 cat examples/docs/validate-empty-column-name.tsv
 ```
-~~~
-	label	node2
-~~~
+
+|   | label | node2 |
+| -- | -- | -- |
+
 
 ```bash
 kgtk validate -i examples/docs/validate-empty-column-name.tsv \
@@ -680,9 +707,9 @@ column names have initial whitespace.
 ```bash
 cat examples/docs/validate-column-names-initial-whitespace.tsv
 ```
-~~~
-id	 node1	 label	 node2
-~~~
+
+| id |  node1 |  label |  node2 | 
+|----|--------|--------|--------| 
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-initial-whitespace.tsv
@@ -714,9 +741,10 @@ whitespace is detected.
 ```bash
 cat examples/docs/validate-column-names-initial-whitespace.tsv
 ```
-~~~
-id	 node1	 label	 node2
-~~~
+
+| id |  node1 |  label |  node2 | 
+|----|--------|--------|--------| 
+
 
 ```bash
 
@@ -746,9 +774,9 @@ column names have trailing whitespace.
 ```bash
 cat examples/docs/validate-column-names-trailing-whitespace.tsv
 ```
-~~~
-id	node1 	label 	node2 
-~~~
+
+| id | node1  | label  | node2  | 
+|----|--------|--------|-------| 
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-trailing-whitespace.tsv
@@ -779,9 +807,9 @@ whitespace is detected.
 ```bash
 cat examples/docs/validate-column-names-trailing-whitespace.tsv
 ```
-~~~
-id	node1 	label 	node2 
-~~~
+
+| id | node1  | label  | node2 | 
+|----|--------|--------|-------| 
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-trailing-whitespace.tsv \
@@ -810,9 +838,9 @@ but it may be prohibited on request.
 ```bash
 cat examples/docs/validate-column-names-internal-whitespace.tsv
 ```
-~~~
-id	node 1	label	node 2
-~~~
+
+| id | node 1 | label | node 2 | 
+|----|--------|-------|--------| 
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-internal-whitespace.tsv \
@@ -843,9 +871,9 @@ whitespace is detected.
 ```bash
 cat examples/docs/validate-column-names-internal-whitespace.tsv
 ```
-~~~
-id	node 1	label	node 2
-~~~
+
+| id | node 1 | label | node 2 | 
+|----|--------|-------|--------| 
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-internal-whitespace.tsv \
@@ -873,9 +901,9 @@ column names have a comma (`,`) at the end.
 ```bash
 cat examples/docs/validate-column-names-with-comma.tsv
 ```
-~~~
-node1,	label,	node2,	id
-~~~
+
+| node1, | label, | node2, | id | 
+|--------|--------|--------|----| 
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-with-comma.tsv
@@ -906,9 +934,9 @@ whitespace is detected.
 ```bash
 cat examples/docs/validate-column-names-with-comma.tsv
 ```
-~~~
-node1,	label,	node2,	id
-~~~
+
+| node1, | label, | node2, | id | 
+|--------|--------|--------|----| 
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-with-comma.tsv \
@@ -985,9 +1013,9 @@ Validate an input file with two `node1` columns instead of
 ```bash
 cat examples/docs/validate-column-names-with-duplicates.tsv
 ```
-~~~
-node1	label	node1	id
-~~~
+
+| node1 | label | node1 | id | 
+|-------|-------|-------|----| 
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-with-duplicates.tsv
@@ -1012,9 +1040,10 @@ the file to be treated as a Node file by specifying `--mode=NODE`.
 ```bash
 cat examples/docs/validate-column-names-without-required-columns.tsv
 ```
-~~~
-col1	col2	col3
-~~~
+
+| col1 | col2 | col3 | 
+|------|------|------| 
+
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-without-required-columns.tsv \
@@ -1040,9 +1069,11 @@ the file to be treated as a Edge file by specifying `--mode=EDGE`.
 ```bash
 cat examples/docs/validate-column-names-without-required-columns.tsv
 ```
-~~~
-col1	col2	col3
-~~~
+
+| col1 | col2 | col3 | 
+|------|------|------| 
+
+
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-without-required-columns.tsv \
@@ -1068,9 +1099,10 @@ and we force auto-mode sensing with `--mode=AUTO`.
 ```bash
 cat examples/docs/validate-column-names-without-required-columns.tsv
 ```
-~~~
-col1	col2	col3
-~~~
+
+| col1 | col2 | col3 | 
+|------|------|------| 
+
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-without-required-columns.tsv \
@@ -1095,9 +1127,9 @@ disabled with `--mode=NONE`
 ```bash
 cat examples/docs/validate-column-names-without-required-columns.tsv
 ```
-~~~
-col1	col2	col3
-~~~
+
+| col1 | col2 | col3 | 
+|------|------|------| 
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-without-required-columns.tsv \
@@ -1120,9 +1152,10 @@ Validate an input file with a `node1` column abd its alias `from`.
 ```bash
 cat examples/docs/validate-column-names-with-ambiguities.tsv
 ```
-~~~
-node1	label	node2	id	from
-~~~
+
+| node1 | label | node2 | id | from | 
+|-------|-------|-------|----|------| 
+
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-with-ambiguities.tsv
@@ -1151,12 +1184,12 @@ when `--empty-line-action=EXCLUDE` (the default).
 ```bash
 cat examples/docs/validate-empty-lines.tsv
 ```
-~~~
-node1	label	node2
-line1	isa	line
 
-line3	isa	line
-~~~
+| node1 | label | node2 | 
+|-------|-------|-------| 
+| line1 | isa   | line  | 
+|       |       |       | 
+| line3 | isa   | line  | 
 
 ```bash
 kgtk validate -i examples/docs/validate-empty-lines.tsv
@@ -1207,12 +1240,12 @@ Whitespace lines are silently ignored in input files during validation whe
 ```bash
 cat examples/docs/validate-whitespace-lines.tsv
 ```
-~~~
-node1	label	node2
-line1	isa	line
-		
-line3	isa	line
-~~~
+
+| node1 | label | node2 | 
+|-------|-------|-------| 
+| line1 | isa   | line  | 
+|       |       |       | 
+| line3 | isa   | line  | 
 
 ```bash
 kgtk validate -i examples/docs/validate-whitespace-lines.tsv
@@ -1239,16 +1272,19 @@ during validation if `fill-short-lines=False` (the default) and
 ```bash
 cat examples/docs/validate-short-lines.tsv
 ```
-~~~
-node1	label	node2
-line1	isa	line
-line2	isashortline
-line3	isa	line
-~~~
+
+| node1 | label        | node2 | 
+|-------|--------------|-------| 
+| line1 | isa          | line  | 
+| line2 | isashortline |       | 
+| line3 | isa          | line  | 
+
 
 ```bash
 kgtk validate -i examples/docs/validate-short-lines.tsv
 ```
+
+The following is reported on standard output:
 
 ~~~
 Data line 2:
@@ -1261,6 +1297,9 @@ Data lines passed: 2
 Data lines excluded due to too few columns: 1
 Data errors reported: 1
 ~~~
+
+The following error is reported on standard error:
+    Errors detected
 
 !!! note
     See the table of Action Codes for a discussion of other
@@ -1275,12 +1314,12 @@ will not be triggered.
 ```bash
 cat examples/docs/validate-short-lines.tsv
 ```
-~~~
-node1	label	node2
-line1	isa	line
-line2	isashortline
-line3	isa	line
-~~~
+
+| node1 | label        | node2 | 
+|-------|--------------|-------| 
+| line1 | isa          | line  | 
+| line2 | isashortline |       | 
+| line3 | isa          | line  | 
 
 ```bash
 kgtk validate -i examples/docs/validate-short-lines.tsv \
@@ -1305,12 +1344,12 @@ during validation if `truncate-long-lines=True` (the default) and
 ```bash
 cat examples/docs/validate-long-lines.tsv
 ```
-~~~
-node1	label	node2
-line1	isa	line
-line2	isa	long	line
-line3	isa	line
-~~~
+
+| node1 | label | node2 |      | 
+|-------|-------|-------|------| 
+| line1 | isa   | line  |      | 
+| line2 | isa   | long  | line | 
+| line3 | isa   | line  |      |
 
 ```bash
 kgtk validate -i examples/docs/validate-long-lines.tsv
@@ -1328,6 +1367,9 @@ Data lines excluded due to too many columns: 1
 Data errors reported: 1
 ~~~
 
+The following error is reported on standard error:
+    Errors detected
+
 !!! note
     See the table of Action Codes for a discussion of other
     `--long-line-action` values.
@@ -1341,12 +1383,13 @@ will not be triggered.
 ```bash
 cat examples/docs/validate-long-lines.tsv
 ```
-~~~
-node1	label	node2
-line1	isa	line
-line2	isa	long	line
-line3	isa	line
-~~~
+
+| node1 | label | node2 |      | 
+|-------|-------|-------|------| 
+| line1 | isa   | line  |      | 
+| line2 | isa   | long  | line | 
+| line3 | isa   | line  |      |
+
 
 ```bash
 kgtk validate -i examples/docs/validate-long-lines.tsv \
@@ -1370,10 +1413,11 @@ This constraint is applied when `--prohibited-list-action==COMPLAIN` (the defaul
 ```bash
 cat examples/docs/validate-node1-list.tsv
 ```
-~~~
-node1	label	node2	id
-line1|line3	isa	line	id1
-~~~
+
+| node1        | label | node2 | id  | 
+|--------------|-------|-------|-----| 
+| line1\|line3 | isa   | line  | id1 | 
+
 
 ```bash
 kgtk validate -i examples/docs/validate-node1-list.tsv
@@ -1390,6 +1434,9 @@ Data lines passed: 0
 Data lines excluded due to prohibited lists: 1
 Data errors reported: 1
 ~~~
+
+The following error is reported on standard error:
+    Errors detected
 
 !!! note
     This constraint does not apply to KGTK node files or to
@@ -1408,10 +1455,11 @@ This constraint is applied when `--prohibited-list-action==COMPLAIN` (the defaul
 ```bash
 cat examples/docs/validate-label-list.tsv
 ```
-~~~
-node1	label	node2	id
-line1	isa|equals	line	id1
-~~~
+
+| node1 | label       | node2 | id  | 
+|-------|-------------|-------|-----| 
+| line1 | isa\|equals | line  | id1 | 
+
 
 ```bash
 kgtk validate -i examples/docs/validate-label-list.tsv
@@ -1428,6 +1476,9 @@ Data lines passed: 0
 Data lines excluded due to prohibited lists: 1
 Data errors reported: 1
 ~~~
+
+The following error is reported on standard error:
+    Errors detected
 
 !!! note
     This constraint does not apply to KGTK node files or to
@@ -1446,10 +1497,11 @@ This constraint is applied when `--prohibited-list-action==COMPLAIN` (the defaul
 ```bash
 cat examples/docs/validate-node2-list.tsv
 ```
-~~~
-node1	label	node2	id
-line1	isa	line|record	id1
-~~~
+
+| node1 | label | node2        | id  | 
+|-------|-------|--------------|-----| 
+| line1 | isa   | line\|record | id1 |
+
 
 ```bash
 kgtk validate -i examples/docs/validate-node2-list.tsv
@@ -1466,6 +1518,9 @@ Data lines passed: 0
 Data lines excluded due to prohibited lists: 1
 Data errors reported: 1
 ~~~
+
+The following error is reported on standard error:
+    Errors detected
 
 !!! note
     This constraint does not apply to KGTK node files or to
@@ -1486,10 +1541,10 @@ removed by specifying `--prohibited-list-action=PASS` or
 ```bash
 cat examples/docs/validate-node2-list.tsv
 ```
-~~~
-node1	label	node2	id
-line1	isa	line|record	id1
-~~~
+
+| node1 | label | node2        | id  | 
+|-------|-------|--------------|-----| 
+| line1 | isa   | line\|record | id1 |
 
 ```bash
 kgtk validate -i examples/docs/validate-node2-list.tsv \
@@ -1523,6 +1578,9 @@ Data lines passed: 1
 Data errors reported: 1
 ~~~
 
+The following error is reported on standard error:
+    Errors detected
+
 !!! note
     This constraint does not apply to KGTK node files or to
     quasi-KGTK (`--mode=NONE`) files, so setting `--mode=NONE`
@@ -1536,10 +1594,11 @@ The `node1` field may not be blank in a KGTK edge file.
 ```bash
 cat examples/docs/validate-node1-blank-edge.tsv
 ```
-~~~
-node1	label	node2	id
-	isa	line	id1
-~~~
+
+| node1 | label | node2 | id  | 
+|-------|-------|-------|-----| 
+|       | isa   | line  | id1 |
+
 
 ```bash
 kgtk validate -i examples/docs/validate-node1-blank-edge.tsv
@@ -1560,10 +1619,11 @@ The `node1` field may be blank in a KGTK node file.
 ```bash
 cat examples/docs/validate-node1-blank-node.tsv
 ```
-~~~
-id	size	color	node1
-id1	large	red	
-~~~
+
+| id  | size  | color | node1 | 
+|-----|-------|-------|-------| 
+| id1 | large | red   |       |
+
 
 ```bash
 kgtk validate -i examples/docs/validate-node1-blank-node.tsv \
@@ -1588,10 +1648,10 @@ The `label` field may be blank in a KGTK edge file.
 ```bash
 cat examples/docs/validate-label-blank-edge.tsv
 ```
-~~~
-node1	label	node2	id
-line1		line	id1
-~~~
+
+| node1 | label | node2 | id  | 
+|-------|-------|-------|-----| 
+| line1 |       | line  | id1 |
 
 ```bash
 kgtk validate -i examples/docs/validate-label-blank-edge.tsv
@@ -1611,10 +1671,11 @@ The `label` field may be blank in a KGTK node file.
 ```bash
 cat examples/docs/validate-label-blank-node.tsv
 ```
-~~~
-id	size	color	label
-id1	large	red	
-~~~
+
+| id  | size  | color | label | 
+|-----|-------|-------|-------| 
+| id1 | large | red   |       |
+
 
 ```bash
 kgtk validate -i examples/docs/validate-label-blank-node.tsv
@@ -1634,10 +1695,11 @@ The `node2` field may not be blank in a KGTK edge file.
 ```bash
 cat examples/docs/validate-node2-blank-edge.tsv
 ```
-~~~
-node1	label	node2	id
-line1	isa		id1
-~~~
+
+| node1 | label | node2 | id  | 
+|-------|-------|-------|-----| 
+| line1 | isa   |       | id1 | 
+
 
 ```bash
 kgtk validate -i examples/docs/validate-node2-blank-edge.tsv
@@ -1658,10 +1720,11 @@ The `node2` field may be blank in a KGTK node file.
 ```bash
 cat examples/docs/validate-node2-blank-node.tsv
 ```
-~~~
-id	size	color	node2
-id1	large	red	
-~~~
+
+| id  | size  | color | node2 | 
+|-----|-------|-------|-------| 
+| id1 | large | red   |       | 
+
 
 ```bash
 kgtk validate -i examples/docs/validate-node2-blank-node.tsv
@@ -1681,10 +1744,11 @@ The `id` field may be blank in a KGTK edge file.
 ```bash
 cat examples/docs/validate-id-blank-edge.tsv
 ```
-~~~
-node1	label	node2	id
-line1	isa	line	
-~~~
+
+| node1 | label | node2 | id | 
+|-------|-------|-------|----| 
+| line1 | isa   | line  |    | 
+
 
 ```bash
 kgtk validate -i examples/docs/validate-id-blank-edge.tsv
@@ -1704,10 +1768,11 @@ The `id` field may not be blank in a KGTK node file.
 ```bash
 cat examples/docs/validate-id-blank-node.tsv
 ```
-~~~
-id	size	color
-	large	red
-~~~
+
+| id | size  | color | 
+|----|-------|-------| 
+|    | large | red   | 
+
 
 ```bash
 kgtk validate -i examples/docs/validate-id-blank-node.tsv
@@ -1794,6 +1859,10 @@ Data lines excluded due to invalid values: 8
 Data errors reported: 8
 ~~~
 
+The following error is reported on standard error:
+    Errors detected
+
+
 ### Value Check: Lax QNodes in Quantities
 
 By default, standard QNodes (Wikidata QIDs or Q identifiers) are allowed as dimension
@@ -1878,6 +1947,9 @@ Data lines excluded due to invalid values: 2
 Data errors reported: 2
 ~~~
 
+The following error is reported on standard error:
+    Errors detected
+
 ### Value Check: Lax Strings
 
 Strings with internal double quote characters(`"`) that are not escaped
@@ -1914,6 +1986,9 @@ Data lines passed: 4
 Data lines excluded due to invalid values: 1
 Data errors reported: 1
 ~~~
+
+The following error is reported on standard error:
+    Errors detected
 
 ### Value Check: Language-Qualified Strings
 
@@ -1979,6 +2054,9 @@ Data lines passed: 2
 Data lines excluded due to invalid values: 3
 Data errors reported: 3
 ~~~
+
+The following error is reported on standard error:
+    Errors detected
 
 ### Value Check: Language-Qualified Strings with Suffixes
 
@@ -2170,6 +2248,9 @@ Data lines excluded due to invalid values: 5
 Data errors reported: 5
 ~~~
 
+The following error is reported on standard error:
+    Errors detected
+
 ### Value Check: Allow Lax Location Coordinates
 
 ```bash
@@ -2215,6 +2296,9 @@ Data lines excluded due to invalid values: 5
 Data errors reported: 5
 ~~~
 
+The following error is reported on standard error:
+    Errors detected
+
 ### Value Check: Allow Out of Range Location Coordinates
 
 ```bash
@@ -2247,6 +2331,9 @@ Data lines passed: 6
 Data lines excluded due to invalid values: 1
 Data errors reported: 1
 ~~~
+
+The following error is reported on standard error:
+    Errors detected
 
 ### Value Check: Clamp Out of Range Location Coordinates
 
@@ -2281,6 +2368,9 @@ Data lines passed: 6
 Data lines excluded due to invalid values: 1
 Data errors reported: 1
 ~~~
+
+The following error is reported on standard error:
+    Errors detected
 
 ### Value Check: Dates with Month or Day Zero
 
@@ -2318,6 +2408,9 @@ Data lines passed: 0
 Data lines excluded due to invalid values: 2
 Data errors reported: 2
 ~~~
+
+The following error is reported on standard error:
+    Errors detected
 
 ### Value Check: Allow Dates with Month or Day Zero
 
@@ -2411,6 +2504,9 @@ Data lines passed: 0
 Data lines excluded due to invalid values: 1
 Data errors reported: 1
 ~~~
+
+The following error is reported on standard error:
+    Errors detected
 
 ### Value Check: Minimum Valid Year (1583 by Default)
 

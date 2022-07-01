@@ -23,7 +23,7 @@ import sys
 import typing
 
 from kgtk.kgtkformat import KgtkFormat
-from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.kgtkvalue import KgtkValue
@@ -86,11 +86,21 @@ class KgtkLift(KgtkFormat):
     matched_label_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)), default=None)
     unmatched_label_file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)), default=None)
 
+    languages: typing.Optional[typing.List[str]] = \
+        attr.ib(validator=attr.validators.optional(attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
+                                                                                 iterable_validator=attr.validators.instance_of(list))),
+                default=None)
+    prioritize: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
+
+    lift_all_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    force_input_mode_none: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    
     # TODO: add rewind logic here and KgtkReader
 
     # TODO: find working validators
     # value_options: typing.Optional[KgtkValueOptions] = attr.ib(attr.validators.optional(attr.validators.instance_of(KgtkValueOptions)), default=None)
-    reader_options: typing.Optional[KgtkReaderOptions]= attr.ib(default=None)
+    input_reader_options: typing.Optional[KgtkReaderOptions]= attr.ib(default=None)
+    label_reader_options: typing.Optional[KgtkReaderOptions]= attr.ib(default=None)
     value_options: typing.Optional[KgtkValueOptions] = attr.ib(default=None)
 
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
@@ -192,6 +202,13 @@ class KgtkLift(KgtkFormat):
                 lift_column_idxs.append(kr.column_name_map[input_column_name])
                 # lift_column_idxs.append(output_column_names.index(input_column_name))
                 properties_to_lift.append(self.get_property_to_lift(idx2, propname=propname))
+
+        elif self.lift_all_columns:
+            idx: int
+            column_name: str
+            for idx, column_name in enumerate(kr.column_names):
+                if not column_name.endswith(self.output_lifted_column_suffix):
+                    lift_column_idxs.append(idx)
 
         else:
             # If neither the input nor output columns were specified, default to the
@@ -319,9 +336,16 @@ class KgtkLift(KgtkFormat):
                     path: Path,
                     lift_column_properties: typing.List[str],
                     save_input: bool = True,
+<<<<<<< HEAD
                     labels_needed: typing.Optional[typing.Mapping[str, typing.Set[str]]] = None,
                     label_rows: typing.Optional[typing.MutableMapping[str, typing.MutableMapping[str, typing.List[typing.List[str]]]]] = None,
     )->typing.Tuple[typing.Mapping[str, typing.Mapping[str, str]], typing.List[typing.List[str]]]:
+=======
+                    labels_needed: typing.Optional[typing.Set[str]] = None,
+                    label_rows: typing.Optional[typing.MutableMapping[str, typing.List[typing.List[str]]]] = None,
+                    is_label_file: bool = False,
+    )->typing.Tuple[typing.Mapping[str, str], typing.List[typing.List[str]]]:
+>>>>>>> dev
         input_rows: typing.List[typing.List[str]] = [ ]
         labels: typing.MutableMapping[str, typing.MutableMapping[str, str]] = { }
 
@@ -330,10 +354,24 @@ class KgtkLift(KgtkFormat):
         label_value_column_idx: int
         label_match_column_idx, label_select_column_idx, label_value_column_idx = self.lookup_label_table_idxs(kr)
 
+<<<<<<< HEAD
         label_select_column_value_set: typing.Set[str] = set(lift_column_properties)
 
         if label_select_column_idx < 0 and len(label_select_column_value_set) > 1:
             raise ValueError("No label select column and multiple label select column values")
+=======
+        # Build the label filter.  We will still do the same filtering steps in code below.
+        #
+        # TODO: Remove the redundant filtering steps.
+        if is_label_file:
+            label_filter: typing.MutableMapping[int, typing.Set[str]] = dict()
+            if label_select_column_idx >= 0:
+                label_filter[label_select_column_idx] = set([self.label_select_column_value])
+            if labels_needed is not None and label_match_column_idx >= 0:
+                label_filter[label_match_column_idx] = set(labels_needed)
+            if len(label_filter) > 0:
+                kr.add_input_filter(label_filter)
+>>>>>>> dev
 
         if self.verbose:
             print("Loading labels from %s" % path, file=self.error_file, flush=True)
@@ -347,6 +385,29 @@ class KgtkLift(KgtkFormat):
             print("label_value_column_idx=%d (%s)." % (label_value_column_idx, kr.column_names[label_value_column_idx]), file=self.error_file, flush=True)
             print("label_select_column_values='%s'." % " ".join(lift_column_properties), file=self.error_file, flush=True)
 
+
+        # Setup for language filtering:
+        language_filtering: bool = self.languages is not None and len(self.languages) > 0
+        allow_all_strings: bool = False
+        allow_all_lqstrings: bool = False
+        language_filter: typing.List[str] = list()
+        language_filter_tuple: typing.Tuple[str, ...] = ()
+        label_priorities: typing.MutableMapping[str, int] = dict()
+        if language_filtering:
+            for lf in self.languages:
+                if lf == 'NONE':
+                    if self.prioritize:
+                        language_filter.append(lf)
+                    else:
+                        allow_all_strings = True
+                elif lf == 'ANY':
+                    if self.prioritize:
+                        language_filter.append(lf)
+                    else:
+                        allow_all_lqstrings = True
+                else:
+                    language_filter.append("'@" + lf)
+            language_filter_tuple = tuple(language_filter)
 
         key: str
         row: typing.List[str]
@@ -362,7 +423,14 @@ class KgtkLift(KgtkFormat):
             if selected:
                 # This is a label definition row.
                 label_key: str = row[label_match_column_idx]
+                if labels_needed is not None and label_key not in labels_needed:
+                    # We don't need this label.
+                    if save_input and not self.remove_label_records:
+                        input_rows.append(row.copy())
+                    continue # Ignore unneeded labels.
+
                 label_value: str = row[label_value_column_idx]
+<<<<<<< HEAD
                 if label_value != self.default_value:
                     selected_labels: typing.MutableMapping[str, str]
                     if label_select_column_value in labels:
@@ -372,6 +440,71 @@ class KgtkLift(KgtkFormat):
                         labels[label_select_column_value] = selected_labels
                         
                     if label_key in selected_labels:
+=======
+                if label_value == self.default_value:
+                    # We can ignore default values.
+                    #
+                    # TODO: There might be different semantics to default value handling between
+                    # this code and the merge code.
+                    if save_input and not self.remove_label_records:
+                        input_rows.append(row.copy())
+                    continue # Ignore default values.
+
+                process_label: bool
+                if language_filtering:
+                    sigil: str
+                    if len(label_value) == 0:
+                        # An empty value is not a valid label when filtering by language.
+                        process_label = False
+
+                    elif self.prioritize:
+                        current_priority: int = label_priorities.get(label_key, 999999)
+                        sigil = label_value[0]
+                        priority: int
+                        lf: str
+                        for priority, lf in enumerate(language_filter):
+                            if priority >= current_priority:
+                                process_label = False
+                                break
+
+                            elif sigil == KgtkFormat.STRING_SIGIL:
+                                if lf == "NONE":
+                                    process_label = True
+                                    break
+                                
+                            elif sigil == KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL:
+                                if (lf == "ANY" or label_value.endswith(lf)):
+                                    process_label = True
+                                    break
+
+                            else:
+                                process_label = False
+                                break # Do not allow values that are neither strings nor lqstrings.
+                        else:
+                            process_label = False
+
+
+                        if process_label:
+                            label_priorities[label_key] = priority
+                            if label_key in labels:
+                                del labels[label_key] # Remove the prior label
+                    else:
+                        sigil = label_value[0]
+                        if sigil == KgtkFormat.STRING_SIGIL:
+                            process_label = allow_all_strings
+
+                        elif sigil == KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL:
+                            process_label = allow_all_lqstrings or label_value.endswith(language_filter_tuple)
+
+                        else:
+                            # Do not allow values that are neither strings nor lqstrings.
+                            process_label = False
+                else:
+                    process_label = True
+
+                if process_label:
+                    if label_key in labels:
+>>>>>>> dev
                         # This label already exists in the table.
                         if self.suppress_duplicate_labels:
                             # Build a list eliminating duplicate elements.
@@ -385,6 +518,7 @@ class KgtkLift(KgtkFormat):
                             label_rows[label_select_column_value][label_key].append(row.copy())
                     else:
                         # This is the first instance of this label definition.
+<<<<<<< HEAD
                         if labels_needed is not None:
                             if label_select_column_value in labels_needed and label_key in labels_needed[label_select_column_value]:
                                 selected_labels[label_key] = label_value
@@ -398,6 +532,11 @@ class KgtkLift(KgtkFormat):
                                 if label_select_column_value not in label_rows:
                                     label_rows[label_select_column_value] = dict()
                                 label_rows[label_select_column_value][label_key] = [ row.copy() ]
+=======
+                        labels[label_key] = label_value
+                        if label_rows is not None:
+                            label_rows[label_key] = [ row.copy() ]
+>>>>>>> dev
                 if save_input and not self.remove_label_records:
                     input_rows.append(row.copy())
             else:
@@ -452,10 +591,19 @@ class KgtkLift(KgtkFormat):
     def load_input(self,
                    kr: KgtkReader,
                    path: Path,
+<<<<<<< HEAD
                    properties_to_lift: typing.List[str],
     )-> typing.List[typing.List[str]]:
         if self.remove_label_records:
             return self.load_input_removing_label_records(kr, path, properties_to_lift)
+=======
+                   seperate_label_file: bool = False
+    )-> typing.List[typing.List[str]]:
+        if seperate_label_file:
+            return self.load_input_keeping_label_records(kr, path)
+        elif self.remove_label_records:
+            return self.load_input_removing_label_records(kr, path)
+>>>>>>> dev
         else:
             return self.load_input_keeping_label_records(kr, path)
 
@@ -649,8 +797,8 @@ class KgtkLift(KgtkFormat):
                                          require_all_columns=False,
                                          prohibit_extra_columns=True,
                                          fill_missing_columns=True,
-                                         use_mgzip=False if self.reader_options is None else self.reader_options.use_mgzip , # Hack!
-                                         mgzip_threads=3 if self.reader_options is None else self.reader_options.mgzip_threads , # Hack!
+                                         use_mgzip=False if self.input_reader_options is None else self.input_reader_options.use_mgzip , # Hack!
+                                         mgzip_threads=3 if self.input_reader_options is None else self.input_reader_options.mgzip_threads , # Hack!
                                          gzip_in_parallel=False,
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)        
@@ -757,18 +905,27 @@ class KgtkLift(KgtkFormat):
             if self.prefilter_labels:
                 if self.verbose:
                     print("Reading input data to prefilter the labels.", file=self.error_file, flush=True)
+<<<<<<< HEAD
                 input_rows = self.load_input(ikr, self.input_file_path, lift_column_properties)
                 labels_needed = self.build_labels_needed(input_rows, input_select_column_idx, lift_column_idxs, lift_column_properties)
+=======
+                input_rows = self.load_input(ikr, self.input_file_path, seperate_label_file=True)
+                labels_needed = self.build_labels_needed(input_rows, input_select_column_idx, lift_column_idxs)
+>>>>>>> dev
             # Read the label file.
             if self.verbose:
                 print("Loading labels from the label file.", file=self.error_file, flush=True)
             # We don't need to worry about input rows in the label file.
+<<<<<<< HEAD
             labels, _ = self.load_labels(lkr,
                                          self.label_file_path,
                                          save_input=False,
                                          labels_needed=labels_needed,
                                          label_rows=label_rows,
                                          lift_column_properties=lift_column_properties)
+=======
+            labels, _ = self.load_labels(lkr, self.label_file_path, save_input=False, labels_needed=labels_needed, label_rows=label_rows, is_label_file=True)
+>>>>>>> dev
         else:
             if self.verbose:
                 print("Loading labels and reading data from the input file.", file=self.error_file, flush=True)
@@ -917,8 +1074,34 @@ class KgtkLift(KgtkFormat):
         if len(lift_column_idxs) != 1:
             raise ValueError("Expecting exactly one lift_column_idxs, got %d" % len(lift_column_idxs))
 
+<<<<<<< HEAD
         # Build the output column names.
         output_column_names: typing.List[str]
+=======
+        # Setup for language filtering:
+        language_filtering: bool = self.languages is not None and len(self.languages) > 0
+        allow_all_strings: bool = False
+        allow_all_lqstrings: bool = False
+        language_filter: typing.List[str] = list()
+        language_filter_tuple: typing.Tuple[str, ...] = ()
+        if language_filtering:
+            for lf in self.languages:
+                if lf == 'NONE':
+                    if self.prioritize:
+                        language_filter.append(lf)
+                    else:
+                        allow_all_strings = True
+                elif lf == 'ANY':
+                    if self.prioritize:
+                        language_filter.append(lf)
+                    else:
+                        allow_all_lqstrings = True
+                else:
+                    language_filter.append("'@" + lf)
+            language_filter_tuple = tuple(language_filter)
+
+        ew: KgtkWriter
+>>>>>>> dev
         lifted_output_column_idxs: typing.List[int]
         output_column_names, lifted_output_column_idxs = self.build_output_column_names(ikr, lift_column_idxs)
 
@@ -1006,10 +1189,66 @@ class KgtkLift(KgtkFormat):
 
                 # While the label records have node1 values equal to the value we are trying to lift,
                 # look for label values from the label file.
+                current_priority: int = 9999999 # Large numbers are low priority.
                 while more_labels and current_label_row is not None and current_label_row[label_match_column_idx] == value_to_lift:
                     if label_select_column_idx < 0 or current_label_row[label_select_column_idx] == label_select_column_value:
                         label_value: str = current_label_row[label_value_column_idx]
-                        if len(label_value) > 0:
+
+                        process_label: bool
+                        sigil: str
+                        if language_filtering:
+                            if len(label_value) == 0:
+                                # Empty values are not valid for language filtering.
+                                process_label = False
+                                
+                            elif self.prioritize:
+                                # We will not use a label value unless it passes one of
+                                # the priority-ordered filters.
+                                process_label = False
+                                sigil = label_value[0]
+                                priority: int
+                                lf: str
+                                for priority, lf in enumerate(language_filter):
+                                    if priority >= current_priority:
+                                        # A priori label is higher priority.
+                                        break
+
+                                    elif sigil == KgtkFormat.STRING_SIGIL:
+                                        # This is a KGTK string without language qualification.
+                                        if lf == "NONE":
+                                            # We will allow it.
+                                            current_priority = priority
+                                            process_label = True
+                                            break
+
+                                    elif sigil == KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL:
+                                        # This is a KGTK language-qualified string.
+                                        if lf == "ANY" or label_value.endswith(lf):
+                                            # We will allow it.
+                                            current_priority = priority
+                                            process_label = True
+                                            break
+
+                                    else:
+                                        # Do not allow values that are neither strings nor lqstrings.
+                                        break
+                                            
+                            else:
+                                # Optimized code for non-prioritized langiage selection.
+                                sigil = label_value[0]
+                                if sigil == KgtkFormat.STRING_SIGIL:
+                                    process_label = allow_all_strings
+
+                                elif sigil == KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL:
+                                    process_label = allow_all_lqstrings or label_value.endswith(language_filter_tuple)
+
+                                else:
+                                    # Do not allow values that are neither strings nor lqstrings.
+                                    process_label = False
+                        else:
+                            process_label = True
+
+                        if process_label:
                             # TODO: is this code positioned correctly?
                             if mlkw is not None:
                                 mlkw.write(current_label_row)
@@ -1100,6 +1339,7 @@ class KgtkLift(KgtkFormat):
             
 
         # Open the input file.
+        input_mode: typing.Optional[KgtkReaderMode] = KgtkReaderMode.NONE if self.force_input_mode_none else None
         if self.verbose:
             if self.input_file_path is not None:
                 print("Opening the input file: %s" % self.input_file_path, file=self.error_file, flush=True)
@@ -1107,14 +1347,14 @@ class KgtkLift(KgtkFormat):
                 print("Reading the input data from stdin", file=self.error_file, flush=True)
 
         ikr: KgtkReader =  KgtkReader.open(self.input_file_path,
-                                          error_file=self.error_file,
-                                          options=self.reader_options,
-                                          value_options = self.value_options,
-                                          verbose=self.verbose,
-                                          very_verbose=self.very_verbose,
+                                           error_file=self.error_file,
+                                           mode=input_mode,
+                                           options=self.input_reader_options,
+                                           value_options = self.value_options,
+                                           verbose=self.verbose,
+                                           very_verbose=self.very_verbose,
         )
 
-        # If supplied, open the label file.
         lkr: typing.Optional[KgtkReader] = None
         if self.label_file_path is not None:
             if self.verbose:
@@ -1125,7 +1365,7 @@ class KgtkLift(KgtkFormat):
 
             lkr =  KgtkReader.open(self.label_file_path,
                                    error_file=self.error_file,
-                                   options=self.reader_options,
+                                   options=self.label_reader_options,
                                    value_options = self.value_options,
                                    verbose=self.verbose,
                                    very_verbose=self.very_verbose,
@@ -1139,8 +1379,8 @@ class KgtkLift(KgtkFormat):
                                    require_all_columns=False,
                                    prohibit_extra_columns=True,
                                    fill_missing_columns=True,
-                                   use_mgzip=False if self.reader_options is None else self.reader_options.use_mgzip , # Hack!
-                                   mgzip_threads=3 if self.reader_options is None else self.reader_options.mgzip_threads , # Hack!
+                                   use_mgzip=False if self.input_reader_options is None else self.input_reader_options.use_mgzip , # Hack!
+                                   mgzip_threads=3 if self.input_reader_options is None else self.input_reader_options.mgzip_threads , # Hack!
                                    gzip_in_parallel=False,
                                    verbose=self.verbose,
                                    very_verbose=self.very_verbose)        
@@ -1164,8 +1404,8 @@ class KgtkLift(KgtkFormat):
                                    require_all_columns=False,
                                    prohibit_extra_columns=True,
                                    fill_missing_columns=True,
-                                   use_mgzip=False if self.reader_options is None else self.reader_options.use_mgzip , # Hack!
-                                   mgzip_threads=3 if self.reader_options is None else self.reader_options.mgzip_threads , # Hack!
+                                   use_mgzip=False if self.input_reader_options is None else self.input_reader_options.use_mgzip , # Hack!
+                                   mgzip_threads=3 if self.input_reader_options is None else self.input_reader_options.mgzip_threads , # Hack!
                                    gzip_in_parallel=False,
                                    verbose=self.verbose,
                                    very_verbose=self.very_verbose)        
@@ -1187,13 +1427,12 @@ class KgtkLift(KgtkFormat):
                                    require_all_columns=False,
                                    prohibit_extra_columns=True,
                                    fill_missing_columns=True,
-                                   use_mgzip=False if self.reader_options is None else self.reader_options.use_mgzip , # Hack!
-                                   mgzip_threads=3 if self.reader_options is None else self.reader_options.mgzip_threads , # Hack!
+                                   use_mgzip=False if self.input_reader_options is None else self.input_reader_options.use_mgzip , # Hack!
+                                   mgzip_threads=3 if self.input_reader_options is None else self.input_reader_options.mgzip_threads , # Hack!
                                    gzip_in_parallel=False,
                                    verbose=self.verbose,
                                    very_verbose=self.very_verbose)        
             
-
         if self.input_lifting_column_names is not None and len(self.input_lifting_column_names) == 1 and \
            (self.label_select_column_values is None or len(self.label_select_column_values) in (0, 1)) and \
            not self.suppress_empty_columns and \
@@ -1218,6 +1457,7 @@ def main():
     Test the KGTK lift processor.
 
     TODO: the unmodified row file path.
+    TODO: there are other missing options.
     """
     parser: ArgumentParser = ArgumentParser()
 
@@ -1331,6 +1571,8 @@ def main():
     KgtkReader.add_debug_arguments(parser)
     # TODO: seperate reader options for the label file.
     KgtkReaderOptions.add_arguments(parser, mode_options=True)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, who="input", defaults=False)
+    KgtkReaderOptions.add_arguments(parser, mode_options=True, who="label", defaults=False)
     KgtkValueOptions.add_arguments(parser)
 
     args: Namespace = parser.parse_args()
@@ -1338,7 +1580,8 @@ def main():
     error_file: typing.TextIO = sys.stdout if args.errors_to_stdout else sys.stderr
 
     # Build the option structures.                                                                                                                          
-    reader_options: KgtkReaderOptions = KgtkReaderOptions.from_args(args)
+    input_reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs, who="input", fallback=True)
+    label_reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs, who="label", fallback=True)
     value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
 
     # Show the final option structures for debugging and documentation.   
@@ -1385,7 +1628,8 @@ def main():
         print("--overwrite=%s" % repr(args.overwrite))
         print("--output-only-modified-rows=%s" % repr(args.output_only_modified_rows))
         
-        reader_options.show(out=error_file)
+        input_reader_options.show(out=error_file, who="input")
+        label_reader_options.show(out=error_file, who="label")
         value_options.show(out=error_file)
 
     kl: KgtkLift = KgtkLift(
@@ -1421,7 +1665,8 @@ def main():
         clear_before_lift=args.clear_before_lift,
         overwrite=args.overwrite,
 
-        reader_options=reader_options,
+        input_reader_options=input_reader_options,
+        label_reader_options=label_reader_options,
         value_options=value_options,
         error_file=error_file,
         verbose=args.verbose,

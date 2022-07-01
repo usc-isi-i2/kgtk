@@ -7,40 +7,52 @@ import pprint
 
 from requests.auth import HTTPBasicAuth
 from unidecode import unidecode
-from typing import List
+from typing import List, Tuple, Any
+
+valid_context_types = {'i', 'q', 'e', 'm', 'd'}
 
 
 class ElasticsearchManager(object):
     @staticmethod
-    def build_kgtk_search_input(kgtk_file_path,
-                                label_fields,
-                                mapping_file_path,
-                                output_path,
-                                alias_fields=None,
-                                pagerank_fields=None,
-                                add_text=False,
-                                description_properties=None,
-                                separate_languages=True,
-                                property_datatype_file=None
+    def build_kgtk_search_input(kgtk_file_path: str,
+                                label_fields: str,
+                                mapping_file_path: str,
+                                output_path: str,
+                                alias_fields: str = None,
+                                extra_alias_properties: str = None,
+                                pagerank_fields: str = None,
+                                add_text: bool = False,
+                                description_properties: str = None,
+                                separate_languages: bool = True,
+                                property_datatype_file: str = None,
+                                languages: set = None
                                 ):
         """
         builds a json lines file and a mapping file to support retrieval of candidates
-        It is assumed that the file is sorted by subject and predicate, in order to be able to process it in a streaming fashion
+        It is assumed that the file is sorted by subject and predicate, in order to be able to process it in a
+        streaming fashion
 
         Args:
-            kgtk_file_path: a file in KGTK format
-            label_fields: field in the kgtk file to be used as labels
-            mapping_file_path: output mapping file path for elasticsearch
-            output_path: output json lines path, converted from the input kgtk file
-            alias_fields: field in the kgtk file to be used as aliases
-            pagerank_fields: field in the kgtk file to be used as pagerank
-            black_list_file_path: path to black list file
-        Returns: Nothing
-
+        :param kgtk_file_path: input KGTK edge file
+        :param label_fields: comma separated properties to be used as labels
+        :param mapping_file_path: output file path for mapping json file
+        :param output_path: output json lines file path
+        :param alias_fields: comma separated properties to be used as aliases
+        :param extra_alias_properties: additional properties to be used as aliases
+        :param pagerank_fields: comma separated properties to be used as pagerank
+        :param add_text: concatenate english labels, aliases and descriptions in one text field
+        :param description_properties: comma separated properties to be used as descriptions
+        :param separate_languages: flag to store text in separate languages in different fields
+        :param property_datatype_file: input file with property datatype information
+        :param languages: a set of languages, for labels, aliases and descriptions
+        :return: None
         """
 
+        if languages is None:
+            languages = {'en'}
         labels = label_fields.split(',')
         aliases = alias_fields.split(',') if alias_fields else []
+        extra_aliases_properties = set(extra_alias_properties.split(',')) if extra_alias_properties else set()
         pagerank = pagerank_fields.split(',') if pagerank_fields else []
         descriptions = description_properties.split(',') if description_properties else []
 
@@ -81,6 +93,10 @@ class ElasticsearchManager(object):
         class_count = None
         context = None
         is_human = False
+        _extra_aliases = set()
+        _properties = set()
+        _external_identifiers = set()
+        _external_identifiers_pairs = set()
 
         _pagerank = 0.0
 
@@ -138,7 +154,11 @@ class ElasticsearchManager(object):
                                                                  property_count=property_count,
                                                                  class_count=class_count,
                                                                  context=context,
-                                                                 is_human=is_human
+                                                                 is_human=is_human,
+                                                                 extra_aliases=_extra_aliases,
+                                                                 properties=_properties,
+                                                                 external_identifiers=_external_identifiers,
+                                                                 external_identifiers_pairs=_external_identifiers_pairs
                                                                  )
                             # initialize for next node
                             _labels = dict()
@@ -164,6 +184,10 @@ class ElasticsearchManager(object):
                             class_count = None
                             context = None
                             is_human = False
+                            _extra_aliases = set()
+                            _properties = set()
+                            _external_identifiers = set()
+                            _external_identifiers_pairs = set()
 
                         qnode_statement_count += 1
                         if vals[label_id] in labels:
@@ -171,38 +195,40 @@ class ElasticsearchManager(object):
                                 tmp_val, lang = ElasticsearchManager.separate_language_text_tag(vals[node2_id])
                             else:
                                 tmp_val = ElasticsearchManager.remove_language_tag(vals[node2_id])
-                            if lang not in _labels:
-                                _labels[lang] = set()
-                                all_langs.add(lang)
+                            if lang in languages:
+                                if lang not in _labels:
+                                    _labels[lang] = set()
+                                    all_langs.add(lang)
 
-                            if tmp_val.strip() != '':
-                                _labels[lang].add(tmp_val)
-                                all_labels.add(tmp_val)
+                                if tmp_val.strip() != '':
+                                    _labels[lang].add(tmp_val)
+                                    all_labels.add(tmp_val)
 
-                                if lang in {'en', 'de', 'es', 'fr', 'it', 'pt'}:
-                                    # add transilerated value as well
-                                    _ascii_label = ElasticsearchManager.transliterate_label(tmp_val)
-                                    if _ascii_label != "" and _ascii_label not in all_labels:
-                                        ascii_labels.add(_ascii_label)
+                                    if lang in {'en', 'de', 'es', 'fr', 'it', 'pt'}:
+                                        # add transilerated value as well
+                                        _ascii_label = ElasticsearchManager.transliterate_label(tmp_val)
+                                        if _ascii_label != "" and _ascii_label not in all_labels:
+                                            ascii_labels.add(_ascii_label)
 
                         elif vals[label_id] in aliases:
                             if separate_languages:
                                 tmp_val, lang = ElasticsearchManager.separate_language_text_tag(vals[node2_id])
                             else:
                                 tmp_val = ElasticsearchManager.remove_language_tag(vals[node2_id])
-                            if lang not in _aliases:
-                                _aliases[lang] = set()
-                                all_langs.add(lang)
+                            if lang in languages:
+                                if lang not in _aliases:
+                                    _aliases[lang] = set()
+                                    all_langs.add(lang)
 
-                            if tmp_val.strip() != '':
-                                _aliases[lang].add(tmp_val)
-                                all_labels.add(tmp_val)
+                                if tmp_val.strip() != '':
+                                    _aliases[lang].add(tmp_val)
+                                    all_labels.add(tmp_val)
 
-                                if lang in {'en', 'de', 'es', 'fr', 'it', 'pt'}:
-                                    # add transilerated value as well
-                                    _ascii_alias = ElasticsearchManager.transliterate_label(tmp_val)
-                                    if _ascii_alias != "" and _ascii_alias not in all_labels:
-                                        ascii_labels.add(_ascii_alias)
+                                    if lang in {'en', 'de', 'es', 'fr', 'it', 'pt'}:
+                                        # add transilerated value as well
+                                        _ascii_alias = ElasticsearchManager.transliterate_label(tmp_val)
+                                        if _ascii_alias != "" and _ascii_alias not in all_labels:
+                                            ascii_labels.add(_ascii_alias)
 
                         elif vals[label_id] in pagerank:
                             tmp_val = ElasticsearchManager.to_float(vals[node2_id])
@@ -213,13 +239,14 @@ class ElasticsearchManager(object):
                                 tmp_val, lang = ElasticsearchManager.separate_language_text_tag(vals[node2_id])
                             else:
                                 tmp_val = ElasticsearchManager.remove_language_tag(vals[node2_id])
-                            if lang not in _descriptions:
-                                _descriptions[lang] = set()
-                                all_langs.add(lang)
-                            if tmp_val.strip() != '':
-                                _descriptions[lang].add(tmp_val)
+                            if lang in languages:
+                                if lang not in _descriptions:
+                                    _descriptions[lang] = set()
+                                    all_langs.add(lang)
+                                if tmp_val.strip() != '':
+                                    _descriptions[lang].add(tmp_val)
                         elif vals[label_id].strip() == 'isa_star' or vals[label_id].strip() == 'P39' \
-                                or vals[label_id].strip() == 'P106':
+                                or vals[label_id].strip() == 'P106' or vals[label_id].strip() == 'Pisa_star':
                             _instance_ofs.add(vals[node2_id])
                         elif vals[label_id].strip() == 'datatype':
                             data_type = vals[node2_id]
@@ -262,9 +289,32 @@ class ElasticsearchManager(object):
                         elif vals[label_id] == 'class_count':
                             class_count = vals[node2_id]
                         elif vals[label_id] == 'context':
-                            context = vals[node2_id]
+                            context_dict = ElasticsearchManager.parse_context_string(node1, vals[node2_id])
+                            context = context_dict[node1]
                         elif vals[label_id] == 'P31' and vals[node2_id] == 'Q5':
                             is_human = True
+                        elif vals[label_id] in extra_aliases_properties:
+                            if separate_languages:
+                                tmp_val, lang = ElasticsearchManager.separate_language_text_tag(vals[node2_id])
+                            else:
+                                tmp_val = ElasticsearchManager.remove_language_tag(vals[node2_id])
+
+                            if lang in languages:
+                                if tmp_val.strip() != '':
+                                    _extra_aliases.add(tmp_val)
+
+                                    if lang in {'en', 'de', 'es', 'fr', 'it', 'pt'}:
+                                        _ascii_label = ElasticsearchManager.transliterate_label(tmp_val)
+                                        if _ascii_label != "":
+                                            _extra_aliases.add(_ascii_label)
+
+                        if vals[label_id].startswith('P'):  # add to set of properties
+                            _properties.add(vals[label_id])
+
+                        if property_datatype_dict.get(vals[label_id], None) == 'external-id':
+                            ex_id = vals[node2_id].replace('"', "").strip()
+                            _external_identifiers.add(ex_id)
+                            _external_identifiers_pairs.add(f"{vals[label_id]}:{ex_id}")
 
             # do one more write for last node
             ElasticsearchManager._write_one_node(_labels=_labels,
@@ -289,9 +339,13 @@ class ElasticsearchManager(object):
                                                  property_count=property_count,
                                                  class_count=class_count,
                                                  context=context,
-                                                 is_human=is_human
+                                                 is_human=is_human,
+                                                 extra_aliases=_extra_aliases,
+                                                 properties=_properties,
+                                                 external_identifiers=_external_identifiers,
+                                                 external_identifiers_pairs=_external_identifiers_pairs
                                                  )
-        except:
+        except Exception:
             print(traceback.print_exc())
 
         mapping_dict = ElasticsearchManager.create_mapping_es(languages=list(all_langs))
@@ -318,7 +372,6 @@ class ElasticsearchManager(object):
         is_class = kwargs['is_class']
         wikitable_anchor_text = kwargs['wikitable_anchor_text']
         wikipedia_anchor_text = kwargs['wikipedia_anchor_text']
-        abbreviated_name = kwargs['abbreviated_name']
         redirect_text = kwargs['redirect_text']
         text_embedding = kwargs['text_embedding']
         graph_embeddings_complex = kwargs['graph_embeddings_complex']
@@ -328,6 +381,10 @@ class ElasticsearchManager(object):
         class_count = kwargs['class_count']
         context = kwargs['context']
         is_human = kwargs['is_human']
+        extra_aliases = kwargs['extra_aliases']
+        properties = kwargs['properties']
+        external_identifiers = kwargs['external_identifiers']
+        external_identifiers_pairs = kwargs['external_identifiers_pairs']
 
         _labels = {}
         _aliases = {}
@@ -409,6 +466,14 @@ class ElasticsearchManager(object):
                 _['context'] = context
             if len(abbreviated_names) > 0:
                 _['abbreviated_name'] = {'en': list(abbreviated_names)}
+            if len(extra_aliases) > 0:
+                _['extra_aliases'] = list(extra_aliases)
+            if len(properties) > 0:
+                _['properties'] = list(properties)
+            if len(external_identifiers) > 0:
+                _['external_identifiers'] = list(external_identifiers)
+            if len(external_identifiers_pairs) > 0:
+                _['external_identifiers_pairs'] = list(external_identifiers_pairs)
             output_file.write(json.dumps(_))
 
             output_file.write('\n')
@@ -445,7 +510,7 @@ class ElasticsearchManager(object):
     def to_float(input_str):
         try:
             return float(input_str)
-        except:
+        except Exception:
             return None
 
     @staticmethod
@@ -468,7 +533,7 @@ class ElasticsearchManager(object):
             'all_labels': {
                 'field_type': 'text',
                 'languages': languages,
-                'es_fields': ['keyword_lower', 'keyword', 'ngram'],
+                'es_fields': ['keyword_lower', 'keyword', 'ngram', 'trigram'],
                 'copy_to': [],
                 'enabled': True
             },
@@ -491,6 +556,27 @@ class ElasticsearchManager(object):
                 'languages': [],
                 'es_fields': ['keyword_lower', 'keyword'],
                 'copy_to': ['all_labels.en', 'all_labels_aliases'],
+                'enabled': True
+            },
+            'extra_aliases': {
+                'field_type': 'text',
+                'languages': [],
+                'es_fields': ['keyword_lower', 'keyword'],
+                'copy_to': ['all_labels.en', 'all_labels_aliases'],
+                'enabled': True
+            },
+            'external_identifiers': {
+                'field_type': 'text',
+                'languages': [],
+                'es_fields': ['keyword_lower', 'keyword'],
+                'copy_to': ['all_labels_aliases'],
+                'enabled': True
+            },
+            'external_identifiers_pairs': {
+                'field_type': 'text',
+                'languages': [],
+                'es_fields': ['keyword_lower', 'keyword'],
+                'copy_to': [],
                 'enabled': True
             },
             'class_count': {
@@ -526,6 +612,13 @@ class ElasticsearchManager(object):
                 'enabled': True
             },
             'instance_ofs': {
+                'field_type': 'text',
+                'languages': [],
+                'es_fields': ['keyword_lower'],
+                'copy_to': [],
+                'enabled': True
+            },
+            'properties': {
                 'field_type': 'text',
                 'languages': [],
                 'es_fields': ['keyword_lower'],
@@ -623,6 +716,12 @@ class ElasticsearchManager(object):
                         },
                         "edge_ngram_search_analyzer": {
                             "tokenizer": "lowercase"
+                        },
+                        "trigram_analyzer": {
+                            "tokenizer": "trigram_tokenizer",
+                            "filter": [
+                                "lowercase"
+                            ]
                         }
                     },
                     "tokenizer": {
@@ -633,6 +732,14 @@ class ElasticsearchManager(object):
                             "min_gram": "2",
                             "type": "edge_ngram",
                             "max_gram": "20"
+                        },
+                        "trigram_tokenizer": {
+                            "type": "ngram",
+                            "min_gram": 3,
+                            "max_gram": 4,
+                            "token_chars": [
+                                "letter"
+                            ]
                         }
                     }
                 }
@@ -697,7 +804,7 @@ class ElasticsearchManager(object):
                                                                es_pass=es_pass)
                     if response.status_code >= 400:
                         print(response.text)
-                except:
+                except Exception:
                     print('Exception while loading a batch to es')
                     print(response.text)
                     print(response.status_code)
@@ -812,7 +919,7 @@ class ElasticsearchManager(object):
                 }
 
                 if len(copy_to) > 0:
-                    _mapping[field_name]['copy_to'] = [copy_to]
+                    _mapping[field_name]['copy_to'] = copy_to if isinstance(copy_to, list) else [copy_to]
             else:
                 _mapping = {
                     field_name: {
@@ -855,15 +962,21 @@ class ElasticsearchManager(object):
                         "analyzer": "edge_ngram_analyzer",
                         "search_analyzer": "edge_ngram_search_analyzer"
                     }
+                elif es_field == "trigram":
+                    _mapping['fields'][es_field] = {
+                        "type": "text",
+                        "analyzer": "trigram_analyzer"
+                    }
+
         return _mapping
 
     @staticmethod
     def generate_abbreviations(name: str) -> List[str]:
-        '''
+        """
         Helper function to generate the abbreviation.
         Input: name_split: List of the words in a name
         Output: Abbreviated Name
-        '''
+        """
         name_split = name.split()
         abbreviated_names = set()
 
@@ -896,3 +1009,117 @@ class ElasticsearchManager(object):
                 abbr_label += name_split[i][0].upper() + '.' + ' '
         abbr_label += name_split[-1]
         return abbr_label
+
+    @staticmethod
+    def remove_text_inside_brackets(text, brackets="()"):
+        count = [0] * (len(brackets) // 2)  # count open/close brackets
+        saved_chars = []
+        for character in text:
+            for i, b in enumerate(brackets):
+                if character == b:  # found bracket
+                    kind, is_close = divmod(i, 2)
+                    count[kind] += (-1) ** is_close  # `+1`: open, `-1`: close
+                    if count[kind] < 0:  # unbalanced bracket
+                        count[kind] = 0  # keep it
+                    else:  # found bracket to remove
+                        break
+            else:  # character is not a [balanced] bracket
+                if not any(count):  # outside brackets
+                    saved_chars.append(character)
+        return ''.join(saved_chars).strip()
+
+    @staticmethod
+    def parse_context_string(qnode, context_string: str) -> dict:
+
+        context_dict = {
+            qnode: []
+        }
+
+        p_v_dict = {}
+        try:
+            if context_string:
+                prop_val_list = re.split(r'(?<!\\)\|', context_string)
+
+                for prop_val in prop_val_list:
+                    _type = prop_val[0]
+
+                    assert _type in valid_context_types, f"Invalid context type :{_type} found, Qnode: {qnode}," \
+                                                         f" property value string: {prop_val}"
+
+                    values, property, item = ElasticsearchManager.parse_prop_val(qnode, prop_val)
+
+                    if _type == 'd' and values.startswith("^"):
+                        values = values.replace("^", "")
+
+                    if item is None:
+                        key = property
+                        if key not in p_v_dict:
+                            p_v_dict[key] = {
+                                'p': property,
+                                "t": _type,
+                                'v': []
+                            }
+                        p_v_dict[key]['v'].append(values)
+
+                    else:
+                        key = f"{property}_{item}"
+                        if key not in p_v_dict:
+                            p_v_dict[key] = {
+                                'p': property,
+                                'i': item,
+                                'v': [],
+                                "t": _type
+                            }
+                        p_v_dict[key]['v'].append(values)
+        except Exception as e:
+            raise Exception(e)
+
+        for k in p_v_dict:
+            context_dict[qnode].append(p_v_dict[k])
+
+        return context_dict
+
+    @staticmethod
+    def parse_prop_val(qnode: str, property_value_string: str) -> Tuple[str, str, Any]:
+        line_started = False
+        string_value = list()
+
+        property_value_string = property_value_string[1:]
+
+        for i, c in enumerate(property_value_string):
+            if i == 0 and c == '"':  # start of the string value:
+                line_started = True
+            if line_started:
+                string_value.append(c)
+            if (i > 0 and c == '"' and property_value_string[i - 1] != "\\") \
+                    or \
+                    (i > 0 and c == '"' and property_value_string[i + 1] == ":" and property_value_string[
+                        i + 2] == "P"):
+                line_started = False
+        string_val = "".join(string_value)
+        length_remove = len(string_val) + 1  # ":" eg i"utc+01:00":P421:Q6655
+        rem_vals = property_value_string[length_remove:].split(":")
+        n = len(string_val)
+        string_val = string_val[1: n - 1]
+
+        property = rem_vals[0]
+
+        if not property.startswith('P'):
+            raise Exception(
+                f"Unexpected format of the context string, Qnode: {qnode}, context string: {property_value_string}. "
+                f"Property does not starts with 'P'")
+
+        if len(rem_vals) == 2:
+            item = rem_vals[1]
+            if not item.startswith('Q'):
+                raise Exception(
+                    f"Unexpected format of the context string, Qnode: {qnode}, context string: {property_value_string}"
+                    f". Item does not start with 'Q'")
+            return string_val, property, item
+
+        if len(rem_vals) == 1:
+            return string_val, property, None
+
+        if len(rem_vals) > 2:
+            raise Exception(
+                f"Unexpected format of the context string, Qnode: {qnode}, context string: {property_value_string}")

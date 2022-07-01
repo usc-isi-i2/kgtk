@@ -15,19 +15,21 @@
 # the input file twice (once as --input-file and once as --entity-label-file, both
 # of which must be specified on the command line).
 #
-from argparse import Namespace, SUPPRESS
+from argparse import Namespace
 import typing
 
 from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 
-DEFAULT_LABEL_PROPERTIES: typing.List[str] = [ "label" ]
-DEFAULT_DESCRIPTION_PROPERTIES: typing.List[str] = [ "description" ]
-DEFAULT_ISA_PROPERTIES: typing.List[str] = [ "P21", "P31", "P39", "P106", "P279" ]
-DEFAULT_HAS_PROPERTIES: typing.List[str] = [ ]
-DEFAULT_PROPERTY_VALUES: typing.List[str] = [ "P17" ]
+DEFAULT_LABEL_PROPERTIES: typing.List[str] = ["label"]
+DEFAULT_DESCRIPTION_PROPERTIES: typing.List[str] = ["description"]
+DEFAULT_ISA_PROPERTIES: typing.List[str] = ["P21", "P31", "P39", "P106", "P279"]
+DEFAULT_HAS_PROPERTIES: typing.List[str] = []
+DEFAULT_PROPERTY_VALUES: typing.List[str] = ["P17"]
 DEFAULT_SENTENCE_LABEL: str = "sentence"
+DEFAULT_LANGUAGE: str = "en"
 
-OUTPUT_COLUMNS: typing.List[str] = [ "node1", "label", "node2" ]
+OUTPUT_COLUMNS: typing.List[str] = ["node1", "label", "node2"]
+
 
 def parser():
     return {
@@ -35,8 +37,8 @@ def parser():
     }
 
 
-def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Namespace ):
-    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Namespace):
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
     from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
@@ -58,6 +60,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument("--description-properties", dest="description_properties", nargs="*",
                         help="The description properties. (default=%s)" % repr(DEFAULT_DESCRIPTION_PROPERTIES))
 
+    parser.add_argument("--language", dest="language", nargs="*",
+                        help="The label and description language. (default=%s)" % repr(DEFAULT_LANGUAGE))
+
     parser.add_argument("--isa-properties", dest="isa_properties", nargs="*",
                         help="The isa properties. (default=%s)" % repr(DEFAULT_ISA_PROPERTIES))
 
@@ -67,11 +72,13 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument("--property-values", dest="property_values", nargs="*",
                         help="The property values. (default=%s)" % repr(DEFAULT_PROPERTY_VALUES))
 
-    parser.add_argument('--sentence-label', action='store', type=str, dest='sentence_label', default=DEFAULT_SENTENCE_LABEL,
+    parser.add_argument('--sentence-label', action='store', type=str, dest='sentence_label',
+                        default=DEFAULT_SENTENCE_LABEL,
                         help="The relationship to write in the output file. (default=%(default)s)")
 
     parser.add_argument("--explain", dest="explain", metavar="True|False",
-                        help="When true, include an explanation column that tells how the sentence was constructed. (default=%(default)s).",
+                        help="When true, include an explanation column that tells how the sentence was constructed. "
+                             "(default=%(default)s).",
                         type=optional_bool, nargs='?', const=True, default=False)
 
     parser.add_argument("--presorted", dest="presorted", metavar="True|False",
@@ -83,7 +90,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         type=optional_bool, nargs='?', const=True, default=False)
 
     KgtkReader.add_debug_arguments(parser, expert=False)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=False)
+    KgtkReaderOptions.add_arguments(parser,
+                                    mode_options=True,
+                                    default_mode=KgtkReaderMode[parsed_shared_args._mode],
+                                    expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=False)
 
 
@@ -97,6 +107,7 @@ def run(input_file: KGTKFiles,
         has_properties: typing.Optional[typing.List[str]],
         property_values: typing.Optional[typing.List[str]],
         sentence_label: str,
+        language: str,
         explain: bool,
         presorted: bool,
         add_entity_labels_from_input: bool,
@@ -107,13 +118,12 @@ def run(input_file: KGTKFiles,
         verbose: bool = False,
         very_verbose: bool = False,
 
-        **kwargs # Whatever KgtkFileOptions and KgtkValueOptions want.
-)->int:
-        
+        **kwargs  # Whatever KgtkFileOptions and KgtkValueOptions want.
+        ) -> int:
     # import modules locally
     from pathlib import Path
     import sys
-    
+
     from kgtk.exceptions import KGTKException
 
     from kgtk.gt.lexicalize_utils import Lexicalize
@@ -150,12 +160,17 @@ def run(input_file: KGTKFiles,
     if property_values is None:
         property_values = DEFAULT_PROPERTY_VALUES
 
+    if language is None:
+        language = DEFAULT_LANGUAGE
+
     # Show the final option structures for debugging and documentation.
     if show_options:
         print("--input-file=%s" % str(input_kgtk_file), file=error_file, flush=True)
         if len(entity_label_kgtk_files) > 0:
-            print("--entity-label-files %s" % " ".join([str(f) for f in entity_label_kgtk_files]), file=error_file, flush=True)
+            print("--entity-label-files %s" % " ".join([str(f) for f in entity_label_kgtk_files]), file=error_file,
+                  flush=True)
         print("--output-file=%s" % str(output_kgtk_file), file=error_file, flush=True)
+        print("--language=%s" % str(language), file=error_file, flush=True)
 
         if len(label_properties) > 0:
             print("--label-properties %s" % " ".join(label_properties), file=error_file, flush=True)
@@ -180,13 +195,13 @@ def run(input_file: KGTKFiles,
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
 
-
     lexer: Lexicalize = Lexicalize(label_properties,
                                    description_properties,
                                    isa_properties,
                                    has_properties,
                                    property_values,
                                    sentence_label,
+                                   language=language,
                                    explain=explain,
                                    error_file=error_file,
                                    verbose=verbose,
@@ -198,7 +213,7 @@ def run(input_file: KGTKFiles,
                                       value_options,
                                       label_properties=label_properties,
                                       verbose=verbose)
-        
+
     kr: typing.Optional[KgtkReader] = None
     kw: typing.Optional[KgtkWriter] = None
 
@@ -207,7 +222,7 @@ def run(input_file: KGTKFiles,
             print("Opening the input file %s" % str(input_kgtk_file), file=error_file, flush=True)
         kr = KgtkReader.open(input_kgtk_file,
                              options=reader_options,
-                             value_options = value_options,
+                             value_options=value_options,
                              error_file=error_file,
                              verbose=verbose,
                              very_verbose=very_verbose,
@@ -221,15 +236,15 @@ def run(input_file: KGTKFiles,
             raise KGTKException("Missing column: node2 or alias")
 
         if verbose:
-            print("node1 column index = {}".format(kr.node1_column_idx),  file=error_file, flush=True)
-            print("label column index = {}".format(kr.label_column_idx),  file=error_file, flush=True)
-            print("node2 column index = {}".format(kr.node2_column_idx),  file=error_file, flush=True)
+            print("node1 column index = {}".format(kr.node1_column_idx), file=error_file, flush=True)
+            print("label column index = {}".format(kr.label_column_idx), file=error_file, flush=True)
+            print("node2 column index = {}".format(kr.node2_column_idx), file=error_file, flush=True)
 
         output_columns: typing.List[str] = OUTPUT_COLUMNS.copy()
         if explain:
-            output_columns.append("explaination")
+            output_columns.append("explanation")
             if verbose:
-                print("Including an explaination column in the output.", file=error_file, flush=True)
+                print("Including an explanation column in the output.", file=error_file, flush=True)
 
         if verbose:
             print("Opening the output file %s" % str(output_kgtk_file), file=error_file, flush=True)
@@ -256,6 +271,6 @@ def run(input_file: KGTKFiles,
     finally:
         if kw is not None:
             kw.close()
-            
+
         if kr is not None:
             kr.close()

@@ -77,7 +77,8 @@ usage: kgtk unique [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                    [--in WHERE_VALUES [WHERE_VALUES ...]]
                    [--value-filter VALUE_FILTER_RE]
                    [--value-match-type {fullmatch,match,search}]
-                   [--presorted [True|False]] [-v [optional True|False]]
+                   [--presorted [True|False]] [--min-count MIN_COUNT]
+                   [--max-count MAX_COUNT] [-v [optional True|False]]
 
 Count the unique values in a column in a KGTK file. Write the unique values and counts as a new KGTK file.
 
@@ -115,6 +116,14 @@ optional arguments:
   --presorted [True|False]
                         When True, the input file is presorted.
                         (default=False).
+  --min-count MIN_COUNT
+                        The minimum count output filter (does not apply to
+                        'node' format). The minimum and maximum count filters
+                        are conjunctive. (default=0).
+  --max-count MAX_COUNT
+                        The minimum count output filter (does not apply to
+                        'node' format). The minimum and maximum count filters
+                        are conjunctive. (default=999999999999999).
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).
@@ -243,3 +252,81 @@ kgtk unique -i examples/docs/unique-file1.tsv \
 | work | count | 3 |
 | zipcode | count | 8 |
 
+### Filter using the Minimum Count
+
+Without filtering:
+
+```bash
+kgtk unique -i examples/docs/unique-file1.tsv --column node1
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| eric | count | 1 |
+| john | count | 3 |
+| peter | count | 2 |
+| steve | count | 2 |
+
+Requiring a minimum count of 2:
+
+```bash
+kgtk unique -i examples/docs/unique-file1.tsv --column node1 --min-count 2
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| john | count | 3 |
+| peter | count | 2 |
+| steve | count | 2 |
+
+### Filter using the Maximum Count
+
+Without filtering:
+
+```bash
+kgtk unique -i examples/docs/unique-file1.tsv --column node1
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| eric | count | 1 |
+| john | count | 3 |
+| peter | count | 2 |
+| steve | count | 2 |
+
+Requiring a maximum count of 1:
+
+```bash
+kgtk unique -i examples/docs/unique-file1.tsv --column node1 --max-count 1
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| eric | count | 1 |
+
+### Filter using the Minimum and Maximum Counts
+
+Without filtering:
+
+```bash
+kgtk unique -i examples/docs/unique-file1.tsv --column node1
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| eric | count | 1 |
+| john | count | 3 |
+| peter | count | 2 |
+| steve | count | 2 |
+
+Filter with the 'and' of the minimum and maximum counts:
+
+```bash
+kgtk unique -i examples/docs/unique-file1.tsv --column node1 \
+            --min-count 2 --max-count 2
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| peter | count | 2 |
+| steve | count | 2 |

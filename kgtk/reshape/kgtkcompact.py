@@ -30,6 +30,10 @@ class KgtkCompact(KgtkFormat):
 
     key_column_names: typing.List[str] = attr.ib(validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
                                                                                          iterable_validator=attr.validators.instance_of(list)))
+
+    keep_first_names: typing.List[str] = attr.ib(validator=attr.validators.deep_iterable(member_validator=attr.validators.instance_of(str),
+                                                                                         iterable_validator=attr.validators.instance_of(list)))
+
     compact_id: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
     deduplicate: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
@@ -69,6 +73,8 @@ class KgtkCompact(KgtkFormat):
     current_row: typing.Optional[typing.List[str]] = None
     current_row_lists: typing.Optional[typing.List[typing.Optional[typing.List[str]]]] = None
 
+    keep_first_idx_list: typing.List[int] = [ ]        
+
     FIELD_SEPARATOR_DEFAULT: str = KgtkFormat.KEY_FIELD_SEPARATOR
 
     def build_key(self, row: typing.List[str], key_columns: typing.List[int])->str:
@@ -84,7 +90,10 @@ class KgtkCompact(KgtkFormat):
         return key
 
     def compact_row(self)->bool:
-        """Compact the current row. Return True if ther eis at least one list in the result, otherwise return False."""
+        """Compact the current row. Return True if there is at least one list in the
+        result, otherwise return False.
+
+        """
         if self.current_row_lists is None:
             return False
 
@@ -95,14 +104,17 @@ class KgtkCompact(KgtkFormat):
         saw_list: bool = False
         for idx, item_list in enumerate(self.current_row_lists):
             if item_list is not None:
+                if idx in self.keep_first_idx_list:
+                    item_list = sorted(item_list[:1]) # Ensure sorting.  Is this redundant?
+
+                if len(item_list) > 1:
+                    saw_list = True
                 # We don't need to use KgtkValue.join_unique_list(item_list)
                 # because self.merge_row(...) and self.expand_row(...) ensure that
                 # there are no duplicates.
                 #
                 # TODO: run timing studies to determine which approach is more efficient.
                 self.current_row[idx] = KgtkValue.join_sorted_list(item_list)
-                if len(item_list) > 1:
-                    saw_list = True
         self.current_row_lists = None
         return saw_list
 
@@ -273,8 +285,9 @@ class KgtkCompact(KgtkFormat):
                                           verbose=self.verbose,
                                           very_verbose=self.very_verbose,
         )
+        self.id_column_idx = kr.id_column_idx
 
-        # If requested, creat the ID column builder.
+        # If requested, create the ID column builder.
         # Assemble the list of output column names.
         output_column_names: typing.List[str]
         idb: typing.Optional[KgtkIdBuilder] = None
@@ -289,12 +302,7 @@ class KgtkCompact(KgtkFormat):
         # Build the list of key column edges:
         key_idx_list: typing.List[int] = [ ]
 
-        if self.deduplicate:
-            # Use the columns in the order the appear in the input file.  If you want to
-            # use --presorted, then the input needs to be sorted the same way.
-            key_idx_list = range(kr.column_count)
-            
-        elif len(self.key_column_names) == 0:
+        if len(self.key_column_names) == 0:
             if kr.is_edge_file:
                 # Add the KGTK edge file required columns.
                 key_idx_list.append(kr.node1_column_idx)
@@ -311,24 +319,55 @@ class KgtkCompact(KgtkFormat):
                 raise ValueError("The input file is neither an edge nor a node file.  Key columns must be supplied.")
 
         else:
-            # Append additional columns to the list of key column indices,
+            # Append columns to the list of key column indices,
             # silently removing duplicates, but complaining about unknown names.
             #
             # TODO: warn about duplicates?
             column_name: str
             for column_name in self.key_column_names:
                 if column_name not in kr.column_name_map:
-                    raise ValueError("Column %s is not in the input file" % (column_name))
+                    raise ValueError("Column %s is not in the input file" % (repr(column_name)))
                 key_idx: int = kr.column_name_map[column_name]
                 if key_idx not in key_idx_list:
                     key_idx_list.append(key_idx)
 
         if self.verbose:
+            print("key indexes: %s" % " ".join([str(idx) for idx in key_idx_list]), file=self.error_file, flush=True)
+
+        self.keep_first_idx_list.clear()
+        if len(self.keep_first_names) > 0:
+            keep_first_name: str
+            for keep_first_name in self.keep_first_names:
+                if keep_first_name not in kr.column_name_map:
+                    raise ValueError("Keep first column %s is not in the input file" % (repr(keep_first_name)))
+                keep_first_idx: int = kr.column_name_map[keep_first_name]
+                if keep_first_idx in key_idx_list:
+                    raise ValueError("Keep first column %s may not be a key column" % (repr(keep_first_name)))
+                self.keep_first_idx_list.append(keep_first_idx)
+            if self.verbose:
+                print("keep first indexes: %s" % " ".join([str(idx) for idx in self.keep_first_idx_list]), file=self.error_file, flush=True)
+
+        if self.deduplicate:
+            if  self.compact_id and kr.id_column_idx >= 0 and kr.id_column_idx not in self.keep_first_idx_list:
+                self.keep_first_idx_list.append(kr.id_column_idx)
+
+            # Any columns that aren't in the keep_first list and aren't
+            # already in key_idx_list will be appended to key_idx_list:
+            idx: int
+            for idx in range(kr.column_count):
+                if idx not in self.keep_first_idx_list and idx not in key_idx_list:
+                    key_idx_list.append(idx)
+
+            if self.verbose:
+                print("revised key indexes: %s" % " ".join([str(idx) for idx in key_idx_list]), file=self.error_file, flush=True)
+
+            
+        if self.verbose:
             key_idx_list_str: typing.List[str] = [ ]
             for key_idx in key_idx_list:
                 key_idx_list_str.append(str(key_idx))
             print("key indexes: %s" % " ".join(key_idx_list_str), file=self.error_file, flush=True)
-            
+
         # Open the output file.
         ew: KgtkWriter = KgtkWriter.open(output_column_names,
                                          self.output_file_path,
@@ -434,7 +473,7 @@ class KgtkCompact(KgtkFormat):
                                                                                self.excluded_row_count,
                                                                                self.output_line_count),
                   file=self.error_file, flush=True)
-            if lewh is not None:
+            if lew is not None:
                 print("Wrote %d list ouput records." % (self.list_output_line_count), file=self.error_file, flush=True)
         
         ew.close()
@@ -454,6 +493,10 @@ def main():
     parser.add_argument(      "--columns", dest="key_column_names",
                               help="The key columns to identify records for compaction. " +
                               "(default=id for node files, (node1, label, node2, id) for edge files).", nargs='+', default=[ ])
+
+    parser.add_argument(      "--keep-first", dest="keep_first_names",
+                              help="If compaction results in a list of values for any column on this list, keep only the first value after sorting. " +
+                              "(default=none).", nargs='+', default=[ ])
 
     parser.add_argument(      "--compact-id", dest="compact_id",
                               help="Indicate that the ID column in KGTK edge files should be compacted. " +
@@ -516,6 +559,7 @@ def main():
         print("input: %s" % str(args.input_file_path), file=error_file, flush=True)
         print("--output-file=%s" % str(args.output_file_path), file=error_file, flush=True)
         print("--columns %s" % " ".join(args.key_column_names), file=error_file, flush=True)
+        print("--keep-first %s" % " ".join(args.keep_first_names), file=error_file, flush=True)
         print("--compact-id=%s" % str(args.compact_id), file=error_file, flush=True)
         print("--deduplicate=%s" % str(args.deduplicate), file=error_file, flush=True)
         print("--presorted=%s" % str(args.sorted_input), file=error_file, flush=True)
@@ -532,6 +576,7 @@ def main():
     kc: KgtkCompact = KgtkCompact(
         input_file_path=args.input_file_path,
         key_column_names=args.key_column_names,
+        keep_first_names=args.keep_first_names,
         compact_id=args.compact_id,
         deduplicate=args.deduplicate,
         sorted_input=args.sorted_input,

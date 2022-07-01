@@ -14,15 +14,13 @@ It should not be used to compact the `node2` column of a KGTK edge file.
 duplicate edges are removed without compacting any columns into
 [multi-valued edges (`|` lists)](../../specification#multi-valued-edges).
 
-!!! note
-    If you wish to use deduplicate mode with a presorted input file, the
-    sort key needs to be the entire set of columns in the input file in
-    the order in which they appear in the file.
-
-    If it is difficult to ascertain the order in which columns appear in
-    the input file, an alternative approach is to list all the column names
-    in some order to the sort command, then list them in that order to
-    `kgtk compact --columns`.
+All columns will be selected as key columns, except for columns that are
+included in the `--keep-first` first.  if `--compact-id` is specified, than
+the ID column (or its alias) will be included in the `--keep-first`
+list. Columns included in `--columns` will be first, in the order specified,
+then the remaining columns (except for columns that are included in the
+`--keep-first` list) in the order that they appear in the file's header
+record.
 
 ### Creating Multi-value Edges
 
@@ -47,8 +45,7 @@ The compacted result would be:
 Compaction occurs by grouping records on a set of key columns,
 then compacting the records into a single output record.
 
-When `--deduplicate=TRUE`, all columns will be used as key columns, in the order in which they appear
-in the input file's header record.  This overrides `--columns` and `--compact-id`.
+When `--deduplicate=TRUE`, all columns will be used as key columns, other than `--keep-first` columns.
 
 For KGTK node files, the default key is (`id`).
 The `--columns KEY_COLUMN_NAMES ...` option may be used to add additional columns to this list.
@@ -64,7 +61,7 @@ When `--mode=NONE` is specified, there is no default key.
 The `--columns KEY_COLUMN_NAMES ...` option *MUST* be used to add additional columns to this list.
 
 !!! note
-    The key column order with an `id` column is not the same as is used in most
+    The key column order with an `id` column is not the same as is used in some
     other KGTK commands.  It may change in the future.
 
 ### `id` Generation
@@ -132,6 +129,7 @@ usage: kgtk compact [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                     [--columns KEY_COLUMN_NAMES [KEY_COLUMN_NAMES ...]]
                     [--compact-id [True|False]] [--deduplicate [True|False]]
                     [--lists-in-input [LISTS_IN_INPUT]]
+                    [--keep-first KEEP_FIRST_NAMES [KEEP_FIRST_NAMES ...]]
                     [--presorted [True|False]] [--verify-sort [True|False]]
                     [--report-lists [REPORT_LISTS]]
                     [--exclude-lists [EXCLUDE_LISTS]]
@@ -161,7 +159,9 @@ optional arguments:
                         stdout.)
   --list-output-file LIST_OUTPUT_FILE
                         A KGTK output file that will contain only the rows
-                        containing lists. (Optional, use '-' for stdout.)
+                        containing lists. This file will have the same columns
+                        as the primary output file. (Optional, use '-' for
+                        stdout.)
   --columns KEY_COLUMN_NAMES [KEY_COLUMN_NAMES ...]
                         The key columns to identify records for compaction.
                         (default=id for node files, (node1, label, node2, id)
@@ -180,6 +180,10 @@ optional arguments:
   --lists-in-input [LISTS_IN_INPUT]
                         Assume that the input file may contain lists (disable
                         when certain it does not). (default=True).
+  --keep-first KEEP_FIRST_NAMES [KEEP_FIRST_NAMES ...]
+                        If compaction results in a list of values for any
+                        column on this list, keep only the first value after
+                        sorting. (default=none).
   --presorted [True|False]
                         Indicate that the input has been presorted (or at
                         least pregrouped) (default=False).
@@ -442,6 +446,52 @@ The output will be the following table in KGTK format:
 !!! note
     The default key is (`node1`, `label`, `node2`, `id`).
 
+### Compact with Default Keys and `--compact-id`
+
+Compacting with the tuple (`node1`, `label`, `node2`) and `--compact-id`.
+
+```bash
+kgtk compact -i examples/docs/compact-file3.tsv \
+             --compact-id
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | id | location | years |
+| -- | -- | -- | -- | -- | -- |
+| john | zipcode | 12345 | 1 | home | 10 |
+| john | zipcode | 12346 | 2 |  |  |
+| peter | zipcode | 12040 | 3\|4 | cabin\|home\|work | 5\|6 |
+| steve | zipcode | 45601 | 5\|6 | cabin\|home\|work | 1\|2\|3\|4\|5 |
+
+!!! note
+    The default key is (`node1`, `label`, `node2`, `id`),
+    byt `--compact-id` removes `id` from the default key.
+
+### Compact with Default Keys and `--keep-first`
+
+Compacting with the tuple (`node1`, `label`, `node2`, `id`) (the default
+for a KGTK edge file) as the key, and `--keep-first location years`.
+
+```bash
+kgtk compact -i examples/docs/compact-file3.tsv \
+             --keep-first location years
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | id | location | years |
+| -- | -- | -- | -- | -- | -- |
+| john | zipcode | 12345 | 1 | home | 10 |
+| john | zipcode | 12346 | 2 |  |  |
+| peter | zipcode | 12040 | 3 | home |  |
+| peter | zipcode | 12040 | 4 | cabin | 5 |
+| steve | zipcode | 45601 | 5 |  | 3 |
+| steve | zipcode | 45601 | 6 | home | 1 |
+
+!!! note
+    The default key is (`node1`, `label`, `node2`, `id`).
+
 ### Compacting on the ID Column
  
 Since the `id` values are not duplicated between (`node1`, `label`, `node2`)
@@ -533,6 +583,57 @@ The output will be the following table in KGTK format:
 
 The output is sorted and duplicate lines have been removed, without creating any new
 [multi-valued edges (`|` lists)](../../specification#multi-valued-edges).
+
+### Deduplication with `--keep-first`
+
+```bash
+kgtk deduplicate -i examples/docs/compact-file4.tsv \
+                 --keep-first location years
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | location | years |
+| -- | -- | -- | -- | -- |
+| john | zipcode | 12345 | home | 10 |
+| john | zipcode | 12346 |  |  |
+| peter | zipcode | 12040 | home | 5 |
+| steve | zipcode | 45601 | work | 2 |
+
+### Deduplication with `--keep-first` and an `id` Column
+
+```bash
+kgtk deduplicate -i examples/docs/compact-file3.tsv \
+                 --keep-first location years
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | id | location | years |
+| -- | -- | -- | -- | -- | -- |
+| john | zipcode | 12345 | 1 | home | 10 |
+| john | zipcode | 12346 | 2 |  |  |
+| peter | zipcode | 12040 | 3 | home |  |
+| peter | zipcode | 12040 | 4 | cabin | 5 |
+| steve | zipcode | 45601 | 5 |  | 3 |
+| steve | zipcode | 45601 | 6 | home | 1 |
+
+### Deduplication with `--compact-id` and `--keep-first`
+
+```bash
+kgtk deduplicate -i examples/docs/compact-file3.tsv \
+                 --keep-first location years \
+                 --compact-id
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | id | location | years |
+| -- | -- | -- | -- | -- | -- |
+| john | zipcode | 12345 | 1 | home | 10 |
+| john | zipcode | 12346 | 2 |  |  |
+| peter | zipcode | 12040 | 3 | home | 5 |
+| steve | zipcode | 45601 | 5 | home | 3 |
 
 ### Reporting Rows with Lists
  

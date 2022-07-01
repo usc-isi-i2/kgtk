@@ -21,7 +21,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     Args:
         parser (argparse.ArgumentParser)
     """
-    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
+    from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
     from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
@@ -54,6 +54,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                            dest="activated_mapping_file",
                            options=["--activated-mapping-edges-file"],
                            metavar="ACTIVATED_MAPPING_EDGES_FILE",
+                           optional=True)
+
+    parser.add_output_file(who="A KGTK output file that will contain rejected mapping edges.",
+                           dest="rejected_mapping_file",
+                           options=["--rejected-mapping-edges-file"],
+                           metavar="REJECTED_MAPPING_EDGES_FILE",
                            optional=True)
 
     parser.add_argument(      "--confidence-column", dest="confidence_column_name",
@@ -125,7 +131,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               help=h("The name of the node2 column in the mapping file.  (default=node2 or its alias)"))
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
-    KgtkReaderOptions.add_arguments(parser, mode_options=True, expert=_expert)
+    KgtkReaderOptions.add_arguments(parser,
+                                    mode_options=True,
+                                    default_mode=KgtkReaderMode[parsed_shared_args._mode],
+                                    expert=_expert)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="input", expert=_expert, defaults=False)
     KgtkReaderOptions.add_arguments(parser, mode_options=True, who="mapping", expert=_expert, defaults=False)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
@@ -135,6 +144,7 @@ def run(input_file: KGTKFiles,
         mapping_file: KGTKFiles,
         unmodified_edges_file: KGTKFiles,
         activated_mapping_file: KGTKFiles,
+        rejected_mapping_file: KGTKFiles,
 
         confidence_column_name: str,
         require_confidence: bool,
@@ -179,6 +189,7 @@ def run(input_file: KGTKFiles,
     mapping_kgtk_file: Path = KGTKArgumentParser.get_input_file(mapping_file, who="KGTK mappping file")
     unmodified_edges_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(unmodified_edges_file, who="KGTK unmodified edges output file")
     activated_mapping_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(activated_mapping_file, who="KGTK activated mapping output file")
+    rejected_mapping_kgtk_file: typing.Optional[Path] = KGTKArgumentParser.get_optional_output_file(rejected_mapping_file, who="KGTK rejected mapping output file")
 
     # Select where to send error messages, defaulting to stderr.
     error_file: typing.TextIO = sys.stdout if errors_to_stdout else sys.stderr
@@ -197,6 +208,8 @@ def run(input_file: KGTKFiles,
             print("--unmodified-edges-file=%s" % repr(str(unmodified_edges_kgtk_file)), file=error_file, flush=True)
         if activated_mapping_kgtk_file is not None:
             print("--activated-mapping-edges-file=%s" % repr(str(activated_mapping_kgtk_file)), file=error_file, flush=True)
+        if rejected_mapping_kgtk_file is not None:
+            print("--rejected-mapping-edges-file=%s" % repr(str(rejected_mapping_kgtk_file)), file=error_file, flush=True)
 
         print("--confidence-column=%s" % repr(confidence_column_name), file=error_file, flush=True)
         print("--require-confidence=%s" % repr(require_confidence), file=error_file, flush=True)
@@ -271,6 +284,19 @@ def run(input_file: KGTKFiles,
             mkr.close()
             raise KGTKException("The mapping file does not have a confidence column, and confidence is required.")
         
+        rmkw: typing.Optional[KgtkWriter] = None
+        if rejected_mapping_kgtk_file is not None:
+            if verbose:
+                print("Opening the rejected mapping edges file %s." % repr(str(rejected_mapping_kgtk_file)), file=error_file, flush=True)
+            rmkw = KgtkWriter.open(mkr.column_names,
+                                   rejected_mapping_kgtk_file,
+                                   mode=KgtkWriter.Mode[mkr.mode.name],
+                                   use_mgzip=input_reader_options.use_mgzip, # Hack!
+                                   mgzip_threads=input_reader_options.mgzip_threads, # Hack!
+                                   error_file=error_file,
+                                   verbose=verbose,
+                                   very_verbose=very_verbose)
+
         # Mapping structures:
         item_map: typing.MutableMapping[str, str] = dict()
         item_line_map: typing.MutableMapping[str, int] = dict()
@@ -312,6 +338,8 @@ def run(input_file: KGTKFiles,
                         continue
             if mapping_confidence is not None and mapping_confidence < confidence_threshold:
                 mapping_confidence_exclusions += 1
+                if rmkw is not None:
+                    rmkw.write(mrow)
                 continue
 
             if mapping_node1 == mapping_node2 and not allow_idempotent_mapping:
@@ -358,6 +386,8 @@ def run(input_file: KGTKFiles,
 
         # Close the mapping file.
         mkr.close()
+        if rmkw is not None:
+            rmkw.close()
 
         if mapping_errors > 0:
             raise KGTKException("%d errors detected in the mapping file %s" % (mapping_errors, repr(str(mapping_kgtk_file))))

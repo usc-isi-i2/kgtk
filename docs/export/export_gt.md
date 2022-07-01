@@ -13,6 +13,8 @@ optional arguments:
                         saved. (Optional, use '-' for stdout.)
   --directed            Is the graph directed or not?
   --log LOG_FILE        Log file for summarized statistics of the graph.
+  --node-file NODE_FILE
+                        Specify the location of node file.
 ```
 
 ## Examples
