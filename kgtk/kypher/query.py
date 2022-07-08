@@ -217,7 +217,8 @@ class KgtkQuery(object):
             alias = self.get_input_option(file, 'alias')
             comment = self.get_input_option(file, 'comment')
             index_specs = self.get_input_option(file, 'index_specs')
-            store.add_graph(file, alias=alias, index_specs=index_specs)
+            append_files = self.get_input_option(file, 'append')
+            store.add_graph(file, alias=alias, index_specs=index_specs, append=append_files)
             # use aliases for handle matching, otherwise unnormalized files except for stdin:
             norm_file = store.get_normalized_file(file, alias=alias)
             if store.is_standard_input(file):
