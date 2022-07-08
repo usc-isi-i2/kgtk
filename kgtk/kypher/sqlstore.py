@@ -890,11 +890,21 @@ class SqliteStore(SqlStore):
             # perform step 1 of vector data import, step 2 indexing is done by the caller:
             self.import_graph_vector_data_via_csv(table, file, index_specs=vector_specs)
         else:
-            fast_import = False
             # fast import runs in a separate process at the shell level, so we cannot use it here
-            # if we are currently inside a transaction on this connection, since the DB will be locked:
-            # TO DO: see if we can perform explicit post-hoc cleanup in case something crashes here,
-            #        given that our local transactions will not handle this case:
+            # if we are currently inside a transaction on this connection, since the DB will be locked
+            # TRANSACTION NOTES: this will still generally do the right thing with cleanup, even though it
+            # runs in its own process and transaction handling; here are the worst things that might happen:
+            # 1. the data table was created but then the import phase was interrupted somehow, and we wind
+            #    up with an empty graph 'table' which will simply be ignored after that
+            # 2. all the data gets imported but then something goes wrong during the info table update
+            #    which means the graph table is full but will be ignored down the road; if this happens
+            #    during append, the info table will have incorrect size/timestamp but otherwise be correct;
+            #    the window for that is extremely small and chances for that to happen are very low
+            # 3. if the data import phase gets interrupted, the database will have produced a journal file
+            #    which will rollback the partial import during the next call to sqlite on this graph cache
+            # so the only case that might need some cleanup is case 2 which doesn't corrupt anything
+            # but just wastes space, so that could be deferred to be handled manually for now
+            fast_import = False
             if not self.in_transaction():
                 try:
                     # try fast shell-based import first, but if that is not applicable or supported...
@@ -912,7 +922,12 @@ class SqliteStore(SqlStore):
             self.set_file_info(file, size=0, modtime=time.time(), graph=table)
         else:
             self.set_file_info(file, size=os.path.getsize(file), modtime=os.path.getmtime(file), graph=table)
-        self.set_graph_info(table, header=header, size=graphsize, acctime=time.time())
+        if append:
+            # just update changed size and access time:
+            ginfo = self.get_graph_info(table)
+            self.set_graph_info(table, size=int(ginfo.size)+graphsize, acctime=time.time())
+        else:
+            self.set_graph_info(table, header=header, size=graphsize, acctime=time.time())
         if alias is not None:
             self.set_file_alias(file, alias)
             
