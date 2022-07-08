@@ -811,6 +811,22 @@ class VectorIndex(TableIndex):
                 and self.index.columns.keys() == index.index.columns.keys()
                 and self != index)
 
+    def redefines_store(self, index):
+        """Return True if 'self' is different from 'index' and redefines its vector storage options.
+        """
+        if self.redefines(index):
+            for column1, options1 in self.index.columns.items():
+                options2 = index.index.columns[column1]
+                if options1.store != options2.store or options1.dtype != options2.dtype or options1.norm != options2.norm:
+                    return True
+        return False
+
+    def redefines_quantizer(self, index):
+        """Return True if 'self' is different from 'index' but redefines its quantizer index only.
+        """
+        return self.redefines(index) and not self.redefines_store(index)
+    
+
 """
 >>> TableIndex('graph1', 'node1, label, node2')
 StandardIndex('graph1', sdict['type': 'index', 'columns': sdict['node1': {}, 'label': {}, 'node2': {}], 'options': {}])
