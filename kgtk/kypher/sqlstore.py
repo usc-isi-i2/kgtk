@@ -192,6 +192,8 @@ class SqliteStore(SqlStore):
                 self.conn = sqlite3.connect(f'file:{self.dbfile}?mode=ro', uri=True)
             else:
                 self.conn = sqlite3.connect(self.dbfile)
+                # use explicit transaction management via BEGIN/COMMIT:
+                self.conn.isolation_level = None
         return self.conn
 
     def get_sqlite_cmd(self):
@@ -227,6 +229,20 @@ class SqliteStore(SqlStore):
         else:
             return self.get_conn().executemany(*args, **kwargs)
 
+    def in_transaction(self):
+        """Return True if we are currently in the scope of a transaction.
+        """
+        return self.get_conn().in_transaction
+            
+    def ensure_transaction(self, type='DEFERRED'):
+        """Ensure a transaction of 'type' has been started.  If we are currently
+        inside a transaction, this is a no-op, which means a change of 'type'
+        can only happen after a COMMIT has ended the current transaction.
+        """
+        if not self.in_transaction():
+            self.log(2, f'BEGIN {type} TRANSACTION')
+            self.execute(f'BEGIN {type} TRANSACTION')
+            
     def commit(self):
         """Commit all updates of the current transaction to the database.
         This should only be called after complete and internally consistent
@@ -667,6 +683,7 @@ class SqliteStore(SqlStore):
         if not self.has_graph_index(table_name, index):
             if self.readonly:
                 return
+            self.ensure_transaction()
             loglevel = 0 if explain else 1
             indexes = self.get_graph_indexes(table_name)
             # delete anything that is redefined by this 'index':
@@ -779,42 +796,115 @@ class SqliteStore(SqlStore):
         """
         return self.determine_graph_action(file, alias=alias, error=False) == 'reuse'
 
-    def add_graph(self, file, alias=None, index_specs=None, commit=True):
+    def add_graph(self, file, alias=None, index_specs=None, append=None, commit=True):
         """Import a graph from 'file' (and optionally named by 'alias') unless a matching
         graph has already been imported earlier according to 'has_graph' (which see).
         'index_specs' is a list of index specifications relevant to the import of this graph.
+        'append' can be one or more files whose data should be appended to the graph identified
+        by 'file'.  If any to-be-appended file already exists in the info table, it will simply
+        be ignored and the data reused.  Updating of appended data is not supported, however,
+        the whole graph can be replaced with data from a new 'file'.  Appended data needs
+        to match the columns of the data that it is appended to, however, no other checking
+        for duplicates, etc. is performed.  Data is simply treated as if it had been appended
+        to the original data file.  Reordering of columns is supported for the cost of some
+        import speed.
         """
+        # TO DO: make this less messy and hairy...
         graph_action = self.determine_graph_action(file, alias=alias)
+        file_info = self.get_file_info(file, alias=alias)
+
+        # determine what we have to do with the supplied file if anything:
         if graph_action == 'reuse':
             if alias is not None:
                 # this allows us to do multiple renamings (no-op if we are readonly):
                 self.set_file_alias(file, alias)
-            return
-        file_info = self.get_file_info(file, alias=alias)
+        if self.readonly and graph_action != 'reuse':
+            raise KGTKException(f"cannot import or update {file} in read-only mode")
+
+        # determine the graph table we are operating on:
+        if graph_action != 'reuse':
+            table = self.new_graph_table()
+        else:
+            table = file_info.graph
+
+        # vector tables are handled in two steps, vector data import and indexing, and we have
+        # to figure out whether one or both steps need to be redone upon index redefinition:
+        vector_spec = self.get_vector_index_specs(table, index_specs)
+        vector_spec = self.normalize_vector_index_specs(table, vector_spec) if vector_spec else None
+        if graph_action == 'reuse' and vector_spec and not self.readonly:
+            for idx in self.get_vector_indexes(table):
+                if vector_spec.redefines_store(idx):
+                    graph_action = 'replace'
+                    table = self.new_graph_table()
+                    vector_spec.table = table
+                    break
+
+        if graph_action != 'reuse':
+            # import main data:
+            self.add_graph_data(table, file, alias=alias, index_specs=index_specs, append=False)
         if graph_action == 'replace':
-            # we already have an earlier version of the file in store:
-            if self.readonly:
-                # reuse it:
-                return
-            else:
-                # delete its graph data before importing new version:
-                self.drop_graph(file_info.graph)
-        if self.readonly:
-            raise KGTKException(f"cannot import {file} in read-only mode")
+            # delete any old graph data *after* we replaced with new version to not lose anything in case of error:
+            # TRICKY: we already pointed the new file_info.graph to the new table, so it won't be deleted here:
+            self.drop_graph(file_info.graph)
+
+        if vector_spec:
+            # handle step 2 of vector index creation:
+            self.ensure_graph_index(table, vector_spec, commit=False)
+        if commit and self.in_transaction():
+            # top-level OP, commit successful DB, index and info updates:
+            if vector_spec:
+                self.get_vector_store().commit()
+            self.commit()
+
+        # append any additional data files:
+        for afile in listify(append):
+            graph_action = self.determine_graph_action(afile)
+            file_info = self.get_file_info(afile)
+            if graph_action == 'replace':
+                if self.readonly:
+                    graph_action = 'reuse'
+                else:
+                    raise KGTKException(f"cannot replace {afile} in append mode")
+            if graph_action == 'reuse' and file_info.graph != table:
+                # each file must correspond to exactly one graph:
+                raise KGTKException(f"{afile} is already in use by a different graph: {table}")
+            if graph_action == 'add':
+                self.add_graph_data(table, afile, index_specs=index_specs, append=True)
+                if commit:
+                    # top-level OP, commit successful DB and info updates:
+                    self.commit()
+
+    def add_graph_data(self, table, file, alias=None, index_specs=None, append=False):
+        """Low-level implementation of 'add_graph'.  Import data for graph 'table' from 'file'
+        or add it to an existing graph if 'append' is True.  Uses a fast direct import
+        if possible, otherwise falls back on a 2x slower csv.reader-based import of the data.
+        'index_specs' is a list of index specifications relevant to the import of this graph.
+        """
         file = self.normalize_file_path(file)
-        table = self.new_graph_table()
         oldsize = self.get_db_size()
         vector_specs = self.get_vector_index_specs(table, index_specs)
-        indexes = []
         if len(vector_specs) > 0:
-            indexes += self.import_graph_vector_data_via_csv(table, file, index_specs=vector_specs)
+            if append:
+                raise KGTKException('cannot append to vector data')
+            self.ensure_transaction()
+            # perform step 1 of vector data import, step 2 indexing is done by the caller:
+            self.import_graph_vector_data_via_csv(table, file, index_specs=vector_specs)
         else:
-            try:
-                # try fast shell-based import first, but if that is not applicable...
-                self.import_graph_data_via_import(table, file)
-            except (KGTKException, sh.CommandNotFound):
+            fast_import = False
+            # fast import runs in a separate process at the shell level, so we cannot use it here
+            # if we are currently inside a transaction on this connection, since the DB will be locked:
+            # TO DO: see if we can perform explicit post-hoc cleanup in case something crashes here,
+            #        given that our local transactions will not handle this case:
+            if not self.in_transaction():
+                try:
+                    # try fast shell-based import first, but if that is not applicable or supported...
+                    fast_import = self.import_graph_data_via_import(table, file, append=append)
+                except (KGTKException, sh.CommandNotFound):
+                    pass
+            self.ensure_transaction()
+            if not fast_import:
                 # ...fall back on CSV-based import which is more flexible but about 2x slower:
-                self.import_graph_data_via_csv(table, file)
+                self.import_graph_data_via_csv(table, file, append=append)
         graphsize = self.get_db_size() - oldsize
         # this isn't really needed, but we store it for now:
         header = str(self.get_table_header(table))
@@ -822,25 +912,18 @@ class SqliteStore(SqlStore):
             self.set_file_info(file, size=0, modtime=time.time(), graph=table)
         else:
             self.set_file_info(file, size=os.path.getsize(file), modtime=os.path.getmtime(file), graph=table)
-        # FIXME: this is incorrect, since the vector index hasn't been (completely) created yet, but for
-        # now we need it to get correct query translations; but this needs a more general approach, since
-        # it also doesn't do the right thing for redefinitions of vector indexes
-        indexes = [ispec.TableIndex.encode(idx) for idx in indexes]
-        self.set_graph_info(table, header=header, size=graphsize, acctime=time.time(), index=indexes)
+        self.set_graph_info(table, header=header, size=graphsize, acctime=time.time())
         if alias is not None:
             self.set_file_alias(file, alias)
-        if commit:
-            # top-level OP, commit DB and info updates:
-            self.commit()
-
+            
     def drop_graph(self, table_name):
         """Delete the graph 'table_name' and all its associated info records.
         """
         if self.readonly:
             return
-        # delete all supporting file infos:
+        self.log(1, f'DROP graph data table {table_name}')
+        # delete any remaining supporting file infos pointing to 'table_name':
         for file in self.get_graph_files(table_name):
-            self.log(1, 'DROP graph data table %s from %s' % (table_name, file))
             self.drop_file_info(file)
         # delete the graph info:
         self.drop_graph_info(table_name)
@@ -871,6 +954,7 @@ class SqliteStore(SqlStore):
         """Delete all indexes for graph 'table_name'.  If 'index_type' is not None,
         restrict to indexes of that type (can be a short name or a class).
         """
+        self.ensure_transaction()
         if isinstance(index_type, str):
             index_type = ispec.TableIndex.get_index_type_class(index_type)
         for index in self.get_graph_indexes(table_name)[:]:
@@ -883,7 +967,7 @@ class SqliteStore(SqlStore):
 
     ### Data import:
     
-    def import_graph_data_via_csv(self, table, file):
+    def import_graph_data_via_csv(self, table, file, append=False):
         """Import 'file' into 'table' using Python's csv.reader.  This is safe and properly
         handles conversion of different kinds of line endings, but 2x slower than direct import.
         """
@@ -896,17 +980,30 @@ class SqliteStore(SqlStore):
             csvreader = csv.reader(inp, dialect=None, delimiter='\t', quoting=csv.QUOTE_NONE)
             header = next(csvreader)
             schema = self.kgtk_header_to_graph_table_schema(table, header)
-            self.execute(self.get_table_definition(schema))
-            insert = 'INSERT INTO %s VALUES (%s)' % (table, ','.join(['?'] * len(header)))
+            column_list = ''
+            if append:
+                if self.has_table(table):
+                    table_header = self.get_table_header(table)
+                    if set(table_header) != set(header):
+                        raise KGTKException('can only append data with the same set of columns')
+                    if table_header != header:
+                        # new data columns are in a different order, so we need an explicit column list:
+                        column_list = f' ({self.get_full_column_list(self.kgtk_header_to_graph_table_schema(table, header))})'
+                else:
+                    append = False
+            if not append:
+                self.execute(self.get_table_definition(schema))
+            insert = f'INSERT INTO {table}{column_list} VALUES ({",".join(["?"] * len(header))})'
             self.executemany(insert, csvreader)
 
-    def import_graph_data_via_import(self, table, file):
+    def import_graph_data_via_import(self, table, file, append=False):
         """Use the sqlite shell and its import command to import 'file' into 'table'.
         This will be about 2+ times faster and can exploit parallelism for decompression.
         This is only supported for Un*x for now and requires a named 'file'.
+        Return True if the import finished successfully, raise exception otherwise.
         """
         if self.readonly:
-            return
+            return True
         if os.name != 'posix':
             raise KGTKException("not yet implemented for this OS: '%s'" % os.name)
         # generalizing this to work for stdin would be possible, but it would significantly complicate
@@ -938,7 +1035,16 @@ class SqliteStore(SqlStore):
                 raise KGTKException('unsupported line endings')
             header = header[:-1].split('\t')
             schema = self.kgtk_header_to_graph_table_schema(table, header)
-            self.execute(self.get_table_definition(schema))
+            if append:
+                if self.has_table(table):
+                    if self.get_table_header(table) != header:
+                        raise KGTKException('can only fast-append data with identical columns')
+                else:
+                    append = False
+            if not append:
+                # create the table in a separate process and not on the local connection
+                # to not create any locking issues with local transactions:
+                sqlite3(self.dbfile, self.get_table_definition(schema))
         
         separators = '\\t \\n'
         args = ['-cmd', '.mode ascii', '-cmd', '.separator ' + separators,
@@ -960,6 +1066,7 @@ class SqliteStore(SqlStore):
             # waiting (we can't call is_alive or access sqlproc.exit_code):
             if sqlproc is not None and sqlproc.process.exit_code is None:
                 sqlproc.terminate()
+        return True
 
                 
     # we need to be able to comfortably fit that many un/parsed vectors into RAM:
@@ -1042,8 +1149,8 @@ class SqliteStore(SqlStore):
                     break
                 if schema is not None:
                     self.executemany(insert, chunk)
-
-        return [vector_spec]
+        # make sure we close any open files:
+        vstore.close()
 
     def vector_column_to_sql(self, table, column, table_alias=None):
         """Return an SQL expression that can be used to generate the actual vectors
@@ -1163,6 +1270,7 @@ class InfoTable(KgtkInfoTable):
         """If the info table doesn't exist yet, define it from its schema.
         """
         if not self.store.has_table(self.table):
+            self.store.ensure_transaction()
             super().init_table()
             self.transfer_fileinfo()
             self.transfer_graphinfo()
