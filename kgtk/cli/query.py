@@ -25,7 +25,7 @@ def parser():
     }
 
 EXPLAIN_MODES = ('plan', 'full', 'expert')
-INDEX_MODES = ('auto', 'expert', 'quad', 'triple', 'node1+label', 'node1', 'label', 'node2', 'none')
+DEFAULT_INDEX_MODE = 'auto'
 
 class InputOptionAction(argparse.Action):
     """Special-purpose argparse action that associates an input-specific option
@@ -89,6 +89,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args):
     # future extension:
     #parser.add_argument('--in-memory', default=False, type=bool, nargs=0, action=InputOptionAction, dest='in_memory',
     #                    help="load the preceding input into a temporary in-memory table only")
+    parser.add_argument('-a', '--append', metavar='FILE', nargs='+', default=None,
+                        action=InputOptionAction, dest='append',
+                        help="additional data file(s) to append to the specified input")
     parser.add_argument('--query', default=None, action='store', dest='query',
                         help="complete Kypher query combining all clauses," +
                         " if supplied, all other specialized clause arguments will be ignored")
@@ -123,9 +126,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args):
     parser.add_argument('--force', action='store_true', dest='force',
                         help="force problematic queries to run against advice")
     parser.add_argument('--index', '--index-mode', metavar='MODE', nargs='+', action='store',
-                        dest='index_mode', default=[INDEX_MODES[0]], 
+                        dest='index_mode', default=[DEFAULT_INDEX_MODE], 
                         help="default index creation MODE for all inputs"
-                        + f" (default: {INDEX_MODES[0]});"
+                        + f" (default: {DEFAULT_INDEX_MODE});"
                         + " can be overridden with --idx for specific inputs")
     parser.add_argument('--idx', '--input-index', metavar='SPEC', nargs='+', default=None,
                         action=InputOptionAction, dest='index_specs',
