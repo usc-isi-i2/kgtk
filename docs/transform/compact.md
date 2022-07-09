@@ -15,12 +15,17 @@ duplicate edges are removed without compacting any columns into
 [multi-valued edges (`|` lists)](../../specification#multi-valued-edges).
 
 All columns will be selected as key columns, except for columns that are
-included in the `--keep-first` first.  if `--compact-id` is specified, than
+included in the `--keep-first` list.  if `--compact-id` is specified, than
 the ID column (or its alias) will be included in the `--keep-first`
 list. Columns included in `--columns` will be first, in the order specified,
 then the remaining columns (except for columns that are included in the
 `--keep-first` list) in the order that they appear in the file's header
 record.
+
+However, unless `--columns` is specified, the standard key columns (`id`, for
+KGTK node files, (`node1`, `label`, `node2`, and optional 'id`) for KGTK edge
+files) may not be used as `--keep-first` columns.  This command parsing
+constraint may be removed in the future.
 
 ### Creating Multi-value Edges
 
@@ -345,7 +350,7 @@ The output will be the following table in KGTK format:
 
 ### Compact with External Sorting, with `id`
 
-Suppose that `file5.tsv` contains the following table in KGTK format:
+Suppose that `compact-file5.tsv` contains the following table in KGTK format:
 
 ```bash
 kgtk cat -i examples/docs/compact-file5.tsv
@@ -530,6 +535,52 @@ The output will be the following table in KGTK format:
 | peter | zipcode | 12040 | 3\|4 | cabin\|home\|work | 5\|6 |
 | steve | zipcode | 45601 | 5\|6 | cabin\|home\|work | 1\|2\|3\|4\|5 |
 
+
+### Compacting the `node2` Column with `--keep-first`
+
+Normally, the `node2` column should not be compacted, because the KGTK File
+Specification prohibits lists in that column.  However, you can use
+`--keep-first` to keep just the first `node2` value for a (`node1, `label`)
+combination in a KGTK Edge file, since the implied list being built does not
+actually get written to the output KGTK file.
+
+Suppose that `compact-file6.tsv` contains the following table in KGTK format:
+
+```bash
+kgtk cat -i examples/docs/compact-file6.tsv
+```
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| john | zipcode | 12345 |
+| steve | zipcode | 45601 |
+| john | zipcode | 12346 |
+| peter | zipcode | 12040 |
+| peter | zipcode | 12040 |
+| john | zipcode | 12345 |
+| peter | zipcode | 12040 |
+| peter | zipcode | 12040 |
+| steve | zipcode | 45601 |
+| steve | zipcode | 45601 |
+| peter | zipcode | 12040 |
+| steve | zipcode | 45601 |
+| steve | zipcode | 45601 |
+| steve | zipcode | 45601 |
+| steve | zipcode | 45601 |
+| steve | zipcode | 45601 |
+
+Compact the `node2` column with:
+
+```bash
+kgtk compact -i examples/docs/compact-file6.tsv --columns node1 label --keep-first node2
+```
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 |
+| -- | -- | -- |
+| john | zipcode | 12345 |
+| peter | zipcode | 12040 |
+| steve | zipcode | 45601 |
 
 ### Deduplication with Builtin Sorting
 
