@@ -52,10 +52,14 @@ class KgtkInfoTable(object):
 
     def make_object_id(self, prefix, *keys):
         """Create a unique object ID starting with 'prefix' and based on 'keys'.
+        If no 'keys' are supplied, append a new random UUID to 'prefix'.
         """
         # we only use this during DB updates, so the import overhead should be negligible:
         import shortuuid
-        return prefix + shortuuid.uuid(r'_/^^\_'.join(map(str, keys)))
+        if len(keys) == 0:
+            return prefix + shortuuid.random(22)
+        else:
+            return prefix + shortuuid.uuid(r'_/^^\_'.join(map(str, keys)))
 
     @lru_cache(maxsize=None)
     def get_edge_pattern_restriction(self, node1=None, label=None, node2=None, id=None):
