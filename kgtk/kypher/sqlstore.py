@@ -1292,9 +1292,10 @@ class InfoTable(KgtkInfoTable):
             self.store.commit()
 
     def make_file_id(self, path):
-        """Create a file object ID uniquely based on a file's 'path'.
+        """Create a new file object ID for the file with 'path'.
+        Note that this creates a new ID upon every call, regardless of 'path'.
         """
-        return self.make_object_id('file-', path)
+        return self.make_object_id('file-')
 
     def transfer_fileinfo(self):
         """Transfer information from an old-style fileinfo table.
@@ -1377,7 +1378,9 @@ class InfoTable(KgtkInfoTable):
         """
         file = self.get_object(path, InfoTable.file)
         if file is None:
-            # new file, generate an ID for it:
+            # new file, generate a new object ID for it (this will be different for every call even
+            # if called with the same path, which is important for files like /dev/stdin where we
+            # we do not want to accidentally create an already existing file ID that points to an alias):
             file = self.make_file_id(path)
             info[InfoTable.file] = path
             # also report the type:
