@@ -97,6 +97,8 @@ class MasterVectorStore(object):
         return (table, column)
     
     def get_store_name(self, table, column):
+        # strip off any DB prefixes if necessary:
+        _, table = self.store.parse_table_name(table)
         return f'{table}:{column}'
 
     def has_vector_store(self, table, column):
@@ -208,6 +210,11 @@ class VectorStore(object):
     
     def get_store_name(self):
         return self.master.get_store_name(self.table, self.column)
+
+    def get_sqlstore_dbfile(self):
+        """Return the DB file in which the data for 'self.table' resides.
+        """
+        return self.store.get_table_dbfile(self.table)
     
     def drop_store_data(self):
         """If a vector dataset object for 'table->column' exists, delete it, no-op otherwise.
@@ -451,7 +458,7 @@ class InlineVectorStore(VectorStore):
         corresponding to the vector-indexed 'column' variable of 'table'.
         """
         table = table_alias or self.table
-        return f'{table}.{self.column}'
+        return f'{table}.{sql_quote_ident(self.column)}'
 
     def vector_column_to_reference_sql(self, table_alias=None):
         """Return an SQL expression that can be used to access the associated
@@ -548,7 +555,7 @@ class NumpyVectorStore(VectorStore):
             self.dbfile = self.get_store_external_file()
             if self.dbfile is None:
                 vsname = self.get_store_name()
-                self.dbfile = f'{self.store.dbfile}.vec.{vsname}.npy'
+                self.dbfile = f'{self.get_sqlstore_dbfile()}.vec.{vsname}.npy'
         return self.dbfile
 
     def has_external_file(self):
@@ -817,7 +824,7 @@ class Hd5VectorStore(VectorStore):
         """
         super().__init__(master, table, column, index_spec=index_spec)
         # a vector cache is tightly linked to its parent SQL store, so we use a fixed pattern here:
-        self.dbfile = self.store.dbfile + '.vec.hdf5'
+        self.dbfile = self.get_sqlstore_dbfile() + '.vec.hdf5'
         self.conn = None
 
     def get_linked_stores(self):
@@ -1230,7 +1237,7 @@ class FaissIndex(NearestNeighborIndex):
         vsname = vstore.get_store_name()
         if shardid and not shardid.endswith('.'):
             shardid += '.'
-        return f'{vstore.store.dbfile}.vec.{vsname}.faiss.{shardid}idx'
+        return f'{vstore.get_sqlstore_dbfile()}.vec.{vsname}.faiss.{shardid}idx'
 
     def get_quantizer(self, error=True):
         """Return the quantizer for this vector store, raise an error if it doesn't exist
