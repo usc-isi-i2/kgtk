@@ -222,6 +222,8 @@ class TableIndex(object):
         self.table = table
         self.index = index_spec
         self.index = self.get_index()
+        # the auxiliary DB this index is defined on, used for qualified access if necessary:
+        self.db = None
 
     def __repr__(self):
         """Create an eval-able repr that will recreate 'self' identically.
@@ -339,6 +341,11 @@ class TableIndex(object):
         """
         for key in self.index.columns.keys():
             return key == column
+
+    def get_columns(self):
+        """Return the columns this index is defined on.
+        """
+        return self.index.columns.keys()
 
     def subsumes_columns(self, columns):
         """Return True if 'columns' are a prefix of this index's columns,
