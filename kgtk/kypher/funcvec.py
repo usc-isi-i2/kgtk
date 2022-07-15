@@ -79,7 +79,7 @@ class VectorFunction(SqlFunction):
         # vector columns don't really make sense, do they?
         if isinstance(arg, parser.Variable):
             graph, column, sql = query.variable_to_sql(arg, state)
-            table = query.graph_alias_to_graph(graph)
+            table = state.get_alias_table(graph)
             master = self.store.get_vector_store()
             if master.has_vector_store(table, column):
                 vstore = master.get_vector_store(table, column)
@@ -414,7 +414,9 @@ class TopKCosineSimilarity(VirtualGraphFunction, VectorFunction):
         old_graph = node1._graph_table
         old_graph_alias = node1._graph_alias
         new_graph = self.get_name()
-        new_graph_alias = old_graph_alias.replace(old_graph, new_graph)
+        # create a new alias (which is fine given we have a unique table name),
+        # this will transparently handle qualified graph table names:
+        new_graph_alias = state.get_table_aliases(new_graph, new_graph + '_c')[0]
         node1._graph_table = new_graph
         node1._graph_alias = new_graph_alias
         # TO DO: support this in query.py:
