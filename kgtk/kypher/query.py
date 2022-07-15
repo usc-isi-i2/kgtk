@@ -417,7 +417,7 @@ class KgtkQuery(object):
         # otherwise, pick the representative from the set of equiv-joined column vars,
         # which corresponds to the graph alias and column name used by the first reference:
         graph, column = sql_vars[0]
-        table = self.graph_alias_to_graph(graph)
+        table = state.get_alias_table(graph)
         if self.store.is_vector_column(table, column):
             return graph, column, self.store.vector_column_to_sql(table, column, table_alias=graph)
         return graph, column, f'{graph}.{sql_quote_ident(column)}'
@@ -645,16 +645,12 @@ class KgtkQuery(object):
         for match_clause in self.get_match_clauses():
             for clause in match_clause.get_pattern_clauses():
                 graph = self.get_pattern_clause_graph(clause)
-                graph_alias = '%s_c%d' % (graph, i) # per-clause graph table alias for self-joins
+                # create per-clause graph table alias for self-joins (keep the DB qualifier
+                # if we have it to avoid name clashes but change the separator char):
+                graph_alias = f'{self.store.get_qualified_table_name(graph, sep="_")}_c{i}'
                 clause[0]._graph_alias = graph_alias
                 state.register_table_alias(graph, graph_alias)
                 i += 1
-
-    def graph_alias_to_graph(self, graph_alias):
-        """Map a graph table 'graph_alias' back onto the graph table from which it was derived.
-        This simply keys in on the naming scheme we use above, but we could also store this somewhere.
-        """
-        return graph_alias[0:graph_alias.rfind('_')]
 
     def get_match_clause_graphs(self, match_clause):
         """Return the set of graph table names with aliases referenced by this 'match_clause'.
@@ -700,8 +696,8 @@ class KgtkQuery(object):
         
         for (g1, c1), (g2, c2) in sorted(list(state.get_match_clause_joins(match_clause))):
             condition = '%s.%s = %s.%s' % (g1, sql_quote_ident(c1), g2, sql_quote_ident(c2))
-            graph1 = (self.graph_alias_to_graph(g1), g1)
-            graph2 = (self.graph_alias_to_graph(g2), g2)
+            graph1 = (state.get_alias_table(g1), g1)
+            graph2 = (state.get_alias_table(g2), g2)
             internal = graph1 in clause_sources and graph2 in clause_sources
             if graph1 != primary_source:
                 if graph1 in clause_sources:
@@ -839,8 +835,8 @@ class KgtkQuery(object):
             restrictions = state.get_match_clause_restrictions(match_clause)
             if len(joins) > 0:
                 for (g1, c1), (g2, c2) in joins:
-                    g1 = self.graph_alias_to_graph(g1)
-                    g2 = self.graph_alias_to_graph(g2)
+                    g1 = state.get_alias_table(g1)
+                    g2 = state.get_alias_table(g2)
                     # do not create any indexes on virtual tables:
                     if state.lookup_vtable(g1) is None:
                         indexes.add((g1, c1))
@@ -851,7 +847,7 @@ class KgtkQuery(object):
                 for (g, c), val in restrictions:
                     # do not create any indexes on virtual tables:
                     if state.lookup_vtable(g) is None:
-                        g = self.graph_alias_to_graph(g)
+                        g = state.get_alias_table(g)
                     indexes.add((g, c))
         return indexes
 
@@ -1042,7 +1038,6 @@ class TranslationState(object):
             raise Exception('Undefined variable: %s' % variable)
         return sql_vars
 
-    # TO DO: handle all graph alias management from here (e.g., graph_alias_to_graph)1
     def register_table_alias(self, table, alias):
         """Record 'alias' as an alias for 'table'.  Raise an error if the alias
         if already used as a table name or as an alias for a different table.
@@ -1055,6 +1050,15 @@ class TranslationState(object):
             raise Exception(f'Alias {alias} already used as table name')
         elif current != table:
             raise Exception(f'Alias {alias} already in use for {current}')
+
+    def get_alias_table(self, alias, error=True):
+        """Return the table for which 'alias' has been registered as an alias.
+        If 'alias' is not a registered table alias, raise an error if 'error' is True.
+        """
+        table = self.alias_map.get(alias)
+        if table is None and error:
+            raise Exception(f'Alias {alias} is not defined')
+        return table
 
     def get_table_aliases(self, table, create_prefix=None):
         """Get the currently defined aliases for 'table'.  If none are defined
@@ -1323,7 +1327,7 @@ def translate_text_match_op_to_sql(query, expr, state):
         raise Exception(f"First argument to {expr.function} needs to be variable or property")
 
     # find applicable indexes:
-    graph = query.graph_alias_to_graph(graph_alias)
+    graph = state.get_alias_table(graph_alias)
     if column_name == query.get_id_column(graph) and isinstance(arg1, parser.Variable):
         # we have an all-indexed-columns match:
         column = None
@@ -1340,13 +1344,14 @@ def translate_text_match_op_to_sql(query, expr, state):
     # generate the SQL translation:
     index = indexes[0]
     index_table = index.get_name()
-    index_alias = state.get_table_aliases(index_table, create_prefix='txtidx')[0]
+    qualified_index_table = query.store.get_qualified_table_name(index_table, db=index.db)
+    index_alias = state.get_table_aliases(qualified_index_table, create_prefix='txtidx')[0]
     index_column = index_table
     if not (column_name == query.get_id_column(graph) and isinstance(arg1, parser.Variable)):
         # we have a column-specific search:
         index_column = column_name
     index_column = sql_quote_ident(index_column)
-    state.add_match_clause_aux_table(index_table, index_alias)
+    state.add_match_clause_aux_table(qualified_index_table, index_alias)
 
     if normfun in ('match', 'like', 'glob'):
         if arity != 2:
