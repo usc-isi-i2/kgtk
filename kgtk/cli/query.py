@@ -138,12 +138,14 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args):
                         help="explain the query execution and indexing plan according to MODE"
                         + " (%(choices)s, default: %(const)s)."
                         + " This will not actually run or create anything.")
-    parser.add_argument('--graph-cache', '--gc', action='store', dest='graph_cache_file',
+    parser.add_argument('--graph-cache', '--gc', metavar='DBFILE', action='store', dest='graph_cache_file',
                         help="database cache where graphs will be imported before they are queried"
                         + " (defaults to per-user temporary file)")
     parser.add_argument('--show-cache', '--sc', action='store_true', dest='show_cache',
                         help="describe the current content of the graph cache and exit"
                         + " (does not actually run a query or import data)")
+    parser.add_argument('--aux-cache', '--ac', metavar='DBFILE', nargs='+', action='extend', dest='aux_graph_cache_file',
+                        help="auxiliary read-only database file(s) to use for cross-graph-cache queries")
     parser.add_argument('--read-only', '--ro', action='store_true', dest='readonly',
                         help="do not create or update the graph cache in any way"
                         + ", only run queries against already imported and indexed data")
@@ -255,7 +257,8 @@ def run(input_files: KGTKFiles, **options):
         try:
             graph_cache = options.get('graph_cache_file')
             store = sqlstore.SqliteStore(graph_cache, create=not os.path.exists(graph_cache),
-                                         loglevel=loglevel, readonly=options.get('readonly'))
+                                         loglevel=loglevel, readonly=options.get('readonly'),
+                                         aux_dbfiles=options.get('aux_graph_cache_file'))
 
             if show_cache:
                 store.describe_meta_tables(out=sys.stdout)
