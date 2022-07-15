@@ -66,6 +66,14 @@ class SqlStore(object):
     pass
 
 
+# NOTES on DB names:
+# - for code simplicity, we assume all internally defined and generated DB, table and
+#   column names do not require SQL-quoting, while user-defined columns will need quoting
+# - qualified table names needed to handle auxiliary DBs are so far only supported in
+#   a very limited fashion to support read-only operation; operations that update the DB
+#   do therefore not (yet) consider that table names might (need to) be qualified
+    
+
 class SqliteStore(SqlStore):
     """SQL store implemented via sqlite3 (which is supported as a Python builtin library.
     """
@@ -102,18 +110,25 @@ class SqliteStore(SqlStore):
         'temporary': False,     # just for illustration
     ]
 
-    def __init__(self, dbfile=None, create=False, loglevel=0, conn=None, readonly=False):
+    def __init__(self, dbfile=None, create=False, loglevel=0,
+                 conn=None, readonly=False, aux_dbfiles=None):
         """Open or create an SQLStore on the provided database file 'dbfile'
         or SQLite connection object 'conn'.  If 'dbfile' is provided and does
         not yet exist, it will only be created if 'create' is True.  Passing
         in a connection object directly provides more flexibility with creation
         options.  In that case any 'dbfile' value will be ignored and instead
-        looked up directly from 'conn'.
+        looked up directly from 'conn'.  'aux_dbfiles' can be one or more
+        auxiliary DB files which will be attached to the main DB and can be
+        queried in combination with tables in the main DB in read-only mode.
         """
         self.loglevel = loglevel
         self.dbfile = dbfile
+        # generate a dict of db->dbfile, where we preserve the order and treat it like a path:
+        self.aux_dbfiles = sdict([('db' + str(i+1), db) for i, db in enumerate(listify(aux_dbfiles))])
         self.conn = conn
-        self.readonly = readonly
+        # for now force readonly mode if we have any auxiliary DBs; eventually we might
+        # want to generalize this to still support updates to the main DB file:
+        self.readonly = readonly or self.aux_dbfiles
         if not isinstance(self.conn, sqlite3.Connection):
             if self.conn is not None:
                 raise KGTKException('invalid sqlite connection object: %s' % self.conn)
@@ -139,10 +154,13 @@ class SqliteStore(SqlStore):
             sys.stderr.flush()
 
     def init_meta_tables(self):
-        self.infotable = InfoTable(self, self.INFO_TABLE._name_)
+        if self.aux_dbfiles:
+            self.infotable = MultiDbInfoTable(self, self.INFO_TABLE._name_)
+        else:
+            self.infotable = InfoTable(self, self.INFO_TABLE._name_)
 
     def describe_meta_tables(self, out=sys.stderr):
-        """Describe the current content of the internal bookkeeping tables to 'out'.
+        """Describe the current content of the main internal bookkeeping tables to 'out'.
         """
         out.write('Graph Cache:\n')
         out.write('DB file: %s\n' % self.dbfile)
@@ -194,6 +212,18 @@ class SqliteStore(SqlStore):
                 self.conn = sqlite3.connect(self.dbfile)
                 # use explicit transaction management via BEGIN/COMMIT:
                 self.conn.isolation_level = None
+            # attach any auxiliary DBs if we have them:
+            for schema, dbfile in list(self.aux_dbfiles.items()):
+                if not os.path.exists(dbfile):
+                    # we don't want sqlite to create missing auxiliary DB files for us:
+                    raise KGTKException(f'auxiliary sqlite DB file does not exist: {dbfile}')
+                if os.path.realpath(dbfile) == os.path.realpath(self.dbfile):
+                    # ignore any aux file that is the same as the main file so we can use wildcards more easily:
+                    del self.aux_dbfiles[schema]
+                    continue
+                statement = f'ATTACH DATABASE {sql_quote_ident(dbfile)} AS {schema}'
+                self.log(2, statement)
+                self.execute(statement)
         return self.conn
 
     def get_sqlite_cmd(self):
@@ -208,7 +238,7 @@ class SqliteStore(SqlStore):
             self.conn = None
             self.user_functions = set()
 
-    READONLY_REGEX = re.compile(r'^\s*(select|pragma)\s', re.IGNORECASE)
+    READONLY_REGEX = re.compile(r'^\s*(select|pragma|attach)\s', re.IGNORECASE)
     
     def is_readonly_statement(self, statement):
         """Return True if the SQL 'statement' does not update the database.
@@ -323,13 +353,26 @@ class SqliteStore(SqlStore):
         """
         return self.pragma('freelist_count') * self.pragma('page_size')
 
+    def get_table_dbfile(self, table_name):
+        """Return the DB file where the data for 'table_name' resides.
+        """
+        db, table = self.parse_table_name(table_name)
+        if db:
+            # it must be a registered auxiliary DB:
+            return self.aux_dbfiles[db]
+        else:
+            return self.dbfile
+
     def has_table(self, table_name):
         """Return True if a table with name 'table_name' exists in the store.
         """
         schema = self.MASTER_TABLE
         columns = schema.columns
-        query = """SELECT COUNT(*) FROM %s WHERE %s=?""" % (schema._name_, columns.name._name_)
-        (cnt,) = self.execute(query, (table_name,)).fetchone()
+        # for now we assume DB qualifiers always exist, but maybe we should test that also:
+        db, table = self.parse_table_name(table_name)
+        db = db + '.' if db else ''
+        query = f"""SELECT COUNT(*) FROM {db}{schema._name_} WHERE {columns.name._name_}=?"""
+        (cnt,) = self.execute(query, (table,)).fetchone()
         return cnt > 0
 
     def get_table_header(self, table_name):
@@ -354,9 +397,12 @@ class SqliteStore(SqlStore):
         """
         master = self.MASTER_TABLE._name_
         mcols = self.MASTER_TABLE.columns
-        query = f"""SELECT {mcols.sql._name_} FROM {master} 
+        # for now we assume DB qualifiers always exist, but maybe we should test that also:
+        db, table = self.parse_table_name(table_name)
+        db = db + '.' if db else ''
+        query = f"""SELECT {mcols.sql._name_} FROM {db}{master} 
                     WHERE {mcols.type._name_}='table' AND {mcols.name._name_}=?"""
-        for (stmt,) in self.execute(query, (table_name,)):
+        for (stmt,) in self.execute(query, (table,)):
             return stmt
         return None
 
@@ -365,9 +411,12 @@ class SqliteStore(SqlStore):
         """
         master = self.MASTER_TABLE._name_
         mcols = self.MASTER_TABLE.columns
-        query = f"""SELECT {mcols.sql._name_} FROM {master} 
+        # for now we assume DB qualifiers always exist, but maybe we should test that also:
+        db, table = self.parse_table_name(table_name)
+        db = db + '.' if db else ''
+        query = f"""SELECT {mcols.sql._name_} FROM {db}{master} 
                     WHERE {mcols.type._name_}='index' AND {mcols.tbl_name._name_}=?"""
-        return [stmt for (stmt,) in self.execute(query, (table_name,))]
+        return [stmt for (stmt,) in self.execute(query, (table,))]
 
     def sort_table(self, table_name, columns):
         """Sort the rows in table 'table_name' along one or more 'columns'.  Each column can be a simple
@@ -379,6 +428,8 @@ class SqliteStore(SqlStore):
         data to the database or run the VACUUM command.  The value of sorting a table is primarily to
         create better data locality on disk, the sorted table will otherwise be identical to the original.
         """
+        # TO DO: support sorting in batches to avoid need for potentially large amounts of temp space
+        
         # we look up the actual definition statement to get all the types and column features correct:
         table_def = self.get_table_definition_sql(table_name)
         if table_def is None:
@@ -411,6 +462,37 @@ class SqliteStore(SqlStore):
 
 
     ### Schema manipulation:
+
+    def parse_table_name(self, table_name):
+        """Parse 'table_name' into its schema/DB and name components.
+        If 'table_name' is unqualified, the DB component will be None.
+        """
+        parse = table_name.split('.', 1)
+        if len(parse) == 1:
+            return None, parse[0]
+        else:
+            return parse[0], parse[1]
+
+    def is_qualified_table_name(self, table_name):
+        """Return True if 'table_name' is qualified with a schema/DB namespace prefix.
+        """
+        db, table = self.parse_table_name(table_name)
+        return db is not None
+
+    def get_qualified_table_name(self, table_name, db=None, sep='.'):
+        """Create a 'db'-qualified 'table_name'.  If 'db' is None, use any
+        DB specified as part of 'table_name'.  Use 'sep' to separate the DB
+        from the 'table_name' it qualifies.  If no DB is supplied or attached
+        to 'table_name', simply return the unqualified 'table_name'.
+        """
+        _db, name = self.parse_table_name(table_name)
+        db = db or _db
+        return (db + sep if db else '') + name
+
+    def get_unqualified_table_name(self, table_name):
+        """Strip off any DB qualifiers from 'table_name' and return the result.
+        """
+        return self.parse_table_name(table_name)[1]
     
     def kgtk_header_to_graph_table_schema(self, table_name, header):
         columns = sdict()
@@ -649,6 +731,11 @@ class SqliteStore(SqlStore):
                 return []
             raise KGTKException(f"INTERNAL ERROR: missing graph info for '{table_name}'")
         indexes = [ispec.TableIndex.decode(idx) for idx in listify(info.index)]
+        if self.is_qualified_table_name(table_name) and indexes:
+            # record the database the tables of this index are stored in:
+            db = self.parse_table_name(table_name)[0]
+            for idx in indexes:
+                idx.db = db
         return indexes
 
     def has_graph_index(self, table_name, index):
@@ -683,6 +770,10 @@ class SqliteStore(SqlStore):
         if not self.has_graph_index(table_name, index):
             if self.readonly:
                 return
+            for col in index.get_columns():
+                if self.is_vector_column(table_name, col):
+                    # do not index any vector columns:
+                    return
             self.ensure_transaction()
             loglevel = 0 if explain else 1
             indexes = self.get_graph_indexes(table_name)
@@ -1276,15 +1367,19 @@ class InfoTable(KgtkInfoTable):
     shasum = 'shasum'
     size = 'size'
     type = 'type'
+    # this is a 'virtual' attribute used when reading auxiliary DBs which should never get written:
+    db = 'db'
 
     # info object templates:
-    FILE_INFO = sdict([(key, None) for key in [type, file, size, modtime, graph, comment]])
-    GRAPH_INFO = sdict([(key, None) for key in [type, name, header, size, acctime, index]])
+    FILE_INFO = sdict([(key, None) for key in [type, file, size, modtime, graph, comment, db]])
+    GRAPH_INFO = sdict([(key, None) for key in [type, name, header, size, acctime, index, db]])
 
     def init_table(self):
         """If the info table doesn't exist yet, define it from its schema.
         """
         if not self.store.has_table(self.table):
+            if self.store.is_qualified_table_name(self.table):
+                raise KGTKException('cannot define or upgrade auxiliary DB info table: {self.table}')
             self.store.ensure_transaction()
             super().init_table()
             self.transfer_fileinfo()
@@ -1440,6 +1535,68 @@ class InfoTable(KgtkInfoTable):
 
     def get_all_graph_infos(self):
         return self.get_all_infos(type='graph')
+
+
+class MultiDbInfoTable(InfoTable):
+    """Variant of 'InfoTable' that also supports limited read-only access to the
+    info tables of any attached auxiliary DBs.  The main and auxiliary info tables
+    are treated similar to a path.  Objects with the same name might exist in multiple
+    tables, in which case the info from the first table in the path will be used.
+    """
+
+    def init_table(self):
+        """If the info table doesn't exist yet, define it from its schema.
+        """
+        super().init_table()
+        # read info tables from all auxiliary DBs:
+        self.aux_infotables = sdict([(db, InfoTable(self.store, f'{db}.{self.table}')) for db in self.store.aux_dbfiles.keys()])
+
+    def get_file_info(self, path):
+        """Return a dict info structure for the file with 'path' (there can only be one).
+        If file is not found in the main info table, try to find the first auxiliary info table
+        where it is defined and qualify the associated graph with the respective DB prefix.
+        Return None if this file does not exist in any info table.  All supported keys will
+        be set although some values may be None.
+        """
+        info = None
+        file = self.get_object(path, InfoTable.file)
+        if file is None:
+            for db, itable in self.aux_infotables.items():
+                file = itable.get_object(path, InfoTable.file)
+                if file is not None:
+                    info = itable.get_info(file, info=copy.deepcopy(self.FILE_INFO))
+                    if info.graph:
+                        # qualify the graph with the DB prefix so we will later
+                        # lookup its info from the appropriate aux info table:
+                        info.graph = f'{db}.{info.graph}'
+                    # record virtual DB attribute which will never get written out:
+                    info.db = db
+                    break
+        else:
+            info = self.get_info(file, info=copy.deepcopy(self.FILE_INFO))
+        return info
+
+    def get_graph_info(self, graph):
+        """Return a dict info structure for 'graph' (there can only be one).  'graph' may
+        be qualified in which case the info table from the respective auxiliary DB will be used.
+        Return None if this graph does not exist in the relevant info table.  All supported
+        keys will be set although some values may be None.  Note that this does not search
+        through all info tables, since graph names by themselves are meaningless, they only
+        get identity through the file(s) they are linked to.
+        """
+        db, table = self.store.parse_table_name(graph)
+        if db is not None:
+            info = self.aux_infotables[db].get_info(table, info=copy.deepcopy(self.GRAPH_INFO))
+            # record virtual DB attribute which will never get written out:
+            info.db = db
+            return info
+        else:
+            return super().get_graph_info(graph)
+
+    def set_info(self, obj, info):
+        # safety precaution to make sure the db attribute never gets written out:
+        info.db = None
+        super().set_info(obj, info)
 
 
 ### Experiments:
