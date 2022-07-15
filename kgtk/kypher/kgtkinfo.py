@@ -41,13 +41,13 @@ class KgtkInfoTable(object):
             self.store.execute(self.store.get_table_definition(self.schema))
             table = self.table
             node1_idx = f'{table}_node1_idx'
-            stmt = f'CREATE INDEX {sql_quote_ident(node1_idx)} ON {sql_quote_ident(table)} ({self.columns.node1._name_})'
+            stmt = f'CREATE INDEX {node1_idx} ON {table} ({self.columns.node1._name_})'
             self.store.execute(stmt)
             label_idx = f'{table}_label_idx'
-            stmt = f'CREATE INDEX {sql_quote_ident(label_idx)} ON {sql_quote_ident(table)} ({self.columns.label._name_})'
+            stmt = f'CREATE INDEX {label_idx} ON {table} ({self.columns.label._name_})'
             self.store.execute(stmt)
             node2_idx = f'{table}_node2_idx'
-            stmt = f'CREATE INDEX {sql_quote_ident(node2_idx)} ON {sql_quote_ident(table)} ({self.columns.node2._name_})'
+            stmt = f'CREATE INDEX {node2_idx} ON {table} ({self.columns.node2._name_})'
             self.store.execute(stmt)
 
     def make_object_id(self, prefix, *keys):
@@ -67,20 +67,20 @@ class KgtkInfoTable(object):
         # instead of actual values for maximum caching effectiveness:
         restrictions = []
         if node1:
-            restrictions.append(f'{sql_quote_ident(self.columns.node1._name_)}=?')
+            restrictions.append(f'{self.columns.node1._name_}=?')
         if label:
-            restrictions.append(f'{sql_quote_ident(self.columns.label._name_)}=?')
+            restrictions.append(f'{self.columns.label._name_}=?')
         if node2:
-            restrictions.append(f'{sql_quote_ident(self.columns.node2._name_)}=?')
+            restrictions.append(f'{self.columns.node2._name_}=?')
         if id:
-            restrictions.append(f'{sql_quote_ident(self.columns.id._name_)}=?')
+            restrictions.append(f'{self.columns.id._name_}=?')
         return ' AND '.join(restrictions)
 
     @lru_cache(maxsize=None)
     def get_edges_query(self, node1=None, label=None, node2=None, id=None):
         # this should be called with a True/False binding pattern
         # instead of actual values for maximum caching effectiveness:
-        table = sql_quote_ident(self.table)
+        table = self.table
         return_columns = self.column_list
         restrictions = self.get_edge_pattern_restriction(node1, label, node2, id) or "TRUE"
         query = f'SELECT {return_columns} FROM {table} WHERE {restrictions}'
@@ -101,7 +101,7 @@ class KgtkInfoTable(object):
         """
         if id is None:
             id = self.make_object_id('e-', node1, label, node2)
-        table = sql_quote_ident(self.table)
+        table = self.table
         columns = self.column_list
         stmt = f'INSERT INTO {table} ({columns}) VALUES (?,?,?,?)'
         self.store.execute(stmt, (node1, label, node2, id))
@@ -111,7 +111,7 @@ class KgtkInfoTable(object):
         defined through the values of 'node1/label/node2/id'.
         """
         pattern = [node1, label, node2, id]
-        table = sql_quote_ident(self.table)
+        table = self.table
         restrictions = self.get_edge_pattern_restriction(*[x is not None for x in pattern]) or "TRUE"
         stmt = f'DELETE FROM {table} WHERE {restrictions}'
         self.store.execute(stmt, [x for x in pattern if x is not None])
@@ -122,7 +122,7 @@ class KgtkInfoTable(object):
         """
         if id is None:
             id = self.make_object_id('e-', node1, label, node2)
-        table = sql_quote_ident(self.table)
+        table = self.table
         columns = self.get_edge_pattern_restriction(False, False, True, True)
         columns = columns.replace('=? AND ', '=?, ')
         restrictions = self.get_edge_pattern_restriction(True, True, False, False)
@@ -179,5 +179,5 @@ class KgtkInfoTable(object):
     def get_all_objects(self):
         """Return a list of distinct 'node1' objects in this table.
         """
-        query = f'SELECT DISTINCT {sql_quote_ident(self.columns.node1._name_)} FROM {sql_quote_ident(self.table)}'
+        query = f'SELECT DISTINCT {self.columns.node1._name_} FROM {self.table}'
         return [node1 for (node1,) in self.store.execute(query)]
