@@ -269,9 +269,11 @@ class VectorStore(object):
         """
         raise KGTKException('not implemented')
 
-    def guess_vector_format(self, example_vector, seps=(' ', ',', ';', ':', '|')):
+    def guess_vector_format(self, example_vector, seps=(',', ';', ':', '|', ' ')):
         """Try to infer an encoding from an 'example_vector'.  For now we only handle
         text strings of numbers separated by one of 'seps' that can be parsed by numpy.
+        NOTE: white space separators need to be listed AFTER any others so that
+        separators followed by whitespace will be handled correctly.
         """
         if not isinstance(example_vector, str):
             raise KGTKException(f"can only handle vectors in text format'")
@@ -1130,6 +1132,7 @@ class FaissIndex(NearestNeighborIndex):
     DEFAULT_MAX_ALLOWED_RAM = 16 * 1024 * 1024 * 1024
     DEFAULT_NITER = 10
     DEFAULT_NPROBE = 8
+    MIN_TEMP_TABLE_SIZE = 2 ** 31    # 2GB, assume temp tables can be at least this big
     
     def __init__(self, store):
         """Initialize a FAISS nearest neighbor index for the vector store 'store'.
@@ -1274,6 +1277,7 @@ class FaissIndex(NearestNeighborIndex):
         buffer, nvec = vstore.get_vectors_as_array(self.batch_size, offset=0, buffer=buffer)
         self.sql_store.log(1, f'Training vector store quantizer:')
         clus.train(buffer[0:nvec], clus.index)
+        self.sql_store.log(1, '\n') # kludge: ensure newline after clustering log output
         return clus
 
     def train_quantizer_multi_batch(self):
@@ -1366,7 +1370,17 @@ class FaissIndex(NearestNeighborIndex):
         vstore = self.vector_store
         if isinstance(vstore, InlineVectorStore):
             qcell_colname = vstore.get_quantizer_cell_column_name()
-            sstore.sort_table(vstore.table, f'CAST({sql_quote_ident(qcell_colname)} AS INT)')
+            # KLUDGE: sorting the vector table can be extremely space intensive without batching and committing
+            # batches (up to 3-4x the space requirements for the table itself), so we re-enter auto-commit mode
+            # here so that sort_table can manage its own transactions - this means there is a chance that the
+            # DB winds up in a "slightly" inconsistent stage if something breaks during sorting:
+            sstore.commit()
+            # estimate final table size here, since it won't be measured and recorded until later:
+            nbytes = np.zeros(1, dtype=self.vector_dtype).nbytes
+            table_size = int(nbytes * self.vector_ndim * self.ntotal * 1.2)
+            # use fewer batches for smaller tables, but stay between 2 and 10:
+            nbatches = min(max(math.ceil(table_size / self.MIN_TEMP_TABLE_SIZE), 2), 10)
+            sstore.batched_sort_table(vstore.table, f'CAST({sql_quote_ident(qcell_colname)} AS INT)', n=nbatches, commit=True)
         else:
             sstore.log(0, 'WARNING: sorting on this type of vector store not yet implemented')
 
