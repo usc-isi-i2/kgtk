@@ -427,9 +427,9 @@ class SqliteStore(SqlStore):
         table and indexes is NOT automatically reclaimed.  To use it or free it either add additional
         data to the database or run the VACUUM command.  The value of sorting a table is primarily to
         create better data locality on disk, the sorted table will otherwise be identical to the original.
+        NOTE: this may require 3-4x the size of the sorted table in temporary space, for that reason,
+        use 'batched_sort_table' it at all possible.
         """
-        # TO DO: support sorting in batches to avoid need for potentially large amounts of temp space
-        
         # we look up the actual definition statement to get all the types and column features correct:
         table_def = self.get_table_definition_sql(table_name)
         if table_def is None:
@@ -459,6 +459,71 @@ class SqliteStore(SqlStore):
         for index_def in index_defs:
             self.log(1, f"RE-CREATE index '{index_def}'...")
             self.execute(index_def)
+
+    def batched_sort_table(self, table_name, columns, n=10, commit=True):
+        """Sort the rows in table 'table_name' along one or more 'columns'.  Each column can be a simple
+        column name or a full spec such as 'cast(node2 as int) desc' containing optional type coercion
+        and sort directions (in which case the column name should be properly quoted if necessary).  
+        This is a batched version of 'sort_table' (which see) which sorts 'n' slices of 'table_name'
+        independently to reduce the amount of temporary and uncommitted space used (by default about
+        10% of the size of 'table_name').  All indexes currently defined on 'table_name' will be updated
+        incrementally, however, the fewer indexes defined on 'table_name', the faster this operation will be.
+        If 'commit' (the default) each batch will be committed immediately after it was sorted to reduce
+        the amount of temporary space needed.  If 'commit' is False, the space requirements will be similar
+        to unbatched sorting.  Calling this should generally not generate any unused free space in the DB.
+        The value of sorting a table is primarily to create better data locality on disk, the sorted table
+        will otherwise be identical to the original.  The smaller the number of batches, the better the
+        locality, however, for the cost of additional temporary space needed.
+        """
+        # - we tested this extensively to make sure that the sorted table is identical in content to the original
+        # - locality of the batched table with n=10 seems to be generally good enough for our purposes
+        
+        # we look up the actual definition statement to get all the types and column features correct:
+        table_def = self.get_table_definition_sql(table_name)
+        if table_def is None:
+            raise KGTKException(f"table '{table_name}' does not exist")
+        table_ref = sql_quote_ident(table_name)
+        table_columns = self.get_table_header(table_name)
+        nrows = self.get_table_row_count(table_name)
+        batch_size = int(nrows / n + 1.0)
+        
+        sorted_table = f'{table_name}_sortEd_'
+        sorted_table_ref = sql_quote_ident(sorted_table)
+        sorted_def = re.sub(r"""(?i)^\s*(CREATE\s+TABLE\s+)['"`]?""" + re.escape(table_name) + r"""['"`]?(\s+.*)""",
+                            f'CREATE TEMPORARY TABLE {sorted_table_ref}\\2', table_def)
+        if sorted_def == table_def:
+            raise KGTKException(f"failed to sort '{table_name}', unexpected definition statement")
+        sort_columns = [sql_quote_ident(col) if not re.search("""["` ]""", col) else col for col in listify(columns)]
+        sort_stmt   = f"""INSERT INTO {sorted_table_ref} 
+                          SELECT {', '.join(map(sql_quote_ident, table_columns))}
+                          FROM {table_ref}
+                          WHERE {table_ref}.rowid >= ? and {table_ref}.rowid < ?
+                          ORDER BY {', '.join(sort_columns)}"""
+        update_stmt = f"""UPDATE {table_ref}
+                          SET {', '.join([f'{col} = {sorted_table_ref}.{col}' for col in map(sql_quote_ident, table_columns)])}
+                          FROM {sorted_table_ref}
+                          WHERE {table_ref}.rowid = ({sorted_table_ref}.rowid + ?)"""
+        commit = commit and not self.in_transaction()
+        start = 1
+        for i in range(n):
+            self.log(1, f"SORT table '{table_name}' batch {i+1} of {n}...")
+            end = min(start + batch_size, nrows) + 1
+            # each commit is on a single sorted batch which means if it succeeds
+            # it keeps the table in a consistent state, even if things break later:
+            if commit:
+                self.ensure_transaction()
+            self.execute(sorted_def)
+            self.log(2, f'  sorting batch start={start} end={end}...')
+            self.execute(sort_stmt, (start, end))
+            self.log(2, '  updating table...')
+            self.execute(update_stmt, (start - 1,))
+            self.log(2, '  dropping temp table...')
+            self.execute(f'DROP table {sorted_table_ref}')
+            if commit:
+                self.commit()
+            start = end
+            if start > nrows:
+                break
 
 
     ### Schema manipulation:
