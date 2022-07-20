@@ -91,6 +91,7 @@ EQ_OP: str = "eq" # (column == column) or (column == value) -> boolean
 NE_OP: str = "ne" # (column != column) or (column != value) -> boolean
 
 # String
+APPEND_OP: str = "append"
 CAPITALIZE_OP: str = "capitalize"
 CASEFOLD_OP: str = "casefold"
 IS_LQSTRING_OP: str = "is_lqstring" # -> bool
@@ -98,6 +99,7 @@ IS_STRING_OP: str = "is_string" # -> bool
 JOIN_OP: str = "join"
 LEN_OP: str = "len"
 LOWER_OP: str = "lower"
+PREPEND_OP: str = "prepend"
 REPLACE_OP: str = "replace"
 STRING_LANG_OP: str = "string_lang"
 STRING_LANG_SUFFIX_OP: str = "string_lang_suffix"
@@ -122,6 +124,7 @@ FROMISOFORMAT_OP: str = "fromisoformat"
 OPERATIONS: typing.List[str] = [
     ABS_OP,
     AND_OP,
+    APPEND_OP,
     AVERAGE_OP,
     CAPITALIZE_OP,
     CASEFOLD_OP,
@@ -159,6 +162,7 @@ OPERATIONS: typing.List[str] = [
     NUMBER_OP,
     OR_OP,
     PERCENTAGE_OP,
+    PREPEND_OP,
     REPLACE_OP,
     REVERSE_DIV_OP,
     REVERSE_MINUS_OP,
@@ -183,12 +187,15 @@ OVERWRITE_FALSE_OPERATIONS: typing.List[str] = [
 ]
 
 TO_STRING_TRUE_OPERATIONS: typing.List[str] = [
+    APPEND_OP,
     DATE_DATE_OP,
     DATE_DATE_ISO_OP,
     DATE_DAY_OP,
     DATE_MONTH_OP,
     DATE_YEAR_OP,
+    JOIN_OP,
     NUMBER_OP,
+    PREPEND_OP,
     STRING_LANG_OP,
     STRING_LANG_SUFFIX_OP,
     STRING_SUFFIX_OP,
@@ -679,6 +686,30 @@ def run(input_file: KGTKFiles,
                     output_row[into_column_idx] = KgtkValue.to_boolean(bresult)
                 return bresult if filter else True
             opfunc = and_op
+
+        elif operation == APPEND_OP:
+            if len(sources) != 1:
+                raise KGTKException("append needs 1 source columm, got %d" % len(sources))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("append needs 1 destination column, got %d" % len(into_column_idxs))
+            if len(values) != 1:
+                raise KGTKException("append needs 1 value, got %d" % len(values))
+
+            def append_op()->bool:
+                # TODO: do not strip the language and suffix of language qualified strings.
+                string_result: bool = to_string
+                item = row[sources[idx]]
+                if item.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)):
+                    item = KgtkFormat.unstringify(item)
+                    string_result = True
+
+                if string_result:
+                    output_row[into_column_idx] =  KgtkFormat.stringify(item + values[0])
+                else:
+                    output_row[into_column_idx] =  item + values[0]
+
+                return True
+            opfunc = append_op
 
         elif operation == AVERAGE_OP:
             if len(sources) == 0:
@@ -1318,9 +1349,32 @@ def run(input_file: KGTKFiles,
             if len(values) != 1:
                 raise KGTKException("Join needs 1 value, got %d" % len(values))
 
-            def join_op()->bool:
-                output_row[into_column_idx] = values[0].join((row[sources[idx]] for idx in range(len(sources))))
-                return True
+            if be_fast:
+                def join_op()->bool:
+                    output_row[into_column_idx] = values[0].join((row[sources[idx]] for idx in range(len(sources))))
+                    return True
+
+            else:
+                def join_op()->bool:
+                    # TODO: do not strip the language and suffix of language qualified strings.
+                    # TODO: object if joining language qualified strings with different qualifiers.
+                    string_result: bool = to_string
+                    result: str = ""
+                    for idx in range(len(sources)):
+                        item = row[sources[idx]]
+                        if item.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)):
+                            item = KgtkFormat.unstringify(item)
+                            string_result = True
+
+                        if idx == 0:
+                            result = item
+                        else:
+                            result = values[0].join([result, item])
+                    if string_result:
+                        output_row[into_column_idx] = KgtkFormat.stringify(result)
+                    else:
+                        output_row[into_column_idx] = result
+                    return True
             opfunc = join_op
 
         elif operation == LE_OP:
@@ -1941,6 +1995,29 @@ def run(input_file: KGTKFiles,
                 output_row[into_column_idx] = fs % (float(row[sources[0]]) * 100 / float(row[sources[1]]))
                 return True
             opfunc = percentage_op
+
+        elif operation == PREPEND_OP:
+            if len(sources) != 1:
+                raise KGTKException("prepend needs 1 source columm, got %d" % len(sources))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("prepend needs 1 destination column, got %d" % len(into_column_idxs))
+            if len(values) != 1:
+                raise KGTKException("prepend needs 1 value, got %d" % len(values))
+
+            def prepend_op()->bool:
+                # TODO: do not strip the language and suffix of language qualified strings.
+                string_result: bool = to_string
+                item = row[sources[idx]]
+                if item.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)):
+                    item = KgtkFormat.unstringify(item)
+                    string_result = True
+
+                if string_result:
+                    output_row[into_column_idx] = KgtkFormat.stringify(values[0] + item)
+                else:
+                    output_row[into_column_idx] = values[0] + item
+                return True
+            opfunc = prepend_op
 
         elif operation == REPLACE_OP:
             if len(into_column_idxs) != 1:
