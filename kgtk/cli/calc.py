@@ -696,16 +696,29 @@ def run(input_file: KGTKFiles,
                 raise KGTKException("append needs 1 value, got %d" % len(values))
 
             def append_op()->bool:
-                # TODO: do not strip the language and suffix of language qualified strings.
-                string_result: bool = to_string
-                item = row[sources[idx]]
-                if item.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)):
-                    item = KgtkFormat.unstringify(item)
-                    string_result = True
+                # Append a constant to a value from a row.
+                item: str = row[sources[idx]]
 
-                if string_result:
+                if item.startswith(KgtkFormat.STRING_SIGIL):
+                    # A string without a language qualifier
+                    output_row[into_column_idx] =  KgtkFormat.stringify(KgtkFormat.unstringify(item) + values[0])
+
+                elif item.startswith(KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL):
+                    # A string with a language qualifier
+                    string_value: str
+                    language: str
+                    language_suffix: str
+                    (string_value, language, language_suffix) = KgtkFormat.destringify(item)
+                    output_row[into_column_idx] =  KgtkFormat.stringify(string_value + values[0], language, language_suffix)
+
+                elif to_string:
+                    # Not a string, but we want to convert it to one:
                     output_row[into_column_idx] =  KgtkFormat.stringify(item + values[0])
+
                 else:
+                    # Not a string, in or out:
+                    #
+                    # Note: This operation could produce an invalid KGTK value.
                     output_row[into_column_idx] =  item + values[0]
 
                 return True
@@ -1356,22 +1369,30 @@ def run(input_file: KGTKFiles,
 
             else:
                 def join_op()->bool:
-                    # TODO: do not strip the language and suffix of language qualified strings.
-                    # TODO: object if joining language qualified strings with different qualifiers.
                     string_result: bool = to_string
                     result: str = ""
+                    result_language: str = ""
+                    result_language_suffix: str = ""
                     for idx in range(len(sources)):
                         item = row[sources[idx]]
-                        if item.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)):
+                        if item.startswith(KgtkFormat.STRING_SIGIL):
                             item = KgtkFormat.unstringify(item)
+                            string_result = True
+
+                        elif item.startswith(KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL):
+                            # This code retains the last language qualifier seen.
+                            #
+                            # TODO: object if joining language qualified strings with different qualifiers.
+                            (item, result_language, result_language_suffix) = KgtkFormat.destringify(item)
                             string_result = True
 
                         if idx == 0:
                             result = item
                         else:
                             result = values[0].join([result, item])
+
                     if string_result:
-                        output_row[into_column_idx] = KgtkFormat.stringify(result)
+                        output_row[into_column_idx] = KgtkFormat.stringify(result, result_language, result_language_suffix)
                     else:
                         output_row[into_column_idx] = result
                     return True
@@ -1997,6 +2018,7 @@ def run(input_file: KGTKFiles,
             opfunc = percentage_op
 
         elif operation == PREPEND_OP:
+            # Prepend a constant to a value from a row.
             if len(sources) != 1:
                 raise KGTKException("prepend needs 1 source columm, got %d" % len(sources))
             if len(into_column_idxs) != 1:
@@ -2005,17 +2027,30 @@ def run(input_file: KGTKFiles,
                 raise KGTKException("prepend needs 1 value, got %d" % len(values))
 
             def prepend_op()->bool:
-                # TODO: do not strip the language and suffix of language qualified strings.
-                string_result: bool = to_string
                 item = row[sources[idx]]
-                if item.startswith((KgtkFormat.STRING_SIGIL, KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL)):
-                    item = KgtkFormat.unstringify(item)
-                    string_result = True
 
-                if string_result:
-                    output_row[into_column_idx] = KgtkFormat.stringify(values[0] + item)
+                if item.startswith(KgtkFormat.STRING_SIGIL):
+                    # A string without a language qualifier
+                    output_row[into_column_idx] =  KgtkFormat.stringify(values[0] + KgtkFormat.unstringify(item))
+
+                elif item.startswith(KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL):
+                    # A string with a language qualifier
+                    string_value: str
+                    language: str
+                    language_suffix: str
+                    (string_value, language, language_suffix) = KgtkFormat.destringify(item)
+                    output_row[into_column_idx] =  KgtkFormat.stringify(values[0] + string_value, language, language_suffix)
+                    
+                elif to_string:
+                    # Not a string, but we want to convert it to one:
+                    output_row[into_column_idx] =  KgtkFormat.stringify(values[0] + item)
+
                 else:
-                    output_row[into_column_idx] = values[0] + item
+                    # Not a string, in or out:
+                    #
+                    # Note: This operation could produce an invalid KGTK value.
+                    output_row[into_column_idx] =  values[0] + item
+
                 return True
             opfunc = prepend_op
 
