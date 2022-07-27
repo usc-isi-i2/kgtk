@@ -151,6 +151,68 @@ kgtk cat -i examples/docs/calc-file1.tsv
 | P1050 | p585-count | 246 | 226380 |
 
 
+Also consider the following data:
+
+```bash
+kgtk cat -i examples/docs/calc-file4.tsv
+```
+
+| node1 | label | node2 | flower |
+| -- | -- | -- | -- |
+| apple | items | apple | blossom |
+| apple | lstring | "apple" | blossom |
+| apple | rstring | apple | "blossom" |
+| apple | name | "apple" | "blossom" |
+| apple | label | 'apple'@en | blossom |
+| apple | label2 | 'apple'@en | "blossom" |
+| apple | label3 | apple | 'blossom'@en |
+| apple | label4 | "apple" | 'blossom'@en |
+| apple | french | 'apple'@en | 'fleur'@fr |
+
+### Append a Constant Value
+
+Append a constant to the values in a column.  String values are
+treated specially.
+
+```bash
+kgtk calc -i examples/docs/calc-file4.tsv \
+          --do append --columns node2 --value "xxx" \
+	  --into result
+```
+
+| node1 | label | node2 | flower | result |
+| -- | -- | -- | -- | -- |
+| apple | items | apple | blossom | applexxx |
+| apple | lstring | "apple" | blossom | "applexxx" |
+| apple | rstring | apple | "blossom" | applexxx |
+| apple | name | "apple" | "blossom" | "applexxx" |
+| apple | label | 'apple'@en | blossom | 'applexxx'@en |
+| apple | label2 | 'apple'@en | "blossom" | 'applexxx'@en |
+| apple | label3 | apple | 'blossom'@en | applexxx |
+| apple | label4 | "apple" | 'blossom'@en | "applexxx" |
+| apple | french | 'apple'@en | 'fleur'@fr | 'applexxx'@en |
+
+Forcing all appended results to be strings:
+
+```bash
+kgtk calc -i examples/docs/calc-file4.tsv \
+          --do append --columns node2 --value "xxx" \
+	  --into result --to-string
+```
+
+| node1 | label | node2 | flower | result |
+| -- | -- | -- | -- | -- |
+| apple | items | apple | blossom | "applexxx" |
+| apple | lstring | "apple" | blossom | "applexxx" |
+| apple | rstring | apple | "blossom" | "applexxx" |
+| apple | name | "apple" | "blossom" | "applexxx" |
+| apple | label | 'apple'@en | blossom | 'applexxx'@en |
+| apple | label2 | 'apple'@en | "blossom" | 'applexxx'@en |
+| apple | label3 | apple | 'blossom'@en | "applexxx" |
+| apple | label4 | "apple" | 'blossom'@en | "applexxx" |
+| apple | french | 'apple'@en | 'fleur'@fr | 'applexxx'@en |
+
+
 ### Convert the `node1` column value with capitalization.
 
 !!! info
@@ -371,6 +433,71 @@ The output will be the following table in KGTK format:
 | P1040 | p585-count | 1 | 45073 | P1040p585-count |
 | P1050 | p585-count | 246 | 226380 | P1050p585-count |
 
+### Join strings.
+
+Joining using the default algorithm treats strings properly.
+Language qualified sring tags are retained in the result.  In case of a conflict, the
+last language qualified string tag takes precedence.
+
+```bash
+kgtk calc -i examples/docs/calc-file4.tsv \
+          --do join --columns node2 flower --value "" --into result
+```
+
+| node1 | label | node2 | flower | result |
+| -- | -- | -- | -- | -- |
+| apple | items | apple | blossom | appleblossom |
+| apple | lstring | "apple" | blossom | "appleblossom" |
+| apple | rstring | apple | "blossom" | "appleblossom" |
+| apple | name | "apple" | "blossom" | "appleblossom" |
+| apple | label | 'apple'@en | blossom | 'appleblossom'@en |
+| apple | label2 | 'apple'@en | "blossom" | 'appleblossom'@en |
+| apple | label3 | apple | 'blossom'@en | 'appleblossom'@en |
+| apple | label4 | "apple" | 'blossom'@en | 'appleblossom'@en |
+| apple | french | 'apple'@en | 'fleur'@fr | 'applefleur'@fr |
+
+Forcing all results to be strings:
+
+```bash
+kgtk calc -i examples/docs/calc-file4.tsv \
+          --do join --columns node2 flower --value "" \
+	  --into result --to-string
+```
+
+| node1 | label | node2 | flower | result |
+| -- | -- | -- | -- | -- |
+| apple | items | apple | blossom | "appleblossom" |
+| apple | lstring | "apple" | blossom | "appleblossom" |
+| apple | rstring | apple | "blossom" | "appleblossom" |
+| apple | name | "apple" | "blossom" | "appleblossom" |
+| apple | label | 'apple'@en | blossom | 'appleblossom'@en |
+| apple | label2 | 'apple'@en | "blossom" | 'appleblossom'@en |
+| apple | label3 | apple | 'blossom'@en | 'appleblossom'@en |
+| apple | label4 | "apple" | 'blossom'@en | 'appleblossom'@en |
+| apple | french | 'apple'@en | 'fleur'@fr | 'applefleur'@fr |
+
+There is a faster join algorithm that does not join strings properly.  The result
+might not be a valid KGTK file, as the following example illustrates.  However,
+if you are confident that the input data being joined does not include strings,
+then the fast algorithm may improve performace.
+
+```bash
+kgtk calc -i examples/docs/calc-file4.tsv \
+          --do join --fast --columns node2 flower --value "" --into result
+```
+
+| node1 | label | node2 | flower | result |
+| -- | -- | -- | -- | -- |
+| apple | items | apple | blossom | appleblossom |
+| apple | lstring | "apple" | blossom | "apple"blossom |
+| apple | rstring | apple | "blossom" | apple"blossom" |
+| apple | name | "apple" | "blossom" | "apple""blossom" |
+| apple | label | 'apple'@en | blossom | 'apple'@enblossom |
+| apple | label2 | 'apple'@en | "blossom" | 'apple'@en"blossom" |
+| apple | label3 | apple | 'blossom'@en | apple'blossom'@en |
+| apple | label4 | "apple" | 'blossom'@en | "apple"'blossom'@en |
+| apple | french | 'apple'@en | 'fleur'@fr | 'apple'@en'fleur'@fr |
+
 ### Compute the length of a column value
 
 !!! info
@@ -526,6 +653,51 @@ The output will be the following table in KGTK format:
 | P1037 | p585-count | 60 | 9317 |  0.64 |
 | P1040 | p585-count | 1 | 45073 |  0.00 |
 | P1050 | p585-count | 246 | 226380 |  0.11 |
+
+### Append a Constant Value
+
+Prepend a constant to the values in a column.  String values are
+treated specially.
+
+```bash
+kgtk calc -i examples/docs/calc-file4.tsv \
+          --do prepend --columns node2 --value "xxx" \
+	  --into result
+```
+
+| node1 | label | node2 | flower | result |
+| -- | -- | -- | -- | -- |
+| apple | items | apple | blossom | xxxapple |
+| apple | lstring | "apple" | blossom | "xxxapple" |
+| apple | rstring | apple | "blossom" | xxxapple |
+| apple | name | "apple" | "blossom" | "xxxapple" |
+| apple | label | 'apple'@en | blossom | 'xxxapple'@en |
+| apple | label2 | 'apple'@en | "blossom" | 'xxxapple'@en |
+| apple | label3 | apple | 'blossom'@en | xxxapple |
+| apple | label4 | "apple" | 'blossom'@en | "xxxapple" |
+| apple | french | 'apple'@en | 'fleur'@fr | 'xxxapple'@en |
+
+
+Forcing all results to be strings:
+
+```bash
+kgtk calc -i examples/docs/calc-file4.tsv \
+          --do prepend --columns node2 --value "xxx" \
+	  --into result --to-string
+```
+
+| node1 | label | node2 | flower | result |
+| -- | -- | -- | -- | -- |
+| apple | items | apple | blossom | "xxxapple" |
+| apple | lstring | "apple" | blossom | "xxxapple" |
+| apple | rstring | apple | "blossom" | "xxxapple" |
+| apple | name | "apple" | "blossom" | "xxxapple" |
+| apple | label | 'apple'@en | blossom | 'xxxapple'@en |
+| apple | label2 | 'apple'@en | "blossom" | 'xxxapple'@en |
+| apple | label3 | apple | 'blossom'@en | "xxxapple" |
+| apple | label4 | "apple" | 'blossom'@en | "xxxapple" |
+| apple | french | 'apple'@en | 'fleur'@fr | 'xxxapple'@en |
+
 
 ### Replace a String into a New Column
 
