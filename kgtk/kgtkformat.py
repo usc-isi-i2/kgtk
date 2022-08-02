@@ -211,9 +211,9 @@ class KgtkFormat:
     @classmethod
     def from_datetime(cls, d: dt.datetime, precision: typing.Optional[typing.Union[int, str]]=None)->str:
         if precision is None:
-            return cls.DATE_AND_TIMES_SIGIL + dt.isoformat()
+            return cls.DATE_AND_TIMES_SIGIL + d.isoformat()
         else:
-            return cls.DATE_AND_TIMES_SIGIL + dt.isoformat() + "/" + str(precision)
+            return cls.DATE_AND_TIMES_SIGIL + d.isoformat() + "/" + str(precision)
             
 
     @classmethod
