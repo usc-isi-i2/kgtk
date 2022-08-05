@@ -607,6 +607,8 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
     # Note: At present, input filtering takes place after sampling, validation, and filling.
     # This ordering will change in the future, to accomodate sqlite3-based queries.
     #
+    # The input filter is a map between column number and the set of allowed values in the column.
+    #
     # TODO: Build a validator for input_filter.
     input_filter: typing.Optional[typing.Mapping[int, typing.Set[str]]] = attr.ib(default=None)
 

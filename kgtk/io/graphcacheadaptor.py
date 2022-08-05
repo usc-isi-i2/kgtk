@@ -383,7 +383,7 @@ class GraphCacheAdaptor:
 
                 while True:
                     if reader_self.need_query:
-                        if not reader_self.advance_state():
+                        if not reader_self.advance_state(filter_batch_size):
                             adapter_self.close()
                             raise StopIteration
                         reader_self.start_query()
@@ -431,16 +431,22 @@ class GraphCacheAdaptor:
                     reader_self.cursor = reader_self.get_cursor(adapter_self.sql_store)
                     reader_self.start_query(adapter_self.table_name,
                                             adapter_self.column_names,
+                                            filter_batch_size,
                                             verbose=adapter_self.verbose,
                                             very_verbose=adapter_self.very_verbose,
                                             )
 
                 while True:
                     if reader_self.need_query:
-                        if not reader_self.advance_state():
+                        if not reader_self.advance_state(filter_batch_size):
                             adapter_self.close()
                             raise StopIteration
-                        reader_self.start_query()
+                        reader_self.start_query(adapter_self.table_name,
+                                                adapter_self.column_names,
+                                                filter_batch_size,
+                                                verbose=adapter_self.verbose,
+                                                very_verbose=adapter_self.very_verbose,
+                                                )
                             
                     while True:
                         if reader_self.buffer is not None and reader_self.buffer_idx < len(reader_self.buffer):
@@ -545,6 +551,7 @@ class GraphCacheReaderBase(KgtkReader):
     def build_query(self,
                     table_name: str,
                     column_names: typing.List[str],
+                    filter_batch_size: int,
                     verbose: bool = False,
                     very_verbose: bool = False,
                     )->typing.Tuple[str, typing.List[str]]:
@@ -612,16 +619,17 @@ class GraphCacheReaderBase(KgtkReader):
     def start_query(self,
                     table_name: str,
                     column_names: typing.List[str],
+                    filter_batch_size: int,
                     verbose: bool = False,
                     very_verbose: bool = False,
                     ):
         query: str
         parameters: typing.List[str]
-        query, parameters = self.build_query(table_name, column_names, verbose=verbose, very_verbose=very_verbose)
+        query, parameters = self.build_query(table_name, column_names, filter_batch_size, verbose=verbose, very_verbose=very_verbose)
         self.cursor.execute(query, parameters)
         self.need_query = False
 
-    def advance_state(self)->bool:
+    def advance_state(self, filter_batch_size: int)->bool:
         idx: int
         for idx in range(len(self.batch_state)):
             self.batch_state[idx] += filter_batch_size
@@ -636,22 +644,62 @@ def main():
     from argparse import ArgumentParser, Namespace
     import sys
 
+    from kgtk.io.kgtkreader import KgtkReaderOptions
+    from kgtk.utils.argparsehelpers import optional_bool
     from kgtk.exceptions import KGTKException
 
     parser = ArgumentParser()
     parser.add_argument("--graph-cache", dest="graph_cache", type=str,
                         help="The graph cache file.", required=True)
+
     parser.add_argument("--input-file", dest="input_file", type=str,
                         help="The input file to find in the graph cache.", required=True)
 
+    parser.add_argument("--index-mode", dest="index_mode", type=str,
+                        help="The index mode to pass to the Kypher API.", default='none')
+
+    parser.add_argument("--max-results", dest="max_results", type=int,
+                        help="The maximum results to pass to the Kypher API.", default=10000)
+
+    parser.add_argument("--max-cache-size", dest="max_cache_size", type=int,
+                        help="The maximum cache size to pass to the Kypher API.", default=1000)
+
+    parser.add_argument("--fetch-size", dest="fetch_size", type=int,
+                        help="The maximum number of rows to fetch in one call. 0 means unlimited.", default=0)
+
+    parser.add_argument("--filter-batch-size", dest="filter_batch_size", type=int,
+                        help="The maximum number of values to search for at once. 0 means unlimited.", default=0)
+
+    parser.add_argument("--verbose", dest="verbose", type=optional_bool, metavar="optional True|False",
+                        help="Print verbose progress messages.", nargs="?", const=True, default=False)
+
+    parser.add_argument("--very-verbose", dest="very_verbose", type=optional_bool, metavar="optional True|False",
+                        help="Print very verbose progress messages.", nargs="?", const=True, default=False)
+
+    KgtkReaderOptions.add_arguments(parser, who="opt")
+
     args: Namespace = parser.parse_args()
+
+    reader_options: KgtkReaderOptions = KgtkReaderOptions.from_args(args, who="opt")
 
     print("The graph cache is %s" % repr(args.graph_cache), flush=True)
     print("The input file is %s" % repr(args.input_file), flush=True)
+    print("The index mode is %s" % repr(args.index_mode), flush=True)
+    print("The maximum number of results is %d" % args.max_results, flush=True)
+    print("The maximum cache size is %d" % args.max_cache_size, flush=True)
+    print("The maximum fetch size is %d" % args.fetch_size, flush=True)
+    print("The filter batch size is %d" % args.filter_batch_size, flush=True)
+    print("Verbose = %s" % repr(args.verbose), flush=True)
+    print("Very verbose = %s" % repr(args.very_verbose), flush=True)
 
     try:
         gca: GraphCacheAdaptor = GraphCacheAdaptor.open(graph_cache_path=Path(args.graph_cache),
                                                         file_path=Path(args.input_file),
+                                                        index_mode=args.index_mode,
+                                                        max_results=args.max_results,
+                                                        max_cache_size=args.max_cache_size,
+                                                        verbose=args.verbose,
+                                                        very_verbose=args.very_verbose,
                                                         )
     except KGTKException as e:
         print("KGTKException: %s" % str(e), file=sys.stderr, flush=True)
@@ -663,6 +711,10 @@ def main():
 
     print("The columns are: [%s]" % ", ".join(gca.column_names))
     print("", flush=True)
+
+    reader = gca.reader(fetch_size=args.fetch_size,
+                        filter_batch_size=args.filter_batch_size,
+                        options=reader_options)
 
     gca.close()
 
