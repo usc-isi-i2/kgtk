@@ -307,7 +307,8 @@ def run(input_file: KGTKFiles,
 
                 if output_betweenness:
                     if vertex_betweenness in G2.vp:
-                        kw.write([v_id, vertex_betweenness, str(G2.vp[vertex_betweenness][v]), '{}-{}-{}'.format(v_id, vertex_betweenness, id_count)])
+                        kw.write([v_id, vertex_betweenness, str(G2.vp[vertex_betweenness][v]),
+                                  '{}-{}-{}'.format(v_id, vertex_betweenness, id_count)])
                         id_count += 1
 
 

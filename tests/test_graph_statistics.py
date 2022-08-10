@@ -30,38 +30,31 @@ class TestKGTKGraphStatistics(unittest.TestCase):
             '--compute-betweenness')
 
 
-        ## Code used to generate test result for comparison
-
+        # Code used to generate test result for comparison
         # self.temp_dir = Path('data')
         # self.undirected_output_path = self.temp_dir / 'graph_statistics_undirected.tsv'
         # self.directed_output_path = self.temp_dir / 'graph_statistics_directed.tsv'
-
         # cli_entry(
         #     'kgtk', 'graph-statistics', '-i', f'{self.file_path}', '-o', f'{self.undirected_output_path}',
         #     '--undirected', 'True', '--compute-betweenness')
-
         # cli_entry(
         #     'kgtk', 'graph-statistics', '-i', f'{self.file_path}', '-o', f'{self.directed_output_path}',
         #     '--compute-betweenness')
-
         # cli_entry(
         #     'kgtk', 'filter', '-i', f'{self.undirected_output_path}', '-p', ';vertex_pagerank;',
         #     '/', 'calc', '--do', 'average', '--columns', 'node2', '--into', 'node2', '--format', '%.4f',
         #     '/', 'sort', '-c', 'node2', '', '-r',
         #     '/', 'remove-columns', '-c', 'id', '-o', f'{self.undirected_pagerank_path}')
-
         # cli_entry(
         #     'kgtk', 'filter', '-i', f'{self.undirected_output_path}', '-p', ';vertex_betweenness;',
         #     '/', 'calc', '--do', 'average', '--columns', 'node2', '--into', 'node2', '--format', '%.4f',
         #     '/', 'sort', '-c', 'node2', '', '-r',
         #     '/', 'remove-columns', '-c', 'id', '-o', f'{self.undirected_betweenness_path}')
-
         # cli_entry(
         #     'kgtk', 'filter', '-i', f'{self.directed_output_path}', '-p', ';vertex_pagerank;',
         #     '/', 'calc', '--do', 'average', '--columns', 'node2', '--into', 'node2', '--format', '%.4f',
         #     '/', 'sort', '-c', 'node2', '', '-r',
         #     '/', 'remove-columns', '-c', 'id', '-o', f'{self.directed_pagerank_path}')
-
         # cli_entry(
         #     'kgtk', 'filter', '-i', f'{self.directed_output_path}', '-p', ';vertex_betweenness;',
         #     '/', 'calc', '--do', 'average', '--columns', 'node2', '--into', 'node2', '--format', '%.4f',
