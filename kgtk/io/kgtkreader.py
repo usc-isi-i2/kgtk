@@ -750,6 +750,9 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             from kgtk.io.graphcacheadaptor import GraphCacheAdaptor
             gca: typing.Optional[GraphCacheAdaptor] = GraphCacheAdaptor.open(graph_cache_path=Path(graph_cache),
                                                                              file_path=file_path,
+                                                                             who=who,
+                                                                             options=options,
+                                                                             value_options=value_options,
                                                                              ignore_stale_graph_cache=options.ignore_stale_graph_cache,
                                                                              error_file=error_file,
                                                                              verbose=verbose)
@@ -761,7 +764,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                 source = ClosableIterTextIOWrapper(sys.stdin) # This is a dummy definition.
                 rewindable = True
                 column_names = gca.column_names.copy()
-                header = KgtkFormat.COLUMN_SEPARATOR.join(column_names)
+                header = gca.header
 
         if not use_graph_cache and \
            not need_record_slicing and \
@@ -932,10 +935,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         if use_graph_cache and gca is not None:
             if verbose:
                 print("KgtkReader: Reading a kgtk file using the graph cache path.", file=error_file, flush=True)
-            cls = gca.reader(fetch_size=options.graph_cache_fetchmany_size,
-                             filter_batch_size=options.graph_cache_filter_batch_size,
-                             options=options,
-                             )
+            cls = gca.reader()
 
         elif use_fast_path:
             # The EdgeReader/NodeReader distinctions don't matter on the fast path.
