@@ -517,6 +517,8 @@ class GraphCacheAdaptor:
                             
                     while True:
                         if reader_self.buffer is not None and reader_self.buffer_idx < len(reader_self.buffer):
+                            if adapter_self.very_verbose:
+                                print("Returning buffer index %d" % reader_self.buffer_idx, file=adapter_self.error_file, flush=True)
                             row = list(reader_self.buffer[reader_self.buffer_idx])
                             reader_self.buffer_idx += 1
 
@@ -525,13 +527,15 @@ class GraphCacheAdaptor:
 
                                 # TODO: Use a separate option to control this.
                                 if adapter_self.very_verbose:
-                                    print("'%s'" % line, file=adapter_self.error_file, flush=True)
+                                    print("row: '%s'" % line, file=adapter_self.error_file, flush=True)
 
                                 # Ignore empty lines.
                                 if options.empty_line_action != ValidationAction.PASS and all([len(e) == 0 for e in row]):
                                     if reader_self.exclude_line(self.options.empty_line_action, "saw an empty line", line):
                                         reader_self.reject(line)
                                         reader_self.data_lines_ignored += 1
+                                        if adapter_self.very_verbose:
+                                            print("Ignoring empty row.", file=adapter_self.error_file, flush=True)
                                         continue
 
                                 # Ignore comment lines:
@@ -539,6 +543,8 @@ class GraphCacheAdaptor:
                                     if reader_self.exclude_line(self.options.comment_line_action, "saw a comment line", line):
                                         reader_self.reject(line)
                                         reader_self.data_lines_ignored += 1
+                                        if adapter_self.very_verbose:
+                                            print("Ignoring comment row.", file=adapter_self.error_file, flush=True)
                                         continue
 
                                 # Ignore whitespace lines
@@ -546,11 +552,15 @@ class GraphCacheAdaptor:
                                     if reader_self.exclude_line(self.options.whitespace_line_action, "saw a whitespace line", line):
                                         reader_self.reject(line)
                                         reader_self.data_lines_ignored += 1
+                                        if adapter_self.very_verbose:
+                                            print("Ignoring whitespace row.", file=adapter_self.error_file, flush=True)
                                         continue
 
                                 if reader_self._ignore_if_blank_required_fields(row, line):
                                     reader_self.reject(line)
                                     reader_self.data_lines_excluded_blank_fields += 1
+                                    if adapter_self.very_verbose:
+                                        print("Ignoring row due to blank required fields.", file=adapter_self.error_file, flush=True)
                                     continue
 
                             if options.repair_and_validate_values:
@@ -562,12 +572,16 @@ class GraphCacheAdaptor:
                                     if reader_self._ignore_invalid_values(row, line):
                                         reader_self.reject(line)
                                         reader_self.data_lines_excluded_invalid_values += 1
+                                        if adapter_self.very_verbose:
+                                            print("Ignoring row due to invalid values.", file=adapter_self.error_file, flush=True)
                                         continue
 
                                 if options.prohibited_list_action != ValidationAction.PASS:
                                     if reader_self._ignore_prohibited_lists(row, line):
                                         reader_self.reject(line)
                                         reader_self.data_lines_excluded_prohibited_lists += 1
+                                        if adapter_self.very_verbose:
+                                            print("Ignoring row due to prohibited lists.", file=adapter_self.error_file, flush=True)
                                         continue
 
                             if options.implied_label is not None:
@@ -575,8 +589,13 @@ class GraphCacheAdaptor:
                                 
                             return row
 
+                        if adapter_self.very_verbose:
+                            print("Fetching a buffer of maximum size %d" % fetch_size, file=adapter_self.error_file, flush=True)
                         reader_self.buffer = reader_self.cursor.fetchmany(fetch_size)
                         reader_self.buffer_idx = 0
+                        if adapter_self.very_verbose:
+                            print("Fetched %d records" % len(reader_self.buffer), file=adapter_self.error_file, flush=True)
+
                         if len(reader_self.buffer) == 0:
                             reader_self.need_query = True
                             break
