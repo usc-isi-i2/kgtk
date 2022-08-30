@@ -49,8 +49,15 @@ class GraphCacheAdaptor:
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
+    # The following fields may change during the lifetime of this object.
+
+    # is_open is used to prevent sending duplicate close calls to the
+    # KypherApi.
     is_open: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
 
+    # reader_method contains the name of the reader class.  It is set when a
+    # reader is opened. This should simplify unit tests.
+    reader_method: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
 
     @classmethod
     def open(cls,
@@ -186,20 +193,24 @@ class GraphCacheAdaptor:
         if self.options.repair_and_validate_values or \
            self.options.repair_and_validate_lines or \
            self.options.implied_label is not None:
+            self.reader_method = "slow_reader"
             if self.verbose:
                 print("Using the Graph Cache slow reader.", file=self.error_file, flush=True)
             return self.slow_reader(fetch_size, filter_batch_size, self.options)
             
         if fetch_size > 0:
             if filter_batch_size > 0:
+                self.reader_method = "filter_batch_reader"
                 if self.verbose:
                     print("Using the Graph Cache filter batch reader.", file=self.error_file, flush=True)
                 return self.filter_batch_reader(fetch_size, filter_batch_size)
             else:
+                self.reader_method = "fetchmany_reader"
                 if self.verbose:
                     print("Using the Graph Cache fetchmany reader.", file=self.error_file, flush=True)
                 return self.fetchmany_reader(fetch_size)
         else:
+            self.reader_method = "simple_reader"
             if self.verbose:
                 print("Using the Graph Cache simple reader.", file=self.error_file, flush=True)
             return self.simple_reader()
@@ -805,6 +816,8 @@ def main():
     print("The columns are: [%s]" % ", ".join(gca.column_names), flush=True)
 
     reader = gca.reader_instance()
+    if gca.reader_method is not None:
+        print("Using reader method %s" % gca.reader_method, flush=True)
 
     if args.filter_index is not None and args.filter_values is not None and len(args.filter_values) > 0:
         print("Building an input filter. index=%d, values=%s" % (args.filter_index, repr(args.filter_values)), flush=True)
