@@ -40,7 +40,7 @@ def check_sqlite_command():
     """Return True if sqlite3 is available as a shell command and callable via 'sh'.
     """
     try:
-        import sh
+        import sh # type: ignore
         sqlite3 = sh.Command(SQLITE_COMMAND)
         return True
     except:

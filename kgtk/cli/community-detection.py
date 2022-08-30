@@ -68,10 +68,9 @@ def run(input_file: KGTKFiles,
     import sys
     import typing
 
-    from graph_tool import Graph
-    from graph_tool.inference.minimize import minimize_blockmodel_dl, \
-        minimize_nested_blockmodel_dl
-    import graph_tool
+    from graph_tool import Graph # type: ignore
+    from graph_tool.inference.minimize import minimize_blockmodel_dl, minimize_nested_blockmodel_dl # type: ignore
+    import graph_tool # type: ignore
 
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
     from kgtk.io.kgtkwriter import KgtkWriter

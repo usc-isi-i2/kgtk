@@ -1022,7 +1022,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             if use_mgzip:
                 if verbose:
                     print("%s: reading mgzip with %d threads: %s" % (who, mgzip_threads, file_name), file=error_file, flush=True)
-                import mgzip
+                import mgzip # type: ignore
                 if isinstance(file_or_path, Path):
                     return mgzip.open(str(file_or_path), mode="rt", thread=mgzip_threads) # type: ignore
                 else:

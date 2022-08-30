@@ -26,10 +26,10 @@ def run(output_file: KGTKFiles):
     import sys # type: ignore
     from kgtk.exceptions import kgtk_exception_auto_handler
     import json
-    import nltk
+    import nltk # type: ignore
     nltk.download("wordnet")
     nltk.download('omw-1.4')
-    from nltk.corpus import wordnet as wn
+    from nltk.corpus import wordnet as wn # type: ignore
     from kgtk.kgtkformat import KgtkFormat
     from kgtk.io.kgtkwriter import KgtkWriter
 

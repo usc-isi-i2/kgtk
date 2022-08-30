@@ -9,7 +9,7 @@ from loguru import logger
 
 def load_gt_graph(graph_path):
     """Load a graph in graphml or gt format."""
-    from graph_tool.all import load_graph
+    from graph_tool.all import load_graph # type: ignore
     logger.info(f"loading the generated graph file from {graph_path}")
     g = load_graph(graph_path)
     return g

@@ -15,11 +15,11 @@ import gzip
 from typing import Any, Counter, Dict, Iterable, List, Optional, Tuple
 
 import torch
-from torchbiggraph.config import EntitySchema, RelationSchema
-from torchbiggraph.converters.dictionary import Dictionary
-from torchbiggraph.edgelist import EdgeList
-from torchbiggraph.entitylist import EntityList
-from torchbiggraph.graph_storages import (
+from torchbiggraph.config import EntitySchema, RelationSchema # type: ignore
+from torchbiggraph.converters.dictionary import Dictionary # type: ignore
+from torchbiggraph.edgelist import EdgeList # type: ignore
+from torchbiggraph.entitylist import EntityList # type: ignore
+from torchbiggraph.graph_storages import ( # type: ignore
     EDGE_STORAGES,
     ENTITY_STORAGES,
     RELATION_TYPE_STORAGES,
@@ -89,7 +89,7 @@ class ParquetEdgelistReader(EdgelistReader):
 
     def read(self, path: Path):
         try:
-            import parquet
+            import parquet # type: ignore
         except ImportError as e:
             raise ImportError(
                 f"{e}. HINT: You can install Parquet by running "
