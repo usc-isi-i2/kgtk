@@ -79,6 +79,9 @@ MOD_OP: str = "mod" # (column mod column) or (column mod value)
 NEGATE_OP: str = "negate" # (column, ...)
 NUMBER_OP: str = "number" # Get a number or the numeric part of a quantity.
 PERCENTAGE_OP: str = "percentage"
+RANDOM_OP: str = "random"
+RANDINT_OP: str = "randint"
+RANDRANGE_OP: str = "randrange"
 REVERSE_DIV_OP: str = "reverse_div" # (column2 / column1) or (column / value)
 REVERSE_MINUS_OP: str = "reverse_minus" # (column2 - column1) or (value - column)
 REVERSE_MOD_OP: str = "reverse_mod" # (column2 mod column1) or (value mod column)
@@ -163,6 +166,9 @@ OPERATIONS: typing.List[str] = [
     OR_OP,
     PERCENTAGE_OP,
     PREPEND_OP,
+    RANDOM_OP,
+    RANDINT_OP,
+    RANDRANGE_OP,
     REPLACE_OP,
     REVERSE_DIV_OP,
     REVERSE_MINUS_OP,
@@ -309,6 +315,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                               metavar="True|False",
                               type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument(      "--seed", dest="seed", type=int,
+                              help="An optional seed for the random number generator.")
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser,
                                     mode_options=True,
@@ -350,6 +359,7 @@ def run(input_file: KGTKFiles,
         filter: bool,
         be_fast: bool,
         as_int: bool,
+        seed: typing.Optional[int],
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -362,6 +372,7 @@ def run(input_file: KGTKFiles,
     # import modules locally
     import datetime as dt
     from pathlib import Path
+    import random
     import re
     import sys
 
@@ -421,6 +432,8 @@ def run(input_file: KGTKFiles,
         print("--filter=%s" % repr(filter), file=error_file, flush=True)
         print("--fast=%s" % repr(be_fast), file=error_file, flush=True)
         print("--as-int=%s" % repr(as_int), file=error_file, flush=True)
+        if seed is not None:
+            print("--seed %d" % seed, file=error_file, flush=True)
 
         reader_options.show(out=error_file)
         value_options.show(out=error_file)
@@ -525,6 +538,10 @@ def run(input_file: KGTKFiles,
         return sources
   
     try:
+        if seed is not None:
+            if verbose:
+                print("Setting the random number generation seed to %d" % seed, file=error_file, flush=True)
+            random.seed(seed)
 
         if verbose:
             print("Opening the input file %s" % str(input_kgtk_file), file=error_file, flush=True)
@@ -2053,6 +2070,55 @@ def run(input_file: KGTKFiles,
 
                 return True
             opfunc = prepend_op
+
+        elif operation == RANDOM_OP:
+            if len(sources) != 0:
+                raise KGTKException("Random needs no sources, got %d" % len(sources))
+            if len(into_column_idxs) == 0:
+                raise KGTKException("Random needs at least one destination column, got %d" % len(into_column_idxs))
+            if len(values) != 0:
+                raise KGTKException("Random needs no values, got %d" % len(values))
+
+            def random_op()->bool:
+                idx: int
+                for idx in range(len(into_column_idxs)):
+                    output_row[into_column_idxs[idx]] = str(random.random())
+                return True
+            opfunc = random_op
+
+        elif operation == RANDINT_OP:
+            if len(sources) != 0:
+                raise KGTKException("Randint needs no sources, got %d" % len(sources))
+            if len(into_column_idxs) == 0:
+                raise KGTKException("Randint needs at least one destination column, got %d" % len(into_column_idxs))
+            if len(values) != 2:
+                raise KGTKException("Randint needs two values, got %d" % len(values))
+
+            def randint_op()->bool:
+                start: int = int(values[0])
+                stop: int = int(values[1])
+                idx: int
+                for idx in range(len(into_column_idxs)):
+                    output_row[into_column_idxs[idx]] = str(random.randint(start, stop))
+                return True
+            opfunc = randint_op
+
+        elif operation == RANDRANGE_OP:
+            if len(sources) != 0:
+                raise KGTKException("Randrange needs no sources, got %d" % len(sources))
+            if len(into_column_idxs) == 0:
+                raise KGTKException("Randrange needs at least one destination column, got %d" % len(into_column_idxs))
+            if len(values) != 2:
+                raise KGTKException("Randrange needs two values, got %d" % len(values))
+
+            def randrange_op()->bool:
+                start: int = int(values[0])
+                stop: int = int(values[1])
+                idx: int
+                for idx in range(len(into_column_idxs)):
+                    output_row[into_column_idxs[idx]] = str(random.randrange(start, stop))
+                return True
+            opfunc = randrange_op
 
         elif operation == REPLACE_OP:
             if len(into_column_idxs) != 1:
