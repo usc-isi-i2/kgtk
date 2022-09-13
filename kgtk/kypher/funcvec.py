@@ -68,20 +68,30 @@ class VectorFunction(SqlFunction):
         self.ystore = None     # used to hold the vector store corresponding to the second y argument
         self.optimize = False  # internal switch to flag whether to produce optimized or generic code
 
-    def get_argument_vector_store(self, query, arg, state):
+    def get_argument_vector_store(self, query, arg, state, clause=None):
         """If 'arg' is a column variable that can be linked to a vector store,
         return the associated vector store object, otherwise return None.
+        If 'clause' is not None, it should be the pattern clause containing 'arg',
+        in which case the graph associated with that clause will dominate 'arg's.
         As the second return value, return the optimized reference that can
         be used for the vector for this type of vector store.
         """
         # TO DO: figure out whether we need to worry about join-variables here
         # that can't be linked unambiguously to a table, but then joins on 
-        # vector columns don't really make sense, do they?
+        # vector columns don't really make sense, do they (unless vectors
+        # become inputs to other vector computations)?
         if isinstance(arg, parser.Variable):
             graph, column, sql = query.variable_to_sql(arg, state)
             table = state.get_alias_table(graph)
+            if clause is not None:
+                # make the clause graph dominate, so we can join across vector tables:
+                table = query.get_pattern_clause_graph(clause)
+                # pick an arbitrary alias for this table, they'll be joined if there is more than one,
+                # but maybe we should pick the one specific to this clause - but there is no mechanism yet:
+                #graph = state.get_table_aliases(table)[0]
             master = self.store.get_vector_store()
-            if master.has_vector_store(table, column):
+            # TO DO: maybe add an 'error' arg to 'get_vector_store' so we can simplify this test:
+            if master.has_vector_store(table, column) or self.store.is_vector_column(table, column):
                 vstore = master.get_vector_store(table, column)
                 vref = vstore.vector_column_to_reference_sql(table_alias=graph)
                 return vstore, vref
@@ -112,7 +122,7 @@ class VectorFunction(SqlFunction):
     def translate_two_arg_call_to_optimized_sql(self, query, expr, state):
         args = expr.args
         if len(args) != 2:
-            raise Exception("Illegal number of arguments to '{self.get_name()}'")
+            raise KGTKException("Illegal number of arguments to '{self.get_name()}'")
         self.xstore, xref = self.get_argument_vector_store(query, args[0], state)
         self.ystore, yref = self.get_argument_vector_store(query, args[1], state)
         self.optimize = self.xstore and self.ystore and type(self.xstore) == type(self.ystore)
@@ -128,7 +138,7 @@ class VectorFunction(SqlFunction):
     def translate_two_arg_call_to_generic_sql(self, query, expr, state):
         args = expr.args
         if len(args) != 2:
-            raise Exception("Illegal number of arguments to '{self.get_name()}'")
+            raise KGTKException("Illegal number of arguments to '{self.get_name()}'")
         self.xstore, xref = self.get_argument_vector_store(query, args[0], state)
         self.ystore, yref = self.get_argument_vector_store(query, args[1], state)
         self.optimize = False
@@ -292,7 +302,7 @@ class CosineSimilarity(DotProduct):
 
     def translate_call_to_sql(self, query, expr, state):
         if len(expr.args) != 2:
-            raise Exception("Illegal number of arguments to '{self.get_name()}'")
+            raise KGTKException("Illegal number of arguments to '{self.get_name()}'")
         self.xstore, _ = self.get_argument_vector_store(query, expr.args[0], state)
         self.ystore, _ = self.get_argument_vector_store(query, expr.args[1], state)
         if self.have_l2_normalized_vectors():
@@ -338,22 +348,70 @@ class TopKCosineSimilarity(VirtualGraphFunction, VectorFunction):
     """
 
     # parameters needed by the 'VirtualTableFunction' API:
-    params = ['node1', 'k', 'nprobe']
+    params = ['node1', 'k', 'maxk', 'nprobe']
     columns = ['label', 'node2', 'vid', 'vrowid', 'vector', 'similarity']
     name = 'kvec_topk_cosine_similarity'
 
+    DEFAULT_K = 10
+    DEFAULT_MAXK = 0
+    DEFAULT_NPROBE = 1
+
     @staticmethod
-    def initialize(vtfun, node1, k=10, nprobe=0):
+    def initialize(vtfun, node1, k=DEFAULT_K, maxk=DEFAULT_MAXK, nprobe=DEFAULT_NPROBE):
         """Called during the initialziation of the virtual table function for a set of input
         parameters 'node1' (the source vector we are comparing against), 'k' (how many top-similar
         results to compute), and 'nprobe' (how deeply to search in the nearest-neighbor index).
+        If 'maxk' is non-zero, 'k' will dynamically scale all the way to 'maxk' which is only
+        useful, however, in conjunction with a similarity join controller.
         """
-        # TO DO: the optional arguments don't work as expected, we always have to supply them it seems,
-        #        otherwise the query breaks, figure out how to work around that...
+        # NOTE: the optional arguments don't work as expected, we always have to provide them,
+        #       so instead we fill in appropriate defaults as part of clause translation:
         vtfun.input_vector = node1
         vtfun.input_k = k
+        vtfun.input_maxk = maxk
         vtfun.input_nprobe = nprobe
-        vtfun._result_rows = None
+        vtfun.current_k = vtfun.input_k
+        vtfun.result_rows = None
+        vtfun.result_rows_offset = 0
+
+        # additional slots needed to support full similarity joins via join controllers:
+        # VERY TRICKY: the object actually running the result computation and iteration will be an
+        # instance of this class created during registration with the DB connection, so we record
+        # that here on the class so the join controller mechanism can access it from the class object
+        # (each invocation creates its own class object, so we "should" have a 1-1 correspondence):
+        type(vtfun).vtfun_impl = vtfun
+        vtfun.top_k_values = None
+        vtfun.debug = False
+        if vtfun.debug:
+            print('kvec_cos_sim_topk.init:')
+
+    def supports_sim_join(self):
+        """Signal that this computation supports full similarity joins via auxiliary join controllers."""
+        return True
+
+    @staticmethod
+    def iterate(vtfun, idx):
+        """Called by the virtual table function API when a new set of output values is requested.
+        In our adaptation here, this static method becomes the implementation of TableFunction.iterate()
+        on the dynamic class we create in self.get_code() below.  This just calls out to
+        'vtfun.compute_result_rows()' and should generally not require any specialization on subclasses.
+        """
+        if vtfun.result_rows is None:
+            vtfun.result_rows = vtfun.compute_result_rows()
+        try:
+            row = next(vtfun.result_rows)
+        except StopIteration:
+            if vtfun.current_k < vtfun.input_maxk:
+                vtfun.current_k = min(vtfun.current_k * 2, vtfun.input_maxk)
+                # TO DO: make follow-up calls with larger k more efficient, reintroduce vector caching
+                vtfun.result_rows = vtfun.compute_result_rows()
+                row = next(vtfun.result_rows)
+            else:
+                raise StopIteration
+        if vtfun.debug:
+            print('kvec_cos_sim_topk.next:', row[1])
+        vtfun.result_rows_offset += 1
+        return row
 
     @staticmethod
     def compute_result_rows(vtfun):
@@ -362,7 +420,7 @@ class TopKCosineSimilarity(VirtualGraphFunction, VectorFunction):
         for the associated vector store, this simply fails with an empty result.
         """
         vector = vtfun.input_vector
-        k = vtfun.input_k
+        k = vtfun.current_k
         nprobe = vtfun.input_nprobe
         vstore = vtfun.vector_store
         nnindex = vstore.get_nearest_neighbor_index() if vstore is not None else None
@@ -377,7 +435,9 @@ class TopKCosineSimilarity(VirtualGraphFunction, VectorFunction):
         label = TopKCosineSimilarity.name
         vx = vector
         vxnorm = np.linalg.norm(vx)
-        for row in vstore.get_vector_rows_by_id(V[0]):
+        for i, row in enumerate(vstore.get_vector_rows_by_id(V[0])):
+            if i < vtfun.result_rows_offset:
+                continue
             vy = row[4]
             # ['label', 'node2', 'vid', 'vrowid', 'vector', 'similarity']
             res = [label, row[1], row[0], row[3], vy.tobytes(), 0.0]
@@ -408,7 +468,19 @@ class TopKCosineSimilarity(VirtualGraphFunction, VectorFunction):
         rel = clause[1]
         if rel.labels is None:
             return
-        self.xstore, _ = self.get_argument_vector_store(query, node1.variable, state)
+
+        # we force dont_optimize for match clauses containing this virtual graph:
+        query.get_pattern_clause_match_clause(clause).dont_optimize = True
+
+        # supply default arguments - somehow doing this with self.initialize doesn't do the trick:
+        rel.properties = rel.properties or {}
+        rel.properties.setdefault('k', parser.Literal(query.query, self.DEFAULT_K))
+        rel.properties.setdefault('maxk', parser.Literal(query.query, self.DEFAULT_MAXK))
+        rel.properties.setdefault('nprobe', parser.Literal(query.query, self.DEFAULT_NPROBE))
+
+        # compute relevant vector store:
+        self.xstore, _ = self.get_argument_vector_store(query, node1.variable, state, clause=clause)
+        
         # load here so we get the uniquified name registered with the connection:
         self.load()
         old_graph = node1._graph_table
@@ -451,3 +523,230 @@ Q40	'Austria'@en	Q865	'Taiwan'@en	0.7146331071853638
 Q40	'Austria'@en	Q928	'Philippines'@en	0.7101161479949951
 Q40	'Austria'@en	Q298	'Chile'@en	0.7095608711242676
 """
+
+
+class EuclidianDistance(VectorFunction):
+    """Compute the Euclidian distance between two vectors.
+    """
+    
+    def translate_call_to_sql(self, query, expr, state):
+        return self.translate_two_arg_call_to_generic_sql(query, expr, state)
+
+    def get_generic_code(self):
+        """Generic calls assume byte strings as inputs which either come directly from the DB
+        or via '_kvec_get_vector' calls.
+        """
+        sstore, xtab, xcol, xdtype, xcache, ytab, ycol, ydtype, ycache = self.get_call_context()
+        def _euclidian_distance(x, y):
+            # 'frombuffer' calls are very fast, O(1):
+            vx = np.frombuffer(x, dtype=xdtype)
+            vy = np.frombuffer(y, dtype=ydtype)
+            # make sure we don't return numpy floats:
+            return float(np.linalg.norm(vx - vy))
+        return _euclidian_distance
+        
+    def get_code(self):
+        if self.code is None:
+            self.code = self.get_generic_code()
+            self.name += '_generic'
+        return self.code
+
+EuclidianDistance('kvec_euclidian_distance', num_params=2, deterministic=True).define()
+EuclidianDistance('kvec_euclid_dist', num_params=2, deterministic=True).define()
+EuclidianDistance('kvec_l2_norm', num_params=2, deterministic=True).define()
+
+
+### Join controllers to support full similarity joins:
+
+# The winning incantation seems to be to use an optional clause with
+# SimilarityJoinController and in addition do a dont-optimize on the
+# match clause containing the similarity computation - we might
+# (eventually) be able to only enclose the vtable computation in cross
+# joins instead of doing it for all clauses, but for now the whole
+# match clause will be deoptimized (see 'TopKCosineSimilarity').
+
+# TO DO: once we are confident that this is the right way to go,
+# these controllers should be inserted automatically into the query
+
+class SimilarityJoinController(VirtualGraphFunction):
+    """Virtual graph helper function that assists a similarity function such as
+    'kvec_topk_cos_sim' to compute full similarity joins.  The basic idea is to
+    insert this dummy computation at a point in the query where all the relevant
+    restrictions on a candidate similarity element have been tested (that is
+    the candidate qualifies for output), and that candidate then becomes an input
+    to this virtual graph computation.  We then record it as a result and shortcut
+    the main similarity computation if enough results have been computed.
+
+    Finding the right spot for insertion to do what we want it to do in the nested
+    loop join carried out by SQLite is tricky.  So far the winning combination seems
+    to be to insert this in an optional clause following the main sim computation
+    and pattern, and (optionally) use a cross join in the main pattern to avoid
+    any surprises from query optimization.  For example, something like this works
+    (the explicit use of 'maxk' indicates that we want to dynamically grow the set
+    of computed candidates until we found enough qualifying for the join, the
+    relation variable 'r' links the two clauses):
+
+        kgtk query --gc ... --ac ...
+             -i short_abstracts_textemb -i labels -i claims \
+             --match 'emb:      (x)-[]->(xv), \
+                                (xv)-[r:kvec_topk_cos_sim {k: 8, maxk: 1024, nprobe: 4}]->(y), \
+                      claims:   (y)-[:P106]->(:Q4964182), \
+                                (y)-[:P31]->(:Q5), \
+                      labels:   (x)-[]->(xl), \
+                      labels:   (y)-[]->(yl)' \
+             --where 'x in ["Q859", "Q868", "Q913"] and x != y' \
+             --opt   'emb:      (y)-[r:kvec_sim_join_controller]->()' \
+             --return 'xl as xlabel, r.similarity as sim, yl as ylabel'
+
+    Once we are confident this is the way to go, we can insert these auxiliary clauses
+    automatically during translation of 'kvec_topk_cos_sim' and others.
+    """
+
+    # parameters needed by the 'VirtualTableFunction' API:
+    params = ['node1', 'k']
+    columns = ['label', 'node2']
+
+    # the default value of 0 means to use the 'k' from the main sim computation:
+    DEFAULT_K = 0
+
+    @staticmethod
+    def initialize(vtfun, node1, k=DEFAULT_K):
+        """Initialize a call to the virtual graph function 'vtfun'.  If 'k' == 0,
+        use the 'k' of the associated main similarity function computation.
+        """
+        vtfun.input_node1 = node1
+        vtfun.input_k = int(k)
+        vtfun.result_rows = None
+        # points to the similarity function code object that is controlled by this controller
+        # (the proper linkage is established during self.translate_call_to_sql() below):
+        vtfun.sim_function = type(vtfun).sim_function.code.vtfun_impl
+        if vtfun.sim_function.top_k_values is None:
+            vtfun.sim_function.top_k_values = set()
+
+    @staticmethod
+    def compute_result_rows(vtfun):
+        """Receives one similarity candidate as input/node1 that satisfies all join conditions,
+        registers it and performs any resetting of the main similarity computation if necessary,
+        and returns a dummy result so this computation always succeeds.
+        """
+        value = vtfun.input_node1
+        k = vtfun.input_k
+        # from now on we are operating within the virtual function of the sim computation:
+        vtfun = vtfun.sim_function
+        # if k == 0, default to the 'k' of the similarity computation:
+        k = k or vtfun.input_k
+        if vtfun.debug:
+            print('topk_values_vtable:', value)
+        vtfun.top_k_values.add(value)
+        if len(vtfun.top_k_values) >= k:
+            # we generated 'k' fully qualifying similar nodes for the
+            # sim function's 'input_node1', terminate its iteration:
+            if vtfun.debug:
+                print('topk_values_vtable: reset', vtfun.current_k)
+            vtfun.result_rows = iter([])
+            vtfun.top_k_values.clear()
+            vtfun.input_maxk = 0
+        # return a dummy identity result:
+        return iter([['label', value]])
+
+    @staticmethod
+    def get_sim_function(query, vrel, state):
+        """Find a qualifying similarity function linked to this controller via 'vrel'.
+        Return None if nothing could be found.
+        """
+        for mclause in query.get_match_clauses():
+            for pclause in mclause.get_pattern_clauses():
+                prel = pclause[1]
+                # test variable name match, but ensure that the variable is from a different clause:
+                if prel.variable.name == vrel.name and prel.variable is not vrel:
+                    # we found a pattern clause whose relation var matches the vrel variable here:
+                    vgraph = query.get_pattern_clause_graph(pclause)
+                    sim_function = state.lookup_vtable(vgraph)
+                    if hasattr(sim_function, 'supports_sim_join') and sim_function.supports_sim_join():
+                        return sim_function
+        return None
+    
+    def translate_call_to_sql(self, query, clause, state):
+        """Called by query.pattern_clause_to_sql() to translate a clause
+        with a virtual graph pattern.  This additionally links to the
+        corresponding similarity function and supplies property defaults.
+        """
+        rel = clause[1]
+        self.sim_function = self.get_sim_function(query, rel.variable, state)
+        if not self.sim_function:
+            raise KGTKException(f"{self.name}: failed to find base similarity function")
+        # avoid creating a join between the two vtables:
+        rel.variable = query.query.create_anonymous_variable()
+
+         # supply default arguments - somehow doing this with self.initialize doesn't do the trick:
+        rel.properties = rel.properties or {}
+        rel.properties.setdefault('k', parser.Literal(query.query, self.DEFAULT_K))
+
+        super().translate_call_to_sql(query, clause, state)
+        # link the uniquified code object to the virtual graph function we computed above:
+        self.get_code().sim_function = self.sim_function
+        
+SimilarityJoinController('kvec_sim_join_controller').define()
+
+
+class SimilarityJoinControllerFunction(VectorFunction):
+    """Function version of 'SimilarityJoinController' (which see), which can be used
+    in where clauses or return expressions.  Controlling the exact application of this
+    function without unexpected interference from the query optimizer seems more difficult,
+    however, which was the reason for the vtable version in the first place.  Here is a
+    working invocation (the first arg links to the base similarity computation, the second
+    arg controls how many values to return, and the third argument will be registered upon
+    each call; additional otherwise unused args can be used to introduce clause dependencies):
+
+        kgtk query --gc ... --ac ... \
+             -i short_abstracts_textemb -i labels -i claims \
+             --match 'emb:      (x)-[]->(xv), \
+                                (xv)-[r:kvec_topk_cos_sim {k: 5, nprobe: 4}]->(y), \
+                      claims:   (y)-[:P31]->(:Q5), \
+                      labels:   (x)-[]->(xl), (y)-[]->(yl)' \
+             --where 'x in ["Q859", "Q868", "Q913"] and x != y' \
+             --return 'xl as xlabel, r.similarity as sim, yl as ylabel, kvec_sim_join_ctrl(r, 2, yl) as yl2'
+    """
+
+    def translate_call_to_sql(self, query, expr, state):
+        """Does some minimal argument checking and translates the call to SQL.
+        This additionally links to the corresponding similarity function.
+        """
+        if len(expr.args) >= 3:
+            vrel = expr.args[0]
+            self.sim_function = SimilarityJoinController.get_sim_function(query, vrel, state)
+            if not self.sim_function:
+                raise KGTKException(f"{self.name}: failed to find base similarity function")
+            # cut out vrel variable which is only needed for translation:
+            expr.args = expr.args[1:]
+            return super().translate_call_to_sql(query, expr, state)
+        else:
+            raise KGTKException(f"{self.name}: illegal call arguments")
+
+    def get_code(self):
+        if self.code is None:
+            sim_function = self.sim_function.code
+            
+            def _join_controller(k, value, *deps):
+                # access the code object of the sim function:
+                vtfun = sim_function.vtfun_impl
+                if vtfun.debug:
+                    print('kvec_sim_join_ctrl:', value)
+                if vtfun.top_k_values is None:
+                    vtfun.top_k_values = set()
+                vtfun.top_k_values.add(value)
+                if len(vtfun.top_k_values) >= k:
+                    # we generated 'k' fully qualifying similar nodes for the
+                    # sim function's 'input_node1', terminate its iteration:
+                    if vtfun.debug:
+                        print('kvec_sim_join_ctrl: reset', vtfun.current_k)
+                    vtfun.result_rows = iter([])
+                    vtfun.top_k_values.clear()
+                    vtfun.input_maxk = 0
+                # return a dummy identity result:
+                return value
+            
+            self.code = _join_controller
+        return self.code
+
+SimilarityJoinControllerFunction(name='kvec_sim_join_ctrl', deterministic=True).define()
