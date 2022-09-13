@@ -162,7 +162,8 @@ class KgtkQuery(object):
     def __init__(self, files, store, options=None, query=None,
                  match='()', where=None, optionals=None, with_=None,
                  ret='*', order=None, skip=None, limit=None, multi=None,
-                 parameters={}, index='auto', force=False, loglevel=0):
+                 parameters={}, index='auto', force=False, dont_optimize=False,
+                 loglevel=0):
         self.options = options or {}
         self.store = store
         self.loglevel = loglevel
@@ -209,6 +210,7 @@ class KgtkQuery(object):
         if multi is not None and multi < 1:
             raise Exception(f'Illegal multi-edge value: {multi}')
         self.multi_edge = multi
+        self.dont_optimize = dont_optimize
         
         # process/import files after we parsed the query, so we get syntax errors right away:
         self.files = []
@@ -303,6 +305,21 @@ class KgtkQuery(object):
         # assumes self.init_match_clauses() has been called:
         node1 = clause[0]
         return node1._graph_alias
+    
+    def get_pattern_clause_match_clause(self, clause):
+        """Return the match clause this pattern 'clause' belongs to,
+        raise an error if it cannot be found.
+        """
+        node1 = clause[0]
+        if hasattr(node1, '_match_clause'):
+            return node1._match_clause
+        for mclause in self.get_match_clauses():
+            for pclause in mclause.get_pattern_clauses():
+                # currently we rely on object identity to make the connection:
+                if pclause is clause:
+                    node1._match_clause = mclause
+                    return mclause
+        raise KGTKException('failed to link pattern clause to match clause')
     
     # in case we have aliases which could be different in every graph, stubs for now:
     def get_node1_column(self, graph):
@@ -643,6 +660,9 @@ class KgtkQuery(object):
         """
         i = 1
         for match_clause in self.get_match_clauses():
+            # we initialize this here for now; conceivably we could also invent
+            # some per-clause syntax for it, for example, --match! and --opt!:
+            match_clause.dont_optimize = self.dont_optimize
             for clause in match_clause.get_pattern_clauses():
                 graph = self.get_pattern_clause_graph(clause)
                 # create per-clause graph table alias for self-joins (keep the DB qualifier
@@ -656,11 +676,17 @@ class KgtkQuery(object):
         """Return the set of graph table names with aliases referenced by this 'match_clause'.
         """
         graphs = set()
+        graphs_list = []
         for clause in match_clause.get_pattern_clauses():
             graph_table = self.get_pattern_clause_graph(clause)
             graph_alias = self.get_pattern_clause_graph_alias(clause)
-            graphs.add((graph_table, graph_alias))
-        return graphs
+            graph = (graph_table, graph_alias)
+            if graph not in graphs:
+                graphs.add(graph)
+                graphs_list.append(graph)
+        # extra logic so we preserve the original graph order in the standard case
+        # to not upset the optimization of any existing queries in the wild:
+        return graphs_list if match_clause.dont_optimize else graphs
 
     def get_all_match_clause_graphs(self):
         """Return the set of graph table names with aliases referenced by this query.
@@ -673,10 +699,19 @@ class KgtkQuery(object):
                 graphs.add((graph_table, graph_alias))
         return graphs
 
-    def graph_names_to_sql(self, graphs):
+    def graph_names_to_sql_join(self, graphs, dont_optimize=False, append=False):
         """Translate a list of (graph, alias) pairs into an SQL table list with aliases.
+        Choose the appropriate INNER or CROSS join operator based on 'dont_optimize'
+        (note that this is an SQLite-specific idiom to disable the query optimizer).
+        If 'append', append to an existing join starting with the respective join operator.
         """
-        return ', '.join([g + ' AS ' + a for g, a in sorted(listify(graphs))])
+        if not dont_optimize:
+            # preserve the original graph order in the standard case to not
+            # upset the optimization of any existing queries in the wild:
+            graphs = sorted(listify(graphs))
+        appendop = (dont_optimize  and 'CROSS JOIN ' or 'INNER JOIN ') if append else ''
+        joinop = (dont_optimize  and ' CROSS JOIN ' or ', ')
+        return appendop + joinop.join([g + ' AS ' + a for g, a in graphs])
 
     def match_clause_to_sql(self, match_clause, state):
         """Translate a strict or optional 'match_clause' into a set of source tables,
@@ -686,7 +721,11 @@ class KgtkQuery(object):
         a bit wild and wooly and will likely need further refinement down the road.
         """
         state.set_match_clause(match_clause)
-        clause_sources = sorted(list(self.get_match_clause_graphs(match_clause)))
+        clause_sources = list(self.get_match_clause_graphs(match_clause))
+        if not match_clause.dont_optimize:
+            # preserve the original graph order in the standard case to not
+            # upset the optimization of any existing queries in the wild:
+            clause_sources = sorted(clause_sources)
         primary_source = clause_sources[0]
         sources = clause_sources.copy()
 
@@ -720,6 +759,12 @@ class KgtkQuery(object):
             internal_condition.append(where)
         internal_condition = '\n   AND '.join(internal_condition)
         external_condition = '\n   AND '.join(external_condition)
+
+        if match_clause.dont_optimize:
+            # order joined tables in the order they appear in clause_sources:
+            joined = [(graph, clause_sources.index(graph)) for graph in joined]
+            joined.sort(key=lambda x: x[1])
+            joined = [x[0] for x in joined]
         
         return sources, joined, internal_condition, external_condition
 
@@ -774,9 +819,9 @@ class KgtkQuery(object):
         assert not ext_condition, 'INTERNAL ERROR: unexpected match clause'
 
         where = []
-        query.write('\nFROM %s' % self.graph_names_to_sql(sources + aux_tables))
+        query.write(f'\nFROM {self.graph_names_to_sql_join(sources + aux_tables)}')
         if joined:
-            query.write('\nINNER JOIN %s' % self.graph_names_to_sql(joined))
+                query.write(f'\n{self.graph_names_to_sql_join(joined, dont_optimize=self.match_clause.dont_optimize, append=True)}')
         if int_condition:
             if joined:
                 query.write('\nON %s' % int_condition)
@@ -790,12 +835,13 @@ class KgtkQuery(object):
             aux_tables = list(state.get_match_clause_aux_tables(opt_clause))
             if len(sources) > 1 and not self.force:
                 raise Exception('optional clause generates a cross-product which can be very expensive, use --force to override')
+            # FIXME: nested optionals are broken, for one, the aliases becomes shielded and inaccessible in the ext_condition:
             nested = len(joined) > 0
-            query.write('\nLEFT JOIN %s%s' % (nested and '(' or '', self.graph_names_to_sql(sources + aux_tables)))
+            query.write(f'\nLEFT JOIN {"(" if nested else ""}{self.graph_names_to_sql_join(sources + aux_tables)}')
             if nested:
-                query.write('\n    INNER JOIN %s' % self.graph_names_to_sql(joined))
+                query.write(f'\n    {self.graph_names_to_sql_join(joined, dont_optimize=opt_clause.dont_optimize, append=True)}')
                 query.write('\n    ON %s)' % int_condition.replace('\n', '\n    '))
-                query.write('\nON %s' % ext_condition)
+                query.write(f'\nON {ext_condition}')
             else:
                 query.write('\nON %s' % '\n   AND '.join(listify(ext_condition) + listify(int_condition)))
 
