@@ -260,7 +260,7 @@ class VirtualTableFunction(SqlFunction):
         """
         vtfun.arg1 = arg1
         vtfun.arg2 = arg2
-        vtfun._result_rows = None
+        vtfun.result_rows = None
 
     @staticmethod
     def iterate(vtfun, idx):
@@ -269,9 +269,9 @@ class VirtualTableFunction(SqlFunction):
         on the dynamic class we create in self.get_code() below.  This just calls out to
         'vtfun.compute_result_rows()' and should generally not require any specialization on subclasses.
         """
-        if vtfun._result_rows is None:
-            vtfun._result_rows = vtfun.compute_result_rows()
-        return next(vtfun._result_rows)
+        if vtfun.result_rows is None:
+            vtfun.result_rows = vtfun.compute_result_rows()
+        return next(vtfun.result_rows)
 
     @staticmethod
     def compute_result_rows(vtfun):
@@ -321,6 +321,35 @@ class VirtualTableFunction(SqlFunction):
         self.uniquify_name()
         code = self.get_code()
         self.store.load_user_function(self.get_name(), self.get_num_params(), code)
+
+    def translate_call_to_sql(self, query, clause, state):
+        """Default method called by query.pattern_clause_to_sql() to translate
+        a clause with a virtual graph pattern.  This primarily substitutes the
+        appropriate virtual graph tables to use.
+        """
+        node1 = clause[0]
+        rel = clause[1]
+        if rel.labels is None:
+            return
+
+        # load here so we get the uniquified name registered with the connection:
+        self.load()
+        old_graph = node1._graph_table
+        old_graph_alias = node1._graph_alias
+        new_graph = self.get_name()
+        # create a new alias (which is fine given we have a unique table name),
+        # this will transparently handle qualified graph table names:
+        new_graph_alias = state.get_table_aliases(new_graph, new_graph + '_c')[0]
+        node1._graph_table = new_graph
+        node1._graph_alias = new_graph_alias
+        # TO DO: support this in query.py:
+        #state.unregister_table_alias(old_graph, old_graph_alias)
+        state.register_table_alias(new_graph, new_graph_alias)
+        # prevent the generation of a label restriction based on the virtual graph name:
+        rel.labels = None
+        # now finish translation with standard translator:
+        query.pattern_clause_to_sql(clause, new_graph_alias, state)
+
 
 """
 # minimal test that uses the dummy definition provided in VirtualTableFunction:
@@ -403,4 +432,6 @@ declare('kgtk.kypher.funcmath',
 
 declare('kgtk.kypher.funcvec',
         '_kvec_get_vector', 'kvec_dot', 'kvec_dot_product', 'kvec_cos_sim', 'kvec_cosine_similarity',
-        'kvec_topk_cosine_similarity', 'kvec_topk_cos_sim',)
+        'kvec_topk_cosine_similarity', 'kvec_topk_cos_sim',
+        'kvec_euclidian_distance', 'kvec_euclid_dist', 'kvec_l2_norm',
+        'kvec_sim_join_controller', 'kvec_sim_join_ctrl',)
