@@ -125,6 +125,8 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args):
                         help="do not generate a header row with column names")
     parser.add_argument('--force', action='store_true', dest='force',
                         help="force problematic queries to run against advice")
+    parser.add_argument('--dont-optimize', action='store_true', dest='dont_optimize',
+                        help="disable query optimizer and process match clause joins in the order listed")
     parser.add_argument('--index', '--index-mode', metavar='MODE', nargs='+', action='store',
                         dest='index_mode', default=[DEFAULT_INDEX_MODE], 
                         help="default index creation MODE for all inputs"
@@ -281,7 +283,8 @@ def run(input_files: KGTKFiles, **options):
                                       multi=options.get('multi_edge'),
                                       parameters=options.get('parameters'),
                                       index=options.get('index_mode'),
-                                      force=options.get('force'))
+                                      force=options.get('force'),
+                                      dont_optimize=options.get('dont_optimize'))
             
             explain = options.get('explain')
             if explain is not None:
