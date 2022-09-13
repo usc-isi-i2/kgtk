@@ -1409,29 +1409,34 @@ class FaissIndex(NearestNeighborIndex):
                 # reinitialize to remove any stale cached information:
                 self.__init__(self.vector_store)
 
-    def get_search_index(self):
+    def get_search_index(self, reuse=False):
         """Return a FAISS index that can be used to search a query vector against all vectors from relevant q-cells.
         This index is created dynamically during a query, linked to a pre-trained quantizer and then quickly populated
         with relevant vectors retrieved from the database using the 'index.add_core' method.  It uses a fast,
         multi-threaded, heap-based search implementation by FAISS which beats anything we might create from scratch.
         """
-        if self.search_index == None:
+        if self.search_index is None or not reuse:
             quantizer = self.get_quantizer()
             self.search_index = faiss.IndexIVFFlat(quantizer, self.vector_ndim, self.nlist, quantizer.metric_type)
             self.search_index.is_trained = True
             self.search_index.verbose = self.sql_store.loglevel >= 2
             self.search_index_qcells = set()
+        # just doing this doesn't free up memory for some reason, so we eventually run out of RAM:
+        #elif not reuse:
+        #    self.search_index.reset()
+        #    self.search_index.nprobe = 1
         return self.search_index
 
     def get_search_index_for_qcells(self, qcells):
         """Return a search index that contains (at least) all vectors of the identified 'qcells'.
         """
-        # TO DO: make this a size-limited index, currently we are reusing a search index that's already been
-        # created and add to it what is missing which speeds repeat queries but might eventually run out of RAM;
-        # this also changes the search quality over the course of a query, so think about this some more:
-        index = self.get_search_index()
+        # TO DO: reuse the search index in a size-limited fashion (we can key in on index.ntotal for that), so
+        # that we only add new qcells which would speed things up across repeat queries; however, this also
+        # would make the results non-deterministic depending on how many and which qcells have been cached...
+        index = self.get_search_index(reuse=False)
         loaded_qcells = self.search_index_qcells
         vstore = self.vector_store
+        nprobe = 0
         for row in self.ensure_vector_array(qcells):
             for qcell in row:
                 # -1 is a FAISS code for "not found":
@@ -1445,6 +1450,11 @@ class FaissIndex(NearestNeighborIndex):
                     # we use 'add_core' which is very fast, since we already know the qcell IDs of the added vectors:
                     index.add_core(nvecs, faiss.swig_ptr(vecs), faiss.swig_ptr(vecids), faiss.swig_ptr(qcellids))
                     loaded_qcells.add(qcell)
+                    nprobe += 1
+        # IMPORTANT: by default the nprobe value of the IndexIVFFlat index is set to 1, and there is no parameter
+        # that allows us to control that value from the 'search' method, so we set it here to correspond to the
+        # number of 'qcells' we are searching
+        index.nprobe = max(nprobe, 1)
         return index
     
     def search_quantizer(self, vectors, k=None):
