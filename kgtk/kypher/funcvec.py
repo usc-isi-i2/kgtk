@@ -371,6 +371,7 @@ class TopKCosineSimilarity(VirtualGraphFunction, VectorFunction):
         vtfun.input_maxk = maxk
         vtfun.input_nprobe = nprobe
         vtfun.current_k = vtfun.input_k
+        vtfun.search_index = None
         vtfun.result_rows = None
         vtfun.result_rows_offset = 0
 
@@ -429,15 +430,17 @@ class TopKCosineSimilarity(VirtualGraphFunction, VectorFunction):
         ndim = vstore.get_vector_ndim()
         dtype = vstore.get_vector_dtype()
         vector = np.frombuffer(vector, dtype=dtype)
+        if vtfun.search_index is None:
+            # first time around, create the FAISS search index for the respective qcells;
+            # we will reuse that if we do dynamic scaling towards maxk:
+            vtfun.search_index = nnindex.get_search_index_for_vectors(vector, nprobe=nprobe)
         # TO DO: possibly increase 'k' here to account for different L2 vs. cosine distance ordering:
-        D, V = nnindex.search(vector, k, nprobe=nprobe)
+        D, V = nnindex.search(vector, k, nprobe=nprobe, index=vtfun.search_index)
         result = []
         label = TopKCosineSimilarity.name
         vx = vector
         vxnorm = np.linalg.norm(vx)
-        for i, row in enumerate(vstore.get_vector_rows_by_id(V[0])):
-            if i < vtfun.result_rows_offset:
-                continue
+        for row in vstore.get_vector_rows_by_id(V[0][vtfun.result_rows_offset:]):
             vy = row[4]
             # ['label', 'node2', 'vid', 'vrowid', 'vector', 'similarity']
             res = [label, row[1], row[0], row[3], vy.tobytes(), 0.0]
