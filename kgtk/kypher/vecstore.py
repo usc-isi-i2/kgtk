@@ -8,6 +8,7 @@ import os.path
 import itertools
 import copy
 import math
+from   functools import lru_cache
 
 import numpy as np
 import h5py
@@ -491,6 +492,8 @@ class InlineVectorStore(VectorStore):
             buffer[i] = np.frombuffer(vec, dtype=dtype)
         return buffer, nvecs
 
+    # NOTE: 50 qcells with 16K 1K-D vectors each take up about 3GB of RAM:
+    @lru_cache(maxsize=50)
     def get_qcell_vectors(self, qcell):
         """Return all vectors assigned to this quantizer 'qcell' as an array.
         Return their zero-based rowid's as a second array of vector IDs.
@@ -780,6 +783,7 @@ class NumpyVectorStore(VectorStore):
         else:
             return self.get_store_as_array()[offset:end], nvecs
 
+    @lru_cache(maxsize=50)
     def get_qcell_vectors(self, qcell):
         """Return all vectors assigned to this quantizer 'qcell' as an array.
         Return their zero-based rowid's as a second array of vector IDs.
@@ -975,6 +979,7 @@ class Hd5VectorStore(VectorStore):
         else:
             return self.get_store_as_array()[offset:end], nvecs
 
+    @lru_cache(maxsize=50)
     def get_qcell_vectors(self, qcell):
         """Return all vectors assigned to this quantizer 'qcell' as an array.
         Return their zero-based rowid's as a second array of vector IDs.
@@ -1433,7 +1438,10 @@ class FaissIndex(NearestNeighborIndex):
         # TO DO: reuse the search index in a size-limited fashion (we can key in on index.ntotal for that), so
         # that we only add new qcells which would speed things up across repeat queries; however, this also
         # would make the results non-deterministic depending on how many and which qcells have been cached...
+        # ...instead, ordering inputs of a larger vector join by qcell might be a better option
         index = self.get_search_index(reuse=False)
+        # this can speed things up but makes results unstable:
+        #index = self.get_search_index(reuse=True)
         loaded_qcells = self.search_index_qcells
         vstore = self.vector_store
         nprobe = 0
@@ -1468,15 +1476,25 @@ class FaissIndex(NearestNeighborIndex):
         D, V = self.get_quantizer().search(vectors, k)
         return D, V
 
-    def search(self, vectors, k=1, nprobe=None):
+    def get_search_index_for_vectors(self, vectors, nprobe=None):
+        """Create a reusable search index for 'vectors' (for dynamic scaling).
+        'nprobe' controls how many inverted lists will be searched (defaults to self.nprobe)
+        """
+        vectors = self.ensure_float_type(vectors)
+        vectors = self.ensure_vector_array(vectors)
+        _, qcells = self.search_quantizer(vectors, k=nprobe)
+        index = self.get_search_index_for_qcells(qcells)
+        return index
+    
+    def search(self, vectors, k=1, nprobe=None, index=None):
         """Search this index for the 'k' nearest neighbors of 'vectors' and return
         the result as a tuple D, V (where D are distances and V vector IDs).  'nprobe'
         controls how many inverted lists will be searched (defaults to self.nprobe).
         """
         vectors = self.ensure_float_type(vectors)
         vectors = self.ensure_vector_array(vectors)
-        _, qcells = self.search_quantizer(vectors, k=nprobe)
-        index = self.get_search_index_for_qcells(qcells)
+        if index is None:
+            index = self.get_search_index_for_vectors(vectors, nprobe=nprobe)
         k = min(k, index.ntotal)
         D, V = index.search(vectors, k)
         return D, V
