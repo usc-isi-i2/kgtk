@@ -22,7 +22,7 @@ usage: kgtk lift [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                  [--unmodified-row-output-file UNMODIFIED_ROW_OUTPUT_FILE]
                  [--matched-label-output-file MATCHED_LABEL_OUTPUT_FILE]
                  [--unmatched-label-output-file UNMATCHED_LABEL_OUTPUT_FILE]
-                 [--columns-to-write [OUTPUT_LIFTED_COLUMN_NAMES [OUTPUT_LIFTED_COLUMN_NAMES ...]]]
+                 [--columns-to-write [OUTPUT_LIFTED_COLUMN_NAMES ...]]
                  [--default-value DEFAULT_VALUE]
                  [--suppress-empty-columns [True/False]]
                  [--ok-if-no-labels [True/False]]
@@ -32,9 +32,8 @@ usage: kgtk lift [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                  [--clear-before-lift [CLEAR_BEFORE_LIFT]]
                  [--overwrite [OVERWRITE]]
                  [--output-only-modified-rows [OUTPUT_ONLY_MODIFIED_ROWS]]
-                 [--languages [LANGUAGE [LANGUAGE ...]]]
-                 [--prioritize [True/False]] [--use-label-envar [True/False]]
-                 [-v [optional True|False]]
+                 [--languages [LANGUAGE ...]] [--prioritize [True/False]]
+                 [--use-label-envar [True/False]] [-v [optional True|False]]
 
 Lift labels for a KGTK file. If called as "kgtk lift", for each of the items in the (node1, label, node2) columns, look for matching label records. If called as "kgtk add-labels", look for matching label records for all input columns. If found, lift the label values into additional columns in the current record. Label records are removed from the output unless --remove-label-records=False. 
 
@@ -66,7 +65,7 @@ optional arguments:
                         edges. This file will have the same columns as the
                         source of the labels, either the input file or the
                         label file. (Optional, use '-' for stdout.)
-  --columns-to-write [OUTPUT_LIFTED_COLUMN_NAMES [OUTPUT_LIFTED_COLUMN_NAMES ...]]
+  --columns-to-write [OUTPUT_LIFTED_COLUMN_NAMES ...]
                         The columns into which to store the lifted values. The
                         default is [node1;label, label;label, node2;label] or
                         their aliases.
@@ -98,7 +97,7 @@ optional arguments:
   --output-only-modified-rows [OUTPUT_ONLY_MODIFIED_ROWS]
                         If true, output only modified edges to the primary
                         output stream. (default=False).
-  --languages [LANGUAGE [LANGUAGE ...]]
+  --languages [LANGUAGE ...]
                         Lift only labels with a matching language qualifier.
                         ANY means any language qualifier. NONE means no
                         language qualifier. (default=ANY NONE)
@@ -697,8 +696,8 @@ kgtk lift --input-file examples/docs/lift-file5.tsv \
 
 ### Lifting Labels Qualified with Any Language
 
-Lift only labels that are qualified as English,
-ignoring lables without language qualifiers:
+Lift any labels with language qualifiers, ignoring any
+labels without language qualifiers.
 
 ```bash
 kgtk lift --input-file examples/docs/lift-file5.tsv \
@@ -714,8 +713,7 @@ kgtk lift --input-file examples/docs/lift-file5.tsv \
 
 ### Lifting Labels that Are Not Language Qualified
 
-Lift only labels that are qualified as English,
-ignoring lables without language qualifiers:
+Lift only labels without language qualifiers:
 
 ```bash
 kgtk lift --input-file examples/docs/lift-file5.tsv \
@@ -731,8 +729,8 @@ kgtk lift --input-file examples/docs/lift-file5.tsv \
 
 ### Lifting Labels in a Specific Language or Without Language Qualification
 
-Lift only labels that are qualified as English,
-ignoring lables without language qualifiers:
+Lift only labels that are qualified as English
+or that do not have language qualifiers:
 
 ```bash
 kgtk lift --input-file examples/docs/lift-file5.tsv \
@@ -797,13 +795,28 @@ kgtk add-labels --input-file examples/docs/lift-file5.tsv \
 | Q1 | P2 | Q6 | 'Sr Elmo'@es | 'Francisco'@es |
 | Q6 | P1 | Q5 | 'Francisco'@es |  |
 
-Lift only labels that are qualified as English or Spanish, preferring English labels,
+Lift only labels that are qualified as English or Spanish, without prioritization,
 ignoring labels without language qualifiers:
 
 ```bash
 kgtk add-labels --input-file examples/docs/lift-file5.tsv \
                 --label-file examples/docs/lift-file12.tsv \
                 --languages en es
+```
+
+| node1 | label | node2 | node1;label | node2;label |
+| -- | -- | -- | -- | -- |
+| Q1 | P1 | Q5 | 'Elmo'@en\|'Sr Elmo'@es |  |
+| Q1 | P2 | Q6 | 'Elmo'@en\|'Sr Elmo'@es | 'Francisco'@es\|'Frank'@en |
+| Q6 | P1 | Q5 | 'Francisco'@es\|'Frank'@en |  |
+
+Lift only labels that are qualified as English or Spanish, preferring English labels,
+ignoring labels without language qualifiers:
+
+```bash
+kgtk add-labels --input-file examples/docs/lift-file5.tsv \
+                --label-file examples/docs/lift-file12.tsv \
+                --languages en es --prioritize
 ```
 
 | node1 | label | node2 | node1;label | node2;label |
@@ -818,7 +831,7 @@ ignoring labels without language qualifiers:
 ```bash
 kgtk add-labels --input-file examples/docs/lift-file5.tsv \
                 --label-file examples/docs/lift-file12.tsv \
-                --languages es en
+                --languages es en --prioritize
 ```
 
 | node1 | label | node2 | node1;label | node2;label |
@@ -833,7 +846,7 @@ ignoring labels without language qualifiers:
 ```bash
 kgtk add-labels --input-file examples/docs/lift-file5.tsv \
                 --label-file examples/docs/lift-file12.tsv \
-                --languages fr en es
+                --languages fr en es --prioritize
 ```
 
 | node1 | label | node2 | node1;label | node2;label |
@@ -1014,3 +1027,33 @@ kgtk lift --input-file examples/docs/lift-file8.tsv \
 | Q1 | P2 | Q6 | True |  | "friend" |  |
 | Q2 | P1 | Q5 | False |  | "instance of" |  |
 | Q2 | P2 | Q6 | False |  | "friend" |  |
+
+### Lifting Labels Stripping Language Qualifiers
+
+Lift labels without stripping language qualifiers:
+
+```bash
+kgtk lift --input-file examples/docs/lift-file5.tsv \
+          --label-file examples/docs/lift-file11.tsv
+```
+
+| node1 | label | node2 | node1;label | label;label | node2;label |
+| -- | -- | -- | -- | -- | -- |
+| Q1 | P1 | Q5 | 'Elmo'@en | "instance of" | "human" |
+| Q1 | P2 | Q6 | 'Elmo'@en | "friend" | 'Frances'@fr |
+| Q6 | P1 | Q5 | 'Frances'@fr | "instance of" | "human" |
+
+Lift labels, stripping language qualifiers:
+
+```bash
+kgtk lift --input-file examples/docs/lift-file5.tsv \
+          --label-file examples/docs/lift-file11.tsv \
+          --strip-language-qualifiers
+```
+
+| node1 | label | node2 | node1;label | label;label | node2;label |
+| -- | -- | -- | -- | -- | -- |
+| Q1 | P1 | Q5 | "Elmo" | "instance of" | "human" |
+| Q1 | P2 | Q6 | "Elmo" | "friend" | "Frances" |
+| Q6 | P1 | Q5 | "Frances" | "instance of" | "human" |
+

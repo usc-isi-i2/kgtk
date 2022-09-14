@@ -9,15 +9,15 @@
 import argparse
 from typing import Iterable, TextIO
 import logging
-from torchbiggraph.checkpoint_manager import CheckpointManager
-from torchbiggraph.config import ConfigFileLoader, ConfigSchema
-from torchbiggraph.graph_storages import (
+from torchbiggraph.checkpoint_manager import CheckpointManager # type: ignore
+from torchbiggraph.config import ConfigFileLoader, ConfigSchema # type: ignore
+from torchbiggraph.graph_storages import ( # type: ignore
     ENTITY_STORAGES,
     RELATION_TYPE_STORAGES,
     AbstractEntityStorage,
     AbstractRelationTypeStorage,
 )
-from torchbiggraph.model import MultiRelationEmbedder, make_model
+from torchbiggraph.model import MultiRelationEmbedder, make_model # type: ignore
 
 
 def write(outf: TextIO, key: Iterable[str], value: Iterable[float]) -> None:

@@ -1,5 +1,5 @@
-import graph_tool as gtmain
-import graph_tool.all as gtall
+import graph_tool as gtmain # type: ignore
+import graph_tool.all as gtall # type: ignore
 import numpy as np  # type: ignore
 from collections import defaultdict
 

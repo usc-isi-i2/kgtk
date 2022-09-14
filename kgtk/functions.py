@@ -14,7 +14,7 @@ from IPython.core.display import display, HTML, JSON, Markdown
 import json
 import os
 import pandas
-import sh
+import sh # type: ignore
 import sys
 import typing
 

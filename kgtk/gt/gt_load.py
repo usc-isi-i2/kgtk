@@ -1,4 +1,4 @@
-from graph_tool import Graph
+from graph_tool import Graph # type: ignore
 import itertools
 import sys
 import typing

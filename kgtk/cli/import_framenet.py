@@ -24,10 +24,10 @@ def run(output_file: KGTKFiles):
     # import modules locally
 
     from typing import Tuple, List, Union, Dict
-    import nltk
+    import nltk # type: ignore
     import pandas as pd
     nltk.download('framenet_v17')
-    from nltk.corpus import framenet as fn
+    from nltk.corpus import framenet as fn # type: ignore
     import re
     from kgtk.kgtkformat import KgtkFormat
     from kgtk.io.kgtkwriter import KgtkWriter

@@ -172,8 +172,8 @@ def run(input_file: KGTKFiles,
         ):
     import sys
     from pathlib import Path
-    from graph_tool.search import dfs_iterator, bfs_iterator, bfs_search, BFSVisitor
-    from graph_tool.util import find_edge
+    from graph_tool.search import dfs_iterator, bfs_iterator, bfs_search, BFSVisitor # type: ignore
+    from graph_tool.util import find_edge # type: ignore
     from kgtk.exceptions import KGTKException
     from kgtk.cli_argparse import KGTKArgumentParser
     from kgtk.gt.gt_load import load_graph_from_kgtk

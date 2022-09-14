@@ -40,17 +40,15 @@ cleared if an error occurs processing the input date-and-time value.
 ## Usage
 
 ```
-usage: kgtk calc [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
-                 [-c [COLUMN_NAME [COLUMN_NAME ...]]]
+usage: kgtk calc [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [-c [COLUMN_NAME ...]]
                  [--into COLUMN_NAME [COLUMN_NAME ...]] --do
-                 {abs,and,average,capitalize,casefold,copy,date_date,date_date_iso,date_day,date_month,date_year,div,eq,fromisoformat,ge,gt,is_date,is_in,is_lqstring,is_not,is,is_string,join,lower,le,len,list_sum,lt,max,min,minus,nand,ne,negate,nor,not,number,or,percentage,replace,reverse_div,reverse_minus,set,string_lang,string_lang_suffix,string_suffix,string_text,substring,substitute,sum,swapcase,title,upper,xor}
-                 [--values [VALUES [VALUES ...]]]
-                 [--with-values [WITH_VALUES [WITH_VALUES ...]]]
+                 {abs,and,append,average,capitalize,casefold,copy,date_date,date_date_iso,date_day,date_month,date_year,div,eq,fromisoformat,ge,gt,is_date,is_in,is_lqstring,is_not,is,is_string,join,lower,le,len,list_sum,lt,max,min,minus,nand,ne,negate,nor,not,number,or,percentage,prepend,random,randint,randrange,replace,reverse_div,reverse_minus,set,string_lang,string_lang_suffix,string_suffix,string_text,substring,substitute,sum,swapcase,title,upper,xor}
+                 [--values [VALUES ...]] [--with-values [WITH_VALUES ...]]
                  [--limit LIMIT] [--format FORMAT_STRING]
                  [--overwrite [True|False]] [--to-string [True|False]]
-                 [--group-by [COLUMN_NAME [COLUMN_NAME ...]]]
-                 [--presorted [True|False]] [--filter [True|False]]
-                 [--fast [True|False]] [--as-int [True|False]]
+                 [--group-by [COLUMN_NAME ...]] [--presorted [True|False]]
+                 [--filter [True|False]] [--fast [True|False]]
+                 [--as-int [True|False]] [--seed SEED]
                  [-v [optional True|False]]
 
 This command performs calculations on one or more columns in a KGTK file. 
@@ -67,18 +65,18 @@ optional arguments:
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
                         The KGTK output file. (May be omitted or '-' for
                         stdout.)
-  -c [COLUMN_NAME [COLUMN_NAME ...]], --columns [COLUMN_NAME [COLUMN_NAME ...]]
+  -c [COLUMN_NAME ...], --columns [COLUMN_NAME ...]
                         The list of source column names, optionally containing
                         '..' for column ranges and '...' for column names not
                         explicitly mentioned.
   --into COLUMN_NAME [COLUMN_NAME ...]
                         The name of the column to receive the result of the
                         calculation.
-  --do {abs,and,average,capitalize,casefold,copy,date_date,date_date_iso,date_day,date_month,date_year,div,eq,fromisoformat,ge,gt,is_date,is_in,is_lqstring,is_not,is,is_string,join,lower,le,len,list_sum,lt,max,min,minus,nand,ne,negate,nor,not,number,or,percentage,replace,reverse_div,reverse_minus,set,string_lang,string_lang_suffix,string_suffix,string_text,substring,substitute,sum,swapcase,title,upper,xor}
+  --do {abs,and,append,average,capitalize,casefold,copy,date_date,date_date_iso,date_day,date_month,date_year,div,eq,fromisoformat,ge,gt,is_date,is_in,is_lqstring,is_not,is,is_string,join,lower,le,len,list_sum,lt,max,min,minus,nand,ne,negate,nor,not,number,or,percentage,prepend,random,randint,randrange,replace,reverse_div,reverse_minus,set,string_lang,string_lang_suffix,string_suffix,string_text,substring,substitute,sum,swapcase,title,upper,xor}
                         The name of the operation.
-  --values [VALUES [VALUES ...]]
+  --values [VALUES ...]
                         An optional list of values
-  --with-values [WITH_VALUES [WITH_VALUES ...]]
+  --with-values [WITH_VALUES ...]
                         An optional list of additional values
   --limit LIMIT         A limit count.
   --format FORMAT_STRING
@@ -93,11 +91,11 @@ optional arguments:
                         If true, ensure that the result is a string. If false,
                         the result might be a symbol or some other type. --to-
                         string=True may be used with the following operations:
-                        ['date_date', 'date_date_iso', 'date_day',
-                        'date_month', 'date_year', 'number', 'string_lang',
-                        'string_lang_suffix', 'string_suffix', 'substring']
-                        (default=False).
-  --group-by [COLUMN_NAME [COLUMN_NAME ...]]
+                        ['append', 'date_date', 'date_date_iso', 'date_day',
+                        'date_month', 'date_year', 'join', 'number',
+                        'prepend', 'string_lang', 'string_lang_suffix',
+                        'string_suffix', 'substring'] (default=False).
+  --group-by [COLUMN_NAME ...]
                         The list of group-by column names, optionally
                         containing '..' for column ranges and '...' for column
                         names not explicitly mentioned. --group-by may be used
@@ -118,6 +116,7 @@ optional arguments:
   --as-int [True|False]
                         When True, compute numbers as integers. When False,
                         compute numbers as floats. (default=False).
+  --seed SEED           An optional seed for the random number generator.
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).
@@ -149,6 +148,68 @@ kgtk cat -i examples/docs/calc-file1.tsv
 | P1037 | p585-count | 60 | 9317 |
 | P1040 | p585-count | 1 | 45073 |
 | P1050 | p585-count | 246 | 226380 |
+
+
+Also consider the following data:
+
+```bash
+kgtk cat -i examples/docs/calc-file4.tsv
+```
+
+| node1 | label | node2 | flower |
+| -- | -- | -- | -- |
+| apple | items | apple | blossom |
+| apple | lstring | "apple" | blossom |
+| apple | rstring | apple | "blossom" |
+| apple | name | "apple" | "blossom" |
+| apple | label | 'apple'@en | blossom |
+| apple | label2 | 'apple'@en | "blossom" |
+| apple | label3 | apple | 'blossom'@en |
+| apple | label4 | "apple" | 'blossom'@en |
+| apple | french | 'apple'@en | 'fleur'@fr |
+
+### Append a Constant Value
+
+Append a constant to the values in a column.  String values are
+treated specially.
+
+```bash
+kgtk calc -i examples/docs/calc-file4.tsv \
+          --do append --columns node2 --value "xxx" \
+	  --into result
+```
+
+| node1 | label | node2 | flower | result |
+| -- | -- | -- | -- | -- |
+| apple | items | apple | blossom | applexxx |
+| apple | lstring | "apple" | blossom | "applexxx" |
+| apple | rstring | apple | "blossom" | applexxx |
+| apple | name | "apple" | "blossom" | "applexxx" |
+| apple | label | 'apple'@en | blossom | 'applexxx'@en |
+| apple | label2 | 'apple'@en | "blossom" | 'applexxx'@en |
+| apple | label3 | apple | 'blossom'@en | applexxx |
+| apple | label4 | "apple" | 'blossom'@en | "applexxx" |
+| apple | french | 'apple'@en | 'fleur'@fr | 'applexxx'@en |
+
+Forcing all appended results to be strings:
+
+```bash
+kgtk calc -i examples/docs/calc-file4.tsv \
+          --do append --columns node2 --value "xxx" \
+	  --into result --to-string
+```
+
+| node1 | label | node2 | flower | result |
+| -- | -- | -- | -- | -- |
+| apple | items | apple | blossom | "applexxx" |
+| apple | lstring | "apple" | blossom | "applexxx" |
+| apple | rstring | apple | "blossom" | "applexxx" |
+| apple | name | "apple" | "blossom" | "applexxx" |
+| apple | label | 'apple'@en | blossom | 'applexxx'@en |
+| apple | label2 | 'apple'@en | "blossom" | 'applexxx'@en |
+| apple | label3 | apple | 'blossom'@en | "applexxx" |
+| apple | label4 | "apple" | 'blossom'@en | "applexxx" |
+| apple | french | 'apple'@en | 'fleur'@fr | 'applexxx'@en |
 
 
 ### Convert the `node1` column value with capitalization.
@@ -371,6 +432,71 @@ The output will be the following table in KGTK format:
 | P1040 | p585-count | 1 | 45073 | P1040p585-count |
 | P1050 | p585-count | 246 | 226380 | P1050p585-count |
 
+### Join strings.
+
+Joining using the default algorithm treats strings properly.
+Language qualified sring tags are retained in the result.  In case of a conflict, the
+last language qualified string tag takes precedence.
+
+```bash
+kgtk calc -i examples/docs/calc-file4.tsv \
+          --do join --columns node2 flower --value "" --into result
+```
+
+| node1 | label | node2 | flower | result |
+| -- | -- | -- | -- | -- |
+| apple | items | apple | blossom | appleblossom |
+| apple | lstring | "apple" | blossom | "appleblossom" |
+| apple | rstring | apple | "blossom" | "appleblossom" |
+| apple | name | "apple" | "blossom" | "appleblossom" |
+| apple | label | 'apple'@en | blossom | 'appleblossom'@en |
+| apple | label2 | 'apple'@en | "blossom" | 'appleblossom'@en |
+| apple | label3 | apple | 'blossom'@en | 'appleblossom'@en |
+| apple | label4 | "apple" | 'blossom'@en | 'appleblossom'@en |
+| apple | french | 'apple'@en | 'fleur'@fr | 'applefleur'@fr |
+
+Forcing all results to be strings:
+
+```bash
+kgtk calc -i examples/docs/calc-file4.tsv \
+          --do join --columns node2 flower --value "" \
+	  --into result --to-string
+```
+
+| node1 | label | node2 | flower | result |
+| -- | -- | -- | -- | -- |
+| apple | items | apple | blossom | "appleblossom" |
+| apple | lstring | "apple" | blossom | "appleblossom" |
+| apple | rstring | apple | "blossom" | "appleblossom" |
+| apple | name | "apple" | "blossom" | "appleblossom" |
+| apple | label | 'apple'@en | blossom | 'appleblossom'@en |
+| apple | label2 | 'apple'@en | "blossom" | 'appleblossom'@en |
+| apple | label3 | apple | 'blossom'@en | 'appleblossom'@en |
+| apple | label4 | "apple" | 'blossom'@en | 'appleblossom'@en |
+| apple | french | 'apple'@en | 'fleur'@fr | 'applefleur'@fr |
+
+There is a faster join algorithm that does not join strings properly.  The result
+might not be a valid KGTK file, as the following example illustrates.  However,
+if you are confident that the input data being joined does not include strings,
+then the fast algorithm may improve performace.
+
+```bash
+kgtk calc -i examples/docs/calc-file4.tsv \
+          --do join --fast --columns node2 flower --value "" --into result
+```
+
+| node1 | label | node2 | flower | result |
+| -- | -- | -- | -- | -- |
+| apple | items | apple | blossom | appleblossom |
+| apple | lstring | "apple" | blossom | "apple"blossom |
+| apple | rstring | apple | "blossom" | apple"blossom" |
+| apple | name | "apple" | "blossom" | "apple""blossom" |
+| apple | label | 'apple'@en | blossom | 'apple'@enblossom |
+| apple | label2 | 'apple'@en | "blossom" | 'apple'@en"blossom" |
+| apple | label3 | apple | 'blossom'@en | apple'blossom'@en |
+| apple | label4 | "apple" | 'blossom'@en | "apple"'blossom'@en |
+| apple | french | 'apple'@en | 'fleur'@fr | 'apple'@en'fleur'@fr |
+
 ### Compute the length of a column value
 
 !!! info
@@ -526,6 +652,51 @@ The output will be the following table in KGTK format:
 | P1037 | p585-count | 60 | 9317 |  0.64 |
 | P1040 | p585-count | 1 | 45073 |  0.00 |
 | P1050 | p585-count | 246 | 226380 |  0.11 |
+
+### Append a Constant Value
+
+Prepend a constant to the values in a column.  String values are
+treated specially.
+
+```bash
+kgtk calc -i examples/docs/calc-file4.tsv \
+          --do prepend --columns node2 --value "xxx" \
+	  --into result
+```
+
+| node1 | label | node2 | flower | result |
+| -- | -- | -- | -- | -- |
+| apple | items | apple | blossom | xxxapple |
+| apple | lstring | "apple" | blossom | "xxxapple" |
+| apple | rstring | apple | "blossom" | xxxapple |
+| apple | name | "apple" | "blossom" | "xxxapple" |
+| apple | label | 'apple'@en | blossom | 'xxxapple'@en |
+| apple | label2 | 'apple'@en | "blossom" | 'xxxapple'@en |
+| apple | label3 | apple | 'blossom'@en | xxxapple |
+| apple | label4 | "apple" | 'blossom'@en | "xxxapple" |
+| apple | french | 'apple'@en | 'fleur'@fr | 'xxxapple'@en |
+
+
+Forcing all results to be strings:
+
+```bash
+kgtk calc -i examples/docs/calc-file4.tsv \
+          --do prepend --columns node2 --value "xxx" \
+	  --into result --to-string
+```
+
+| node1 | label | node2 | flower | result |
+| -- | -- | -- | -- | -- |
+| apple | items | apple | blossom | "xxxapple" |
+| apple | lstring | "apple" | blossom | "xxxapple" |
+| apple | rstring | apple | "blossom" | "xxxapple" |
+| apple | name | "apple" | "blossom" | "xxxapple" |
+| apple | label | 'apple'@en | blossom | 'xxxapple'@en |
+| apple | label2 | 'apple'@en | "blossom" | 'xxxapple'@en |
+| apple | label3 | apple | 'blossom'@en | "xxxapple" |
+| apple | label4 | "apple" | 'blossom'@en | "xxxapple" |
+| apple | french | 'apple'@en | 'fleur'@fr | 'xxxapple'@en |
+
 
 ### Replace a String into a New Column
 
@@ -696,6 +867,108 @@ The output will be the following table in KGTK format:
 | P1037 | p585-count | 60 | 9317 | xxx |
 | P1040 | p585-count | 1 | 45073 | xxx |
 | P1050 | p585-count | 246 | 226380 | xxx |
+
+### Generate a Random Floating Value
+
+!!! info
+    `--do random` requires no `--values` arguments and at least one destination columns (`--into`).
+    It does not allow any source column (`--columns`). The result will be a floating point number
+    in the range [0.0, 1.0).
+
+The following example uses a fixed seed for reproducibility.  Remove the `--seed 12345`
+argument for an irroproducible result.
+
+```bash
+kgtk calc -i examples/docs/calc-file1.tsv \
+          --do random  --into result --seed 12345
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | node1;total | result |
+| -- | -- | -- | -- | -- |
+| P10 | p585-count | 73 | 3879 | 0.41661987254534116 |
+| P1000 | p585-count | 16 | 266 | 0.010169169457068361 |
+| P101 | p585-count | 5 | 157519 | 0.8252065092537432 |
+| P1018 | p585-count | 2 | 177 | 0.2986398551995928 |
+| P102 | p585-count | 295 | 414726 | 0.3684116894884757 |
+| P1025 | p585-count | 26 | 693 | 0.19366134904507426 |
+| P1026 | p585-count | 40 | 6930 | 0.5660081687288613 |
+| P1027 | p585-count | 14 | 10008 | 0.1616878239293682 |
+| P1028 | p585-count | 1131 | 4035 | 0.12426688428353017 |
+| P1029 | p585-count | 4 | 2643 | 0.4329362680099159 |
+| P1035 | p585-count | 4 | 366 | 0.5620784880758429 |
+| P1037 | p585-count | 60 | 9317 | 0.1743435607237318 |
+| P1040 | p585-count | 1 | 45073 | 0.5532210855693298 |
+| P1050 | p585-count | 246 | 226380 | 0.35490138633659873 |
+
+### Generate a Random Integer Value
+
+!!! info
+    `--do randint` requires two `--values` arguments and at least one destination columns (`--into`).
+    It does not allow any source column (`--columns`). The result will be an integer between the
+    two values, inclusive.
+
+The following example uses a fixed seed for reproducibility.  Remove the `--seed 12345`
+argument for an irroproducible result.
+
+```bash
+kgtk calc -i examples/docs/calc-file1.tsv \
+          --do randint --values 1 5 --into result --seed 12345
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | node1;total | result |
+| -- | -- | -- | -- | -- |
+| P10 | p585-count | 73 | 3879 | 4 |
+| P1000 | p585-count | 16 | 266 | 1 |
+| P101 | p585-count | 5 | 157519 | 3 |
+| P1018 | p585-count | 2 | 177 | 3 |
+| P102 | p585-count | 295 | 414726 | 2 |
+| P1025 | p585-count | 26 | 693 | 3 |
+| P1026 | p585-count | 40 | 6930 | 5 |
+| P1027 | p585-count | 14 | 10008 | 4 |
+| P1028 | p585-count | 1131 | 4035 | 2 |
+| P1029 | p585-count | 4 | 2643 | 3 |
+| P1035 | p585-count | 4 | 366 | 1 |
+| P1037 | p585-count | 60 | 9317 | 4 |
+| P1040 | p585-count | 1 | 45073 | 3 |
+| P1050 | p585-count | 246 | 226380 | 5 |
+
+### Generate a Random Integer Value, Alternate
+
+!!! info
+    `--do randrange` requires two `--values` arguments and at least one destination columns (`--into`).
+    It does not allow any source column (`--columns`). The result will be an integer between the
+    two values, inclusive of the first value but exclusive of the second.
+
+The following example uses a fixed seed for reproducibility.  Remove the `--seed 12345`
+argument for an irroproducible result.
+
+```bash
+kgtk calc -i examples/docs/calc-file1.tsv \
+          --do randrange  --values 1 5 --into result --seed 12345
+```
+
+The output will be the following table in KGTK format:
+
+| node1 | label | node2 | node1;total | result |
+| -- | -- | -- | -- | -- |
+| P10 | p585-count | 73 | 3879 | 4 |
+| P1000 | p585-count | 16 | 266 | 1 |
+| P101 | p585-count | 5 | 157519 | 3 |
+| P1018 | p585-count | 2 | 177 | 3 |
+| P102 | p585-count | 295 | 414726 | 2 |
+| P1025 | p585-count | 26 | 693 | 3 |
+| P1026 | p585-count | 40 | 6930 | 4 |
+| P1027 | p585-count | 14 | 10008 | 2 |
+| P1028 | p585-count | 1131 | 4035 | 3 |
+| P1029 | p585-count | 4 | 2643 | 1 |
+| P1035 | p585-count | 4 | 366 | 4 |
+| P1037 | p585-count | 60 | 9317 | 3 |
+| P1040 | p585-count | 1 | 45073 | 2 |
+| P1050 | p585-count | 246 | 226380 | 2 |
 
 ### Substitute a String in Place
 
