@@ -11,12 +11,12 @@ jobs:
       - name: Install Python
         uses: actions/setup-python@v2
         with:
-          python-version: '3.8'
+          python-version: '3.9'
       - name: Setup conda
         uses: s-weigand/setup-conda@v1
         with:
           update-conda: true
-          python-version: '3.8'
+          python-version: '3.9'
           conda-channels: anaconda, conda-forge
       - name: Setup env
         run: |
