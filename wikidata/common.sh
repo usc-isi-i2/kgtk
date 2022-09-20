@@ -2,13 +2,18 @@
 
 # This script expects to be executed with the current working directory.
 
+# Ensure that sort has enough space for its temporary files.
+TMPDIR=/data3/rogers/tmp
+export TMPDIR
+
 # This is the Wikidata version we will analyze:
-WIKIDATA_VERSION=wikidata-20211021
-KGTK_WORK_DIR=/Volumes/saggu-ssd/wikidata_import
+WIKIDATA_VERSION=wikidata-20220905
+# KGTK_WORK_DIR=/data3/rogers/kgtk/gd/kgtk_public_graphs/cache/
+KGTK_WORK_DIR=/data3/rogers/kgtk/wikidata
 
 # The `kgtk validate-properties` pattern files are expected to
 # be in:
-PATTERNDIR=/Users/amandeep/Github/kgtk/wikidata/patterns
+PATTERNDIR=/data1/rogers/kgtk/github/kgtk/wikidata/patterns
 
 # This will be our working directory:
 WIKIDATA_WORK_DIR=${KGTK_WORK_DIR}/${WIKIDATA_VERSION}
@@ -34,8 +39,7 @@ WIKIDATA_JSON_DIR=${WIKIDATA_WORK_DIR}/dumps
 
 # The Wikidata JSON file is named as follows:
 WIKIDATA_ALL=${WIKIDATA_VERSION}-all
-#WIKIDATA_ALL_JSON=${WIKIDATA_JSON_DIR}/${WIKIDATA_ALL}.json.gz
-WIKIDATA_ALL_JSON=${WIKIDATA_JSON_DIR}/latest-all.json.bz2
+WIKIDATA_ALL_JSON=${WIKIDATA_JSON_DIR}/${WIKIDATA_ALL}.json.gz
 
 # Work file extensions
 UNSORTED_KGTK=unsorted.tsv.gz
@@ -45,22 +49,17 @@ SORTED_KGTK=tsv.gz
 USE_MGZIP=True
 
 # Select on of the following gzip implementations:
-# GZIP_CMD=bzip
+# GZIP_CMD=gzip
 GZIP_CMD=pigz
-
-# Ensure that sort has enough space for its temporary files.
-TMPDIR=${KGTK_WORK_DIR}/tmp
-export TMPDIR
 
 # Skip cleaning for now.  When we enable it, we will need to adjust some file
 # names in subsequent commands.
 CLEAN=0
 
 # Some common flags:
-#KGTK_FLAGS="--debug --timing --progress --progress-tty `tty`"
-KGTK_FLAGS="--debug --timing"
+KGTK_FLAGS="--debug --timing --progress --progress-tty `tty`"
 VERBOSE="--verbose"
-SORT_EXTRAS="--parallel 6 --buffer-size 50% -T ${TEMPDIR}"
+SORT_EXTRAS="--parallel 64 --buffer-size 50% -T ${TMPDIR}"
 
 # The Wikidata datatypes:
 WIKIDATATYPES=( \
