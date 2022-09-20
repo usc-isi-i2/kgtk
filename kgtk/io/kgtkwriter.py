@@ -239,7 +239,7 @@ class KgtkWriter(KgtkBase):
                 if use_mgzip:
                     if verbose:
                         print("KgtkWriter: writing mgzip with %d threads: %s" % (mgzip_threads, str(file_path)), file=error_file, flush=True)
-                    import mgzip
+                    import mgzip # type: ignore
                     gzip_file = mgzip.open(str(file_path), mode="wt", thread=mgzip_threads) # type: ignore
                     used_mgzip = True
                 else:

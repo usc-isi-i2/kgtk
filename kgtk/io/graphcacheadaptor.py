@@ -12,30 +12,60 @@ import sqlite3
 import sys
 import typing
 
+from kgtk.kgtkformat import KgtkFormat
 from kgtk.io.kgtkreader import KgtkReader
+from kgtk.utils.closableiter import ClosableIter, ClosableIterTextIOWrapper
 import kgtk.kypher.api as kapi
 
 @attr.s(slots=True, frozen=False)
 class GraphCacheAdaptor:
     from kgtk.io.kgtkreader import KgtkReaderOptions
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     graph_cache_path: Path = attr.ib(validator=attr.validators.instance_of(Path)) # for feedback
+    file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
+
+    who: str = attr.ib(validator=attr.validators.instance_of(str))
+
+    # TODO: Fix this validator:
+    # options: KgtkReaderOptions = attr.ib(validator=attr.validators.instance_of(KgtkReaderOptions))
+    options: KgtkReaderOptions = attr.ib()
+    value_options: KgtkValueOptions = attr.ib(validator=attr.validators.instance_of(KgtkValueOptions))
+
+
     api: kapi.KypherApi = attr.ib(validator=attr.validators.instance_of(kapi.KypherApi))
     sql_store = attr.ib() # Problems defining this type.
     table_name: str = attr.ib(validator=attr.validators.instance_of(str))
     column_names: typing.List[str] = attr.ib()
+    column_count: int = attr.ib(validator=attr.validators.instance_of(int))
+    column_name_map: typing.Mapping[str, int] = attr.ib(validator=attr.validators.deep_mapping(key_validator=attr.validators.instance_of(str),
+                                                                                               value_validator=attr.validators.instance_of(int)))
 
+    header: str = attr.ib(validator=attr.validators.instance_of(str))
+    source: ClosableIter[str] = attr.ib() # Todo: validate
+    input_format: str = attr.ib(validator=attr.validators.instance_of(str))
+ 
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
 
+    # The following fields may change during the lifetime of this object.
+
+    # is_open is used to prevent sending duplicate close calls to the
+    # KypherApi.
     is_open: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
 
+    # reader_method contains the name of the reader class.  It is set when a
+    # reader is opened. This should simplify unit tests.
+    reader_method: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None)
 
     @classmethod
     def open(cls,
              graph_cache_path: Path,
              file_path: Path,
+             who: str,
+             options: KgtkReaderOptions,
+             value_options: KgtkValueOptions,
              log_level: int = 1,
              index_mode: str = 'none',
              max_results: int = 10000,
@@ -116,14 +146,30 @@ class GraphCacheAdaptor:
             print("The table name is %s" % repr(table_name), file=error_file, flush=True)
             
         column_names: typing.List[str] = sql_store.get_table_header(table_name)
+        header: str = KgtkFormat.COLUMN_SEPARATOR.join(column_names)
+        source: ClosableIter[str] = ClosableIterTextIOWrapper(sys.stdin), # This is a dummy definition.
+        column_name_map: typing.Mapping[str, int] = KgtkReader.build_column_name_map(column_names,
+                                                                                     header_line=header,
+                                                                                     who=who,
+                                                                                     error_action=options.header_error_action,
+                                                                                     error_file=error_file)
 
         # api.add_input(table_name, name="table", handle=True)
 
         return cls(graph_cache_path=graph_cache_path,
+                   file_path=file_path,
+                   who=who,
+                   options=options,
+                   value_options=value_options,
                    api=api,
                    sql_store=sql_store,
                    table_name=table_name,
                    column_names=column_names,
+                   column_count=len(column_names),
+                   column_name_map=column_name_map,
+                   header=header,
+                   source=source,
+                   input_format="gca",
                    error_file=error_file,
                    verbose=verbose,
                    very_verbose=very_verbose,
@@ -134,38 +180,53 @@ class GraphCacheAdaptor:
             self.api.close()
             self.is_open = False
 
-    def reader(self,
-               fetch_size: int = 0,
-               filter_batch_size: int = 0,
-               options: typing.Optional[KgtkReaderOptions] = None,
-               ):
-        """Based on the parameters passed in, select one of the Graph Cache reader
-        implementations.  In the future, we might always use the Graph Cache
-        filter batch reader or the slow reader; the other two are just simpler
-        fallbacks.
+    def reader(self):
+        """Based on the parameters passed in, select one of the Graph Cache
+        reader implementations and return the class of the implementation.  In
+        the future, we might always use the Graph Cache filter batch reader or
+        the slow reader; the other two are just simpler fallbacks.
 
         """
-        if options is not None and \
-           (options.repair_and_validate_values or \
-            options.repair_and_validate_lines or \
-            options.implied_label is not None):
+        fetch_size: int = self.options.graph_cache_fetchmany_size
+        filter_batch_size: int = self.options.graph_cache_filter_batch_size
+
+        if self.options.repair_and_validate_values or \
+           self.options.repair_and_validate_lines or \
+           self.options.implied_label is not None:
+            self.reader_method = "slow_reader"
             if self.verbose:
                 print("Using the Graph Cache slow reader.", file=self.error_file, flush=True)
-            return self.slow_reader(fetch_size, filter_batch_size, options)
+            return self.slow_reader(fetch_size, filter_batch_size, self.options)
             
         if fetch_size > 0:
             if filter_batch_size > 0:
+                self.reader_method = "filter_batch_reader"
                 if self.verbose:
                     print("Using the Graph Cache filter batch reader.", file=self.error_file, flush=True)
                 return self.filter_batch_reader(fetch_size, filter_batch_size)
             else:
+                self.reader_method = "fetchmany_reader"
                 if self.verbose:
                     print("Using the Graph Cache fetchmany reader.", file=self.error_file, flush=True)
                 return self.fetchmany_reader(fetch_size)
         else:
+            self.reader_method = "simple_reader"
             if self.verbose:
                 print("Using the Graph Cache simple reader.", file=self.error_file, flush=True)
             return self.simple_reader()
+
+    def reader_instance(self):
+        """For debugging, return an instantiated reader using the parameters sent to the adapter."""
+        return self.reader()(file_path=self.file_path,
+                             source=self.source,
+                             options=self.options,
+                             value_options=self.value_options,
+                             column_names=self.column_names.copy(),
+                             column_count=self.column_count,
+                             column_name_map=self.column_name_map,
+                             header=self.header,
+                             input_format=self.input_format,
+                             )
 
     def simple_reader(adapter_self):
         """This is the simple Graph Cache reader.
@@ -255,7 +316,6 @@ class GraphCacheAdaptor:
                 return list(row)
 
         return SimpleGraphCacheReader
-        
 
     def fetchmany_reader(adapter_self, fetch_size: int):
         """This is the fetchmany Graph Cache reader.
@@ -342,12 +402,18 @@ class GraphCacheAdaptor:
 
                 while True:
                     if reader_self.buffer is not None and reader_self.buffer_idx < len(reader_self.buffer):
+                        if adapter_self.very_verbose:
+                            print("Returning buffer index %d" % reader_self.buffer_idx, file=adapter_self.error_file, flush=True)
                         row = list(reader_self.buffer[reader_self.buffer_idx])
                         reader_self.buffer_idx += 1
                         return row
 
+                    if adapter_self.very_verbose:
+                        print("Fetching a buffer of maximum size %d" % fetch_size, file=adapter_self.error_file, flush=True)
                     reader_self.buffer = reader_self.cursor.fetchmany(fetch_size)
                     reader_self.buffer_idx = 0
+                    if adapter_self.very_verbose:
+                        print("Fetched %d records" % len(reader_self.buffer), file=adapter_self.error_file, flush=True)
 
                     if len(reader_self.buffer) == 0:
                         adapter_self.close()
@@ -377,32 +443,44 @@ class GraphCacheAdaptor:
                     reader_self.cursor = reader_self.get_cursor(adapter_self.sql_store)
                     reader_self.start_query(adapter_self.table_name,
                                             adapter_self.column_names,
+                                            filter_batch_size,
                                             verbose=adapter_self.verbose,
                                             very_verbose=adapter_self.very_verbose,
                                             )
 
                 while True:
                     if reader_self.need_query:
-                        if not reader_self.advance_state():
+                        if not reader_self.advance_state(filter_batch_size):
                             adapter_self.close()
                             raise StopIteration
-                        reader_self.start_query()
+                        reader_self.start_query(adapter_self.table_name,
+                                                adapter_self.column_names,
+                                                filter_batch_size,
+                                                verbose=adapter_self.verbose,
+                                                very_verbose=adapter_self.very_verbose,
+                                                )
                             
                     while True:
                         if reader_self.buffer is not None and reader_self.buffer_idx < len(reader_self.buffer):
+                            if adapter_self.very_verbose:
+                                print("Returning buffer index %d" % reader_self.buffer_idx, file=adapter_self.error_file, flush=True)
                             row = list(reader_self.buffer[reader_self.buffer_idx])
                             reader_self.buffer_idx += 1
                             return row
 
+                        if adapter_self.very_verbose:
+                            print("Fetching a buffer of maximum size %d" % fetch_size, file=adapter_self.error_file, flush=True)
                         reader_self.buffer = reader_self.cursor.fetchmany(fetch_size)
                         reader_self.buffer_idx = 0
+                        if adapter_self.very_verbose:
+                            print("Fetched %d records" % len(reader_self.buffer), file=adapter_self.error_file, flush=True)
+
                         if len(reader_self.buffer) == 0:
                             reader_self.need_query = True
                             break
                             
 
         return FilterBatchGraphCacheReader
-        
 
     def slow_reader(adapter_self,
                     fetch_size: int,
@@ -431,19 +509,27 @@ class GraphCacheAdaptor:
                     reader_self.cursor = reader_self.get_cursor(adapter_self.sql_store)
                     reader_self.start_query(adapter_self.table_name,
                                             adapter_self.column_names,
+                                            filter_batch_size,
                                             verbose=adapter_self.verbose,
                                             very_verbose=adapter_self.very_verbose,
                                             )
 
                 while True:
                     if reader_self.need_query:
-                        if not reader_self.advance_state():
+                        if not reader_self.advance_state(filter_batch_size):
                             adapter_self.close()
                             raise StopIteration
-                        reader_self.start_query()
+                        reader_self.start_query(adapter_self.table_name,
+                                                adapter_self.column_names,
+                                                filter_batch_size,
+                                                verbose=adapter_self.verbose,
+                                                very_verbose=adapter_self.very_verbose,
+                                                )
                             
                     while True:
                         if reader_self.buffer is not None and reader_self.buffer_idx < len(reader_self.buffer):
+                            if adapter_self.very_verbose:
+                                print("Returning buffer index %d" % reader_self.buffer_idx, file=adapter_self.error_file, flush=True)
                             row = list(reader_self.buffer[reader_self.buffer_idx])
                             reader_self.buffer_idx += 1
 
@@ -452,13 +538,15 @@ class GraphCacheAdaptor:
 
                                 # TODO: Use a separate option to control this.
                                 if adapter_self.very_verbose:
-                                    print("'%s'" % line, file=self.error_file, flush=True)
+                                    print("row: '%s'" % line, file=adapter_self.error_file, flush=True)
 
                                 # Ignore empty lines.
                                 if options.empty_line_action != ValidationAction.PASS and all([len(e) == 0 for e in row]):
                                     if reader_self.exclude_line(self.options.empty_line_action, "saw an empty line", line):
                                         reader_self.reject(line)
                                         reader_self.data_lines_ignored += 1
+                                        if adapter_self.very_verbose:
+                                            print("Ignoring empty row.", file=adapter_self.error_file, flush=True)
                                         continue
 
                                 # Ignore comment lines:
@@ -466,6 +554,8 @@ class GraphCacheAdaptor:
                                     if reader_self.exclude_line(self.options.comment_line_action, "saw a comment line", line):
                                         reader_self.reject(line)
                                         reader_self.data_lines_ignored += 1
+                                        if adapter_self.very_verbose:
+                                            print("Ignoring comment row.", file=adapter_self.error_file, flush=True)
                                         continue
 
                                 # Ignore whitespace lines
@@ -473,11 +563,15 @@ class GraphCacheAdaptor:
                                     if reader_self.exclude_line(self.options.whitespace_line_action, "saw a whitespace line", line):
                                         reader_self.reject(line)
                                         reader_self.data_lines_ignored += 1
+                                        if adapter_self.very_verbose:
+                                            print("Ignoring whitespace row.", file=adapter_self.error_file, flush=True)
                                         continue
 
                                 if reader_self._ignore_if_blank_required_fields(row, line):
                                     reader_self.reject(line)
                                     reader_self.data_lines_excluded_blank_fields += 1
+                                    if adapter_self.very_verbose:
+                                        print("Ignoring row due to blank required fields.", file=adapter_self.error_file, flush=True)
                                     continue
 
                             if options.repair_and_validate_values:
@@ -489,12 +583,16 @@ class GraphCacheAdaptor:
                                     if reader_self._ignore_invalid_values(row, line):
                                         reader_self.reject(line)
                                         reader_self.data_lines_excluded_invalid_values += 1
+                                        if adapter_self.very_verbose:
+                                            print("Ignoring row due to invalid values.", file=adapter_self.error_file, flush=True)
                                         continue
 
                                 if options.prohibited_list_action != ValidationAction.PASS:
                                     if reader_self._ignore_prohibited_lists(row, line):
                                         reader_self.reject(line)
                                         reader_self.data_lines_excluded_prohibited_lists += 1
+                                        if adapter_self.very_verbose:
+                                            print("Ignoring row due to prohibited lists.", file=adapter_self.error_file, flush=True)
                                         continue
 
                             if options.implied_label is not None:
@@ -502,15 +600,19 @@ class GraphCacheAdaptor:
                                 
                             return row
 
+                        if adapter_self.very_verbose:
+                            print("Fetching a buffer of maximum size %d" % fetch_size, file=adapter_self.error_file, flush=True)
                         reader_self.buffer = reader_self.cursor.fetchmany(fetch_size)
                         reader_self.buffer_idx = 0
+                        if adapter_self.very_verbose:
+                            print("Fetched %d records" % len(reader_self.buffer), file=adapter_self.error_file, flush=True)
+
                         if len(reader_self.buffer) == 0:
                             reader_self.need_query = True
                             break
                             
 
         return SlowGraphCacheReader
-        
 
 @attr.s(slots=True, frozen=False)
 class GraphCacheReaderBase(KgtkReader):
@@ -545,6 +647,7 @@ class GraphCacheReaderBase(KgtkReader):
     def build_query(self,
                     table_name: str,
                     column_names: typing.List[str],
+                    filter_batch_size: int,
                     verbose: bool = False,
                     very_verbose: bool = False,
                     )->typing.Tuple[str, typing.List[str]]:
@@ -601,8 +704,8 @@ class GraphCacheReaderBase(KgtkReader):
         query: str = "".join(query_list)
 
         if very_verbose:
-            print("Query: %s" % repr(query), file=adapter_self.error_file, flush=True)
-            print("Parameters: [%s]" % ", ".join([repr(x) for x in parameters]), file=adapter_self.error_file, flush=True)
+            print("Query: %s" % repr(query), file=self.error_file, flush=True)
+            print("Parameters: [%s]" % ", ".join([repr(x) for x in parameters]), file=self.error_file, flush=True)
 
         return query, parameters
 
@@ -612,16 +715,17 @@ class GraphCacheReaderBase(KgtkReader):
     def start_query(self,
                     table_name: str,
                     column_names: typing.List[str],
+                    filter_batch_size: int,
                     verbose: bool = False,
                     very_verbose: bool = False,
                     ):
         query: str
         parameters: typing.List[str]
-        query, parameters = self.build_query(table_name, column_names, verbose=verbose, very_verbose=very_verbose)
+        query, parameters = self.build_query(table_name, column_names, filter_batch_size, verbose=verbose, very_verbose=very_verbose)
         self.cursor.execute(query, parameters)
         self.need_query = False
 
-    def advance_state(self)->bool:
+    def advance_state(self, filter_batch_size: int)->bool:
         idx: int
         for idx in range(len(self.batch_state)):
             self.batch_state[idx] += filter_batch_size
@@ -636,22 +740,70 @@ def main():
     from argparse import ArgumentParser, Namespace
     import sys
 
+    from kgtk.io.kgtkreader import KgtkReaderOptions
+    from kgtk.utils.argparsehelpers import optional_bool
+    from kgtk.value.kgtkvalueoptions import KgtkValueOptions
     from kgtk.exceptions import KGTKException
 
     parser = ArgumentParser()
-    parser.add_argument("--graph-cache", dest="graph_cache", type=str,
-                        help="The graph cache file.", required=True)
     parser.add_argument("--input-file", dest="input_file", type=str,
                         help="The input file to find in the graph cache.", required=True)
 
+    parser.add_argument("--index-mode", dest="index_mode", type=str,
+                        help="The index mode to pass to the Kypher API.", default='none')
+
+    parser.add_argument("--max-results", dest="max_results", type=int,
+                        help="The maximum results to pass to the Kypher API.", default=10000)
+
+    parser.add_argument("--max-cache-size", dest="max_cache_size", type=int,
+                        help="The maximum cache size to pass to the Kypher API.", default=1000)
+
+    parser.add_argument("--filter-index", dest="filter_index", type=int,
+                        help="The index of the column on which to filter.")
+
+    parser.add_argument("--filter-values", dest="filter_values", type=str, nargs='*',
+                        help="The values to include in the filter.")
+
+    parser.add_argument("--verbose", dest="verbose", type=optional_bool, metavar="optional True|False",
+                        help="Print verbose progress messages.", nargs="?", const=True, default=False)
+
+    parser.add_argument("--very-verbose", dest="very_verbose", type=optional_bool, metavar="optional True|False",
+                        help="Print very verbose progress messages.", nargs="?", const=True, default=False)
+
+    KgtkReaderOptions.add_arguments(parser)
+    KgtkValueOptions.add_arguments(parser)
+
     args: Namespace = parser.parse_args()
 
-    print("The graph cache is %s" % repr(args.graph_cache), flush=True)
+    reader_options: KgtkReaderOptions = KgtkReaderOptions.from_args(args)
+    value_options: KgtkValueOptions = KgtkValueOptions.from_args(args)
+
+    if reader_options.graph_cache is not None:
+        print("The graph cache is %s" % repr(reader_options.graph_cache), flush=True)
+    else:
+        print("The graph cache must be supplied.", flush=True)
+        return
+              
     print("The input file is %s" % repr(args.input_file), flush=True)
+    print("The index mode is %s" % repr(args.index_mode), flush=True)
+    print("The maximum number of results is %d" % args.max_results, flush=True)
+    print("The maximum cache size is %d" % args.max_cache_size, flush=True)
+    print("The maximum fetch size is %d" % reader_options.graph_cache_fetchmany_size, flush=True)
+    print("The filter batch size is %d" % reader_options.graph_cache_filter_batch_size, flush=True)
+    print("Verbose = %s" % repr(args.verbose), flush=True)
+    print("Very verbose = %s" % repr(args.very_verbose), flush=True)
 
     try:
         gca: GraphCacheAdaptor = GraphCacheAdaptor.open(graph_cache_path=Path(args.graph_cache),
                                                         file_path=Path(args.input_file),
+                                                        who="gca",
+                                                        options=reader_options,
+                                                        value_options=value_options,
+                                                        index_mode=args.index_mode,
+                                                        max_results=args.max_results,
+                                                        max_cache_size=args.max_cache_size,
+                                                        verbose=args.verbose,
+                                                        very_verbose=args.very_verbose,
                                                         )
     except KGTKException as e:
         print("KGTKException: %s" % str(e), file=sys.stderr, flush=True)
@@ -661,8 +813,27 @@ def main():
         print("%s not found in %s" % (repr(args.input_file), repr(args.graph_cache)), file=sys.stderr, flush=True)
         return
 
-    print("The columns are: [%s]" % ", ".join(gca.column_names))
-    print("", flush=True)
+    print("The columns are: [%s]" % ", ".join(gca.column_names), flush=True)
+
+    reader = gca.reader_instance()
+    if gca.reader_method is not None:
+        print("Using reader method %s" % gca.reader_method, flush=True)
+
+    if args.filter_index is not None and args.filter_values is not None and len(args.filter_values) > 0:
+        print("Building an input filter. index=%d, values=%s" % (args.filter_index, repr(args.filter_values)), flush=True)
+        input_filter = {
+            args.filter_index: set(args.filter_values)
+        }
+        reader.add_input_filter(input_filter=input_filter)
+
+    record_count: int = 0
+    record: typing.List[str]
+    for record in reader:
+        record_count += 1
+        if args.very_verbose:
+            print("record %d: %s" % (record_count, repr(record)), flush=True)
+
+    print("%d records read" % record_count, flush=True)
 
     gca.close()
 

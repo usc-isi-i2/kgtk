@@ -90,6 +90,7 @@ class KgtkLift(KgtkFormat):
 
     lift_all_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     force_input_mode_none: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
+    strip_language_qualifiers: bool= attr.ib(validator=attr.validators.instance_of(bool), default=False)
     
     # TODO: add rewind logic here and KgtkReader
 
@@ -311,8 +312,8 @@ class KgtkLift(KgtkFormat):
                     continue # Ignore default values.
 
                 process_label: bool
+                sigil: str
                 if language_filtering:
-                    sigil: str
                     if len(label_value) == 0:
                         # An empty value is not a valid label when filtering by language.
                         process_label = False
@@ -363,6 +364,11 @@ class KgtkLift(KgtkFormat):
                     process_label = True
 
                 if process_label:
+                    if self.strip_language_qualifiers:
+                        sigil = label_value[0]
+                        if sigil == KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL:
+                            label_value = KgtkFormat.stringify(KgtkFormat.unstringify(label_value))
+                        
                     if label_key in labels:
                         # This label already exists in the table.
                         if self.suppress_duplicate_labels:
@@ -975,6 +981,11 @@ class KgtkLift(KgtkFormat):
                             process_label = True
 
                         if process_label:
+                            if self.strip_language_qualifiers:
+                                sigil = label_value[0]
+                                if sigil == KgtkFormat.LANGUAGE_QUALIFIED_STRING_SIGIL:
+                                    label_value = KgtkFormat.stringify(KgtkFormat.unstringify(label_value))
+
                             # TODO: is this code positioned correctly?
                             if mlkw is not None:
                                 mlkw.write(current_label_row)

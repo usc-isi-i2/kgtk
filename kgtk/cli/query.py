@@ -154,7 +154,7 @@ def import_modules():
     """Import command-specific modules that are only needed when we actually run.
     """
     mod = sys.modules[__name__]
-    import sh
+    import sh # type: ignore
     setattr(mod, "sh", sh)
     import csv
     setattr(mod, "csv", csv)

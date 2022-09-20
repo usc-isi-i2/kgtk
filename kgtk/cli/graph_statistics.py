@@ -186,7 +186,7 @@ def run(input_file: KGTKFiles,
     from pathlib import Path
     import sys
 
-    from graph_tool import centrality
+    from graph_tool import centrality # type: ignore
     from kgtk.exceptions import KGTKException
     import kgtk.gt.analysis_utils as gtanalysis
     from kgtk.gt.gt_load import load_graph_from_kgtk

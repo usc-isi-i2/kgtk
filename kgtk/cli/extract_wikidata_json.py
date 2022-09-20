@@ -123,7 +123,7 @@ def run(input_file: KGTKFiles,
         elif str(in_path).endswith(".gz"):
             # TODO: Optionally use a system decompression program.
             if use_mgzip_for_input:
-                import mgzip
+                import mgzip # type: ignore
                 print('Decompressing (mgzip)', file=sys.stderr, flush=True)
                 input_f = mgzip.open(input_f, thread=mgzip_threads_for_input)
             else:

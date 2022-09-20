@@ -1,7 +1,7 @@
 import sys
 import warnings
 import traceback
-import sh
+import sh # type: ignore
 
 
 class KGTKException(BaseException):

@@ -7,8 +7,8 @@ import shortuuid # type: ignore
 import sys
 import typing
 
-from graph_tool.topology import label_components
-from graph_tool.util import find_edge
+from graph_tool.topology import label_components # type: ignore
+from graph_tool.util import find_edge # type: ignore
 
 from kgtk.kgtkformat import KgtkFormat
 from kgtk.gt.gt_load import load_graph_from_kgtk

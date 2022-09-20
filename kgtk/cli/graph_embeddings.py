@@ -350,12 +350,12 @@ def run(input_file: KGTKFiles,
     from pathlib import Path
     import os
     import shutil
-    from torchbiggraph.config import parse_config
+    from torchbiggraph.config import parse_config # type: ignore
     from kgtk.exceptions import KGTKException
     # copy  missing file under kgtk/graph_embeddings
     from kgtk.graph_embeddings.importers import TSVEdgelistReader, convert_input_data
-    from torchbiggraph.train import train
-    from torchbiggraph.util import SubprocessInitializer, setup_logging
+    from torchbiggraph.train import train # type: ignore
+    from torchbiggraph.util import SubprocessInitializer, setup_logging # type: ignore
     from kgtk.graph_embeddings.export_to_tsv import make_tsv
     # from torchbiggraph.converters.export_to_tsv import make_tsv
 

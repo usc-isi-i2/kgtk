@@ -84,9 +84,9 @@ def run(input_file: KGTKFiles,
     from pathlib import Path
     import sys
 
-    from graph_tool.all import find_vertex
-    from graph_tool.topology import all_paths
-    from graph_tool.topology import all_shortest_paths
+    from graph_tool.all import find_vertex # type: ignore
+    from graph_tool.topology import all_paths # type: ignore
+    from graph_tool.topology import all_shortest_paths # type: ignore
 
     from kgtk.gt.gt_load import load_graph_from_kgtk
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
