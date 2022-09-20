@@ -29,7 +29,6 @@ class TestKGTKGraphStatistics(unittest.TestCase):
             'kgtk', 'graph-statistics', '-i', f'{self.file_path}', '-o', f'{self.directed_output_path}',
             '--compute-betweenness')
 
-
         # Code used to generate test result for comparison
         # self.temp_dir = Path('data')
         # self.undirected_output_path = self.temp_dir / 'graph_statistics_undirected.tsv'
