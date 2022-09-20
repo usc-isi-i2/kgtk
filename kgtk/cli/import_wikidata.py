@@ -235,6 +235,13 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         default=None,
         help='path to output split English label file')
     parser.add_argument(
+        '--split-reference-file',
+        action="store",
+        type=str,
+        dest="split_reference_file",
+        default=None,
+        help='path to output split reference file')
+    parser.add_argument(
         '--split-sitelink-file',
         action="store",
         type=str,
@@ -271,8 +278,6 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         dest="split_property_qual_file",
         default=None,
         help='path to output split property qualifier file')
-
-    # TODO: Create a seperate file for the sitelinks.
 
     parser.add_argument(
         "--limit",
@@ -706,6 +711,7 @@ def run(input_file: KGTKFiles,
         split_en_description_file: typing.Optional[str],
         split_label_file: typing.Optional[str],
         split_en_label_file: typing.Optional[str],
+        split_reference_file: typing.Optional[str],
         split_sitelink_file: typing.Optional[str],
         split_en_sitelink_file: typing.Optional[str],
         split_type_file: typing.Optional[str],
@@ -796,6 +802,8 @@ def run(input_file: KGTKFiles,
     SITELINK_TITLE_LABEL: str = "sitelink-title"
     TYPE_LABEL: str = "type"
     REFERENCE_LABEL: str = "reference"
+
+    REFERENCE_ID_WIDTH: int = 8 # How many decimal digits of reference ID?
 
     ENTITY_ID_TAG: str = "id"
     CLAIMS_TAG: str = "claims"
@@ -920,6 +928,7 @@ def run(input_file: KGTKFiles,
                 self.collector_invalid_qrows_batch = []
 
                 self.collector_description_erows_batch = []
+                self.collector_reference_erows_batch = []
                 self.collector_sitelink_erows_batch = []
 
             self.process_row_data = \
@@ -955,6 +964,9 @@ def run(input_file: KGTKFiles,
                             if len(self.collector_description_erows_batch) > 0:
                                 description_collector_q.put(
                                     ("rows", [], self.collector_description_erows_batch, [], [], [], None))
+                            if len(self.collector_reference_erows_batch) > 0:
+                                reference_collector_q.put(
+                                    ("rows", [], self.collector_reference_erows_batch, [], [], [], None))
                             if len(self.collector_sitelink_erows_batch) > 0:
                                 sitelink_collector_q.put(
                                     ("rows", [], self.collector_sitelink_erows_batch, [], [], [], None))
@@ -1196,6 +1208,7 @@ def run(input_file: KGTKFiles,
             invalid_qrows = [] if invalid_qual_file is not None else None
 
             description_erows = []
+            reference_erows = [ ]
             sitelink_erows = []
 
             # These maps avoid avoid ID collisions due to hash collision or
@@ -1611,13 +1624,14 @@ def run(input_file: KGTKFiles,
                                                           invalid_erows=invalid_erows)
 
                                         if parse_references and CLAIM_REFERENCES_TAG in cp:
+                                            rerows = reference_erows if collect_seperately else erows
                                             references = cp[CLAIM_REFERENCES_TAG]
                                             for reference in references:
                                                 reference_count += 1 # Bad approach for the time machine.
-                                                reference_id: str = "R" + str(reference_count) # TODO: format this with leading zeros
+                                                reference_id: str = "R" + str(reference_count).zfill(REFERENCE_ID_WIDTH)
 
                                                 ref_edgeid: str = edgeid + "-" + reference_id
-                                                self.erows_append(erows,
+                                                self.erows_append(rerows,
                                                                   edge_id=ref_edgeid,
                                                                   node1=edgeid,
                                                                   label=REFERENCE_LABEL,
@@ -1988,6 +2002,7 @@ def run(input_file: KGTKFiles,
 
                         if collect_seperately:
                             self.collector_description_erows_batch.extend(description_erows)
+                            self.collector_reference_erows_batch.extend(reference_erows)
                             self.collector_sitelink_erows_batch.extend(sitelink_erows)
 
                         self.collector_batch_cnt += 1
@@ -2016,6 +2031,11 @@ def run(input_file: KGTKFiles,
                                     description_collector_q.put(
                                         ("rows", [], self.collector_description_erows_batch, [], [], [], None))
                                     self.collector_description_erows_batch.clear()
+
+                                if len(self.collector_reference_erows_batch) > 0 and reference_collector_q is not None:
+                                    reference_collector_q.put(
+                                        ("rows", [], self.collector_reference_erows_batch, [], [], [], None))
+                                    self.collector_reference_erows_batch.clear()
 
                                 if len(self.collector_sitelink_erows_batch) > 0 and sitelink_collector_q is not None:
                                     sitelink_collector_q.put(
@@ -2119,6 +2139,10 @@ def run(input_file: KGTKFiles,
             self.split_en_label_wr = None
             self.n_en_label_rows: int = 0
 
+            self.split_reference_f: typing.Optional[typing.TextIO] = None
+            self.split_reference_wr = None
+            self.n_reference_rows: int = 0
+
             self.split_sitelink_f: typing.Optional[typing.TextIO] = None
             self.split_sitelink_wr = None
             self.n_sitelink_rows: int = 0
@@ -2206,6 +2230,10 @@ def run(input_file: KGTKFiles,
 
                 elif action == "split_en_label_header":
                     self.open_split_en_label_file(header, who)
+                    self.process_split_files = True
+
+                elif action == "split_reference_header":
+                    self.open_split_reference_file(header, who)
                     self.process_split_files = True
 
                 elif action == "split_sitelink_header":
@@ -2310,6 +2338,10 @@ def run(input_file: KGTKFiles,
             self.split_en_label_f, self.split_en_label_wr = self._open_file(split_en_label_file, header,
                                                                             "English " + LABEL_LABEL, who)
 
+        def open_split_reference_file(self, header: typing.List[str], who: str):
+            self.split_reference_f, self.split_reference_wr = self._open_file(split_reference_file, header, REFERENCE_LABEL,
+                                                                              who)
+
         def open_split_sitelink_file(self, header: typing.List[str], who: str):
             self.split_sitelink_f, self.split_sitelink_wr = self._open_file(split_sitelink_file, header, SITELINK_LABEL,
                                                                             who)
@@ -2375,6 +2407,9 @@ def run(input_file: KGTKFiles,
                 if self.split_en_label_wr is not None:
                     self.split_en_label_wr.close()
 
+                if self.split_reference_wr is not None:
+                    self.split_reference_wr.close()
+
                 if self.split_sitelink_wr is not None:
                     self.split_sitelink_wr.close()
 
@@ -2432,6 +2467,9 @@ def run(input_file: KGTKFiles,
 
                 if self.split_en_label_f is not None:
                     self.split_en_label_f.close()
+
+                if self.split_reference_f is not None:
+                    self.split_reference_f.close()
 
                 if self.split_sitelink_f is not None:
                     self.split_sitelink_f.close()
@@ -2600,6 +2638,7 @@ def run(input_file: KGTKFiles,
             self.split_dispatcher[DATATYPE_LABEL] = self.split_datatype
             self.split_dispatcher[DESCRIPTION_LABEL] = self.split_description
             self.split_dispatcher[LABEL_LABEL] = self.split_label
+            self.split_dispatcher[REFERENCE_LABEL] = self.split_reference
             self.split_dispatcher[SITELINK_LABEL] = self.split_sitelink
             self.split_dispatcher[SITELINK_BADGE_LABEL] = self.split_sitelink
             self.split_dispatcher[SITELINK_LANGUAGE_LABEL] = self.split_sitelink
@@ -2661,6 +2700,18 @@ def run(input_file: KGTKFiles,
 
             if self.split_en_label_wr is not None and lang == "en":
                 self.split_en_label_wr.write((row[0], row[1], row[2], row[3]))  # Hack: knows the structure of the row.
+                split = True
+
+            return split
+
+        def split_reference(self, row: typing.List[str]) -> bool:
+            split: bool = False
+
+            lang: str = row[-1]  # Hack: knows the structure of the row.
+
+            if self.split_reference_wr is not None:
+                self.split_reference_wr.write(
+                    (row[0], row[1], row[2], row[3]))  # Hack: knows the structure of the row.
                 split = True
 
             return split
@@ -2833,6 +2884,20 @@ def run(input_file: KGTKFiles,
                         description_collector_p.start()
                         print("Started the description collector process.", file=sys.stderr, flush=True)
 
+                    if split_reference_file is not None:
+                        reference_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
+                        print("The collector reference queue has been created (maxsize=%d)." % collector_q_maxsize,
+                              file=sys.stderr, flush=True)
+
+                        print("Creating the reference collector.", file=sys.stderr, flush=True)
+                        reference_collector: MyCollector = MyCollector()
+                        print("Creating the reference collector process.", file=sys.stderr, flush=True)
+                        reference_collector_p = mp.Process(target=reference_collector.run,
+                                                           args=(reference_collector_q, "reference"))
+                        print("Starting the reference collector process.", file=sys.stderr, flush=True)
+                        reference_collector_p.start()
+                        print("Started the reference collector process.", file=sys.stderr, flush=True)
+
                     if split_sitelink_file is not None:
                         sitelink_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
                         print("The collector sitelink queue has been created (maxsize=%d)." % collector_q_maxsize,
@@ -2958,6 +3023,13 @@ def run(input_file: KGTKFiles,
                 print("Sending the English label file header to the collector.", file=sys.stderr, flush=True)
                 ecq.put(("split_en_label_header", None, None, None, None, None, en_label_file_header))
                 print("Sent the English label file header to the collector.", file=sys.stderr, flush=True)
+
+            rcq = collector_q if collector_q is not None else reference_collector_q
+            if split_reference_file and rcq is not None:
+                reference_file_header = ['id', 'node1', 'label', 'node2']
+                print("Sending the reference file header to the collector.", file=sys.stderr, flush=True)
+                rcq.put(("split_reference_header", None, None, None, None, None, reference_file_header))
+                print("Sent the reference file header to the collector.", file=sys.stderr, flush=True)
 
             scq = collector_q if collector_q is not None else sitelink_collector_q
             if split_sitelink_file and scq is not None:
@@ -3152,6 +3224,16 @@ def run(input_file: KGTKFiles,
                 print('Description collector shut down is complete.', file=sys.stderr, flush=True)
             if description_collector_q is not None:
                 description_collector_q.close()
+
+            if reference_collector_q is not None:
+                print('Telling the reference collector to shut down.', file=sys.stderr, flush=True)
+                reference_collector_q.put(("shutdown", None, None, None, None, None, None))
+            if reference_collector_p is not None:
+                print('Waiting for the reference collector to shut down.', file=sys.stderr, flush=True)
+                reference_collector_p.join()
+                print('Reference collector shut down is complete.', file=sys.stderr, flush=True)
+            if reference_collector_q is not None:
+                reference_collector_q.close()
 
             if sitelink_collector_q is not None:
                 print('Telling the sitelink collector to shut down.', file=sys.stderr, flush=True)
