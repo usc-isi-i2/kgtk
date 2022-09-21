@@ -946,17 +946,25 @@ def run(input_file: KGTKFiles,
                             len(self.collector_erows_batch) > 0 or \
                             len(self.collector_qrows_batch) > 0 or \
                             len(self.collector_invalid_erows_batch) > 0 or \
-                            len(self.collector_invalid_qrows_batch) > 0:
+                            len(self.collector_invalid_qrows_batch) > 0 or \
+                            len(self.collector_description_erows_batch) > 0 or \
+                            len(self.collector_reference_erows_batch) > 0 or \
+                            len(self.collector_sitelink_erows_batch) > 0:
+
                         if collect_seperately:
                             if len(self.collector_nrows_batch) > 0:
                                 node_collector_q.put(("rows", self.collector_nrows_batch, [], [], [], [], None))
+
                             if len(self.collector_erows_batch) > 0:
                                 edge_collector_q.put(("rows", [], self.collector_erows_batch, [], [], [], None))
+
                             if len(self.collector_qrows_batch) > 0:
                                 qual_collector_q.put(("rows", [], [], self.collector_qrows_batch, [], [], None))
+
                             if len(self.collector_invalid_erows_batch) > 0:
                                 invalid_edge_collector_q.put(
                                     ("rows", [], [], [], self.collector_invalid_erows_batch, [], None))
+
                             if len(self.collector_invalid_qrows_batch) > 0:
                                 invalid_qual_collector_q.put(
                                     ("rows", [], [], [], [], self.collector_invalid_qrows_batch, None))
@@ -964,12 +972,15 @@ def run(input_file: KGTKFiles,
                             if len(self.collector_description_erows_batch) > 0:
                                 description_collector_q.put(
                                     ("rows", [], self.collector_description_erows_batch, [], [], [], None))
+
                             if len(self.collector_reference_erows_batch) > 0:
                                 reference_collector_q.put(
                                     ("rows", [], self.collector_reference_erows_batch, [], [], [], None))
+
                             if len(self.collector_sitelink_erows_batch) > 0:
                                 sitelink_collector_q.put(
                                     ("rows", [], self.collector_sitelink_erows_batch, [], [], [], None))
+
                         else:
                             collector_q.put(("rows",
                                              self.collector_nrows_batch,
@@ -977,6 +988,9 @@ def run(input_file: KGTKFiles,
                                              self.collector_qrows_batch,
                                              self.collector_invalid_erows_batch,
                                              self.collector_invalid_qrows_batch,
+                                             self.collector_description_erows_batch,
+                                             self.collector_reference_erows_batch,
+                                             self.collector_sitelink_erows_batch,
                                              None))
 
             else:
@@ -1963,6 +1977,7 @@ def run(input_file: KGTKFiles,
                     (invalid_erows is not None and len(invalid_erows) > 0) or \
                     (invalid_qrows is not None and len(invalid_qrows) > 0) or \
                     len(description_erows) > 0 or \
+                    len(reference_erows) > 0 or \
                     len(sitelink_erows) > 0:
                 if collect_results:
                     if collector_batch_size == 1:
@@ -1987,8 +2002,12 @@ def run(input_file: KGTKFiles,
                             if len(description_erows) > 0 and description_collector_q is not None:
                                 description_collector_q.put(("rows", [], description_erows, [], [], [], None))
 
+                            if len(reference_erows) > 0 and reference_collector_q is not None:
+                                reference_collector_q.put(("rows", [], reference_erows, [], [], [], None))
+
                             if len(sitelink_erows) > 0 and sitelink_collector_q is not None:
                                 sitelink_collector_q.put(("rows", [], sitelink_erows, [], [], [], None))
+
                         elif collector_q is not None:
                             collector_q.put(("rows", nrows, erows, qrows, invalid_erows, invalid_qrows, None))
                     else:
@@ -2743,7 +2762,7 @@ def run(input_file: KGTKFiles,
             return split
 
     try:
-        UPDATE_VERSION: str = "2022-09-20T00:17:25.216280+00:00#tJHN60BhfUeGMFYknDV0F6xAI3BBzYgM17g9xDKj/VcVskqBr2aLIUTVQPDVNzVLSUI6Cn47V4f+sYNM58+IaQ=="
+        UPDATE_VERSION: str = "2022-09-20T01:04:47.788576+00:00#adqElVyrevowucrO23YmctYc3LNrDmKGumoeVjkPtbmkZwaqJ8KeEhcIgn7YCELFtpjndjb1TO75fnDWsjt0dQ=="
         print("kgtk import-wikidata version: %s" % UPDATE_VERSION, file=sys.stderr, flush=True)
         print("Starting main process (pid %d)." % os.getpid(), file=sys.stderr, flush=True)
         inp_path = KGTKArgumentParser.get_input_file(input_file)
