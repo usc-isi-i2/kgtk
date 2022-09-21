@@ -982,15 +982,16 @@ def run(input_file: KGTKFiles,
                                     ("rows", [], self.collector_sitelink_erows_batch, [], [], [], None))
 
                         else:
+                            # TODO: what about the following?
+                            # self.collector_description_erows_batch,
+                            # self.collector_reference_erows_batch,
+                            # self.collector_sitelink_erows_batch,
                             collector_q.put(("rows",
                                              self.collector_nrows_batch,
                                              self.collector_erows_batch,
                                              self.collector_qrows_batch,
                                              self.collector_invalid_erows_batch,
                                              self.collector_invalid_qrows_batch,
-                                             self.collector_description_erows_batch,
-                                             self.collector_reference_erows_batch,
-                                             self.collector_sitelink_erows_batch,
                                              None))
 
             else:
@@ -2762,7 +2763,7 @@ def run(input_file: KGTKFiles,
             return split
 
     try:
-        UPDATE_VERSION: str = "2022-09-20T01:04:47.788576+00:00#adqElVyrevowucrO23YmctYc3LNrDmKGumoeVjkPtbmkZwaqJ8KeEhcIgn7YCELFtpjndjb1TO75fnDWsjt0dQ=="
+        UPDATE_VERSION: str = "2022-09-21T21:56:25.704467+00:00#nKbls2HkvVeDFOOyB5nSOgUBNF8I5WTbwZ9sPS25l4fw2C2SWqHWkgDI/RUILkWbpMLzwT3gcTvYBeEcCHwVmg=="
         print("kgtk import-wikidata version: %s" % UPDATE_VERSION, file=sys.stderr, flush=True)
         print("Starting main process (pid %d)." % os.getpid(), file=sys.stderr, flush=True)
         inp_path = KGTKArgumentParser.get_input_file(input_file)
