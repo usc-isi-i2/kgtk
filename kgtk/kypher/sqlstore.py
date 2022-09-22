@@ -125,19 +125,21 @@ class SqliteStore(SqlStore):
         self.dbfile = dbfile
         # generate a dict of db->dbfile, where we preserve the order and treat it like a path:
         self.aux_dbfiles = sdict([('db' + str(i+1), db) for i, db in enumerate(listify(aux_dbfiles))])
-        self.conn = conn
+        self.conn = None
+        self.init_conn = conn
         # for now force readonly mode if we have any auxiliary DBs; eventually we might
         # want to generalize this to still support updates to the main DB file:
         self.readonly = readonly or self.aux_dbfiles
-        if not isinstance(self.conn, sqlite3.Connection):
-            if self.conn is not None:
-                raise KGTKException('invalid sqlite connection object: %s' % self.conn)
+        if not isinstance(self.init_conn, sqlite3.Connection):
+            if self.init_conn is not None:
+                raise KGTKException('invalid sqlite connection object: %s' % self.init_conn)
             if self.dbfile is None:
                 raise KGTKException('no sqlite DB file or connection object provided')
             if not os.path.exists(self.dbfile) and (not create or readonly):
                 raise KGTKException('sqlite DB file does not exist: %s' % self.dbfile)
         else:
-            self.dbfile = self.pragma('database_list')[0][2]
+            # finish setup for provided connection object (dbfile, aux_dbs, etc.):
+            self.get_conn()
         self.user_functions = set()
         self.vector_store = None
         self.init_meta_tables()
@@ -206,7 +208,10 @@ class SqliteStore(SqlStore):
 
     def get_conn(self):
         if self.conn is None:
-            if self.readonly:
+            if isinstance(self.init_conn, sqlite3.Connection):
+                self.conn = self.init_conn
+                self.dbfile = self.pragma('database_list')[0][2]
+            elif self.readonly:
                 self.conn = sqlite3.connect(f'file:{self.dbfile}?mode=ro', uri=True)
             else:
                 self.conn = sqlite3.connect(self.dbfile)
@@ -238,7 +243,7 @@ class SqliteStore(SqlStore):
             self.conn = None
             self.user_functions = set()
 
-    READONLY_REGEX = re.compile(r'^\s*(select|pragma|attach)\s', re.IGNORECASE)
+    READONLY_REGEX = re.compile(r'^\s*(select|explain|pragma|attach)\s', re.IGNORECASE)
     
     def is_readonly_statement(self, statement):
         """Return True if the SQL 'statement' does not update the database.
@@ -1358,6 +1363,7 @@ class SqliteStore(SqlStore):
             return self.get_query_plan_description(plan)
         # for the other two modes we use an SQLite shell command which doesn't require parameters:
         elif mode == 'full':
+            # we could run this similar to 'get_query_plan', but we won't get all the detail to display:
             out, err = self.shell('EXPLAIN ' + sql_query)
         elif mode == 'expert':
             out, err = self.shell('.expert', sql_query)
