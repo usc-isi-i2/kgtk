@@ -95,6 +95,105 @@ def pycall(fun, *arg):
     except:
         pass
 
+class GenerateValues(VirtualGraphFunction):
+    """Dynamically generate values from a list literal or Python expression.
+    If the 'format' property is 'auto' (the default) a value ending in any type
+    of parenthesis is considered to be a Python expression which will be evaluated
+    in module 'module' (defaults to 'builtins').  The result is assumed to be a
+    Python collection whose values will be returned in order as the value of node2.
+    Otherwise, the values literal will be split along a number of standard separators.
+    If 'format' is 'python' an evaluation in Python will be forced.  Any other
+    value of 'format' is assumed to be a separator string to split the values literal.
+    This virtual graph will disable query optimization in any match clause it is used
+    in to make sure values are generated at the desired point in the query.
+    """
+
+    # parameters needed by the 'VirtualTableFunction' API:
+    params = ['node1', 'format', 'module']
+    columns = ['label', 'node2']
+    name = 'kgtk_values'
+
+    AUTO_SEP_REGEX = re.compile(r'[,;:| \t]\s*')
+    DEFAULT_FORMAT = 'auto'
+    DEFAULT_MODULE = 'builtins'
+
+    @staticmethod
+    def initialize(vtfun, node1, format='auto', module='builtins'):
+        """Called during the initialziation of the virtual table function for a set of input
+        parameters 'node1' (the values literal or Python expression), 'format' (the format
+        to assume to parse the values literal), and 'module' (in which module to evaluate
+        Python expressions).
+        """
+        vtfun.input_node1 = node1
+        vtfun.input_format = format
+        vtfun.input_module = module
+        vtfun.result_rows = None
+
+    @staticmethod
+    def compute_result_rows(vtfun):
+        """Compute a set of value result rows for the input parameters stored by 'initialize'.
+        Each row binds all output 'columns' specified above.
+        """
+        values = str(vtfun.input_node1)
+        fmt = str(vtfun.input_format)
+        label = GenerateValues.name
+        if fmt == 'python':
+            values = eval(values, sys.modules[vtfun.input_module].__dict__)
+        elif fmt == 'auto':
+            if values[-1] in ')]}':
+                values = eval(values, sys.modules[vtfun.input_module].__dict__)
+            else:
+                values = GenerateValues.AUTO_SEP_REGEX.split(values)
+        else:
+            values = values.split(fmt)
+        return iter(map(lambda val: (label, val), values))
+
+    def translate_call_to_sql(self, query, clause, state):
+        """Called by query.pattern_clause_to_sql() to translate a clause
+        with a virtual graph pattern.  This additionally supplies property defaults
+        and disables query optimization in the match clause.
+        """
+        rel = clause[1]
+         # supply default arguments - somehow doing this with self.initialize doesn't do the trick:
+        rel.properties = rel.properties or {}
+        rel.properties.setdefault('format', parser.Literal(query.query, self.DEFAULT_FORMAT))
+        rel.properties.setdefault('module', parser.Literal(query.query, self.DEFAULT_MODULE))
+        # we force dont_optimize for match clauses containing this virtual graph, since the current
+        # vtable mechanism isn't general enough to let us specify that we can support indexed queries
+        # on a bound node2 column, so for now we always have to use this as a generator and need to
+        # be able to control where the value generation takes place:
+        query.get_pattern_clause_match_clause(clause).dont_optimize = True
+        super().translate_call_to_sql(query, clause, state)
+
+GenerateValues('kgtk_values').define()
+
+"""
+# Example queries:
+> kgtk query -i props \
+       --match '(x:`a b c`)-[:kgtk_values]->(v)' \
+       --return 'v'
+node2
+a
+b
+c
+> kgtk query -i props \
+       --match '(x:`range(3)`)-[:kgtk_values]->(v)' \
+       --return 'v'
+node2
+0
+1
+2
+ kgtk query -i props \
+      --match '(x)-[:kgtk_values {format: "%%"}]->(v)' \
+      --where 'x=$VALUES' \
+      --return 'v' \
+      --para VALUES='a%%b%%c'
+node2
+a
+b
+c
+"""
+
 
 # Aggregate functions
 
