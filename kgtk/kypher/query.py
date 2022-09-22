@@ -891,10 +891,10 @@ class KgtkQuery(object):
             if len(restrictions) > 0:
                 # even if we have joins, we might need additional indexes on restricted columns:
                 for (g, c), val in restrictions:
+                    g = state.get_alias_table(g)
                     # do not create any indexes on virtual tables:
                     if state.lookup_vtable(g) is None:
-                        g = state.get_alias_table(g)
-                    indexes.add((g, c))
+                        indexes.add((g, c))
         return indexes
 
     def get_explicit_graph_index_specs(self):
