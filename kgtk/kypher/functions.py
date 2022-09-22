@@ -411,6 +411,7 @@ declare('kgtk.kypher.funccore',
         'kgtk_regex', 'kgtk_null_to_empty', 'kgtk_empty_to_null', 'pyeval', 'pycall',
         'avg', 'count', 'group_concat', 'max', 'min', 'sum', 'total',
         'cast', 'likelihood', 'concat', 'rowid',
+        'kgtk_values',
         'kgtk_is_subnode',)
 
 declare('kgtk.kypher.funclit',
