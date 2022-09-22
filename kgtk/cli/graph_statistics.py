@@ -52,11 +52,17 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         'If you want both pagerank and in/out-degrees, you should make two runs. ' +
                         '\n(default=%(default)s)',
                         type=optional_bool, nargs='?', const=True, default=True, metavar='True|False')
-                        
+
     parser.add_argument('--compute-hits', dest='compute_hits',
                         help='Whether or not to compute the HITS properties. ' +
                         '\nNote: --undirected disables HITS calculation. (default=%(default)s)',
                         type=optional_bool, nargs='?', const=True, default=True, metavar='True|False')
+
+    parser.add_argument('--compute-betweenness', dest='compute_betweenness',
+                        help='Whether or not to compute the betweenness property. ' +
+                        '\nNote: betweenness is not suitable for large graphs. ' +
+                        '\n(default=%(default)s)',
+                        type=optional_bool, nargs='?', const=True, default=False, metavar='True|False')
 
     parser.add_argument('--output-statistics-only', dest='output_statistics_only',
                         help='If this option is set, write only the statistics edges to the primary output file. ' +
@@ -75,6 +81,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         help='Whether or not to write HITS edges to the primary output file. (default=%(default)s)',
                         type=optional_bool, nargs='?', const=True, default=True, metavar='True|False')
 
+    parser.add_argument('--output-betweenness', dest='output_betweenness',
+                        help='Whether or not to write betweenness to the primary output file. (default=%(default)s)',
+                        type=optional_bool, nargs='?', const=True, default=True, metavar='True|False')
+
     parser.add_argument('--log-file', action='store', type=str, dest='log_file',
                         help='Summary file for the global statistics of the graph.', default='./summary.txt')
 
@@ -90,7 +100,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         help='Whether or not to output PageRank centrality top-n to the log file. ' +
                         '\n(default=%(default)s)',
                         type=optional_bool, nargs='?', const=True, default=True, metavar='True|False')
-                        
+
     parser.add_argument('--log-top-hits', dest='log_top_hits',
                         help='Whether or not to output the top-n HITS to the log file. (default=%(default)s)',
                         type=optional_bool, nargs='?', const=True, default=True, metavar='True|False')
@@ -115,15 +125,19 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument('--page-rank-property', action='store', dest='vertex_pagerank',
                         default='vertex_pagerank',
-                        help='Label for pank rank property. (default=%(default)s)')
-    
+                        help='Label for page rank property. (default=%(default)s)')
+
     parser.add_argument('--vertex-hits-authority-property', action='store', dest='vertex_auth',
                         default='vertex_auth',
                         help='Label for edge: vertext hits authority. (default=%(default)s)')
-    
+
     parser.add_argument('--vertex-hits-hubs-property', action='store', dest='vertex_hubs',
                         default='vertex_hubs',
                         help='Label for edge: vertex hits hubs. (default=%(default)s)')
+
+    parser.add_argument('--betweenness-property', action='store', dest='vertex_betweenness',
+                        default='vertex_betweenness',
+                        help='Label for betweenness property. (default=%(default)s)')
 
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser,
@@ -134,16 +148,18 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
 def run(input_file: KGTKFiles,
         output_file: KGTKFiles,
-        
+
         undirected: bool,
         compute_pagerank: bool,
         compute_hits: bool,
+        compute_betweenness: bool,
 
         output_statistics_only: bool,
         output_degrees: bool,
         output_pagerank: bool,
         output_hits: bool,
-        
+        output_betweenness: bool,
+
         log_file: str,
         log_degrees_histogram: bool,
         log_top_relations: bool,
@@ -154,6 +170,7 @@ def run(input_file: KGTKFiles,
         vertex_in_degree: str,
         vertex_out_degree: str,
         vertex_pagerank: str,
+        vertex_betweenness: str,
         vertex_auth: str,
         vertex_hubs: str,
 
@@ -230,6 +247,13 @@ def run(input_file: KGTKFiles,
             centrality.pagerank(G2, prop=v_pr)
             G2.properties[('v', vertex_pagerank)] = v_pr
 
+        if compute_betweenness:
+            if verbose:
+                print('Computing betweenness.', file=error_file, flush=True)
+            v_betweenness = G2.new_vertex_property('float')
+            centrality.betweenness(G2, vprop=v_betweenness)
+            G2.properties[('v', vertex_betweenness)] = v_betweenness
+
         if compute_hits and not undirected:
             if verbose:
                 print('Computing HITS.', file=error_file, flush=True)
@@ -256,7 +280,7 @@ def run(input_file: KGTKFiles,
                 kw.write([G2.vp[id_col][sid], lbl, G2.vp[id_col][oid], '{}-{}-{}'.format(G2.vp[id_col][sid], lbl, id_count)])
                 id_count += 1
 
-        if output_degrees or output_pagerank or output_hits:
+        if output_degrees or output_pagerank or output_hits or output_betweenness:
             if verbose:
                 print('Outputting vertex degrees and/or properties.', file=error_file, flush=True)
             id_count = 0
@@ -280,6 +304,14 @@ def run(input_file: KGTKFiles,
                     if vertex_hubs in G2.vp:
                         kw.write([v_id, vertex_hubs, str(G2.vp[vertex_hubs][v]), '{}-{}-{}'.format(v_id, vertex_hubs, id_count)])
                         id_count += 1
+
+                if output_betweenness:
+                    if vertex_betweenness in G2.vp:
+                        kw.write([v_id, vertex_betweenness, str(G2.vp[vertex_betweenness][v]),
+                                  '{}-{}-{}'.format(v_id, vertex_betweenness, id_count)])
+                        id_count += 1
+
+
 
 
         kw.close()

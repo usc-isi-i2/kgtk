@@ -281,6 +281,15 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         dest="limit",
         default=None,
         help='number of lines of input file to run on, default runs on all')
+
+    parser.add_argument(
+        "--nth",
+        action="store",
+        type=int,
+        dest="nth",
+        default=None,
+        help='Process every nth line, default processes all lines')
+
     parser.add_argument(
         "--lang",
         action="store",
@@ -511,6 +520,17 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     )
 
     parser.add_argument(
+        "--parse-references",
+        nargs='?',
+        type=optional_bool,
+        dest="parse_references",
+        const=True,
+        default=True,
+        metavar="True/False",
+        help="If true, parse references in claims. (default=%(default)s).",
+    )
+
+    parser.add_argument(
         "--fail-if-missing",
         nargs='?',
         type=optional_bool,
@@ -693,6 +713,7 @@ def run(input_file: KGTKFiles,
         split_property_qual_file: typing.Optional[str],
 
         limit: int,
+        nth: int,
         lang: str,
         source: str,
         deprecated: bool,
@@ -715,6 +736,7 @@ def run(input_file: KGTKFiles,
         parse_labels: bool,
         parse_sitelinks: bool,
         parse_claims: bool,
+        parse_references: bool,
         fail_if_missing: bool,
         all_languages: bool,
         warn_if_missing: bool,
@@ -773,6 +795,17 @@ def run(input_file: KGTKFiles,
     SITELINK_SITE_LABEL: str = "sitelink-site"
     SITELINK_TITLE_LABEL: str = "sitelink-title"
     TYPE_LABEL: str = "type"
+    REFERENCE_LABEL: str = "reference"
+
+    ENTITY_ID_TAG: str = "id"
+    CLAIMS_TAG: str = "claims"
+
+    CLAIM_RANK_TAG: str = "rank"
+    RANK_DEPRECATED: str = "deprecated"
+    CLAIM_MAINSNAK_TAG: str = "mainsnak"
+    CLAIM_ID_TAG: str = "id"
+    CLAIM_TYPE_TAG: str = "type"
+    CLAIM_REFERENCES_TAG: str = "references"
 
     SNAKTYPE_NOVALUE: str = "novalue"
     SNAKTYPE_SOMEVALUE: str = "somevalue"
@@ -780,6 +813,11 @@ def run(input_file: KGTKFiles,
 
     NOVALUE_VALUE: str = "novalue"
     SOMEVALUE_VALUE: str = "somevalue"
+
+    DATAVALUE_VALUE_TAG: str = "value"
+    DATAVALUE_TYPE_TAG: str = "type"
+    DATAVALUE_TYPE_STRING: str = "string"
+    DATAVALUE_TYPE_WIKIBASE_UNMAPPED_ENTITYID: str = "wikibase-unmapped-entityid"
 
     CLAIM_TYPE_STATEMENT: str = "statement"
 
@@ -792,6 +830,10 @@ def run(input_file: KGTKFiles,
     DATATYPE_GLOBECOORDINATE: str = "globe-coordinate"
     DATATYPE_TIME: str = "time"
     DATATYPE_MONOLINGUALTEXT: str = "monolingualtext"
+
+    REFERENCE_HASH_TAG: str = "hash"
+    REFERENCE_SNAKS_TAG: str = "snaks"
+    REFERENCE_SNAKS_ORDER_TAG: str = "snaks-order"
 
     collector_q: typing.Optional[pyrallel.ShmQueue] = None
     node_collector_q: typing.Optional[pyrallel.ShmQueue] = None
@@ -1164,6 +1206,10 @@ def run(input_file: KGTKFiles,
             qual_id_collision_map: typing.MutableMapping[str, int] = dict()
             sitelink_id_collision_map: typing.MutableMapping[str, int] = dict()
 
+            # A unique reference counter.  This is not a good long-term approach
+            # because it will not operate well for the Wikidata time machine.
+            reference_count: int = 0
+
             clean_line = line.strip()
             if clean_line.endswith(b","):
                 clean_line = clean_line[:-1]
@@ -1342,17 +1388,17 @@ def run(input_file: KGTKFiles,
                     if node_file:
                         nrows.append(row)
 
-                if parse_claims and "claims" not in obj:
+                if parse_claims and CLAIMS_TAG not in obj:
                     if fail_if_missing:
                         raise KGTKException("Qnode %s is missing its claims" % obj.get("id", "<UNKNOWN>"))
                     elif warn_if_missing:
                         print("Object id {} is missing its claims.".format(obj.get("id", "<UNKNOWN>")), file=sys.stderr,
                               flush=True)
 
-                if parse_claims and "claims" in obj:
-                    claims = obj["claims"]
+                if parse_claims and CLAIMS_TAG in obj:
+                    claims = obj[CLAIMS_TAG]
                     if keep:
-                        qnode = obj.get("id", "")
+                        qnode = obj.get(ENTITY_ID_TAG, "")
                         if len(qnode) == 0:
                             if fail_if_missing:
                                 raise KGTKException("A claim is missing its Qnode id.")
@@ -1362,12 +1408,12 @@ def run(input_file: KGTKFiles,
 
                         for prop, claim_property in claims.items():
                             for cp in claim_property:
-                                if (deprecated or cp['rank'] != 'deprecated'):
-                                    mainsnak = cp['mainsnak']
+                                if (deprecated or cp[CLAIM_RANK_TAG] != RANK_DEPRECATED):
+                                    mainsnak = cp[CLAIM_MAINSNAK_TAG]
                                     snaktype = mainsnak.get(MAINSNAK_SNAKTYPE)
-                                    rank = cp['rank']
-                                    claim_id = cp['id']
-                                    claim_type = cp['type']
+                                    rank = cp[CLAIM_RANK_TAG]
+                                    claim_id = cp[CLAIM_ID_TAG]
+                                    claim_type = cp[CLAIM_TYPE_TAG]
                                     if claim_type != CLAIM_TYPE_STATEMENT:
                                         print("Unknown claim type %s, ignoring claim_property for (%s, %s)." % (
                                             repr(claim_type), repr(qnode), repr(prop)),
@@ -1375,16 +1421,16 @@ def run(input_file: KGTKFiles,
                                         continue
 
                                     if snaktype is None:
-                                        print("Mainsnak without snaktype, ignoring claim_property for (%s, %s)." % (
-                                            repr(qnode), repr(prop)),
+                                        print("Mainsnak without snaktype, ignoring claim_property for (%s, %s)." % (repr(qnode),
+                                                                                                                    repr(prop)),
                                               file=sys.stderr, flush=True)
                                         continue
                                     if snaktype == SNAKTYPE_VALUE:
                                         datavalue = mainsnak[MAINSNAK_DATAVALUE]
-                                        val = datavalue.get('value')
-                                        val_type = datavalue.get("type", "")
+                                        val = datavalue.get(DATAVALUE_VALUE_TAG)
+                                        val_type = datavalue.get(DATAVALUE_TYPE_TAG, "")
                                         if val is not None:
-                                            if val_type in ("string", "wikibase-unmapped-entityid"):
+                                            if val_type in (DATAVALUE_TYPE_STRING, DATAVALUE_TYPE_WIKIBASE_UNMAPPED_ENTITYID):
                                                 if not isinstance(val, str):
                                                     print("Value type is %s but the value is not a string, "
                                                           "ignoring claim_property for (%s, %s)." % (repr(val_type),
@@ -1563,6 +1609,20 @@ def run(input_file: KGTKFiles,
                                                           precision=precision,
                                                           calendar=calendar,
                                                           invalid_erows=invalid_erows)
+
+                                        if parse_references and CLAIM_REFERENCES_TAG in cp:
+                                            references = cp[CLAIM_REFERENCES_TAG]
+                                            for reference in references:
+                                                reference_count += 1 # Bad approach for the time machine.
+                                                reference_id: str = "R" + str(reference_count) # TODO: format this with leading zeros
+
+                                                ref_edgeid: str = edgeid + "-" + reference_id
+                                                self.erows_append(erows,
+                                                                  edge_id=ref_edgeid,
+                                                                  node1=edgeid,
+                                                                  label=REFERENCE_LABEL,
+                                                                  node2=reference_id,
+                                                                  invalid_erows=invalid_erows)
 
                                     if minimal_qual_file is not None or detailed_qual_file is not None or interleave:
                                         if cp.get('qualifiers', None):
@@ -2632,7 +2692,7 @@ def run(input_file: KGTKFiles,
             return split
 
     try:
-        UPDATE_VERSION: str = "2022-08-31T20:44:35.216318+00:00#FYgN7CMQPzn7XC38lG54sfhiYPfifXCp8FNCJ1Snr2mnHiBtOsCFhsbJGqda/w8SCPkDxALcacHinD4tov6uHA=="
+        UPDATE_VERSION: str = "2022-09-20T00:17:25.216280+00:00#tJHN60BhfUeGMFYknDV0F6xAI3BBzYgM17g9xDKj/VcVskqBr2aLIUTVQPDVNzVLSUI6Cn47V4f+sYNM58+IaQ=="
         print("kgtk import-wikidata version: %s" % UPDATE_VERSION, file=sys.stderr, flush=True)
         print("Starting main process (pid %d)." % os.getpid(), file=sys.stderr, flush=True)
         inp_path = KGTKArgumentParser.get_input_file(input_file)
@@ -2999,13 +3059,22 @@ def run(input_file: KGTKFiles,
                                                 batch_size=mapper_batch_size)
             print('Start parallel processing', file=sys.stderr, flush=True)
             pp.start()
+
+            lines_processed: int = 0
             for cnt, line in enumerate(input_f):
+                # Is there a limit on the number of input lines to process?
                 if limit and cnt >= limit:
                     break
+
+                # Shall process every nth input line (within th elimit)?
+                if nth and cnt % nth != 0:
+                    continue
+
                 # pp.add_task(line,node_file,edge_file,qual_file,languages,source)
                 pp.add_task(line)
+                lines_processed += 1
 
-            print('Done processing {}'.format(str(inp_path)), file=sys.stderr, flush=True)
+            print('Done processing {}, {} lines processed'.format(str(inp_path), lines_processed), file=sys.stderr, flush=True)
             input_f.close()
 
             print('Telling the workers to shut down.', file=sys.stderr, flush=True)

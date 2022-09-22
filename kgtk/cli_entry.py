@@ -104,7 +104,7 @@ def progress_shutdown():
         except Exception:
             pass
         _save_progress_command = None
-    
+
 def split_list(sequence, sep):
     """From stack overflow;
     https://stackoverflow.com/questions/54372218/how-to-split-a-list-into-sublists-based-on-a-separator-similar-to-str-split
@@ -174,7 +174,7 @@ def cli_single_command(args, parsed_shared_args, shared_args, parser, sub_parser
             progress_startup()
 
     # run module
-    try: 
+    try:
       kgtk_exception_handler = KGTKExceptionHandler(debug=parsed_shared_args._debug)
       ret_code = kgtk_exception_handler(func, **kwargs)
     except KeyboardInterrupt as e:
@@ -246,8 +246,8 @@ def cli_piped_commands(parallel_pipes, args, parsed_shared_args, shared_args, pa
                 else:
                     new_process = sh.kgtk(prior_process, *full_args, **kwargs)
                 processes.append(new_process)
-                prior_process = new_process                
-                
+                prior_process = new_process
+
         if parsed_shared_args._pipedebug:
             print("*** waiting ***", file=sys.stderr, flush=True)
         for process in processes:
@@ -320,7 +320,7 @@ def cli_entry_pipe(args, parsed_shared_args, shared_args, parser, sub_parsers, s
         parser.print_usage()
         parser.exit(KGTKArgumentParseException.return_code)
     return cli_piped_commands(parallel_pipes, args, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)
-    
+
 def cli_entry_sequential_commands(args, parsed_shared_args, shared_args, parser, sub_parsers, subparser_lookup, subparsers_built)->int:
     # parse internal sequence of pipes
     ret_code: int = 0
@@ -366,36 +366,36 @@ def cli_entry(*args):
     shared_args.add_argument('--debug', dest='_debug', action='store_true',
                              default=os.getenv('KGTK_OPTION_DEBUG', 'False').lower() in ['y', 'yes', 'true'],
                              help='enable debug mode')
-    
+
     shared_args.add_argument('--kgtkmode', dest='_mode', action='store',
                              default=os.getenv('KGTK_OPTION_KGTK_MODE', 'AUTO').upper(),
                              choices=['NONE', 'EDGE', 'NODE', 'AUTO' ],
                              help='KGTK file reading mode (default=AUTO)')
-    
+
     shared_args.add_argument('--expert', dest='_expert', action='store_true',
                              default=os.getenv('KGTK_OPTION_EXPERT', 'False').lower() in ['y', 'yes', 'true'],
                              help='enable expert mode')
-    
+
     shared_args.add_argument('--pipedebug', dest='_pipedebug', action='store_true',
                              default=os.getenv('KGTK_OPTION_PIPEDEBUG', 'False').lower() in ['y', 'yes', 'true'],
                              help='enable pipe debug mode')
-    
+
     shared_args.add_argument('--progress', dest='_progress', action='store_true',
                              default=os.getenv('KGTK_OPTION_PROGRESS', 'False').lower() in ['y', 'yes', 'true'],
                              help='enable progress monitoring')
-    
+
     shared_args.add_argument('--progress-debug', dest='_progress_debug', action='store_true',
                              default=os.getenv('KGTK_OPTION_PROGRESSDEBUG', 'False').lower() in ['y', 'yes', 'true'],
                              help='enable progress debug mode, which will show exceptions occuring during progress monitoring startup')
-    
+
     shared_args.add_argument('--progress-tty', dest='_progress_tty', action='store',
                              default=os.getenv('KGTK_OPTION_PROGRESS_TTY', "/dev/tty"),
                              help='progress monitoring output tty')
-    
+
     shared_args.add_argument('--timing', dest='_timing', action='store_true',
                              default=os.getenv('KGTK_OPTION_TIMING', 'False').lower() in ['y', 'yes', 'true'],
                              help='enable timing measurements')
-    
+
     add_shared_arguments(shared_args)
 
     # parse shared arguments
@@ -448,4 +448,3 @@ def cli_entry(*args):
                                                            " ".join(args)), file=sys.stderr, flush=True)
 
     return ret_code
-

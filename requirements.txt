@@ -4,9 +4,9 @@ lz4
 iso-639
 pycountry
 shortuuid
-rdflib>=6.0.2
-rdflib-jsonld>=0.6.2
-pyshacl>=0.17.1
+rdflib==6.1.1
+rdflib-jsonld==0.6.2
+pyshacl>=0.19.0
 rfc3986
 thinc==7.4.0
 plac==1.1.3
