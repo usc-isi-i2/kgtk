@@ -1653,6 +1653,95 @@ def run(input_file: KGTKFiles,
                                                                   node2=reference_id,
                                                                   invalid_erows=invalid_erows)
 
+                                                if REFERENCE_SNAKS_TAG not in reference:
+                                                    raise ValueError("Reference without SNAKS.")
+
+                                                ref_snaks = reference[REFERENCE_SNAKS_TAG]
+                                                ref_snaks_prop: str
+                                                for ref_snaks_prop in sorted(ref_snaks.keys()):
+                                                    ref_snaks_list = ref_snaks[ref_snaks_prop]
+                                                    for ref_snak in ref_snaks_list:
+                                                        if ref_snak["property"] != ref_snaks_prop:
+                                                            raise ValueError("Reference property %s dose not match SNAK property %s" % (repr(ref_snaks_prop),
+                                                                                                                                       repr(ref_snak["property"])))
+                                                        if MAINSNAK_SNAKTYPE not in ref_snak:
+                                                            raise ValueError("Reference SNAK is missing a SNAKTYPE.")
+
+                                                        ref_snak_type: str = ref_snak[MAINSNAK_SNAKTYPE]
+                                                        if ref_snak_type != SNAKTYPE_VALUE:
+                                                            # raise ValueError("Reference SNAK with unexpected snaktype %s" % repr(snaktype))
+                                                            continue # TODO: process 'novalue' and 'somevalue'
+
+                                                        if MAINSNAK_DATATYPE not in ref_snak:
+                                                            raise ValueError("Reference SNAK is missing a DATATYPE.")
+                                                        ref_snak_datatype: str = ref_snak[MAINSNAK_DATATYPE]
+
+                                                        if MAINSNAK_DATAVALUE not in ref_snak:
+                                                            raise ValueError("Reference SNAK is missing a DATAVALUE.")
+                                                        ref_snak_datavalue = ref_snak[MAINSNAK_DATAVALUE]
+
+                                                        if "type" not in ref_snak_datavalue:
+                                                            raise ValueError("Reference SNAK datavalue is missing a TYPE.")
+                                                        ref_snak_datavalue_type: str = ref_snak_datavalue["type"]
+
+                                                        if "value" not in ref_snak_datavalue:
+                                                            raise ValueError("Reference SNAK datavalue is missing a VALUE.")
+                                                        ref_snak_datavalue_value = ref_snak_datavalue["value"]
+
+                                                        if ref_snak_datatype == "wikibase-item":
+                                                            if ref_snak_datavalue_type != "wikibase-entityid":
+                                                                raise ValueError("Reference SNAK datatype %s with unexpected datavalue type %s" % (repr(ref_snak_datatype),
+                                                                                                                                                   repr(ref_snak_datavalue_type)))
+                                                            
+                                                        elif ref_snak_datatype == "url":
+                                                            if ref_snak_datavalue_type != "string":
+                                                                raise ValueError("Reference SNAK datatype %s with unexpected datavalue type %s" % (repr(ref_snak_datatype),
+                                                                                                                                                   repr(ref_snak_datavalue_type)))
+                                                        elif ref_snak_datatype == "string":
+                                                            if ref_snak_datavalue_type != "string":
+                                                                raise ValueError("Reference SNAK datatype %s with unexpected datavalue type %s" % (repr(ref_snak_datatype),
+                                                                                                                                                   repr(ref_snak_datavalue_type)))
+                                                            
+                                                        elif ref_snak_datatype == "time":
+                                                            if ref_snak_datavalue_type != "time":
+                                                                raise ValueError("Reference SNAK datatype %s with unexpected datavalue type %s" % (repr(ref_snak_datatype),
+                                                                                                                                                   repr(ref_snak_datavalue_type)))
+                                                            
+                                                        elif ref_snak_datatype == "monolingualtext":
+                                                            if ref_snak_datavalue_type != "monolingualtext":
+                                                                raise ValueError("Reference SNAK datatype %s with unexpected datavalue type %s" % (repr(ref_snak_datatype),
+                                                                                                                                                   repr(ref_snak_datavalue_type)))
+                                                            
+                                                        elif ref_snak_datatype == "quantity":
+                                                            if ref_snak_datavalue_type != "quantity":
+                                                                raise ValueError("Reference SNAK datatype %s with unexpected datavalue type %s" % (repr(ref_snak_datatype),
+                                                                                                                                                   repr(ref_snak_datavalue_type)))
+                                                            
+                                                        elif ref_snak_datatype == "commonsMedia":
+                                                            if ref_snak_datavalue_type != "string":
+                                                                raise ValueError("Reference SNAK datatype %s with unexpected datavalue type %s" % (repr(ref_snak_datatype),
+                                                                                                                                                   repr(ref_snak_datavalue_type)))
+                                                            
+                                                        elif ref_snak_datatype == "wikibase-property":
+                                                            if ref_snak_datavalue_type != "wikibase-entityid":
+                                                                raise ValueError("Reference SNAK datatype %s with unexpected datavalue type %s" % (repr(ref_snak_datatype),
+                                                                                                                                                   repr(ref_snak_datavalue_type)))
+
+                                                        elif ref_snak_datatype == "globe-coordinate":
+                                                            if ref_snak_datavalue_type != "globecoordinate":
+                                                                raise ValueError("Reference SNAK datatype %s with unexpected datavalue type %s" % (repr(ref_snak_datatype),
+                                                                                                                                                   repr(ref_snak_datavalue_type)))
+
+                                                        elif ref_snak_datatype == "external-id":
+                                                            if ref_snak_datavalue_type != "string":
+                                                                raise ValueError("Reference SNAK datatype %s with unexpected datavalue type %s" % (repr(ref_snak_datatype),
+                                                                                                                                                   repr(ref_snak_datavalue_type)))
+                                                            
+                                                        else:
+                                                            raise ValueError ("Reference SNAK with unexpected datatype %s and datavalue type %s" % (repr(ref_snak_datatype),
+                                                                                                                                                    repe(ref_snak_datavalue_type)))
+                                                            
+
                                     if minimal_qual_file is not None or detailed_qual_file is not None or interleave:
                                         if cp.get('qualifiers', None):
                                             quals = cp['qualifiers']
