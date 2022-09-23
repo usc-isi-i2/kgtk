@@ -801,8 +801,10 @@ def run(input_file: KGTKFiles,
     SITELINK_SITE_LABEL: str = "sitelink-site"
     SITELINK_TITLE_LABEL: str = "sitelink-title"
     TYPE_LABEL: str = "type"
+
     REFERENCE_LABEL: str = "reference"
 
+    REFERENCE_ID_START: str = "R" # This is a bit of a hack.
     REFERENCE_ID_WIDTH: int = 8 # How many decimal digits of reference ID?
 
     ENTITY_ID_TAG: str = "id"
@@ -842,6 +844,22 @@ def run(input_file: KGTKFiles,
     REFERENCE_HASH_TAG: str = "hash"
     REFERENCE_SNAKS_TAG: str = "snaks"
     REFERENCE_SNAKS_ORDER_TAG: str = "snaks-order"
+
+    # Map SNAK datatypes to SNAK datavalue types.
+    SNAK_DATATYPE_PAIRS: typing.Mapping[str, str] = {
+        "commonsMedia": "string",
+        "external-id": "string",
+        DATATYPE_GLOBECOORDINATE: "globecoordinate",
+        DATATYPE_MONOLINGUALTEXT: "monolingualtext",
+        DATATYPE_QUANTITY: "quantity",
+        "string": "string",
+        DATATYPE_TIME: "time",
+        "url": "string",
+        "wikibase-item": "wikibase-entityid",
+        "wikibase-lexeme": "wikibase-entityid",
+        "wikibase-property": "wikibase-entityid",
+        
+    }
 
     collector_q: typing.Optional[pyrallel.ShmQueue] = None
     node_collector_q: typing.Optional[pyrallel.ShmQueue] = None
@@ -1643,7 +1661,7 @@ def run(input_file: KGTKFiles,
                                             references = cp[CLAIM_REFERENCES_TAG]
                                             for reference in references:
                                                 reference_count += 1 # Bad approach for the time machine.
-                                                reference_id: str = "R" + str(reference_count).zfill(REFERENCE_ID_WIDTH)
+                                                reference_id: str = REFERENCE_ID_START + str(reference_count).zfill(REFERENCE_ID_WIDTH)
 
                                                 ref_edgeid: str = edgeid + "-" + reference_id
                                                 self.erows_append(rerows,
@@ -1656,11 +1674,16 @@ def run(input_file: KGTKFiles,
                                                 if REFERENCE_SNAKS_TAG not in reference:
                                                     raise ValueError("Reference without SNAKS.")
 
+                                                ref_snak_count: int = 0
+
                                                 ref_snaks = reference[REFERENCE_SNAKS_TAG]
                                                 ref_snaks_prop: str
                                                 for ref_snaks_prop in sorted(ref_snaks.keys()):
                                                     ref_snaks_list = ref_snaks[ref_snaks_prop]
                                                     for ref_snak in ref_snaks_list:
+                                                        ref_snak_count += 1 # Bad approach for the time machine, but prevents collisions.
+                                                        ref_snak_edgeid: str = ref_edgeid + "-" + str(ref_snak_count).zfill(REFERENCE_ID_WIDTH)
+
                                                         if ref_snak["property"] != ref_snaks_prop:
                                                             raise ValueError("Reference property %s dose not match SNAK property %s" % (repr(ref_snaks_prop),
                                                                                                                                        repr(ref_snak["property"])))
@@ -1669,8 +1692,14 @@ def run(input_file: KGTKFiles,
 
                                                         ref_snak_type: str = ref_snak[MAINSNAK_SNAKTYPE]
                                                         if ref_snak_type != SNAKTYPE_VALUE:
-                                                            # raise ValueError("Reference SNAK with unexpected snaktype %s" % repr(snaktype))
-                                                            continue # TODO: process 'novalue' and 'somevalue'
+                                                            # Process somevalue and novalue:
+                                                            self.erows_append(rerows,
+                                                                              edge_id=ref_snak_edgeid,
+                                                                              node1=reference_id,
+                                                                              label=ref_snaks_prop,
+                                                                              node2=ref_snak_type,
+                                                                              invalid_erows=invalid_erows)
+                                                            continue
 
                                                         if MAINSNAK_DATATYPE not in ref_snak:
                                                             raise ValueError("Reference SNAK is missing a DATATYPE.")
@@ -1688,58 +1717,198 @@ def run(input_file: KGTKFiles,
                                                             raise ValueError("Reference SNAK datavalue is missing a VALUE.")
                                                         ref_snak_datavalue_value = ref_snak_datavalue["value"]
 
-                                                        if ref_snak_datatype == "wikibase-item":
-                                                            if ref_snak_datavalue_type != "wikibase-entityid":
-                                                                raise ValueError("Reference SNAK datatype %s with unexpected datavalue type %s" % (repr(ref_snak_datatype),
+                                                        if ref_snak_datatype not in SNAK_DATATYPE_PAIRS:
+                                                            raise ValueError ("Reference SNAK with unexpected datatype %s and datavalue type %s" % (repr(ref_snak_datatype),
                                                                                                                                                    repr(ref_snak_datavalue_type)))
-                                                            
-                                                        elif ref_snak_datatype == "url":
-                                                            if ref_snak_datavalue_type != "string":
-                                                                raise ValueError("Reference SNAK datatype %s with unexpected datavalue type %s" % (repr(ref_snak_datatype),
-                                                                                                                                                   repr(ref_snak_datavalue_type)))
-                                                        elif ref_snak_datatype == "string":
-                                                            if ref_snak_datavalue_type != "string":
-                                                                raise ValueError("Reference SNAK datatype %s with unexpected datavalue type %s" % (repr(ref_snak_datatype),
-                                                                                                                                                   repr(ref_snak_datavalue_type)))
-                                                            
-                                                        elif ref_snak_datatype == "time":
-                                                            if ref_snak_datavalue_type != "time":
-                                                                raise ValueError("Reference SNAK datatype %s with unexpected datavalue type %s" % (repr(ref_snak_datatype),
-                                                                                                                                                   repr(ref_snak_datavalue_type)))
-                                                            
-                                                        elif ref_snak_datatype == "monolingualtext":
-                                                            if ref_snak_datavalue_type != "monolingualtext":
-                                                                raise ValueError("Reference SNAK datatype %s with unexpected datavalue type %s" % (repr(ref_snak_datatype),
-                                                                                                                                                   repr(ref_snak_datavalue_type)))
-                                                            
-                                                        elif ref_snak_datatype == "quantity":
-                                                            if ref_snak_datavalue_type != "quantity":
-                                                                raise ValueError("Reference SNAK datatype %s with unexpected datavalue type %s" % (repr(ref_snak_datatype),
-                                                                                                                                                   repr(ref_snak_datavalue_type)))
-                                                            
-                                                        elif ref_snak_datatype == "commonsMedia":
-                                                            if ref_snak_datavalue_type != "string":
-                                                                raise ValueError("Reference SNAK datatype %s with unexpected datavalue type %s" % (repr(ref_snak_datatype),
-                                                                                                                                                   repr(ref_snak_datavalue_type)))
-                                                            
-                                                        elif ref_snak_datatype == "wikibase-property":
-                                                            if ref_snak_datavalue_type != "wikibase-entityid":
-                                                                raise ValueError("Reference SNAK datatype %s with unexpected datavalue type %s" % (repr(ref_snak_datatype),
+                                                        if SNAK_DATATYPE_PAIRS[ref_snak_datatype] != ref_snak_datavalue_type:
+                                                            raise ValueError ("Reference SNAK with mismatched datatype %s and datavalue type %s" % (repr(ref_snak_datatype),
                                                                                                                                                    repr(ref_snak_datavalue_type)))
 
-                                                        elif ref_snak_datatype == "globe-coordinate":
-                                                            if ref_snak_datavalue_type != "globecoordinate":
-                                                                raise ValueError("Reference SNAK datatype %s with unexpected datavalue type %s" % (repr(ref_snak_datatype),
-                                                                                                                                                   repr(ref_snak_datavalue_type)))
-
+                                                        if ref_snak_datatype == "commonsMedia":
+                                                            if isinstance(ref_snak_datavalue_value, dict):
+                                                                raise ValueError("Expecting a string value for a commons media datatype.")
+                                                            self.erows_append(rerows,
+                                                                              edge_id=ref_snak_edgeid,
+                                                                              node1=reference_id,
+                                                                              label=ref_snaks_prop,
+                                                                              node2=KgtkFormat.stringify(ref_snak_datavalue_value),
+                                                                              invalid_erows=invalid_erows)
+                                                            
                                                         elif ref_snak_datatype == "external-id":
-                                                            if ref_snak_datavalue_type != "string":
-                                                                raise ValueError("Reference SNAK datatype %s with unexpected datavalue type %s" % (repr(ref_snak_datatype),
-                                                                                                                                                   repr(ref_snak_datavalue_type)))
+                                                            if isinstance(ref_snak_datavalue_value, dict):
+                                                                raise ValueError("Expecting a string value for an external id datatype.")
+                                                            self.erows_append(rerows,
+                                                                              edge_id=ref_snak_edgeid,
+                                                                              node1=reference_id,
+                                                                              label=ref_snaks_prop,
+                                                                              node2=KgtkFormat.stringify(ref_snak_datavalue_value),
+                                                                              invalid_erows=invalid_erows)
+                                                            
+                                                        elif ref_snak_datatype == "globe-coordinate":
+                                                            if not isinstance(ref_snak_datavalue_value, dict):
+                                                                raise ValueError("Expecting a dict for a globe coordinate.")
+                                                            if 'latitude' not in ref_snak_datavalue_value:
+                                                                raise ValueError("Globe coordinate without latitude.")
+                                                            if 'longitude' not in ref_snak_datavalue_value:
+                                                                raise ValueError("Globe coordinate without longitude.")
+                                                            coord_lat: str = str(ref_snak_datavalue_value['latitude'])
+                                                            coord_long: str = str(ref_snak_datavalue_value['longitude'])
+
+                                                            # TODO: implement precision
+                                                            # coord_precision = str(ref_snak_datavalue_value.get('precision', ''))
+                                                            
+                                                            coord_value: str = '@' + coord_lat + '/' + coord_long
+                                                            self.erows_append(rerows,
+                                                                              edge_id=ref_snak_edgeid,
+                                                                              node1=reference_id,
+                                                                              label=ref_snaks_prop,
+                                                                              node2=coord_value,
+                                                                              invalid_erows=invalid_erows)
+
+                                                        elif ref_snak_datatype == DATATYPE_MONOLINGUALTEXT:
+                                                            if not isinstance(ref_snak_datavalue_value, dict):
+                                                                raise ValueError("Expecting a dict for a monolingual text.")
+                                                            if 'text' not in ref_snak_datavalue_value:
+                                                                raise ValueError("Monolingual text without text.")
+                                                            if 'language' not in ref_snak_datavalue_value:
+                                                                raise ValueError("Monolingual text without language.")
+                                                            text_value: str = KgtkFormat.stringify(ref_snak_datavalue_value['text'],
+                                                                                                   language=ref_snak_datavalue_value['language'])
+                                                            self.erows_append(rerows,
+                                                                              edge_id=ref_snak_edgeid,
+                                                                              node1=reference_id,
+                                                                              label=ref_snaks_prop,
+                                                                              node2=text_value,
+                                                                              invalid_erows=invalid_erows)
+                                                        
+                                                        elif ref_snak_datatype == DATATYPE_QUANTITY:
+                                                            if not isinstance(ref_snak_datavalue_value, dict):
+                                                                raise ValueError("Expecting a dict value for a quantity datatype.")
+                                                            if 'amount' not in ref_snak_datavalue_value:
+                                                                raise ValueError("Quantity without amount.")
+
+                                                            quantity_value: str = ref_snak_datavalue_value['amount']
+                                                            if ref_snak_datavalue_value.get('upperBound', None) or \
+                                                                    ref_snak_datavalue_value.get('lowerBound', None):
+                                                                lower_bound: str = ref_snak_datavalue_value.get(
+                                                                    'lowerBound', '')
+                                                                upper_bound: str = ref_snak_datavalue_value.get(
+                                                                    'upperBound', '')
+                                                                quantity_value += '[' + lower_bound + \
+                                                                         ',' + upper_bound + ']'
+                                                            if len(ref_snak_datavalue_value.get('unit')) > 1:
+                                                                unit: str = ref_snak_datavalue_value.get('unit').split('/')[-1]
+                                                                quantity_value += unit
+                                                            self.erows_append(rerows,
+                                                                              edge_id=ref_snak_edgeid,
+                                                                              node1=reference_id,
+                                                                              label=ref_snaks_prop,
+                                                                              node2=quantity_value,
+                                                                              invalid_erows=invalid_erows)
+
+                                                        elif ref_snak_datatype == "string":
+                                                            if isinstance(ref_snak_datavalue_value, dict):
+                                                                raise ValueError("Expecting a string value for a string datatype.")
+                                                            self.erows_append(rerows,
+                                                                              edge_id=ref_snak_edgeid,
+                                                                              node1=reference_id,
+                                                                              label=ref_snaks_prop,
+                                                                              node2=KgtkFormat.stringify(ref_snak_datavalue_value),
+                                                                              invalid_erows=invalid_erows)
+
+                                                        elif ref_snak_datatype == DATATYPE_TIME:
+                                                            if not isinstance(ref_snak_datavalue_value, dict):
+                                                                raise ValueError("Expecting a dict value for a time datatype.")
+                                                            if 'time' not in ref_snak_datavalue_value:
+                                                                raise ValueError("Time without time.")
+                                                            if 'precision' not in ref_snak_datavalue_value:
+                                                                raise ValueError("Time without precision.")
+                                                            time_prefix: str
+                                                            if ref_snak_datavalue_value['time'][0] == '-':
+                                                                time_prefix = "^-"
+                                                            else:
+                                                                time_prefix = "^"
+                                                            time_date: str = ref_snak_datavalue_value['time'][1:]
+                                                            precision: str = str(ref_snak_datavalue_value['precision'])
+                                                            # calendar = val.get('calendarmodel', '').split('/')[-1]
+                                                            time_value: str = time_prefix + time_date + '/' + precision
+                                                            self.erows_append(rerows,
+                                                                              edge_id=ref_snak_edgeid,
+                                                                              node1=reference_id,
+                                                                              label=ref_snaks_prop,
+                                                                              node2=time_value,
+                                                                              invalid_erows=invalid_erows)
+
+                                                        elif ref_snak_datatype == "url":
+                                                            if isinstance(ref_snak_datavalue_value, dict):
+                                                                raise ValueError("Expecting a string value for a URL.")
+                                                            self.erows_append(rerows,
+                                                                              edge_id=ref_snak_edgeid,
+                                                                              node1=reference_id,
+                                                                              label=ref_snaks_prop,
+                                                                              node2=KgtkFormat.stringify(ref_snak_datavalue_value),
+                                                                              invalid_erows=invalid_erows)
+                                                            
+
+                                                        elif ref_snak_datatype == "wikibase-item":
+                                                            if not isinstance(ref_snak_datavalue_value, dict):
+                                                                raise ValueError("Expecting a dict value for a wikibase item.")
+                                                            wikibase_item_id: str
+                                                            if "id" in ref_snak_datavalue_value:
+                                                                wikibase_item_id = ref_snak_datavalue_value["id"]
+                                                            elif "numeric-id" in ref_snak_datavalue_value:
+                                                                wikibase_item_id = 'Q' + str(ref_snak_datavalue_value["numeric-id"])
+                                                            else:
+                                                                raise ValueError("No numeric ID for wikibase-item")
+                                                            
+                                                            self.erows_append(rerows,
+                                                                              edge_id=ref_snak_edgeid,
+                                                                              node1=reference_id,
+                                                                              label=ref_snaks_prop,
+                                                                              node2=wikibase_item_id,
+                                                                              invalid_erows=invalid_erows)
+
+                                                        elif ref_snak_datatype == "wikibase-lexeme":
+                                                            if not isinstance(ref_snak_datavalue_value, dict):
+                                                                raise ValueError("Expecting a dict value for a wikibase lexeme.")
+                                                            wikibase_lexeme_id: str
+                                                            if "id" in ref_snak_datavalue_value:
+                                                                wikibase_lexeme_id = ref_snak_datavalue_value["id"]
+                                                            elif "numeric-id" in ref_snak_datavalue_value:
+                                                                wikibase_lexeme_id = 'L' + str(ref_snak_datavalue_value["numeric-id"])
+                                                            else:
+                                                                raise ValueError("No numeric ID for wikibase-lexeme")
+                                                            
+                                                            self.erows_append(rerows,
+                                                                              edge_id=ref_snak_edgeid,
+                                                                              node1=reference_id,
+                                                                              label=ref_snaks_prop,
+                                                                              node2=wikibase_lexeme_id,
+                                                                              invalid_erows=invalid_erows)
+                                                            pass
+                                                            
+
+                                                        elif ref_snak_datatype == "wikibase-property":
+                                                            if not isinstance(ref_snak_datavalue_value, dict):
+                                                                raise ValueError("Expecting a dict value for a wikibase property.")
+                                                            wikibase_property_id: str
+                                                            if "id" in ref_snak_datavalue_value:
+                                                                wikibase_property_id = ref_snak_datavalue_value["id"]
+                                                            elif "numeric-id" in ref_snak_datavalue_value:
+                                                                wikibase_property_id = 'P' + str(ref_snak_datavalue_value["numeric-id"])
+                                                            else:
+                                                                raise ValueError("No numeric ID for wikibase-property")
+                                                            
+                                                            self.erows_append(rerows,
+                                                                              edge_id=ref_snak_edgeid,
+                                                                              node1=reference_id,
+                                                                              label=ref_snaks_prop,
+                                                                              node2=wikibase_property_id,
+                                                                              invalid_erows=invalid_erows)
+                                                            pass
                                                             
                                                         else:
-                                                            raise ValueError ("Reference SNAK with unexpected datatype %s and datavalue type %s" % (repr(ref_snak_datatype),
-                                                                                                                                                    repe(ref_snak_datavalue_type)))
+                                                            pass
                                                             
 
                                     if minimal_qual_file is not None or detailed_qual_file is not None or interleave:
@@ -2648,12 +2817,21 @@ def run(input_file: KGTKFiles,
                             label: str = row[2]  # Hack: knows the structure of the row.
                             method: typing.Optional[
                                 typing.Callable[[typing.List[str]], bool]] = self.split_dispatcher.get(label)
+
+                            # Hack: knows the structure of the row.
+                            # This outrageous hack supports references.  It routes reference details to the
+                            # split reference file when there is a split reference file. Otherwise, references
+                            # will go to the edge file.
+                            # TODO: remove this hack.  Perhaps we need a seperate top-level file for references?
+                            if method is None and row[1].startswith(REFERENCE_ID_START):
+                                method = self.split_dispatcher.get(REFERENCE_LABEL)
+
                             if method is not None:
                                 split = method(row)
                             if not split:
                                 if self.minimal_edge_wr is None and self.detailed_edge_wr is None and \
                                         self.split_property_edge_wr is None:
-                                    raise ValueError("Unexpected %s edge rows in the %s collector." % (label, who))
+                                    raise ValueError("Unexpected %s edge rows in the %s collector: %s." % (label, who, repr(row)))
 
                                 if self.split_property_edge_wr is not None and row[1].startswith(
                                         "P"):  # Hack: knows the structure of the row.
@@ -2852,7 +3030,7 @@ def run(input_file: KGTKFiles,
             return split
 
     try:
-        UPDATE_VERSION: str = "2022-09-21T22:02:03.726652+00:00#JPRDOgXuISk14TC5SXKEmwD0mTHaiXeauB3JOsctj8oRmur9pVfuV84RDQKmDwgzEgd2/5HUl1a1gi3AmkVvVg=="
+        UPDATE_VERSION: str = "2022-09-23T02:44:01.379479+00:00#D7StUrZs7JxCUJTY/gzAHiw+ebY6Orr+DcEasKG16G/BJHooeh/0SDVaM89tOXR6g8+LpuMKNOtFa4xe5XjuAw=="
         print("kgtk import-wikidata version: %s" % UPDATE_VERSION, file=sys.stderr, flush=True)
         print("Starting main process (pid %d)." % os.getpid(), file=sys.stderr, flush=True)
         inp_path = KGTKArgumentParser.get_input_file(input_file)
