@@ -849,6 +849,7 @@ def run(input_file: KGTKFiles,
     SNAK_DATATYPE_PAIRS: typing.Mapping[str, str] = {
         "commonsMedia": "string",
         "external-id": "string",
+        "geo-shape": "string",
         DATATYPE_GLOBECOORDINATE: "globecoordinate",
         DATATYPE_MONOLINGUALTEXT: "monolingualtext",
         DATATYPE_QUANTITY: "quantity",
@@ -1737,6 +1738,16 @@ def run(input_file: KGTKFiles,
                                                         elif ref_snak_datatype == "external-id":
                                                             if isinstance(ref_snak_datavalue_value, dict):
                                                                 raise ValueError("Expecting a string value for an external id datatype.")
+                                                            self.erows_append(rerows,
+                                                                              edge_id=ref_snak_edgeid,
+                                                                              node1=reference_id,
+                                                                              label=ref_snaks_prop,
+                                                                              node2=KgtkFormat.stringify(ref_snak_datavalue_value),
+                                                                              invalid_erows=invalid_erows)
+                                                            
+                                                        elif ref_snak_datatype == "geo-shape":
+                                                            if isinstance(ref_snak_datavalue_value, dict):
+                                                                raise ValueError("Expecting a string value for a geo shape datatype.")
                                                             self.erows_append(rerows,
                                                                               edge_id=ref_snak_edgeid,
                                                                               node1=reference_id,
