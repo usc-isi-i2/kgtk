@@ -1728,6 +1728,7 @@ def run(input_file: KGTKFiles,
                                                         if ref_snak_datatype == "commonsMedia":
                                                             if isinstance(ref_snak_datavalue_value, dict):
                                                                 raise ValueError("Expecting a string value for a commons media datatype.")
+                                                            # TODO: Retain the original datatype?
                                                             self.erows_append(rerows,
                                                                               edge_id=ref_snak_edgeid,
                                                                               node1=reference_id,
@@ -1738,6 +1739,7 @@ def run(input_file: KGTKFiles,
                                                         elif ref_snak_datatype == "external-id":
                                                             if isinstance(ref_snak_datavalue_value, dict):
                                                                 raise ValueError("Expecting a string value for an external id datatype.")
+                                                            # TODO: Retain the original datatype?
                                                             self.erows_append(rerows,
                                                                               edge_id=ref_snak_edgeid,
                                                                               node1=reference_id,
@@ -1748,6 +1750,7 @@ def run(input_file: KGTKFiles,
                                                         elif ref_snak_datatype == "geo-shape":
                                                             if isinstance(ref_snak_datavalue_value, dict):
                                                                 raise ValueError("Expecting a string value for a geo shape datatype.")
+                                                            # TODO: Retain the original datatype?
                                                             self.erows_append(rerows,
                                                                               edge_id=ref_snak_edgeid,
                                                                               node1=reference_id,
@@ -1853,6 +1856,7 @@ def run(input_file: KGTKFiles,
                                                         elif ref_snak_datatype == "url":
                                                             if isinstance(ref_snak_datavalue_value, dict):
                                                                 raise ValueError("Expecting a string value for a URL.")
+                                                            # TODO: Retain the original datatype?
                                                             self.erows_append(rerows,
                                                                               edge_id=ref_snak_edgeid,
                                                                               node1=reference_id,
@@ -1872,6 +1876,7 @@ def run(input_file: KGTKFiles,
                                                             else:
                                                                 raise ValueError("No numeric ID for wikibase-item")
                                                             
+                                                            # TODO: Retain the original datatype?
                                                             self.erows_append(rerows,
                                                                               edge_id=ref_snak_edgeid,
                                                                               node1=reference_id,
@@ -1890,14 +1895,13 @@ def run(input_file: KGTKFiles,
                                                             else:
                                                                 raise ValueError("No numeric ID for wikibase-lexeme")
                                                             
+                                                            # TODO: Retain the original datatype?
                                                             self.erows_append(rerows,
                                                                               edge_id=ref_snak_edgeid,
                                                                               node1=reference_id,
                                                                               label=ref_snaks_prop,
                                                                               node2=wikibase_lexeme_id,
                                                                               invalid_erows=invalid_erows)
-                                                            pass
-                                                            
 
                                                         elif ref_snak_datatype == "wikibase-property":
                                                             if not isinstance(ref_snak_datavalue_value, dict):
@@ -1910,13 +1914,13 @@ def run(input_file: KGTKFiles,
                                                             else:
                                                                 raise ValueError("No numeric ID for wikibase-property")
                                                             
+                                                            # TODO: Retain the original datatype?
                                                             self.erows_append(rerows,
                                                                               edge_id=ref_snak_edgeid,
                                                                               node1=reference_id,
                                                                               label=ref_snaks_prop,
                                                                               node2=wikibase_property_id,
                                                                               invalid_erows=invalid_erows)
-                                                            pass
                                                             
                                                         else:
                                                             pass
@@ -3041,7 +3045,7 @@ def run(input_file: KGTKFiles,
             return split
 
     try:
-        UPDATE_VERSION: str = "2022-09-23T23:47:23.934035+00:00#4Oss50LdPVEsyDgaQikIryf0hp4GLaa3YKHc+cHCVoq12FSJe35MQfPY9ukiwGBfGe36o6BFGHyqJxgLUtC8Ow=="
+        UPDATE_VERSION: str = "2022-09-25T02:54:35.165675+00:00#EMsC3I1enCWzNfDiQxSAbU2m5ti2WKspI6/UToiCvbHLlTrp8yNFcBfqopCcmGgeZEiD/TL+nATNb3R4SL/RtQ=="
         print("kgtk import-wikidata version: %s" % UPDATE_VERSION, file=sys.stderr, flush=True)
         print("Starting main process (pid %d)." % os.getpid(), file=sys.stderr, flush=True)
         inp_path = KGTKArgumentParser.get_input_file(input_file)
