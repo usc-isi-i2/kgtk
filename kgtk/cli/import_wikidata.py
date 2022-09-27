@@ -1,7 +1,7 @@
 """
 Import an wikidata file into KGTK file
 
-TODO: references
+TODO: references order
 
 TODO: qualifiers-order
 
@@ -907,7 +907,7 @@ def run(input_file: KGTKFiles,
     }
 
     def extract_snak_value(snak: str,
-                           expected_prop: typing.Optional[str] = None)-> typing.Optional[str]:
+                           expected_prop: typing.Optional[str] = None)-> typing.Tuple[str, str]:
         snak_prop: typing.Optional[str] = snak.get(MAINSNAK_PROPERTY, '')
         if len(snak_prop) == 0:
             raise ValueError("SNAK without property.")
@@ -916,18 +916,18 @@ def run(input_file: KGTKFiles,
             raise ValueError("Expected property %s does not match SNAK property %s" % (repr(expected_prop),
                                                                                        repr(snak[MAINSNAK_PROPERTY])))
         
+        snak_datatype: typing.Optional[str] = snak.get(MAINSNAK_DATATYPE)
+        if snak_datatype is None:
+            raise ValueError("SNAK is missing a DATATYPE.")
+
         snak_type: typing.Optional[str] = snak.get(MAINSNAK_SNAKTYPE)
         if snak_type is None:
             raise ValueError("SNAK is missing a SNAKTYPE.")
 
         if snak_type != SNAKTYPE_VALUE:
             # Process somevalue and novalue:
-            return snak_type
+            return snak_type, snak_datatype
         
-        snak_datatype: typing.Optional[str] = snak.get(MAINSNAK_DATATYPE)
-        if snak_datatype is None:
-            raise ValueError("SNAK is missing a DATATYPE.")
-
         snak_datavalue = snak.get(MAINSNAK_DATAVALUE)
         if snak_datavalue is None:
             raise ValueError("SNAK is missing a DATAVALUE.")
@@ -952,19 +952,19 @@ def run(input_file: KGTKFiles,
             if not isinstance(snak_datavalue_value, str):
                 raise ValueError("Expecting a string value for a commons media datatype.")
             # TODO: Retain the original datatype?
-            return KgtkFormat.stringify(snak_datavalue_value)
+            return KgtkFormat.stringify(snak_datavalue_value), snak_datatype
                                                             
         elif snak_datatype == SNAK_DATATYPE_EXTERNALID:
             if not isinstance(snak_datavalue_value, str):
                 raise ValueError("Expecting a string value for an external id datatype.")
             # TODO: Retain the original datatype?
-            return KgtkFormat.stringify(snak_datavalue_value)
+            return KgtkFormat.stringify(snak_datavalue_value), snak_datatype
 
         elif snak_datatype == SNAK_DATATYPE_GEOSHAPE:
             if not isinstance(snak_datavalue_value, str):
                 raise ValueError("Expecting a string value for a geo shape datatype.")
             # TODO: Retain the original datatype?
-            return KgtkFormat.stringify(snak_datavalue_value)
+            return KgtkFormat.stringify(snak_datavalue_value), snak_datatype
 
         elif snak_datatype == SNAK_DATATYPE_GLOBECOORDINATE:
             if not isinstance(snak_datavalue_value, dict):
@@ -983,7 +983,7 @@ def run(input_file: KGTKFiles,
             # TODO: implement precision
             # coord_precision = str(snak_datavalue_value.get('precision', ''))
                                                             
-            return '@' + coord_lat + '/' + coord_long
+            return '@' + coord_lat + '/' + coord_long, snak_datatype
 
         elif snak_datatype == SNAK_DATATYPE_MONOLINGUALTEXT:
             if not isinstance(snak_datavalue_value, dict):
@@ -997,7 +997,7 @@ def run(input_file: KGTKFiles,
             if language is None:
                 raise ValueError("Monolingual text without language.")
 
-            return KgtkFormat.stringify(text, language=language)
+            return KgtkFormat.stringify(text, language=language), snak_datatype
 
         elif snak_datatype == SNAK_DATATYPE_QUANTITY:
             if not isinstance(snak_datavalue_value, dict):
@@ -1016,12 +1016,12 @@ def run(input_file: KGTKFiles,
             if len(snak_datavalue_value.get('unit')) > 1:
                 quantity_value += snak_datavalue_value.get('unit').split('/')[-1]
 
-            return quantity_value
+            return quantity_value, snak_datatype
 
         elif snak_datatype == SNAK_DATATYPE_STRING:
             if not isinstance(snak_datavalue_value, str):
                 raise ValueError("Expecting a string value for a string datatype.")
-            return KgtkFormat.stringify(snak_datavalue_value)
+            return KgtkFormat.stringify(snak_datavalue_value), snak_datatype
 
         elif snak_datatype == SNAK_DATATYPE_TIME:
             if not isinstance(snak_datavalue_value, dict):
@@ -1044,13 +1044,13 @@ def run(input_file: KGTKFiles,
             # calendar = val.get('calendarmodel', '').split('/')[-1]
             time_value: str = time_prefix + time_date + '/' + precision
 
-            return time_value
+            return time_value, snak_datatype
 
         elif snak_datatype == SNAK_DATATYPE_URL:
             if not isinstance(snak_datavalue_value, str):
                 raise ValueError("Expecting a string value for a URL.")
             # TODO: Retain the original datatype?
-            return KgtkFormat.stringify(snak_datavalue_value)
+            return KgtkFormat.stringify(snak_datavalue_value), snak_datatype
         
         elif snak_datatype in SNAK_DATATYPE_WIKIBASE_TYPES:
             expected_entity_type: typing.Optional[str] = SNAK_DATATYPE_WIKIBASE_ENTITY_TYPES.get(snak_datatype)
@@ -1060,13 +1060,13 @@ def run(input_file: KGTKFiles,
             if not isinstance(snak_datavalue_value, dict):
                 # This is possible in some old lexeme records.
                 if len(snak_datavalue_value) > 0:
-                    return snak_datavalue_value
+                    return snak_datavalue_value, snak_datatype
                 else:
                     raise ValueError("Expecting a value for a wikibase entity with datatype %s." % repr(snak_datatype))
 
             entity_id: str = str(snak_datavalue_value.get(SNAK_DATAVALUE_VALUE_ID, ''))
             if len(entity_id) > 0:
-                return entity_id
+                return entity_id, snak_datatype
 
             numeric_id: str = str(val.get(SNAK_DATAVALUE_VALUE_NUMERIC_ID, ''))
             if len(numeric_id) == 0:
@@ -1082,13 +1082,13 @@ def run(input_file: KGTKFiles,
                                                                                                     repr(entity_type)))
 
             if entity_type == SNAK_DATAVALUE_VALUE_ENTITY_TYPE_ITEM:
-                return 'Q' + numeric_id
+                return 'Q' + numeric_id, snak_datatype
 
             elif entity_type == SNAK_DATAVALUE_VALUE_ENTITY_TYPE_PROPERTY:
-                return 'P' + numeric_id
+                return 'P' + numeric_id, snak_datatype
                                                                 
             elif entity_type == SNAK_DATAVALUE_VALUE_ENTITY_TYPE_LEXEME:
-                return 'L' + numeric_id
+                return 'L' + numeric_id, snak_datatype
                                                                 
             else:
                 raise ValueError("Wikibase entity of datatype %s with unknown entity type %s" % (repr(snak_datatype), repr(entity_type)))
@@ -1923,12 +1923,15 @@ def run(input_file: KGTKFiles,
                                                         ref_snak_count += 1 # Bad approach for the time machine, but prevents collisions.
                                                         ref_snak_edgeid: str = ref_edgeid + "-" + str(ref_snak_count).zfill(REFERENCE_ID_WIDTH)
 
-                                                        kgtk_snak_value: str = extract_snak_value(ref_snak, expected_prop=ref_snaks_prop)
+                                                        kgtk_snak_value: str
+                                                        wikidatatype: str
+                                                        (kgtk_snak_value, wikidatatype) = extract_snak_value(ref_snak, expected_prop=ref_snaks_prop)
                                                         self.erows_append(rerows,
                                                                           edge_id=ref_snak_edgeid,
                                                                           node1=reference_id,
                                                                           label=ref_snaks_prop,
                                                                           node2=kgtk_snak_value,
+                                                                          wikidatatype=wikidatatype,
                                                                           invalid_erows=invalid_erows)
 
                                     if minimal_qual_file is not None or detailed_qual_file is not None or interleave:
@@ -3020,7 +3023,7 @@ def run(input_file: KGTKFiles,
 
             if self.split_reference_wr is not None:
                 self.split_reference_wr.write(
-                    (row[0], row[1], row[2], row[3]))  # Hack: knows the structure of the row.
+                    (row[0], row[1], row[2], row[3], row[5]))  # Hack: knows the structure of the row.
                 split = True
 
             return split
@@ -3335,7 +3338,7 @@ def run(input_file: KGTKFiles,
 
             rcq = collector_q if collector_q is not None else reference_collector_q
             if split_reference_file and rcq is not None:
-                reference_file_header = ['id', 'node1', 'label', 'node2']
+                reference_file_header = ['id', 'node1', 'label', 'node2', 'node2;wikidatatype']
                 print("Sending the reference file header to the collector.", file=sys.stderr, flush=True)
                 rcq.put(("split_reference_header", None, None, None, None, None, reference_file_header))
                 print("Sent the reference file header to the collector.", file=sys.stderr, flush=True)
