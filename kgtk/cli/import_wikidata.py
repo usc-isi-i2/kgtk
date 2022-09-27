@@ -951,19 +951,16 @@ def run(input_file: KGTKFiles,
         if snak_datatype == SNAK_DATATYPE_COMMONSMEDIA:
             if not isinstance(snak_datavalue_value, str):
                 raise ValueError("Expecting a string value for a commons media datatype.")
-            # TODO: Retain the original datatype?
             return KgtkFormat.stringify(snak_datavalue_value), snak_datatype
                                                             
         elif snak_datatype == SNAK_DATATYPE_EXTERNALID:
             if not isinstance(snak_datavalue_value, str):
                 raise ValueError("Expecting a string value for an external id datatype.")
-            # TODO: Retain the original datatype?
             return KgtkFormat.stringify(snak_datavalue_value), snak_datatype
 
         elif snak_datatype == SNAK_DATATYPE_GEOSHAPE:
             if not isinstance(snak_datavalue_value, str):
                 raise ValueError("Expecting a string value for a geo shape datatype.")
-            # TODO: Retain the original datatype?
             return KgtkFormat.stringify(snak_datavalue_value), snak_datatype
 
         elif snak_datatype == SNAK_DATATYPE_GLOBECOORDINATE:
@@ -1049,7 +1046,6 @@ def run(input_file: KGTKFiles,
         elif snak_datatype == SNAK_DATATYPE_URL:
             if not isinstance(snak_datavalue_value, str):
                 raise ValueError("Expecting a string value for a URL.")
-            # TODO: Retain the original datatype?
             return KgtkFormat.stringify(snak_datavalue_value), snak_datatype
         
         elif snak_datatype in SNAK_DATATYPE_WIKIBASE_TYPES:
@@ -3055,7 +3051,7 @@ def run(input_file: KGTKFiles,
             return split
 
     try:
-        UPDATE_VERSION: str = "2022-09-27T22:23:54.863812+00:00#Tel4DyrL37GZmElnY6XWbCWyWNl2r9DMLIDhy/Zqd/NNHw0xGs/e/BeIUjufxOxaKQaUxBk4hPOEFALh7GLAcw=="
+        UPDATE_VERSION: str = "2022-09-27T22:55:03.654830+00:00#Bg3BKiHm1irEjmuaRBlcqXeW4zIALdnwsb5zyOfXBncuChknYylG+T0fGGMWoGXQ/c3JSpvdtRfInAfadx4sgQ=="
         print("kgtk import-wikidata version: %s" % UPDATE_VERSION, file=sys.stderr, flush=True)
         print("Starting main process (pid %d)." % os.getpid(), file=sys.stderr, flush=True)
         inp_path = KGTKArgumentParser.get_input_file(input_file)
