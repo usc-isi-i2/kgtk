@@ -1484,7 +1484,7 @@ def run(input_file: KGTKFiles,
             sitelink_id_collision_map: typing.MutableMapping[str, int] = dict()
 
             # A unique reference counter.  This is not a good long-term approach
-            # because it will not operate well for the Wikidata time machine.
+            # if it is necessary to support the Wikidata time machine.
             reference_count: int = 0
 
             clean_line = line.strip()
@@ -1904,6 +1904,7 @@ def run(input_file: KGTKFiles,
                                                                   node1=edgeid,
                                                                   label=REFERENCE_LABEL,
                                                                   node2=reference_id,
+                                                                  wikidatatype='reference' # Ad-hoc wikidatatype.
                                                                   invalid_erows=invalid_erows)
 
                                                 if REFERENCE_SNAKS_TAG not in reference:
