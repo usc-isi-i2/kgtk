@@ -1904,7 +1904,7 @@ def run(input_file: KGTKFiles,
                                                                   node1=edgeid,
                                                                   label=REFERENCE_LABEL,
                                                                   node2=reference_id,
-                                                                  wikidatatype='reference' # Ad-hoc wikidatatype.
+                                                                  wikidatatype='reference', # Ad-hoc wikidatatype.
                                                                   invalid_erows=invalid_erows)
 
                                                 if REFERENCE_SNAKS_TAG not in reference:
