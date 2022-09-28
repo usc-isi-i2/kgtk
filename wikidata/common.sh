@@ -102,6 +102,7 @@ WIKIDATA_IMPORT_SPLIT_FILES=( \
 	"descriptions.en" \
 	"labels" \
 	"labels.en" \
+	"references" \
 	"sitelinks" \
 	"sitelinks.en" \
 	"sitelinks.en.qualifiers" \

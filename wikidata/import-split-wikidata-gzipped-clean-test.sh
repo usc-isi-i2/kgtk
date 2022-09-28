@@ -45,6 +45,7 @@ kgtk ${KGTK_FLAGS} \
      --split-datatype-file ${TEMPDIR}/metadata.property.datatypes.${UNSORTED_KGTK} \
      --entry-type-edges True \
      --split-type-file ${TEMPDIR}/metadata.types.${UNSORTED_KGTK} \
+     --split-reference-file ${TEMPDIR}/references.raw.${UNSORTED_KGTK} \
      --sitelink-edges True \
      --sitelink-verbose-edges True \
      --split-sitelink-file ${TEMPDIR}/sitelinks.raw.${UNSORTED_KGTK} \
