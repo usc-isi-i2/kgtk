@@ -437,6 +437,28 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     )
 
     parser.add_argument(
+        "--reference-edges",
+        nargs='?',
+        type=optional_bool,
+        dest="reference_edges",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help="If true, create edge records for references. (default=%(default)s).",
+    )
+
+    parser.add_argument(
+        "--reference-detail-edges",
+        nargs='?',
+        type=optional_bool,
+        dest="reference_detail_edges",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help="If true, create edge records for reference details. (default=%(default)s).",
+    )
+
+    parser.add_argument(
         "--sitelink-edges",
         nargs='?',
         type=optional_bool,
@@ -734,6 +756,8 @@ def run(input_file: KGTKFiles,
         datatype_edges: bool,
         descr_edges: bool,
         label_edges: bool,
+        reference_edges: bool,
+        reference_detail_edges: bool,
         sitelink_edges: bool,
         sitelink_verbose_edges: bool,
         sitelink_verbose_qualifiers: bool,
@@ -1100,6 +1124,7 @@ def run(input_file: KGTKFiles,
     invalid_qual_collector_q: typing.Optional[pyrallel.ShmQueue] = None
 
     description_collector_q: typing.Optional[pyrallel.ShmQueue] = None
+    reference_collector_q: typing.Optional[pyrallel.ShmQueue] = None
     sitelink_collector_q: typing.Optional[pyrallel.ShmQueue] = None
 
     mp.set_start_method("fork")
@@ -1899,13 +1924,14 @@ def run(input_file: KGTKFiles,
                                                 reference_id: str = REFERENCE_ID_START + str(reference_count).zfill(REFERENCE_ID_WIDTH)
 
                                                 ref_edgeid: str = edgeid + "-" + reference_id
-                                                self.erows_append(rerows,
-                                                                  edge_id=ref_edgeid,
-                                                                  node1=edgeid,
-                                                                  label=REFERENCE_LABEL,
-                                                                  node2=reference_id,
-                                                                  wikidatatype='reference', # Ad-hoc wikidatatype.
-                                                                  invalid_erows=invalid_erows)
+                                                if reference_edges:
+                                                    self.erows_append(rerows,
+                                                                      edge_id=ref_edgeid,
+                                                                      node1=edgeid,
+                                                                      label=REFERENCE_LABEL,
+                                                                      node2=reference_id,
+                                                                      wikidatatype='reference', # Ad-hoc wikidatatype.
+                                                                      invalid_erows=invalid_erows)
 
                                                 if REFERENCE_SNAKS_TAG not in reference:
                                                     raise ValueError("Reference without SNAKS.")
@@ -1923,13 +1949,14 @@ def run(input_file: KGTKFiles,
                                                         kgtk_snak_value: str
                                                         wikidatatype: str
                                                         (kgtk_snak_value, wikidatatype) = extract_snak_value(ref_snak, expected_prop=ref_snaks_prop)
-                                                        self.erows_append(rerows,
-                                                                          edge_id=ref_snak_edgeid,
-                                                                          node1=reference_id,
-                                                                          label=ref_snaks_prop,
-                                                                          node2=kgtk_snak_value,
-                                                                          wikidatatype=wikidatatype,
-                                                                          invalid_erows=invalid_erows)
+                                                        if reference_detail_edges:
+                                                            self.erows_append(rerows,
+                                                                              edge_id=ref_snak_edgeid,
+                                                                              node1=reference_id,
+                                                                              label=ref_snaks_prop,
+                                                                              node2=kgtk_snak_value,
+                                                                              wikidatatype=wikidatatype,
+                                                                              invalid_erows=invalid_erows)
 
                                     if minimal_qual_file is not None or detailed_qual_file is not None or interleave:
                                         if cp.get('qualifiers', None):
@@ -3104,6 +3131,7 @@ def run(input_file: KGTKFiles,
             invalid_qual_collector_p = None
 
             description_collector_p = None
+            reference_collector_p = None
             sitelink_collector_p = None
 
             if collect_results:
