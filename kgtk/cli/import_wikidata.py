@@ -160,17 +160,6 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         default=None,
         help='path to output qualifier file with minimal data')
 
-    # Optionally write only the ID column to the node file.
-    parser.add_argument(
-        '--node-file-id-only',
-        nargs='?',
-        type=optional_bool,
-        dest="node_id_only",
-        const=True,
-        default=False,
-        metavar="True/False",
-        help='Option to write only the node ID in the node file. (default=%(default)s)')
-
     # The remaining files are KGTK edge files that split out
     # special properties, removing them from the edge file.
     parser.add_argument(
@@ -323,17 +312,6 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         default=False,
         metavar="True/False",
         help="If true, use portable code to combine file fragments. (default=%(default)s).",
-    )
-
-    parser.add_argument(
-        "--keep-temp-files",
-        nargs='?',
-        type=optional_bool,
-        dest="keep_temp_files",
-        const=True,
-        default=False,
-        metavar="True/False",
-        help="If true, keep temporary files (for debugging). (default=%(default)s).",
     )
 
     parser.add_argument(
@@ -691,7 +669,6 @@ def run(input_file: KGTKFiles,
         invalid_edge_file: typing.Optional[str],
         invalid_qual_file: typing.Optional[str],
 
-        node_id_only: bool,
         split_alias_file: typing.Optional[str],
         split_en_alias_file: typing.Optional[str],
         split_datatype_file: typing.Optional[str],
@@ -713,7 +690,6 @@ def run(input_file: KGTKFiles,
         deprecated: bool,
         explode_values: bool,
         use_python_cat: bool,
-        keep_temp_files: bool,
         interleave: bool,
         entry_type_edges: bool,
         alias_edges: bool,
@@ -1416,9 +1392,13 @@ def run(input_file: KGTKFiles,
                     print("Unknown object type {}.".format(entry_type), file=sys.stderr, flush=True)
 
                 if self.process_row_data and keep:
-                    row = []
-                    qnode = obj["id"]
-                    row.append(qnode)
+                    qnode: typing.Optional[str] = obj.get("id")
+                    if qnode is None:
+                        print("Object with no id.", file=sys.stderr, flush=True)
+                        return
+ 
+                    if node_file:
+                        nrows.append([qnode])
 
                     if parse_labels:
                         labels = obj.get("labels")
@@ -1454,15 +1434,6 @@ def run(input_file: KGTKFiles,
                                                           node2=value,
                                                           entrylang=lang,
                                                           invalid_erows=invalid_erows)
-
-                        if not node_id_only:
-                            if len(label_list) > 0:
-                                row.append("|".join(label_list))
-                            else:
-                                row.append("")
-
-                    if not node_id_only:
-                        row.append(entry_type)
 
                     if entry_type_edges:
                         typeid: str = qnode + '-' + TYPE_LABEL + '-' + entry_type
@@ -1506,12 +1477,6 @@ def run(input_file: KGTKFiles,
                                                           node2=value,
                                                           entrylang=lang,
                                                           invalid_erows=invalid_erows)
-
-                        if not node_id_only:
-                            if len(descr_list) > 0:
-                                row.append("|".join(descr_list))
-                            else:
-                                row.append("")
 
                     if parse_aliases:
                         aliases = obj.get("aliases")
@@ -1557,15 +1522,7 @@ def run(input_file: KGTKFiles,
                                                               entrylang=lang,
                                                               invalid_erows=invalid_erows)
 
-                        if not node_id_only:
-                            if len(alias_list) > 0:
-                                row.append("|".join(alias_list))
-                            else:
-                                row.append("")
-
                     datatype = obj.get("datatype", "")
-                    if not node_id_only:
-                        row.append(datatype)
                     if len(datatype) > 0 and datatype_edges:
                         datatypeid: str = qnode + '-' + "datatype"
                         # We expect the datatype to be a valid KGTK symbol, so
@@ -1576,10 +1533,6 @@ def run(input_file: KGTKFiles,
                                           label=DATATYPE_LABEL,
                                           node2=datatype,
                                           invalid_erows=invalid_erows)
-
-                    # row.append(source)
-                    if node_file:
-                        nrows.append(row)
 
                 if parse_claims and CLAIMS_TAG not in obj:
                     if fail_if_missing:
@@ -2946,7 +2899,7 @@ def run(input_file: KGTKFiles,
             return split
 
     try:
-        UPDATE_VERSION: str = "2022-09-28T23:34:55.902287+00:00#eCyBCu4PecjJVbOXx2OaxFTiyvvGgUYaOQDw8KWXnGej3f7MqmWp6Zr6kazdlf5GJXxoIJxthgSUBVpAYkZrwQ=="
+        UPDATE_VERSION: str = "2022-09-28T23:45:37.478062+00:00#Sxx61Zi0MYrscjN1dEwWy5tkYQlbmuk380MPyXuzviXlfEiqO9aVMhJELxvP2jQXdkBLnKs/2QqL7PCVXnq61A=="
         print("kgtk import-wikidata version: %s" % UPDATE_VERSION, file=sys.stderr, flush=True)
         print("Starting main process (pid %d)." % os.getpid(), file=sys.stderr, flush=True)
         inp_path = KGTKArgumentParser.get_input_file(input_file)
@@ -3128,10 +3081,7 @@ def run(input_file: KGTKFiles,
             print("Started the common collector process.", file=sys.stderr, flush=True)
 
         if node_file:
-            if node_id_only:
-                node_file_header = ['id']
-            else:
-                node_file_header = ['id', 'label', 'type', 'description', 'alias', 'datatype']
+            node_file_header = ['id']
 
             ncq = collector_q if collector_q is not None else node_collector_q
             if ncq is not None:
