@@ -544,16 +544,6 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         help='How often to report progress. (default=%(default)d)')
 
     parser.add_argument(
-        "--use-kgtkwriter",
-        nargs='?',
-        type=optional_bool,
-        dest="use_kgtkwriter",
-        const=True,
-        default=True,
-        metavar="True/False",
-        help="If true, use KgtkWriter instead of csv.writer. (default=%(default)s).")
-
-    parser.add_argument(
         "--use-mgzip-for-input",
         nargs='?',
         type=optional_bool,
@@ -717,7 +707,6 @@ def run(input_file: KGTKFiles,
         mapper_batch_size: int,
         collector_batch_size: int,
         single_mapper_queue: bool,
-        use_kgtkwriter: bool,
         use_mgzip_for_input: bool,
         use_mgzip_for_output: bool,
         mgzip_threads_for_input: int,
@@ -2410,228 +2399,148 @@ def run(input_file: KGTKFiles,
             if the_file is None or len(the_file) == 0:
                 raise ValueError("%s header without a %s file in the %s collector." % (file_type, file_type, who))
 
-            f: typing.Optional[typing.TextIO]
-            wr: typing.Any
-            if use_kgtkwriter:
-                from kgtk.io.kgtkwriter import KgtkWriter
-                print("Opening the %s file in the %s collector with KgtkWriter: %s" % (file_type, who, the_file),
-                      file=sys.stderr, flush=True)
-                wr = KgtkWriter.open(header, Path(the_file), who=who + " collector", use_mgzip=use_mgzip_for_output,
-                                     mgzip_threads=mgzip_threads_for_output)
-                return None, wr
-
-            else:
-                print("Opening the %s file in the %s collector with csv.writer." % (file_type, who), file=sys.stderr,
-                      flush=True)
-                csv_line_terminator = "\n" if os.name == 'posix' else "\r\n"
-                f = open(the_file, "w", newline='')
-                wr = csv.writer(
-                    f,
-                    quoting=csv.QUOTE_NONE,
-                    delimiter="\t",
-                    escapechar="\n",
-                    quotechar='',
-                    lineterminator=csv_line_terminator)
-                wr.writerow(header)
-                return f, wr
+            from kgtk.io.kgtkwriter import KgtkWriter
+            print("Opening the %s file in the %s collector with KgtkWriter: %s" % (file_type, who, the_file),
+                  file=sys.stderr, flush=True)
+            wr: KgtkWriter = KgtkWriter.open(header, Path(the_file), who=who + " collector", use_mgzip=use_mgzip_for_output,
+                                             mgzip_threads=mgzip_threads_for_output)
+            return wr
 
         def open_node_file(self, header: typing.List[str], who: str):
-            self.node_f, self.node_wr = self._open_file(node_file, header, "node", who)
+            self.node_wr = self._open_file(node_file, header, "node", who)
 
         def open_minimal_edge_file(self, header: typing.List[str], who: str):
-            self.minimal_edge_f, self.minimal_edge_wr = self._open_file(minimal_edge_file, header, "minimal edge", who)
+            self.minimal_edge_wr = self._open_file(minimal_edge_file, header, "minimal edge", who)
 
         def open_detailed_edge_file(self, header: typing.List[str], who: str):
-            self.detailed_edge_f, self.detailed_edge_wr = self._open_file(detailed_edge_file, header, "detailed edge",
-                                                                          who)
+            self.detailed_edge_wr = self._open_file(detailed_edge_file, header, "detailed edge",
+                                                    who)
 
         def open_minimal_qual_file(self, header: typing.List[str], who: str):
-            self.minimal_qual_f, self.minimal_qual_wr = self._open_file(minimal_qual_file, header, "minimal qual", who)
+            self.minimal_qual_wr = self._open_file(minimal_qual_file, header, "minimal qual", who)
 
         def open_detailed_qual_file(self, header: typing.List[str], who: str):
-            self.detailed_qual_f, self.detailed_qual_wr = self._open_file(detailed_qual_file, header, "qual", who)
+            self.detailed_qual_wr = self._open_file(detailed_qual_file, header, "qual", who)
 
         def open_invalid_edge_file(self, header: typing.List[str], who: str):
-            self.invalid_edge_f, self.invalid_edge_wr = self._open_file(invalid_edge_file, header, "invalid edge", who)
+            self.invalid_edge_wr = self._open_file(invalid_edge_file, header, "invalid edge", who)
 
         def open_invalid_qual_file(self, header: typing.List[str], who: str):
-            self.invalid_qual_f, self.invalid_qual_wr = self._open_file(invalid_qual_file, header, "qual", who)
+            self.invalid_qual_wr = self._open_file(invalid_qual_file, header, "qual", who)
 
         def open_split_alias_file(self, header: typing.List[str], who: str):
-            self.split_alias_f, self.split_alias_wr = self._open_file(split_alias_file, header, ALIAS_LABEL, who)
+            self.split_alias_wr = self._open_file(split_alias_file, header, ALIAS_LABEL, who)
 
         def open_split_en_alias_file(self, header: typing.List[str], who: str):
-            self.split_en_alias_f, self.split_en_alias_wr = self._open_file(split_en_alias_file, header,
-                                                                            "English " + ALIAS_LABEL, who)
+            self.split_en_alias_wr = self._open_file(split_en_alias_file, header,
+                                                     "English " + ALIAS_LABEL, who)
 
         def open_split_datatype_file(self, header: typing.List[str], who: str):
-            self.split_datatype_f, self.split_datatype_wr = self._open_file(split_datatype_file, header, DATATYPE_LABEL,
-                                                                            who)
+             self.split_datatype_wr = self._open_file(split_datatype_file, header, DATATYPE_LABEL,
+                                                      who)
 
         def open_split_description_file(self, header: typing.List[str], who: str):
-            self.split_description_f, self.split_description_wr = self._open_file(split_description_file, header,
-                                                                                  DESCRIPTION_LABEL, who)
+            self.split_description_wr = self._open_file(split_description_file, header,
+                                                        DESCRIPTION_LABEL, who)
 
         def open_split_en_description_file(self, header: typing.List[str], who: str):
-            self.split_en_description_f, self.split_en_description_wr = self._open_file(split_en_description_file,
-                                                                                        header,
-                                                                                        "English " + DESCRIPTION_LABEL,
-                                                                                        who)
+            self.split_en_description_wr = self._open_file(split_en_description_file,
+                                                           header,
+                                                           "English " + DESCRIPTION_LABEL,
+                                                           who)
 
         def open_split_label_file(self, header: typing.List[str], who: str):
-            self.split_label_f, self.split_label_wr = self._open_file(split_label_file, header, LABEL_LABEL, who)
+            self.split_label_wr = self._open_file(split_label_file, header, LABEL_LABEL, who)
 
         def open_split_en_label_file(self, header: typing.List[str], who: str):
-            self.split_en_label_f, self.split_en_label_wr = self._open_file(split_en_label_file, header,
-                                                                            "English " + LABEL_LABEL, who)
+            self.split_en_label_wr = self._open_file(split_en_label_file, header,
+                                                     "English " + LABEL_LABEL, who)
 
         def open_split_reference_file(self, header: typing.List[str], who: str):
-            self.split_reference_f, self.split_reference_wr = self._open_file(split_reference_file, header, REFERENCE_LABEL,
-                                                                              who)
+            self.split_reference_wr = self._open_file(split_reference_file, header, REFERENCE_LABEL,
+                                                      who)
 
         def open_split_sitelink_file(self, header: typing.List[str], who: str):
-            self.split_sitelink_f, self.split_sitelink_wr = self._open_file(split_sitelink_file, header, SITELINK_LABEL,
-                                                                            who)
+            self.split_sitelink_wr = self._open_file(split_sitelink_file, header, SITELINK_LABEL,
+                                                     who)
 
         def open_split_en_sitelink_file(self, header: typing.List[str], who: str):
-            self.split_en_sitelink_f, self.split_en_sitelink_wr = self._open_file(split_en_sitelink_file, header,
-                                                                                  "English " + SITELINK_LABEL, who)
+            self.split_en_sitelink_wr = self._open_file(split_en_sitelink_file, header,
+                                                        "English " + SITELINK_LABEL, who)
 
         def open_split_type_file(self, header: typing.List[str], who: str):
-            self.split_type_f, self.split_type_wr = self._open_file(split_type_file, header, TYPE_LABEL, who)
+            self.split_type_wr = self._open_file(split_type_file, header, TYPE_LABEL, who)
 
         def open_split_property_edge_file(self, header: typing.List[str], who: str):
-            self.split_property_edge_f, self.split_property_edge_wr = self._open_file(split_property_edge_file, header,
-                                                                                      "property edge", who)
+            self.split_property_edge_wr = self._open_file(split_property_edge_file, header,
+                                                          "property edge", who)
 
         def open_split_property_qual_file(self, header: typing.List[str], who: str):
-            self.split_property_qual_f, self.split_property_qual_wr = self._open_file(split_property_qual_file, header,
-                                                                                      "property qual", who)
+            self.split_property_qual_wr = self._open_file(split_property_qual_file, header,
+                                                          "property qual", who)
 
         def shutdown(self, who: str):
             print("Exiting the %s collector (pid %d)." % (who, os.getpid()), file=sys.stderr, flush=True)
 
-            if use_kgtkwriter:
-                if self.node_wr is not None:
-                    self.node_wr.close()
+            if self.node_wr is not None:
+                self.node_wr.close()
 
-                if self.minimal_edge_wr is not None:
-                    self.minimal_edge_wr.close()
+            if self.minimal_edge_wr is not None:
+                self.minimal_edge_wr.close()
 
-                if self.detailed_edge_wr is not None:
-                    self.detailed_edge_wr.close()
+            if self.detailed_edge_wr is not None:
+                self.detailed_edge_wr.close()
 
-                if self.invalid_edge_wr is not None:
-                    self.invalid_edge_wr.close()
+            if self.invalid_edge_wr is not None:
+                self.invalid_edge_wr.close()
 
-                if self.minimal_qual_wr is not None:
-                    self.minimal_qual_wr.close()
+            if self.minimal_qual_wr is not None:
+                self.minimal_qual_wr.close()
 
-                if self.detailed_qual_wr is not None:
-                    self.detailed_qual_wr.close()
+            if self.detailed_qual_wr is not None:
+                self.detailed_qual_wr.close()
 
-                if self.invalid_qual_wr is not None:
-                    self.invalid_qual_wr.close()
+            if self.invalid_qual_wr is not None:
+                self.invalid_qual_wr.close()
 
-                if self.split_alias_wr is not None:
-                    self.split_alias_wr.close()
+            if self.split_alias_wr is not None:
+                self.split_alias_wr.close()
 
-                if self.split_en_alias_wr is not None:
-                    self.split_en_alias_wr.close()
+            if self.split_en_alias_wr is not None:
+                self.split_en_alias_wr.close()
 
-                if self.split_datatype_wr is not None:
-                    self.split_datatype_wr.close()
+            if self.split_datatype_wr is not None:
+                self.split_datatype_wr.close()
 
-                if self.split_description_wr is not None:
-                    self.split_description_wr.close()
+            if self.split_description_wr is not None:
+                self.split_description_wr.close()
 
-                if self.split_en_description_wr is not None:
-                    self.split_en_description_wr.close()
+            if self.split_en_description_wr is not None:
+                self.split_en_description_wr.close()
 
-                if self.split_label_wr is not None:
-                    self.split_label_wr.close()
+            if self.split_label_wr is not None:
+                self.split_label_wr.close()
 
-                if self.split_en_label_wr is not None:
-                    self.split_en_label_wr.close()
+            if self.split_en_label_wr is not None:
+                self.split_en_label_wr.close()
 
-                if self.split_reference_wr is not None:
-                    self.split_reference_wr.close()
+            if self.split_reference_wr is not None:
+                self.split_reference_wr.close()
 
-                if self.split_sitelink_wr is not None:
-                    self.split_sitelink_wr.close()
+            if self.split_sitelink_wr is not None:
+                self.split_sitelink_wr.close()
 
-                if self.split_en_sitelink_wr is not None:
-                    self.split_en_sitelink_wr.close()
+            if self.split_en_sitelink_wr is not None:
+                self.split_en_sitelink_wr.close()
 
-                if self.split_type_wr is not None:
-                    self.split_type_wr.close()
+            if self.split_type_wr is not None:
+                self.split_type_wr.close()
 
-                if self.split_property_edge_wr is not None:
-                    self.split_property_edge_wr.close()
+            if self.split_property_edge_wr is not None:
+                self.split_property_edge_wr.close()
 
-                if self.split_property_edge_wr is not None:
-                    self.split_property_edge_wr.close()
-
-            else:
-                if self.node_f is not None:
-                    self.node_f.close()
-
-                if self.minimal_edge_f is not None:
-                    self.minimal_edge_f.close()
-
-                if self.detailed_edge_f is not None:
-                    self.detailed_edge_f.close()
-
-                if self.minimal_qual_f is not None:
-                    self.minimal_qual_f.close()
-
-                if self.detailed_qual_f is not None:
-                    self.detailed_qual_f.close()
-
-                if self.invalid_edge_f is not None:
-                    self.invalid_edge_f.close()
-
-                if self.invalid_qual_f is not None:
-                    self.invalid_qual_f.close()
-
-                if self.split_alias_f is not None:
-                    self.split_alias_f.close()
-
-                if self.split_en_alias_f is not None:
-                    self.split_en_alias_f.close()
-
-                if self.split_datatype_f is not None:
-                    self.split_datatype_f.close()
-
-                if self.split_description_f is not None:
-                    self.split_description_f.close()
-
-                if self.split_en_description_f is not None:
-                    self.split_en_description_f.close()
-
-                if self.split_label_f is not None:
-                    self.split_label_f.close()
-
-                if self.split_en_label_f is not None:
-                    self.split_en_label_f.close()
-
-                if self.split_reference_f is not None:
-                    self.split_reference_f.close()
-
-                if self.split_sitelink_f is not None:
-                    self.split_sitelink_f.close()
-
-                if self.split_en_sitelink_f is not None:
-                    self.split_en_sitelink_f.close()
-
-                if self.split_type_f is not None:
-                    self.split_type_f.close()
-
-                if self.split_property_edge_f is not None:
-                    self.split_property_edge_f.close()
-
-                if self.split_property_qual_f is not None:
-                    self.split_property_qual_f.close()
+            if self.split_property_edge_wr is not None:
+                self.split_property_edge_wr.close()
 
             print("The %s collector has closed its output files." % who, file=sys.stderr, flush=True)
 
@@ -2666,126 +2575,96 @@ def run(input_file: KGTKFiles,
                 if self.node_wr is None:
                     raise ValueError("Unexpected node rows in the %s collector." % who)
 
-                if use_kgtkwriter:
-                    for row in nrows:
-                        self.node_wr.write(row)
-                else:
-                    self.node_wr.writerows(nrows)
+                for row in nrows:
+                    self.node_wr.write(row)
 
             if len(erows) > 0:
-                if use_kgtkwriter:
-                    if not self.process_split_files:
-                        if self.detailed_edge_wr is None:
-                            raise ValueError("Unexpected edge rows in the %s collector." % who)
-                        for row in erows:
-                            if skip_validation or validate(row, "unsplit detailed edge"):
-                                self.detailed_edge_wr.write(row)
-                    else:
-                        for row in erows:
-                            split: bool = False
-                            label: str = row[2]  # Hack: knows the structure of the row.
-                            method: typing.Optional[
-                                typing.Callable[[typing.List[str]], bool]] = self.split_dispatcher.get(label)
-
-                            # Hack: knows the structure of the row.
-                            # This outrageous hack supports references.  It routes reference details to the
-                            # split reference file when there is a split reference file. Otherwise, references
-                            # will go to the edge file.
-                            # TODO: remove this hack.  Perhaps we need a seperate top-level file for references?
-                            if method is None and row[1].startswith(REFERENCE_ID_START):
-                                method = self.split_dispatcher.get(REFERENCE_LABEL)
-
-                            if method is not None:
-                                split = method(row)
-                            if not split:
-                                if self.minimal_edge_wr is None and self.detailed_edge_wr is None and \
-                                        self.split_property_edge_wr is None:
-                                    raise ValueError("Unexpected %s edge rows in the %s collector: %s." % (label, who, repr(row)))
-
-                                if self.split_property_edge_wr is not None and row[1].startswith(
-                                        "P"):  # Hack: knows the structure of the row.
-                                    # For now, split property files are minimal.
-                                    if skip_validation or validate(row, "split property edge"):
-                                        self.split_property_edge_wr.write((row[0], row[1], row[2], row[3], row[4], row[
-                                            5]))  # Hack: knows the structure of the row.
-
-                                elif self.minimal_edge_wr is not None:
-                                    if skip_validation or validate(row, "minimal edge"):
-                                        self.minimal_edge_wr.write((row[0], row[1], row[2], row[3], row[4],
-                                                                    row[5]))  # Hack: knows the structure of the row.
-
-                                if self.detailed_edge_wr is not None:
-                                    if skip_validation or validate(row, "split detailed edge"):
-                                        self.detailed_edge_wr.write(row)
-                else:
-                    if self.minimal_edge_wr is None:
+                if not self.process_split_files:
+                    if self.detailed_edge_wr is None:
                         raise ValueError("Unexpected edge rows in the %s collector." % who)
+                    for row in erows:
+                        if skip_validation or validate(row, "unsplit detailed edge"):
+                            self.detailed_edge_wr.write(row)
+                else:
+                    for row in erows:
+                        split: bool = False
+                        label: str = row[2]  # Hack: knows the structure of the row.
+                        method: typing.Optional[
+                            typing.Callable[[typing.List[str]], bool]] = self.split_dispatcher.get(label)
 
-                    if skip_validation:
-                        self.minimal_edge_wr.writerows(erows)
-                    else:
-                        for row in erows:
-                            if validate(row, "minimal edge csv"):
-                                self.minimal_edge_wr.write(row)
+                        # Hack: knows the structure of the row.
+                        # This outrageous hack supports references.  It routes reference details to the
+                        # split reference file when there is a split reference file. Otherwise, references
+                        # will go to the edge file.
+                        # TODO: remove this hack.  Perhaps we need a seperate top-level file for references?
+                        if method is None and row[1].startswith(REFERENCE_ID_START):
+                            method = self.split_dispatcher.get(REFERENCE_LABEL)
+
+                        if method is not None:
+                            split = method(row)
+                        if not split:
+                            if self.minimal_edge_wr is None and self.detailed_edge_wr is None and \
+                                    self.split_property_edge_wr is None:
+                                raise ValueError("Unexpected %s edge rows in the %s collector: %s." % (label, who, repr(row)))
+
+                            if self.split_property_edge_wr is not None and row[1].startswith(
+                                    "P"):  # Hack: knows the structure of the row.
+                                # For now, split property files are minimal.
+                                if skip_validation or validate(row, "split property edge"):
+                                    self.split_property_edge_wr.write((row[0], row[1], row[2], row[3], row[4], row[
+                                        5]))  # Hack: knows the structure of the row.
+
+                            elif self.minimal_edge_wr is not None:
+                                if skip_validation or validate(row, "minimal edge"):
+                                    self.minimal_edge_wr.write((row[0], row[1], row[2], row[3], row[4],
+                                                                row[5]))  # Hack: knows the structure of the row.
+
+                            if self.detailed_edge_wr is not None:
+                                if skip_validation or validate(row, "split detailed edge"):
+                                    self.detailed_edge_wr.write(row)
 
             if len(qrows) > 0:
-                if use_kgtkwriter:
-                    if self.minimal_qual_wr is None and self.detailed_qual_wr is None:
-                        raise ValueError("Unexpected qual rows in the %s collector." % who)
+                if self.minimal_qual_wr is None and self.detailed_qual_wr is None:
+                    raise ValueError("Unexpected qual rows in the %s collector." % who)
 
-                    for row in qrows:
-                        if self.split_property_qual_wr is not None and row[0].startswith(
-                                "P"):  # Hack: knows the structure of the row.
-                            if skip_validation or validate(row, "split property qual"):
-                                self.split_property_qual_wr.write(
-                                    (row[0], row[1], row[2], row[3], row[4]))  # Hack: knows the structure of the row.
+                for row in qrows:
+                    if self.split_property_qual_wr is not None and row[0].startswith(
+                            "P"):  # Hack: knows the structure of the row.
+                        if skip_validation or validate(row, "split property qual"):
+                            self.split_property_qual_wr.write(
+                                (row[0], row[1], row[2], row[3], row[4]))  # Hack: knows the structure of the row.
 
-                        elif self.minimal_qual_wr is not None:
-                            if skip_validation or validate(row, "minimal qual"):
-                                self.minimal_qual_wr.write(
-                                    (row[0], row[1], row[2], row[3], row[4]))  # Hack: knows the structure of the row.
+                    elif self.minimal_qual_wr is not None:
+                        if skip_validation or validate(row, "minimal qual"):
+                            self.minimal_qual_wr.write(
+                                (row[0], row[1], row[2], row[3], row[4]))  # Hack: knows the structure of the row.
 
-                        if self.detailed_qual_wr is not None:
-                            if skip_validation or validate(row, "detailed qual"):
-                                self.detailed_qual_wr.write(row)
-                else:
-                    if self.detailed_qual_wr is None:
-                        raise ValueError("Unexpected qual rows in the %s collector." % who)
-                    if skip_validation:
-                        self.detailed_qual_wr.writerows(qrows)
-                    else:
-                        for row in qrows:
-                            if validate(row, "detailed qual csv"):
-                                self.detailed_qual_wr.write(row)
+                    if self.detailed_qual_wr is not None:
+                        if skip_validation or validate(row, "detailed qual"):
+                            self.detailed_qual_wr.write(row)
 
             if len(invalid_erows) > 0:
                 # print("Writing invalid erows", file=sys.stderr, flush=True) # ***
                 if self.invalid_edge_wr is None:
                     raise ValueError("Unexpected invalid edge rows in the %s collector." % who)
 
-                if use_kgtkwriter:
-                    for row in invalid_erows:
-                        if minimal_edge_file is not None:  # messy
-                            self.invalid_edge_wr.write((row[0], row[1], row[2], row[3], row[4],
-                                                        row[5]))  # Hack: knows the structure of the row.
-                        else:
-                            self.invalid_edge_wr.write(row)
-                else:
-                    self.invalid_edge_wr.writerows(invalid_erows)
+                for row in invalid_erows:
+                    if minimal_edge_file is not None:  # messy
+                        self.invalid_edge_wr.write((row[0], row[1], row[2], row[3], row[4],
+                                                    row[5]))  # Hack: knows the structure of the row.
+                    else:
+                        self.invalid_edge_wr.write(row)
 
             if len(invalid_qrows) > 0:
                 if self.invalid_qual_wr is None:
                     raise ValueError("Unexpected invalid qual rows in the %s collector." % who)
 
-                if use_kgtkwriter:
-                    for row in invalid_qrows:
-                        if minimal_qual_file is not None:  # messy
-                            self.invalid_qual_wr.write(
-                                (row[0], row[1], row[2], row[3], row[4]))  # Hack: knows the structure of the row.
-                        else:
-                            self.invalid_qual_wr.write(row)
-                else:
-                    self.invalid_qual_wr.writerows(invalid_qrows)
+                for row in invalid_qrows:
+                    if minimal_qual_file is not None:  # messy
+                        self.invalid_qual_wr.write(
+                            (row[0], row[1], row[2], row[3], row[4]))  # Hack: knows the structure of the row.
+                    else:
+                        self.invalid_qual_wr.write(row)
 
         def setup_split_dispatcher(self):
             self.split_dispatcher: typing.MutableMapping[str, typing.Callable[[typing.List[str]], bool]] = dict()
@@ -2899,7 +2778,7 @@ def run(input_file: KGTKFiles,
             return split
 
     try:
-        UPDATE_VERSION: str = "2022-09-28T23:45:37.478062+00:00#Sxx61Zi0MYrscjN1dEwWy5tkYQlbmuk380MPyXuzviXlfEiqO9aVMhJELxvP2jQXdkBLnKs/2QqL7PCVXnq61A=="
+        UPDATE_VERSION: str = "2022-09-28T23:52:31.524089+00:00#z+S3pir/xV9hTJR5YVtOaUF77H3soK9MtZaEN3qoNVQLc3jtxIKc8cC8aMYcaDrtig1xfeE6rjy4CI1KiDWeYw=="
         print("kgtk import-wikidata version: %s" % UPDATE_VERSION, file=sys.stderr, flush=True)
         print("Starting main process (pid %d)." % os.getpid(), file=sys.stderr, flush=True)
         inp_path = KGTKArgumentParser.get_input_file(input_file)
