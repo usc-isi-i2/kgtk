@@ -29,7 +29,6 @@ kgtk ${KGTK_FLAGS} \
      --minimal-qual-file ${TEMPDIR}/qualifiers.raw.${UNSORTED_KGTK} \
      --invalid-edge-file ${TEMPDIR}/claims.badvalue.${UNSORTED_KGTK} \
      --invalid-qual-file ${TEMPDIR}/qualifiers.badvalue.${UNSORTED_KGTK} \
-     --node-file-id-only \
      --all-languages \
      --alias-edges True \
      --split-alias-file ${TEMPDIR}/aliases.${UNSORTED_KGTK} \
