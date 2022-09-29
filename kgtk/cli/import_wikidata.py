@@ -293,17 +293,6 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         help='option to include deprecated statements, not included by default')
 
     parser.add_argument(
-        "--explode-values",
-        nargs='?',
-        type=optional_bool,
-        dest="explode_values",
-        const=True,
-        default=True,
-        metavar="True/False",
-        help="If true, create columns with exploded value information. (default=%(default)s).",
-    )
-
-    parser.add_argument(
         "--use-python-cat",
         nargs='?',
         type=optional_bool,
@@ -678,7 +667,6 @@ def run(input_file: KGTKFiles,
         lang: str,
         source: str,
         deprecated: bool,
-        explode_values: bool,
         use_python_cat: bool,
         interleave: bool,
         entry_type_edges: bool,
@@ -1195,44 +1183,22 @@ def run(input_file: KGTKFiles,
                           file=sys.stderr, flush=True)
                 error_buffer.close()
 
-            if explode_values:
-                erows.append([edge_id,
-                              node1,
-                              label,
-                              node2,
-                              rank,
-                              magnitude,
-                              unit,
-                              date,
-                              item,
-                              lower,
-                              upper,
-                              latitude,
-                              longitude,
-                              precision,
-                              calendar,
-                              entity_type,
-                              wikidatatype,
-                              entrylang,
-                              ]
-                             )
-            else:
-                erows.append([edge_id,
-                              node1,
-                              label,
-                              node2,
-                              rank,
-                              wikidatatype,
-                              claim_id,
-                              # claim_type,
-                              val_type,
-                              entity_type,
-                              datahash,
-                              precision,
-                              calendar,
-                              entrylang,
-                              ]
-                             )
+            erows.append([edge_id,
+                          node1,
+                          label,
+                          node2,
+                          rank,
+                          wikidatatype,
+                          claim_id,
+                          # claim_type,
+                          val_type,
+                          entity_type,
+                          datahash,
+                          precision,
+                          calendar,
+                          entrylang,
+                          ]
+                         )
             return values_are_valid
 
         def qrows_append(self, qrows, edge_id, node1, label, node2,
@@ -1287,36 +1253,17 @@ def run(input_file: KGTKFiles,
                 error_buffer.close()
 
             if minimal_qual_file is not None or detailed_qual_file is not None:
-                if explode_values:
-                    qrows.append([edge_id,
-                                  node1,
-                                  label,
-                                  node2,
-                                  magnitude,
-                                  unit,
-                                  date,
-                                  item,
-                                  lower,
-                                  upper,
-                                  latitude,
-                                  longitude,
-                                  precision,
-                                  calendar,
-                                  entity_type,
-                                  wikidatatype,
-                                  ])
-                else:
-                    qrows.append([edge_id,
-                                  node1,
-                                  label,
-                                  node2,
-                                  wikidatatype,
-                                  val_type,
-                                  entity_type,
-                                  datahash,
-                                  precision,
-                                  calendar,
-                                  ])
+                qrows.append([edge_id,
+                              node1,
+                              label,
+                              node2,
+                              wikidatatype,
+                              val_type,
+                              entity_type,
+                              datahash,
+                              precision,
+                              calendar,
+                              ])
 
             if interleave:
                 self.erows_append(erows,
@@ -2778,7 +2725,7 @@ def run(input_file: KGTKFiles,
             return split
 
     try:
-        UPDATE_VERSION: str = "2022-09-28T23:52:31.524089+00:00#z+S3pir/xV9hTJR5YVtOaUF77H3soK9MtZaEN3qoNVQLc3jtxIKc8cC8aMYcaDrtig1xfeE6rjy4CI1KiDWeYw=="
+        UPDATE_VERSION: str = "2022-09-28T23:58:57.885350+00:00#u5qk4NhuKfpKG2SPUcjU1aigNel3USkZzGHlyYLuN6orh/YIl4H2wVxvY9FU2cIZGa7iS4LJP7Qekx8uDdA11w=="
         print("kgtk import-wikidata version: %s" % UPDATE_VERSION, file=sys.stderr, flush=True)
         print("Starting main process (pid %d)." % os.getpid(), file=sys.stderr, flush=True)
         inp_path = KGTKArgumentParser.get_input_file(input_file)
@@ -2979,15 +2926,9 @@ def run(input_file: KGTKFiles,
                         lineterminator=csv_line_terminator)
                     wr.writerow(node_file_header)
 
-        if explode_values:
-            edge_file_header = ['id', 'node1', 'label', 'node2', 'rank', 'node2;magnitude', 'node2;unit',
-                                'node2;date', 'node2;item', 'node2;lower', 'node2;upper',
-                                'node2;latitude', 'node2;longitude', 'node2;precision', 'node2;calendar',
-                                'node2;entity-type', 'node2;wikidatatype', 'lang']
-        else:
-            edge_file_header = ['id', 'node1', 'label', 'node2',
-                                'rank', 'node2;wikidatatype',
-                                'claim_id', 'val_type', 'entity_type', 'datahash', 'precision', 'calendar', 'lang']
+        edge_file_header = ['id', 'node1', 'label', 'node2',
+                            'rank', 'node2;wikidatatype',
+                            'claim_id', 'val_type', 'entity_type', 'datahash', 'precision', 'calendar', 'lang']
 
         ecq = collector_q if collector_q is not None else edge_collector_q
         if detailed_edge_file:
