@@ -1123,27 +1123,10 @@ def run(input_file: KGTKFiles,
 
         def erows_append(self, erows, edge_id, node1, label, node2,
                          rank="",
-                         magnitude="",
-                         unit="",
-                         date="",
-                         item="",
-                         lower="",
-                         upper="",
-                         latitude="",
-                         longitude="",
                          wikidatatype="",
-                         claim_id="",
-                         claim_type="",
-                         val_type="",
-                         entity_type="",
-                         datahash="",
-                         precision="",
-                         calendar="",
                          entrylang="",
                          invalid_erows=None,
                          ) -> bool:
-            if len(claim_type) > 0 and claim_type != "statement":
-                raise ValueError("Unexpected claim type %s" % claim_type)
 
             values_are_valid: bool = True
             if clean_input_values:
@@ -1182,33 +1165,13 @@ def run(input_file: KGTKFiles,
                           node2,
                           rank,
                           wikidatatype,
-                          claim_id,
-                          # claim_type,
-                          val_type,
-                          entity_type,
-                          datahash,
-                          precision,
-                          calendar,
                           entrylang,
                           ]
                          )
             return values_are_valid
 
         def qrows_append(self, qrows, edge_id, node1, label, node2,
-                         magnitude="",
-                         unit="",
-                         date="",
-                         item="",
-                         lower="",
-                         upper="",
-                         latitude="",
-                         longitude="",
                          wikidatatype="",
-                         val_type="",
-                         entity_type="",
-                         datahash="",
-                         precision="",
-                         calendar="",
                          invalid_qrows=None,
                          erows=None,
                          invalid_erows=None,
@@ -1251,11 +1214,6 @@ def run(input_file: KGTKFiles,
                               label,
                               node2,
                               wikidatatype,
-                              val_type,
-                              entity_type,
-                              datahash,
-                              precision,
-                              calendar,
                               ])
 
             if interleave:
@@ -1264,19 +1222,7 @@ def run(input_file: KGTKFiles,
                                   node1=node1,
                                   label=label,
                                   node2=node2,
-                                  magnitude=magnitude,
-                                  unit=unit,
-                                  date=date,
-                                  item=item,
-                                  lower=lower,
-                                  upper=upper,
-                                  latitude=latitude,
-                                  longitude=longitude,
                                   wikidatatype=wikidatatype,
-                                  entity_type=entity_type,
-                                  datahash=datahash,
-                                  precision=precision,
-                                  calendar=calendar,
                                   invalid_erows=invalid_erows)
             return values_are_valid
 
@@ -1671,21 +1617,7 @@ def run(input_file: KGTKFiles,
                                                               label=prop,
                                                               node2=value,
                                                               rank=rank,
-                                                              magnitude=mag,
-                                                              unit=unit,
-                                                              date=date,
-                                                              item=item,
-                                                              lower=lower,
-                                                              upper=upper,
-                                                              latitude=lat,
-                                                              longitude=long,
                                                               wikidatatype=typ,
-                                                              claim_id=claim_id,
-                                                              claim_type=claim_type,
-                                                              val_type=val_type,
-                                                              entity_type=enttype,
-                                                              precision=precision,
-                                                              calendar=calendar,
                                                               invalid_erows=invalid_erows)
 
                                         if parse_references and CLAIM_REFERENCES_TAG in cp:
@@ -1903,19 +1835,7 @@ def run(input_file: KGTKFiles,
                                                                           node1=edgeid,
                                                                           label=qual_prop,
                                                                           node2=value,
-                                                                          magnitude=mag,
-                                                                          unit=unit,
-                                                                          date=date,
-                                                                          item=item,
-                                                                          lower=lower,
-                                                                          upper=upper,
-                                                                          latitude=lat,
-                                                                          longitude=long,
                                                                           wikidatatype=typ,
-                                                                          entity_type=enttype,
-                                                                          datahash=datahash,
-                                                                          precision=precision,
-                                                                          calendar=calendar,
                                                                           invalid_qrows=invalid_qrows,
                                                                           erows=erows,
                                                                           invalid_erows=invalid_erows)
@@ -2675,7 +2595,7 @@ def run(input_file: KGTKFiles,
             return split
 
     try:
-        UPDATE_VERSION: str = "2022-09-29T00:08:56.334180+00:00#0ID+8HgX1zvZXjvK0XJ8tgQDVz3rZrGruaZCyia2iO2HC/nBdz382m7oLlqaNAUV+OxJ8z3ThJG2R2c4Nwa0BA=="
+        UPDATE_VERSION: str = "2022-09-29T00:16:17.275974+00:00#gta7XQVp0mPIkZ4yN+t5XQ8N7iBlgvh6+fBlvX/U+7QZxPB7BQWihHS8lGsD4Br/R4NXJv7G0i9FfNtdzKGwlA=="
         print("kgtk import-wikidata version: %s" % UPDATE_VERSION, file=sys.stderr, flush=True)
         print("Starting main process (pid %d)." % os.getpid(), file=sys.stderr, flush=True)
         inp_path = KGTKArgumentParser.get_input_file(input_file)
@@ -2863,15 +2783,13 @@ def run(input_file: KGTKFiles,
                 ncq.put(("node_header", None, None, None, None, None, node_file_header))
                 print("Sent the node header to the collector.", file=sys.stderr, flush=True)
 
-        edge_file_header = ['id', 'node1', 'label', 'node2',
-                            'rank', 'node2;wikidatatype',
-                            'claim_id', 'val_type', 'entity_type', 'datahash', 'precision', 'calendar', 'lang']
+        edge_file_header = ['id', 'node1', 'label', 'node2', 'rank', 'node2;wikidatatype']
 
         ecq = collector_q if collector_q is not None else edge_collector_q
 
         if minimal_edge_file and ecq is not None:
             print("Sending the minimal edge file header to the collector.", file=sys.stderr, flush=True)
-            ecq.put(("minimal_edge_header", None, None, None, None, None, edge_file_header[0:6]))
+            ecq.put(("minimal_edge_header", None, None, None, None, None, edge_file_header))
             print("Sent the minimal edge file header to the collector.", file=sys.stderr, flush=True)
 
         if split_alias_file and ecq is not None:
@@ -2945,44 +2863,36 @@ def run(input_file: KGTKFiles,
 
         if split_property_edge_file and ecq is not None:
             print("Sending the property edge file header to the collector.", file=sys.stderr, flush=True)
-            ecq.put(("split_property_edge_header", None, None, None, None, None, edge_file_header[0:6]))
+            ecq.put(("split_property_edge_header", None, None, None, None, None, edge_file_header))
             print("Sent the property edge file header to the collector.", file=sys.stderr, flush=True)
 
         if invalid_edge_file and invalid_edge_collector_q is not None:
             if minimal_edge_file:
                 print("Sending the minimal invalid edge header to the collector.", file=sys.stderr, flush=True)
                 invalid_edge_collector_q.put(
-                    ("invalid_edge_header", None, None, None, None, None, edge_file_header[0:6]))
+                    ("invalid_edge_header", None, None, None, None, None, edge_file_header))
                 print("Sent the minimal invalid edge header to the collector.", file=sys.stderr, flush=True)
 
         if minimal_qual_file is not None or split_property_qual_file is not None:
-            qual_file_header = edge_file_header.copy()
-            if "rank" in qual_file_header:
-                qual_file_header.remove('rank')
-            if "claim_type" in qual_file_header:
-                qual_file_header.remove('claim_type')
-            if "claim_id" in qual_file_header:
-                qual_file_header.remove('claim_id')
-            if "lang" in qual_file_header:
-                qual_file_header.remove('lang')
+            qual_file_header = ['id', 'node1', 'label', 'node2', 'node2;wikidatatype']
 
             qcq = collector_q if collector_q is not None else qual_collector_q
 
             if minimal_qual_file is not None and qcq is not None:
                 print("Sending the minimal qual file header to the collector.", file=sys.stderr, flush=True)
-                qcq.put(("minimal_qual_header", None, None, None, None, None, qual_file_header[0:5]))
+                qcq.put(("minimal_qual_header", None, None, None, None, None, qual_file_header))
                 print("Sent the minimal qual file header to the collector.", file=sys.stderr, flush=True)
 
             if split_property_qual_file and qcq is not None:
                 print("Sending the property qual file header to the collector.", file=sys.stderr, flush=True)
-                qcq.put(("split_property_qual_header", None, None, None, None, None, qual_file_header[0:5]))
+                qcq.put(("split_property_qual_header", None, None, None, None, None, qual_file_header))
                 print("Sent the property qual file header to the collector.", file=sys.stderr, flush=True)
 
             if invalid_qual_file and invalid_qual_collector_q is not None:
                 if minimal_qual_file:
                     print("Sending the minimal invalid qual header to the collector.", file=sys.stderr, flush=True)
                     invalid_qual_collector_q.put(
-                        ("invalid_qual_header", None, None, None, None, None, qual_file_header[0:5]))
+                        ("invalid_qual_header", None, None, None, None, None, qual_file_header))
                     print("Sent the minimal invalid qual header to the collector.", file=sys.stderr, flush=True)
 
         print('Creating parallel processor for {}'.format(str(inp_path)), file=sys.stderr, flush=True)
