@@ -129,15 +129,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         help='path to output node file')
 
     parser.add_argument(
-        "--edge", '--edge-file', '--detailed-edge-file',
-        action="store",
-        type=str,
-        dest="detailed_edge_file",
-        default=None,
-        help='path to output edge file with detailed data')
-
-    parser.add_argument(
-        '--minimal-edge-file',
+        "--edge", '--edge-file', '--minimal-edge-file',
         action="store",
         type=str,
         dest="minimal_edge_file",
@@ -145,20 +137,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         help='path to output edge file with minimal data')
 
     parser.add_argument(
-        "--qual", '--qual-file', '--detailed-qual-file',
-        action="store",
-        type=str,
-        dest="detailed_qual_file",
-        default=None,
-        help='path to output qualifier file with full data')
-
-    parser.add_argument(
-        '--minimal-qual-file',
+        "--qual", '--qual-file', '--minimal-qual-file',
         action="store",
         type=str,
         dest="minimal_qual_file",
         default=None,
-        help='path to output qualifier file with minimal data')
+        help='path to output qual file with minimal data')
 
     # The remaining files are KGTK edge files that split out
     # special properties, removing them from the edge file.
@@ -641,9 +625,7 @@ def run(input_file: KGTKFiles,
         procs: int,
         max_size_per_mapper_queue: int,
         node_file: typing.Optional[str],
-        detailed_edge_file: typing.Optional[str],
         minimal_edge_file: typing.Optional[str],
-        detailed_qual_file: typing.Optional[str],
         minimal_qual_file: typing.Optional[str],
         invalid_edge_file: typing.Optional[str],
         invalid_qual_file: typing.Optional[str],
@@ -709,7 +691,6 @@ def run(input_file: KGTKFiles,
     # import modules locally
     import bz2
     import simplejson as json
-    import csv
     import hashlib
     import io
     import multiprocessing as mp
@@ -1252,7 +1233,7 @@ def run(input_file: KGTKFiles,
                           file=sys.stderr, flush=True)
                 error_buffer.close()
 
-            if minimal_qual_file is not None or detailed_qual_file is not None:
+            if minimal_qual_file is not None:
                 qrows.append([edge_id,
                               node1,
                               label,
@@ -1292,7 +1273,6 @@ def run(input_file: KGTKFiles,
             if progress_interval > 0 and self.cnt % progress_interval == 0 and self.cnt > 0:
                 print("{} lines processed by processor {}".format(self.cnt, self._idx), file=sys.stderr, flush=True)
             self.cnt += 1
-            # csv_line_terminator = "\n" if os.name == 'posix' else "\r\n"
             nrows = []
             erows = []
             qrows = []
@@ -1649,7 +1629,7 @@ def run(input_file: KGTKFiles,
                                             raise ValueError("Expecting a string for type %s" % repr(typ))
                                         value = KgtkFormat.stringify(val)
 
-                                    if minimal_edge_file is not None or detailed_edge_file is not None or (parse_references and CLAIM_REFERENCES_TAG in cp):
+                                    if minimal_edge_file is not None or (parse_references and CLAIM_REFERENCES_TAG in cp):
                                         prop_value_hash: str
                                         if value.startswith(('P', 'Q')):
                                             prop_value_hash = value
@@ -1672,7 +1652,7 @@ def run(input_file: KGTKFiles,
                                         edge_id_collision_map[edgeid] = prop_seq_no + 1
                                         edgeid += '-' + str(prop_seq_no)
 
-                                        if minimal_edge_file is not None or detailed_edge_file is not None:
+                                        if minimal_edge_file is not None:
                                             self.erows_append(erows,
                                                               edge_id=edgeid,
                                                               node1=qnode,
@@ -1738,7 +1718,7 @@ def run(input_file: KGTKFiles,
                                                                               wikidatatype=wikidatatype,
                                                                               invalid_erows=invalid_erows)
 
-                                    if minimal_qual_file is not None or detailed_qual_file is not None or interleave:
+                                    if minimal_qual_file is not None or interleave:
                                         if cp.get('qualifiers', None):
                                             quals = cp['qualifiers']
                                             for qual_prop, qual_claim_property in quals.items():
@@ -2181,9 +2161,6 @@ def run(input_file: KGTKFiles,
 
             self.minimal_qual_f: typing.Optional[typing.TextIO] = None
             self.minimal_qual_wr = None
-
-            self.detailed_qual_f: typing.Optional[typing.TextIO] = None
-            self.detailed_qual_wr = None
             self.qrows: int = 0
 
             self.invalid_edge_f: typing.Optional[typing.TextIO] = None
@@ -2272,14 +2249,8 @@ def run(input_file: KGTKFiles,
                     self.open_minimal_edge_file(header, who)
                     self.process_split_files = True
 
-                elif action == "detailed_edge_header":
-                    self.open_detailed_edge_file(header, who)
-
                 elif action == "minimal_qual_header":
                     self.open_minimal_qual_file(header, who)
-
-                elif action == "detailed_qual_header":
-                    self.open_detailed_qual_file(header, who)
 
                 elif action == "invalid_edge_header":
                     self.open_invalid_edge_file(header, who)
@@ -2359,15 +2330,8 @@ def run(input_file: KGTKFiles,
         def open_minimal_edge_file(self, header: typing.List[str], who: str):
             self.minimal_edge_wr = self._open_file(minimal_edge_file, header, "minimal edge", who)
 
-        def open_detailed_edge_file(self, header: typing.List[str], who: str):
-            self.detailed_edge_wr = self._open_file(detailed_edge_file, header, "detailed edge",
-                                                    who)
-
         def open_minimal_qual_file(self, header: typing.List[str], who: str):
             self.minimal_qual_wr = self._open_file(minimal_qual_file, header, "minimal qual", who)
-
-        def open_detailed_qual_file(self, header: typing.List[str], who: str):
-            self.detailed_qual_wr = self._open_file(detailed_qual_file, header, "qual", who)
 
         def open_invalid_edge_file(self, header: typing.List[str], who: str):
             self.invalid_edge_wr = self._open_file(invalid_edge_file, header, "invalid edge", who)
@@ -2443,9 +2407,6 @@ def run(input_file: KGTKFiles,
 
             if self.minimal_qual_wr is not None:
                 self.minimal_qual_wr.close()
-
-            if self.detailed_qual_wr is not None:
-                self.detailed_qual_wr.close()
 
             if self.invalid_qual_wr is not None:
                 self.invalid_qual_wr.close()
@@ -2571,7 +2532,7 @@ def run(input_file: KGTKFiles,
                                     self.detailed_edge_wr.write(row)
 
             if len(qrows) > 0:
-                if self.minimal_qual_wr is None and self.detailed_qual_wr is None:
+                if self.minimal_qual_wr is None:
                     raise ValueError("Unexpected qual rows in the %s collector." % who)
 
                 for row in qrows:
@@ -2585,10 +2546,6 @@ def run(input_file: KGTKFiles,
                         if skip_validation or validate(row, "minimal qual"):
                             self.minimal_qual_wr.write(
                                 (row[0], row[1], row[2], row[3], row[4]))  # Hack: knows the structure of the row.
-
-                    if self.detailed_qual_wr is not None:
-                        if skip_validation or validate(row, "detailed qual"):
-                            self.detailed_qual_wr.write(row)
 
             if len(invalid_erows) > 0:
                 # print("Writing invalid erows", file=sys.stderr, flush=True) # ***
@@ -2725,12 +2682,10 @@ def run(input_file: KGTKFiles,
             return split
 
     try:
-        UPDATE_VERSION: str = "2022-09-28T23:58:57.885350+00:00#u5qk4NhuKfpKG2SPUcjU1aigNel3USkZzGHlyYLuN6orh/YIl4H2wVxvY9FU2cIZGa7iS4LJP7Qekx8uDdA11w=="
+        UPDATE_VERSION: str = "2022-09-29T00:01:03.885795+00:00#UO3z2tr77GwIBNGqM2l46cCVJsSCzYdwFAZWxrttTcZQdqIz8DymsbdSfLecrAhBvKZ57h7UkvCwai6Ks0grag=="
         print("kgtk import-wikidata version: %s" % UPDATE_VERSION, file=sys.stderr, flush=True)
         print("Starting main process (pid %d)." % os.getpid(), file=sys.stderr, flush=True)
         inp_path = KGTKArgumentParser.get_input_file(input_file)
-
-        csv_line_terminator = "\n" if os.name == 'posix' else "\r\n"
 
         start = time.time()
 
@@ -2797,7 +2752,7 @@ def run(input_file: KGTKFiles,
                 node_collector_p.start()
                 print("Started the node collector process.", file=sys.stderr, flush=True)
 
-            if minimal_edge_file is not None or detailed_edge_file is not None:
+            if minimal_edge_file is not None:
                 edge_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
                 print("The collector edge queue has been created (maxsize=%d)." % collector_q_maxsize,
                       file=sys.stderr, flush=True)
@@ -2810,7 +2765,7 @@ def run(input_file: KGTKFiles,
                 edge_collector_p.start()
                 print("Started the edge collector process.", file=sys.stderr, flush=True)
 
-            if minimal_qual_file is not None or detailed_qual_file is not None:
+            if minimal_qual_file is not None:
                 qual_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
                 print("The collector qual queue has been created (maxsize=%d)." % collector_q_maxsize,
                       file=sys.stderr, flush=True)
@@ -2915,38 +2870,11 @@ def run(input_file: KGTKFiles,
                 ncq.put(("node_header", None, None, None, None, None, node_file_header))
                 print("Sent the node header to the collector.", file=sys.stderr, flush=True)
 
-            else:
-                with open(node_file + '_header', 'w', newline='') as myfile:
-                    wr = csv.writer(
-                        myfile,
-                        quoting=csv.QUOTE_NONE,
-                        delimiter="\t",
-                        escapechar="\n",
-                        quotechar='',
-                        lineterminator=csv_line_terminator)
-                    wr.writerow(node_file_header)
-
         edge_file_header = ['id', 'node1', 'label', 'node2',
                             'rank', 'node2;wikidatatype',
                             'claim_id', 'val_type', 'entity_type', 'datahash', 'precision', 'calendar', 'lang']
 
         ecq = collector_q if collector_q is not None else edge_collector_q
-        if detailed_edge_file:
-            if ecq is not None:
-                print("Sending the detailed edge header to the collector.", file=sys.stderr, flush=True)
-                ecq.put(("detailed_edge_header", None, None, None, None, None, edge_file_header))
-                print("Sent the detailed edge header to the collector.", file=sys.stderr, flush=True)
-
-            else:
-                with open(detailed_edge_file + '_header', 'w', newline='') as myfile:
-                    wr = csv.writer(
-                        myfile,
-                        quoting=csv.QUOTE_NONE,
-                        delimiter="\t",
-                        escapechar="\n",
-                        quotechar='',
-                        lineterminator=csv_line_terminator)
-                    wr.writerow(edge_file_header)
 
         if minimal_edge_file and ecq is not None:
             print("Sending the minimal edge file header to the collector.", file=sys.stderr, flush=True)
@@ -3028,18 +2956,13 @@ def run(input_file: KGTKFiles,
             print("Sent the property edge file header to the collector.", file=sys.stderr, flush=True)
 
         if invalid_edge_file and invalid_edge_collector_q is not None:
-            if detailed_edge_file:
-                print("Sending the detailed invalid edge header to the collector.", file=sys.stderr, flush=True)
-                invalid_edge_collector_q.put(
-                    ("invalid_edge_header", None, None, None, None, None, edge_file_header))
-                print("Sent the detailed invalid edge header to the collector.", file=sys.stderr, flush=True)
-            elif minimal_edge_file:
+            if minimal_edge_file:
                 print("Sending the minimal invalid edge header to the collector.", file=sys.stderr, flush=True)
                 invalid_edge_collector_q.put(
                     ("invalid_edge_header", None, None, None, None, None, edge_file_header[0:6]))
                 print("Sent the minimal invalid edge header to the collector.", file=sys.stderr, flush=True)
 
-        if minimal_qual_file is not None or detailed_qual_file is not None or split_property_qual_file is not None:
+        if minimal_qual_file is not None or split_property_qual_file is not None:
             qual_file_header = edge_file_header.copy()
             if "rank" in qual_file_header:
                 qual_file_header.remove('rank')
@@ -3052,22 +2975,6 @@ def run(input_file: KGTKFiles,
 
             qcq = collector_q if collector_q is not None else qual_collector_q
 
-            if detailed_qual_file is not None:
-                if qcq is not None:
-                    print("Sending the detailed qual file header to the collector.", file=sys.stderr, flush=True)
-                    qcq.put(("detailed_qual_header", None, None, None, None, None, qual_file_header))
-                    print("Sent the detailed qual file header to the collector.", file=sys.stderr, flush=True)
-
-                else:
-                    with open(detailed_qual_file + '_header', 'w', newline='') as myfile:
-                        wr = csv.writer(
-                            myfile,
-                            quoting=csv.QUOTE_NONE,
-                            delimiter="\t",
-                            escapechar="\n",
-                            quotechar='',
-                            lineterminator=csv_line_terminator)
-                        wr.writerow(qual_file_header)
             if minimal_qual_file is not None and qcq is not None:
                 print("Sending the minimal qual file header to the collector.", file=sys.stderr, flush=True)
                 qcq.put(("minimal_qual_header", None, None, None, None, None, qual_file_header[0:5]))
@@ -3079,12 +2986,7 @@ def run(input_file: KGTKFiles,
                 print("Sent the property qual file header to the collector.", file=sys.stderr, flush=True)
 
             if invalid_qual_file and invalid_qual_collector_q is not None:
-                if detailed_qual_file:
-                    print("Sending the detailed invalid qual header to the collector.", file=sys.stderr, flush=True)
-                    invalid_qual_collector_q.put(
-                        ("invalid_qual_header", None, None, None, None, None, qual_file_header))
-                    print("Sent the detailed invalid qual header to the collector.", file=sys.stderr, flush=True)
-                elif minimal_qual_file:
+                if minimal_qual_file:
                     print("Sending the minimal invalid qual header to the collector.", file=sys.stderr, flush=True)
                     invalid_qual_collector_q.put(
                         ("invalid_qual_header", None, None, None, None, None, qual_file_header[0:5]))
