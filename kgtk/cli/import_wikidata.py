@@ -153,6 +153,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         dest="split_alias_file",
         default=None,
         help='path to output split alias file')
+
     parser.add_argument(
         '--split-en-alias-file',
         action="store",
@@ -160,6 +161,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         dest="split_en_alias_file",
         default=None,
         help='path to output split English alias file')
+
     parser.add_argument(
         '--split-datatype-file',
         action="store",
@@ -167,6 +169,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         dest="split_datatype_file",
         default=None,
         help='path to output split datatype file')
+
     parser.add_argument(
         '--split-description-file',
         action="store",
@@ -174,6 +177,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         dest="split_description_file",
         default=None,
         help='path to output splitdescription file')
+
     parser.add_argument(
         '--split-en-description-file',
         action="store",
@@ -181,6 +185,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         dest="split_en_description_file",
         default=None,
         help='path to output split English description file')
+
     parser.add_argument(
         '--split-label-file',
         action="store",
@@ -188,6 +193,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         dest="split_label_file",
         default=None,
         help='path to output split label file')
+
     parser.add_argument(
         '--split-en-label-file',
         action="store",
@@ -195,6 +201,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         dest="split_en_label_file",
         default=None,
         help='path to output split English label file')
+
     parser.add_argument(
         '--split-reference-file',
         action="store",
@@ -202,6 +209,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         dest="split_reference_file",
         default=None,
         help='path to output split reference file')
+
     parser.add_argument(
         '--split-sitelink-file',
         action="store",
@@ -209,6 +217,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         dest="split_sitelink_file",
         default=None,
         help='path to output split sitelink file')
+
     parser.add_argument(
         '--split-en-sitelink-file',
         action="store",
@@ -216,6 +225,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         dest="split_en_sitelink_file",
         default=None,
         help='path to output split English sitelink file')
+
     parser.add_argument(
         '--split-type-file', '--split-entity-type-file',
         action="store",
@@ -263,6 +273,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         dest="lang",
         default="en",
         help='languages to extract, comma separated, default en')
+
     parser.add_argument(
         "--source",
         action="store",
@@ -270,6 +281,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         dest="source",
         default="wikidata",
         help='wikidata version number, default: wikidata')
+
     parser.add_argument(
         "--deprecated",
         action="store_true",
@@ -1058,13 +1070,13 @@ def run(input_file: KGTKFiles,
             print("Exiting worker process {} (pid {}).".format(self._idx, os.getpid()), file=sys.stderr, flush=True)
             if collector_batch_size > 1:
                 if len(self.collector_nrows_batch) > 0 or \
-                        len(self.collector_erows_batch) > 0 or \
-                        len(self.collector_qrows_batch) > 0 or \
-                        len(self.collector_invalid_erows_batch) > 0 or \
-                        len(self.collector_invalid_qrows_batch) > 0 or \
-                        len(self.collector_description_erows_batch) > 0 or \
-                        len(self.collector_reference_erows_batch) > 0 or \
-                        len(self.collector_sitelink_erows_batch) > 0:
+                   len(self.collector_erows_batch) > 0 or \
+                   len(self.collector_qrows_batch) > 0 or \
+                   len(self.collector_invalid_erows_batch) > 0 or \
+                   len(self.collector_invalid_qrows_batch) > 0 or \
+                   len(self.collector_description_erows_batch) > 0 or \
+                   len(self.collector_reference_erows_batch) > 0 or \
+                   len(self.collector_sitelink_erows_batch) > 0:
 
                     if collect_seperately:
                         if len(self.collector_nrows_batch) > 0:
@@ -2148,78 +2160,59 @@ def run(input_file: KGTKFiles,
 
         def __init__(self):
             # Prepare to use the collector.
-            self.node_f: typing.Optional[typing.TextIO] = None
             self.node_wr = None
             self.nrows: int = 0
 
-            self.minimal_edge_f: typing.Optional[typing.TextIO] = None
             self.minimal_edge_wr = None
 
-            self.detailed_edge_f: typing.Optional[typing.TextIO] = None
             self.detailed_edge_wr = None
             self.erows: int = 0
 
-            self.minimal_qual_f: typing.Optional[typing.TextIO] = None
             self.minimal_qual_wr = None
             self.qrows: int = 0
 
-            self.invalid_edge_f: typing.Optional[typing.TextIO] = None
             self.invalid_edge_wr = None
             self.invalid_erows: int = 0
 
-            self.invalid_qual_f: typing.Optional[typing.TextIO] = None
             self.invalid_qual_wr = None
             self.invalid_qrows: int = 0
 
-            self.split_alias_f: typing.Optional[typing.TextIO] = None
             self.split_alias_wr = None
             self.n_alias_rows: int = 0
 
-            self.split_en_alias_f: typing.Optional[typing.TextIO] = None
             self.split_en_alias_wr = None
             self.n_en_alias_rows: int = 0
 
-            self.split_datatype_f: typing.Optional[typing.TextIO] = None
             self.split_datatype_wr = None
             self.n_datatype_rows: int = 0
 
-            self.split_description_f: typing.Optional[typing.TextIO] = None
             self.split_description_wr = None
             self.n_description_rows: int = 0
 
-            self.split_en_description_f: typing.Optional[typing.TextIO] = None
             self.split_en_description_wr = None
             self.n_en_description_rows: int = 0
 
-            self.split_label_f: typing.Optional[typing.TextIO] = None
             self.split_label_wr = None
             self.n_label_rows: int = 0
 
-            self.split_en_label_f: typing.Optional[typing.TextIO] = None
             self.split_en_label_wr = None
             self.n_en_label_rows: int = 0
 
-            self.split_reference_f: typing.Optional[typing.TextIO] = None
             self.split_reference_wr = None
             self.n_reference_rows: int = 0
 
-            self.split_sitelink_f: typing.Optional[typing.TextIO] = None
             self.split_sitelink_wr = None
             self.n_sitelink_rows: int = 0
 
-            self.split_en_sitelink_f: typing.Optional[typing.TextIO] = None
             self.split_en_sitelink_wr = None
             self.n_en_sitelink_rows: int = 0
 
-            self.split_type_f: typing.Optional[typing.TextIO] = None
             self.split_type_wr = None
             self.n_type_rows: int = 0
 
-            self.split_property_edge_f: typing.Optional[typing.TextIO] = None
             self.split_property_edge_wr = None
             self.n_property_edge_rows: int = 0
 
-            self.split_property_qual_f: typing.Optional[typing.TextIO] = None
             self.split_property_qual_wr = None
             self.n_property_qual_rows: int = 0
 
@@ -2682,7 +2675,7 @@ def run(input_file: KGTKFiles,
             return split
 
     try:
-        UPDATE_VERSION: str = "2022-09-29T00:01:03.885795+00:00#UO3z2tr77GwIBNGqM2l46cCVJsSCzYdwFAZWxrttTcZQdqIz8DymsbdSfLecrAhBvKZ57h7UkvCwai6Ks0grag=="
+        UPDATE_VERSION: str = "2022-09-29T00:08:56.334180+00:00#0ID+8HgX1zvZXjvK0XJ8tgQDVz3rZrGruaZCyia2iO2HC/nBdz382m7oLlqaNAUV+OxJ8z3ThJG2R2c4Nwa0BA=="
         print("kgtk import-wikidata version: %s" % UPDATE_VERSION, file=sys.stderr, flush=True)
         print("Starting main process (pid %d)." % os.getpid(), file=sys.stderr, flush=True)
         inp_path = KGTKArgumentParser.get_input_file(input_file)
