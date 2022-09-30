@@ -777,9 +777,12 @@ def run(input_file: KGTKFiles,
     SNAK_DATATYPE_EXTERNALID: str = "external-id"
     SNAK_DATATYPE_GEOSHAPE: str = "geo-shape"
     SNAK_DATATYPE_GLOBECOORDINATE: str = "globe-coordinate"
+    SNAK_DATATYPE_MATH: str = "math"
     SNAK_DATATYPE_MONOLINGUALTEXT: str = "monolingualtext"
+    SNAK_DATATYPE_MUSICAL_NOTATION: str = "musical-notation"
     SNAK_DATATYPE_QUANTITY: str = "quantity"
     SNAK_DATATYPE_STRING: str = "string"
+    SNAK_DATATYPE_TABULAR_DATA: str = "tabular-data"
     SNAK_DATATYPE_TIME: str = "time"
     SNAK_DATATYPE_URL: str = "url"
     SNAK_DATATYPE_WIKIBASE_FORM: str = "wikibase-form"
@@ -809,9 +812,12 @@ def run(input_file: KGTKFiles,
         SNAK_DATATYPE_EXTERNALID: SNAK_DATAVALUE_TYPE_STRING,
         SNAK_DATATYPE_GEOSHAPE: SNAK_DATAVALUE_TYPE_STRING,
         SNAK_DATATYPE_GLOBECOORDINATE: SNAK_DATAVALUE_TYPE_GLOBECOORDINATE,
+        SNAK_DATATYPE_MATH: SNAK_DATAVALUE_TYPE_STRING,
         SNAK_DATATYPE_MONOLINGUALTEXT: SNAK_DATAVALUE_TYPE_MONOLINGUALTEXT,
+        SNAK_DATATYPE_MUSICAL_NOTATION: SNAK_DATAVALUE_TYPE_STRING,
         SNAK_DATATYPE_QUANTITY: SNAK_DATAVALUE_TYPE_QUANTITY,
         SNAK_DATATYPE_STRING: SNAK_DATAVALUE_TYPE_STRING,
+        SNAK_DATATYPE_TABULAR_DATA: SNAK_DATAVALUE_TYPE_STRING,
         SNAK_DATATYPE_TIME: SNAK_DATAVALUE_TYPE_TIME,
         SNAK_DATATYPE_URL: SNAK_DATAVALUE_TYPE_STRING,
         SNAK_DATATYPE_WIKIBASE_FORM: SNAK_DATAVALUE_TYPE_WIKIBASE_ENTITYID,
@@ -839,23 +845,44 @@ def run(input_file: KGTKFiles,
         SNAK_DATATYPE_WIKIBASE_SENSE: SNAK_DATAVALUE_VALUE_ENTITY_TYPE_ITEM,
     }
 
+    # returns: (kgtk_snak_value, wikidatatype)
     def extract_snak_value(snak: str,
-                           expected_prop: typing.Optional[str] = None)-> typing.Tuple[str, str]:
+                           qnode: str,
+                           prop: str,
+                           subprop: typing.Optional[str] = None,
+                           who: str = "",
+                           )-> typing.Tuple[typing.Optional[str], typing.Optional[str]]:
+        where: str = "Qnode %s prop %s %s" % (repr(qnode), repr(prop), who)
+        if subprop is not None:
+            where += " %s" % repr(subprop)
+
         snak_prop: typing.Optional[str] = snak.get(MAINSNAK_PROPERTY, '')
         if len(snak_prop) == 0:
-            raise ValueError("SNAK without property.")
+            print("%s: SNAK without property." % (where), file=sys.stderr, flush=True)
+            return (None, None)
 
-        if expected_prop is not None and expected_prop != snak_prop:
-            raise ValueError("Expected property %s does not match SNAK property %s" % (repr(expected_prop),
-                                                                                       repr(snak[MAINSNAK_PROPERTY])))
+        if subprop is None:
+            if prop != snak_prop:
+                print("%s: expected property does not match SNAK property %s" % (where,
+                                                                                 repr(snak[MAINSNAK_PROPERTY])),
+                      file=sys.stderr, flush=True)
+                return (None, None)
+        else:
+            if subprop != snak_prop:
+                print("%s: expected property does not match SNAK property %s" % (where,
+                                                                                 repr(snak[MAINSNAK_PROPERTY])),
+                      file=sys.stderr, flush=True)
+                return (None, None)
         
         snak_datatype: typing.Optional[str] = snak.get(MAINSNAK_DATATYPE)
         if snak_datatype is None:
-            raise ValueError("SNAK is missing a DATATYPE.")
+            print("%s: SNAK is missing a DATATYPE." % (where), file=sys.stderr, flush=True)
+            return (None, None)
 
         snak_type: typing.Optional[str] = snak.get(MAINSNAK_SNAKTYPE)
         if snak_type is None:
-            raise ValueError("SNAK is missing a SNAKTYPE.")
+            print("%s: SNAK is missing a SNAKTYPE." % (where), file=sys.stderr, flush=True)
+            return (None, None)
 
         if snak_type != SNAKTYPE_VALUE:
             # Process somevalue and novalue:
@@ -863,7 +890,7 @@ def run(input_file: KGTKFiles,
         
         snak_datavalue = snak.get(MAINSNAK_DATAVALUE)
         if snak_datavalue is None:
-            raise ValueError("SNAK is missing a DATAVALUE.")
+            raise ValueError("Qnode %s: SNAK is missing a DATAVALUE." % repr(qnode))
 
         snak_datavalue_type: typing.Optional[str] = snak_datavalue.get(DATAVALUE_TYPE_TAG)
         if snak_datavalue_type is None:
@@ -915,6 +942,11 @@ def run(input_file: KGTKFiles,
                                                             
             return '@' + coord_lat + '/' + coord_long, snak_datatype
 
+        elif snak_datatype == SNAK_DATATYPE_MATH:
+            if not isinstance(snak_datavalue_value, str):
+                raise ValueError("Expecting a string value for a math datatype.")
+            return KgtkFormat.stringify(snak_datavalue_value), snak_datatype
+
         elif snak_datatype == SNAK_DATATYPE_MONOLINGUALTEXT:
             if not isinstance(snak_datavalue_value, dict):
                 raise ValueError("Expecting a dict for a monolingual text.")
@@ -928,6 +960,11 @@ def run(input_file: KGTKFiles,
                 raise ValueError("Monolingual text without language.")
 
             return KgtkFormat.stringify(text, language=language), snak_datatype
+
+        elif snak_datatype == SNAK_DATATYPE_MUSICAL_NOTATION:
+            if not isinstance(snak_datavalue_value, str):
+                raise ValueError("Expecting a string value for a musical notation datatype.")
+            return KgtkFormat.stringify(snak_datavalue_value), snak_datatype
 
         elif snak_datatype == SNAK_DATATYPE_QUANTITY:
             if not isinstance(snak_datavalue_value, dict):
@@ -943,14 +980,22 @@ def run(input_file: KGTKFiles,
                 upper_bound: str = snak_datavalue_value.get('upperBound', '')
                 quantity_value += '[' + lower_bound + ',' + upper_bound + ']'
 
-            if len(snak_datavalue_value.get('unit')) > 1:
-                quantity_value += snak_datavalue_value.get('unit').split('/')[-1]
+            unitstr: typing.optional[str] = snak_datavalue_value.get('unit')
+            if len(unitstr) > 1:
+                unit: str = unitstr.split('/')[-1]
+                if unit not in ('undefined'):
+                    quantity_value += unit
 
             return quantity_value, snak_datatype
 
         elif snak_datatype == SNAK_DATATYPE_STRING:
             if not isinstance(snak_datavalue_value, str):
                 raise ValueError("Expecting a string value for a string datatype.")
+            return KgtkFormat.stringify(snak_datavalue_value), snak_datatype
+
+        elif snak_datatype == SNAK_DATATYPE_TABULAR_DATA:
+            if not isinstance(snak_datavalue_value, str):
+                raise ValueError("Expecting a string value for a tabular data datatype.")
             return KgtkFormat.stringify(snak_datavalue_value), snak_datatype
 
         elif snak_datatype == SNAK_DATATYPE_TIME:
@@ -1429,167 +1474,47 @@ def run(input_file: KGTKFiles,
                         for prop, claim_property in claims.items():
                             for cp in claim_property:
                                 if (deprecated or cp[CLAIM_RANK_TAG] != RANK_DEPRECATED):
-                                    mainsnak = cp[CLAIM_MAINSNAK_TAG]
-                                    snaktype = mainsnak.get(MAINSNAK_SNAKTYPE)
-                                    rank = cp[CLAIM_RANK_TAG]
-                                    claim_id = cp[CLAIM_ID_TAG]
-                                    claim_type = cp[CLAIM_TYPE_TAG]
+                                    mainsnak = cp.get(CLAIM_MAINSNAK_TAG)
+                                    if mainsnak is None:
+                                        print("Qnode %s Prop %s: claim without mainsnak." % (repr(qnode), repr(prop)),
+                                              file=sys.stderr, flush=True)
+                                        continue
+
+                                    rank: typing.Optional[str] = cp.get(CLAIM_RANK_TAG)
+                                    if rank is None:
+                                        print("Qnode %s Prop %s: claim without rank." % (repr(qnode), repr(prop)),
+                                              file=sys.stderr, flush=True)
+                                        continue
+
+                                    claim_id: typing.Optional[str] = cp.get(CLAIM_ID_TAG)
+                                    if claim_id is None:
+                                        print("Qnode %s Prop %s: claim without claim_id." % (repr(qnode), repr(prop)),
+                                              file=sys.stderr, flush=True)
+                                        continue
+
+                                    claim_type: typi9ng.Optional[str] = cp[CLAIM_TYPE_TAG]
+                                    if claim_type is None:
+                                        print("Qnode %s Prop %s: claim without claim_type." % (repr(qnode), repr(prop)),
+                                              file=sys.stderr, flush=True)
+                                        continue
+
                                     if claim_type != CLAIM_TYPE_STATEMENT:
-                                        print("Unknown claim type %s, ignoring claim_property for (%s, %s)." % (
-                                            repr(claim_type), repr(qnode), repr(prop)),
+                                        print("Qnode %s Prop %s: Unknown claim type %s, ignoring." % (repr(qnode), repr(prop), repr(claim_type)),
                                               file=sys.stderr, flush=True)
                                         continue
 
-                                    if snaktype is None:
-                                        print("Mainsnak without snaktype, ignoring claim_property for (%s, %s)." % (repr(qnode),
-                                                                                                                    repr(prop)),
-                                              file=sys.stderr, flush=True)
+                                    value: typing.Optional[str]
+                                    wikidatatype: typing.Optional[str]
+                                    (value, wikidatatype) = extract_snak_value(mainsnak,
+                                                                               qnode=qnode,
+                                                                               prop=prop,
+                                                                               who="claim")
+                                    if value is None or wikidatatype is None:
                                         continue
-                                    if snaktype == SNAKTYPE_VALUE:
-                                        datavalue = mainsnak[MAINSNAK_DATAVALUE]
-                                        val = datavalue.get(DATAVALUE_VALUE_TAG)
-                                        val_type = datavalue.get(DATAVALUE_TYPE_TAG, "")
-                                        if val is not None:
-                                            if val_type in (DATAVALUE_TYPE_STRING, DATAVALUE_TYPE_WIKIBASE_UNMAPPED_ENTITYID):
-                                                if not isinstance(val, str):
-                                                    print("Value type is %s but the value is not a string, "
-                                                          "ignoring claim_property for (%s, %s)." % (repr(val_type),
-                                                                                                     repr(qnode),
-                                                                                                     repr(prop)),
-                                                          file=sys.stderr, flush=True)
-                                                    continue
-                                            elif not isinstance(val, dict):
-                                                print(
-                                                    "Value type %s is not a known string type and value is not a dict, "
-                                                    "ignoring claim_property for (%s, %s)." % (repr(val_type),
-                                                                                               repr(qnode),
-                                                                                               repr(prop)),
-                                                    file=sys.stderr, flush=True)
-                                                continue
-
-                                    elif snaktype == SNAKTYPE_SOMEVALUE:
-                                        val = None
-                                        val_type = SOMEVALUE_VALUE
-
-                                    elif snaktype == SNAKTYPE_NOVALUE:
-                                        val = None
-                                        val_type = NOVALUE_VALUE
-
-                                    else:
-                                        print("Unknown snaktype %s, ignoring claim_property for (%s, %s)." % (
-                                            repr(snaktype), repr(qnode), repr(prop)),
-                                              file=sys.stderr, flush=True)
-                                        continue
-
-                                    typ = mainsnak.get(MAINSNAK_DATATYPE)
-                                    if typ is None:
-                                        print("Mainsnak without datatype, ignoring claim_property for (%s, %s)" % (
-                                            repr(qnode), repr(prop)),
-                                              file=sys.stderr, flush=True)
-                                        continue
-                                    # if typ != val_type:
-                                    #     print("typ %s != val_type %s" % (typ, val_type), file=sys.stderr, flush=True)
-
-                                    value = ''
-                                    mag = ''
-                                    unit = ''
-                                    date = ''
-                                    item = ''
-                                    lower = ''
-                                    upper = ''
-                                    precision = ''
-                                    calendar = ''
-                                    lat = ''
-                                    long = ''
-                                    enttype = ''
-
-                                    if val is None:
-                                        value = val_type
-                                    elif typ in SNAK_DATATYPE_WIKIBASE_TYPES:
-                                        if isinstance(val, dict):
-                                            enttype = val.get(SNAK_DATAVALUE_VALUE_ENTITY_TYPE)
-                                            value = val.get(SNAK_DATAVALUE_VALUE_ID, '')
-                                        else:
-                                            value = val
-                                            # TODO: Can we find something less ad-hoc to do here?
-                                            if typ == SNAK_DATATYPE_WIKIBASE_LEXEME:
-                                                enttype = SNAK_DATAVALUE_VALUE_ENTITY_TYPE_LEXEME
-                                            else:
-                                                enttype = SNAK_DATAVALUE_VALUE_ENTITY_TYPE_UNKNOWN
-
-                                        # Older Wikidata dumps do not have an 'id' here.
-                                        if len(value) == 0:
-                                            if isinstance(val, dict) and SNAK_DATAVALUE_VALUE_NUMERIC_ID in val:
-                                                numeric_id = str(val[SNAK_DATAVALUE_VALUE_NUMERIC_ID])
-                                            else:
-                                                raise ValueError(
-                                                    "No numeric ID for datatype %s, entity type %s, in (%s, %s)." % (
-                                                        repr(typ), repr(enttype), repr(qnode), repr(prop)))
-
-                                            if enttype == SNAK_DATAVALUE_VALUE_ENTITY_TYPE_ITEM:
-                                                value = 'Q' + numeric_id
-                                            elif enttype == SNAK_DATAVALUE_VALUE_ENTITY_TYPE_PROPERTY:
-                                                value = 'P' + numeric_id
-                                            elif enttype == SNAK_DATAVALUE_VALUE_ENTITY_TYPE_LEXEME:
-                                                value = 'L' + numeric_id
-                                            else:
-                                                raise ValueError(
-                                                    'Unknown entity type %s for datatype %s in (%s, %s).' % (
-                                                        repr(enttype), repr(typ), repr(qnode), repr(prop)))
-                                        item = value
-
-                                    elif typ == SNAK_DATATYPE_QUANTITY:
-                                        # Strip whitespace from the numeric fields.  Some older Wikidata dumps
-                                        # (20150805-20160502) sometimes have trailing newlines in these fields.
-                                        # Convert actual numbers to strings before attempting to strip leading
-                                        # and trailing whitespace.
-                                        value = str(val['amount']).strip()
-                                        mag = value
-                                        if val.get('upperBound', None) or val.get('lowerBound', None):
-                                            lower = str(val.get('lowerBound', '')).strip()
-                                            upper = str(val.get('upperBound', '')).strip()
-                                            value += '[' + lower + \
-                                                     ',' + upper + ']'
-                                        # TODO: Don't lose the single-character unit code.
-                                        #  At a minimum, verify that it is the value "1".
-                                        if len(val.get('unit')) > 1:
-                                            unit = val.get(
-                                                'unit').split('/')[-1]
-                                            if unit not in ["undefined"]:
-                                                # TODO: don't lose track of "undefined" units.
-                                                value += unit
-
-                                    elif typ == SNAK_DATATYPE_GLOBECOORDINATE:
-                                        # Strip potential leading and trailing whitespace.
-                                        lat = str(val['latitude']).strip()
-                                        long = str(val['longitude']).strip()
-                                        precision = str(val.get('precision', ''))
-                                        value = '@' + lat + '/' + long
-                                        # TODO: what about "globe"?
-
-                                    elif typ == SNAK_DATATYPE_TIME:
-                                        if val['time'][0] == '-':
-                                            pre = "^-"
-                                        else:
-                                            pre = "^"
-                                        # TODO: Maybe strip leading and traiming whitespace here?
-                                        date = pre + val['time'][1:]
-                                        # Cautiously strip leading and trailing whitespace from precision?
-                                        precision = str(val['precision']).strip()
-                                        calendar = val.get('calendarmodel', '').split('/')[-1]
-                                        value = date + '/' + precision
-
-                                    elif typ == SNAK_DATATYPE_MONOLINGUALTEXT:
-                                        value = KgtkFormat.stringify(val['text'], language=val['language'])
-
-                                    else:
-                                        if not isinstance(val, str):
-                                            raise ValueError("Expecting a string for type %s" % repr(typ))
-                                        value = KgtkFormat.stringify(val)
 
                                     if minimal_edge_file is not None or (parse_references and CLAIM_REFERENCES_TAG in cp):
                                         prop_value_hash: str
-                                        if value.startswith(('P', 'Q')):
+                                        if value.startswith(('P', 'Q', 'L')):
                                             prop_value_hash = value
                                         else:
                                             prop_value_hash = hashlib.sha256(value.encode('utf-8')).hexdigest()[
@@ -1617,7 +1542,7 @@ def run(input_file: KGTKFiles,
                                                               label=prop,
                                                               node2=value,
                                                               rank=rank,
-                                                              wikidatatype=typ,
+                                                              wikidatatype=wikidatatype,
                                                               invalid_erows=invalid_erows)
 
                                         if parse_references and CLAIM_REFERENCES_TAG in cp:
@@ -1637,12 +1562,14 @@ def run(input_file: KGTKFiles,
                                                                       wikidatatype='reference', # Ad-hoc wikidatatype.
                                                                       invalid_erows=invalid_erows)
 
-                                                if REFERENCE_SNAKS_TAG not in reference:
-                                                    raise ValueError("Reference without SNAKS.")
+                                                ref_snaks = reference.get(REFERENCE_SNAKS_TAG)
+                                                if ref_snaks is None:
+                                                    print("Qnode %s Prop %s: reference without SNAKS." % (repr(qnode), repr(prop)),
+                                                          file=sys.stderr, flush=True)
+                                                    continue
 
                                                 ref_snak_count: int = 0
 
-                                                ref_snaks = reference[REFERENCE_SNAKS_TAG]
                                                 ref_snaks_prop: str
                                                 for ref_snaks_prop in sorted(ref_snaks.keys()):
                                                     ref_snaks_list = ref_snaks[ref_snaks_prop]
@@ -1650,181 +1577,50 @@ def run(input_file: KGTKFiles,
                                                         ref_snak_count += 1 # Bad approach for the time machine, but prevents collisions.
                                                         ref_snak_edgeid: str = ref_edgeid + "-" + str(ref_snak_count).zfill(REFERENCE_ID_WIDTH)
 
-                                                        kgtk_snak_value: str
-                                                        wikidatatype: str
-                                                        (kgtk_snak_value, wikidatatype) = extract_snak_value(ref_snak, expected_prop=ref_snaks_prop)
-                                                        if reference_detail_edges:
+                                                        kgtk_ref_snak_value: typing.Optional[str]
+                                                        ref_wikidatatype: typing.Optional[str]
+                                                        (kgtk_ref_snak_value, ref_wikidatatype) = extract_snak_value(ref_snak,
+                                                                                                                     qnode=qnode,
+                                                                                                                     prop=prop,
+                                                                                                                     subprop=ref_snaks_prop,
+                                                                                                                     who="reference")
+                                                        if reference_detail_edges and kgtk_ref_snak_value is not None and ref_wikidatatype is not None:
                                                             self.erows_append(rerows,
                                                                               edge_id=ref_snak_edgeid,
                                                                               node1=reference_id,
                                                                               label=ref_snaks_prop,
-                                                                              node2=kgtk_snak_value,
-                                                                              wikidatatype=wikidatatype,
+                                                                              node2=kgtk_ref_snak_value,
+                                                                              wikidatatype=ref_wikidatatype,
                                                                               invalid_erows=invalid_erows)
 
                                     if minimal_qual_file is not None or interleave:
-                                        if cp.get('qualifiers', None):
-                                            quals = cp['qualifiers']
-                                            for qual_prop, qual_claim_property in quals.items():
-                                                for qcp in qual_claim_property:
-                                                    snaktype = qcp[MAINSNAK_SNAKTYPE]
-
-                                                    if snaktype == SNAKTYPE_VALUE:
-                                                        datavalue = qcp[MAINSNAK_DATAVALUE]
-                                                        val = datavalue.get('value')
-                                                        val_type = datavalue.get("type", "")
-
-                                                    elif snaktype == SNAKTYPE_SOMEVALUE:
-                                                        val = None
-                                                        val_type = SOMEVALUE_VALUE
-
-                                                    elif snaktype == SNAKTYPE_NOVALUE:
-                                                        val = None
-                                                        val_type = NOVALUE_VALUE
-
-                                                    else:
-                                                        raise ValueError(
-                                                            "Unknown qualifier snaktype %s" % repr(snaktype))
-
-                                                    if True:
-                                                        value = ''
-                                                        mag = ''
-                                                        unit = ''
-                                                        date = ''
-                                                        item = ''
-                                                        lower = ''
-                                                        upper = ''
-                                                        precision = ''
-                                                        calendar = ''
-                                                        lat = ''
-                                                        long = ''
-                                                        enttype = ''
-                                                        datahash = '"' + qcp['hash'] + '"'
-                                                        typ = qcp.get(MAINSNAK_DATATYPE)
-                                                        if typ is None:
-                                                            if fail_if_missing:
-                                                                raise KGTKException(
-                                                                    "Found qualifier %s without a datatype for (%s, %s)"
-                                                                    % (repr(qual_prop), repr(qnode), repr(prop)))
-                                                            elif warn_if_missing:
-                                                                if val_type == SOMEVALUE_VALUE:
-                                                                    print("Somevalue qualifier %s without a datatype "
-                                                                          "for (%s, %s)" % (repr(qual_prop),
-                                                                                            repr(qnode),
-                                                                                            repr(prop)),
-                                                                          file=sys.stderr, flush=True)
-                                                                elif val_type == NOVALUE_VALUE:
-                                                                    print("Novalue qualifier %s without a datatype "
-                                                                          "for (%s, %s)" % (repr(qual_prop),
-                                                                                            repr(qnode),
-                                                                                            repr(prop)),
-                                                                          file=sys.stderr, flush=True)
-                                                                else:
-                                                                    print("Found qualifier %s without a datatype "
-                                                                          "for (%s, %s)" % (repr(qual_prop),
-                                                                                            repr(qnode),
-                                                                                            repr(prop)),
-                                                                          file=sys.stderr, flush=True)
+                                        quals = cp.get('qualifiers')
+                                        if quals is not None:
+                                            for qual_prop, qual_prop_snaks in quals.items():
+                                                for qual_snak in qual_prop_snaks:
+                                                        qual_value: typing.Optional[str]
+                                                        qual_wikidatatype: typing.Optional[str]
+                                                        (qual_value, qual_wikidatatype) = extract_snak_value(qual_snak,
+                                                                                                             qnode=qnode,
+                                                                                                             prop=prop,
+                                                                                                             subprop=qual_prop,
+                                                                                                             who="qualifier")
+                                                        if qual_value is None or qual_wikidatatype is None:
                                                             continue
-
-                                                        if val is None:
-                                                            value = val_type
-
-                                                        elif typ in SNAK_DATATYPE_WIKIBASE_TYPES:
-                                                            if isinstance(val, dict):
-                                                                enttype = val.get('entity-type')
-                                                                value = val.get('id', '')
-                                                            else:
-                                                                value = val
-                                                                if typ == "wikibase-lexeme":
-                                                                    enttype = "lexeme"
-                                                                else:
-                                                                    enttype = "unknown"
-
-                                                            # Older Wikidata dumps do not have an 'id' here.
-                                                            if len(value) == 0:
-                                                                if isinstance(val, dict) and 'numeric-id' in val:
-                                                                    numeric_id = str(val['numeric-id'])
-                                                                else:
-                                                                    raise ValueError("No numeric ID for datatype %s, "
-                                                                                     "entity type %s, in (%s, %s)." % (
-                                                                                         repr(typ), repr(enttype),
-                                                                                         repr(qnode),
-                                                                                         repr(prop)))
-
-                                                                if enttype == "item":
-                                                                    value = 'Q' + numeric_id
-                                                                elif enttype == "property":
-                                                                    value = 'P' + numeric_id
-                                                                elif enttype == "lexeme":
-                                                                    value = 'L' + numeric_id
-                                                                else:
-                                                                    raise ValueError('Unknown entity type %s for '
-                                                                                     'datatype %s in (%s, %s).' % (
-                                                                                         repr(enttype), repr(typ),
-                                                                                         repr(qnode),
-                                                                                         repr(prop)))
-
-                                                            item = value
-
-                                                        elif typ == SNAK_DATATYPE_QUANTITY:
-                                                            value = val['amount']
-                                                            mag = val['amount']
-                                                            if val.get('upperBound', None) or \
-                                                                    val.get('lowerBound', None):
-                                                                lower = val.get(
-                                                                    'lowerBound', '')
-                                                                upper = val.get(
-                                                                    'upperBound', '')
-                                                                value += '[' + lower + \
-                                                                         ',' + upper + ']'
-                                                            if len(
-                                                                    val.get('unit')) > 1:
-                                                                unit = val.get(
-                                                                    'unit').split('/')[-1]
-                                                                value += unit
-
-                                                        elif typ == SNAK_DATATYPE_GLOBECOORDINATE:
-                                                            lat = str(
-                                                                val['latitude'])
-                                                            long = str(
-                                                                val['longitude'])
-                                                            precision = str(val.get(
-                                                                'precision', ''))
-                                                            value = '@' + lat + '/' + long
-
-                                                        elif typ == SNAK_DATATYPE_TIME:
-                                                            if val['time'][0] == '-':
-                                                                pre = "^-"
-                                                            else:
-                                                                pre = "^"
-                                                            date = pre + val['time'][1:]
-                                                            precision = str(val['precision'])
-                                                            calendar = val.get('calendarmodel', '').split('/')[-1]
-                                                            value = pre + val['time'][1:] + '/' + str(val['precision'])
-
-                                                        elif typ == SNAK_DATATYPE_MONOLINGUALTEXT:
-                                                            value = KgtkFormat.stringify(val['text'],
-                                                                                         language=val['language'])
-                                                        else:
-                                                            # value = '\"' + val.replace('"','\\"') + '\"'
-                                                            if not isinstance(val, str):
-                                                                raise ValueError("Expecting a string for type %s" % repr(typ))
-                                                            value = KgtkFormat.stringify(val)
-
+                                                        
                                                         qual_value_hash: str
-                                                        if value.startswith(('P', 'Q')):
-                                                            qual_value_hash = value
+                                                        if qual_value.startswith(('P', 'Q', 'L')):
+                                                            qual_value_hash = qual_value
                                                         else:
                                                             qual_value_hash = hashlib.sha256(
-                                                                value.encode('utf-8')).hexdigest()[:value_hash_width]
+                                                                qual_value.encode('utf-8')).hexdigest()[:value_hash_width]
                                                         qualid: str = edgeid + '-' + qual_prop + '-' + qual_value_hash
                                                         qual_seq_no: int  # In case of hash collision
                                                         if qualid in qual_id_collision_map:
                                                             qual_seq_no = qual_id_collision_map[qualid]
                                                             print(
                                                                 "\n*** Qualifier collision #%d detected for %s (%s)" % (
-                                                                    qual_seq_no, qualid, value), file=sys.stderr,
+                                                                    qual_seq_no, qualid, qual_value), file=sys.stderr,
                                                                 flush=True)
                                                         else:
                                                             qual_seq_no = 0
@@ -1834,8 +1630,8 @@ def run(input_file: KGTKFiles,
                                                                           edge_id=qualid,
                                                                           node1=edgeid,
                                                                           label=qual_prop,
-                                                                          node2=value,
-                                                                          wikidatatype=typ,
+                                                                          node2=qual_value,
+                                                                          wikidatatype=qual_wikidatatype,
                                                                           invalid_qrows=invalid_qrows,
                                                                           erows=erows,
                                                                           invalid_erows=invalid_erows)
