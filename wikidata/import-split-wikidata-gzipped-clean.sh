@@ -55,7 +55,7 @@ kgtk ${KGTK_FLAGS} \
      --use-mgzip-for-input False \
      --use-mgzip-for-output False \
      --use-shm True \
-     --procs 6 \
+     --procs 10 \
      --mapper-batch-size 5 \
      --max-size-per-mapper-queue 3 \
      --single-mapper-queue True \
