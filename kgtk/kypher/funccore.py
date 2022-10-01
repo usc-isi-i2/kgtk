@@ -183,7 +183,7 @@ node2
 0
 1
 2
- kgtk query -i props \
+> kgtk query -i props \
       --match '(x)-[:kgtk_values {format: "%%"}]->(v)' \
       --where 'x=$VALUES' \
       --return 'v' \
