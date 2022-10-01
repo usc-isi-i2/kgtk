@@ -1,7 +1,7 @@
 """
 Import an wikidata file into KGTK file
 
-TODO: references
+TODO: references order
 
 TODO: qualifiers-order
 
@@ -235,6 +235,13 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         default=None,
         help='path to output split English label file')
     parser.add_argument(
+        '--split-reference-file',
+        action="store",
+        type=str,
+        dest="split_reference_file",
+        default=None,
+        help='path to output split reference file')
+    parser.add_argument(
         '--split-sitelink-file',
         action="store",
         type=str,
@@ -271,8 +278,6 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         dest="split_property_qual_file",
         default=None,
         help='path to output split property qualifier file')
-
-    # TODO: Create a seperate file for the sitelinks.
 
     parser.add_argument(
         "--limit",
@@ -706,6 +711,7 @@ def run(input_file: KGTKFiles,
         split_en_description_file: typing.Optional[str],
         split_label_file: typing.Optional[str],
         split_en_label_file: typing.Optional[str],
+        split_reference_file: typing.Optional[str],
         split_sitelink_file: typing.Optional[str],
         split_en_sitelink_file: typing.Optional[str],
         split_type_file: typing.Optional[str],
@@ -795,7 +801,11 @@ def run(input_file: KGTKFiles,
     SITELINK_SITE_LABEL: str = "sitelink-site"
     SITELINK_TITLE_LABEL: str = "sitelink-title"
     TYPE_LABEL: str = "type"
+
     REFERENCE_LABEL: str = "reference"
+
+    REFERENCE_ID_START: str = "R" # This is a bit of a hack.
+    REFERENCE_ID_WIDTH: int = 8 # How many decimal digits of reference ID?
 
     ENTITY_ID_TAG: str = "id"
     CLAIMS_TAG: str = "claims"
@@ -823,17 +833,264 @@ def run(input_file: KGTKFiles,
 
     MAINSNAK_DATATYPE: str = "datatype"
     MAINSNAK_DATAVALUE: str = "datavalue"
+    MAINSNAK_PROPERTY: str = "property"
     MAINSNAK_SNAKTYPE: str = "snaktype"
-
-    DATATYPE_WIKIBASE_PREFIX: str = "wikibase"
-    DATATYPE_QUANTITY: str = "quantity"
-    DATATYPE_GLOBECOORDINATE: str = "globe-coordinate"
-    DATATYPE_TIME: str = "time"
-    DATATYPE_MONOLINGUALTEXT: str = "monolingualtext"
 
     REFERENCE_HASH_TAG: str = "hash"
     REFERENCE_SNAKS_TAG: str = "snaks"
     REFERENCE_SNAKS_ORDER_TAG: str = "snaks-order"
+
+    SNAK_DATATYPE_COMMONSMEDIA: str = "commonsMedia"
+    SNAK_DATATYPE_EXTERNALID: str = "external-id"
+    SNAK_DATATYPE_GEOSHAPE: str = "geo-shape"
+    SNAK_DATATYPE_GLOBECOORDINATE: str = "globe-coordinate"
+    SNAK_DATATYPE_MONOLINGUALTEXT: str = "monolingualtext"
+    SNAK_DATATYPE_QUANTITY: str = "quantity"
+    SNAK_DATATYPE_STRING: str = "string"
+    SNAK_DATATYPE_TIME: str = "time"
+    SNAK_DATATYPE_URL: str = "url"
+    SNAK_DATATYPE_WIKIBASE_FORM: str = "wikibase-form"
+    SNAK_DATATYPE_WIKIBASE_ITEM: str = "wikibase-item"
+    SNAK_DATATYPE_WIKIBASE_LEXEME: str = "wikibase-lexeme"
+    SNAK_DATATYPE_WIKIBASE_PROPERTY: str = "wikibase-property"
+    SNAK_DATATYPE_WIKIBASE_SENSE: str = "wikibase-sense"
+
+    SNAK_DATATYPE_WIKIBASE_TYPES: typing.List[str] = [SNAK_DATATYPE_WIKIBASE_FORM,
+                                                      SNAK_DATATYPE_WIKIBASE_ITEM,
+                                                      SNAK_DATATYPE_WIKIBASE_LEXEME,
+                                                      SNAK_DATATYPE_WIKIBASE_PROPERTY,
+                                                      SNAK_DATATYPE_WIKIBASE_SENSE,
+                                                      ]
+
+    SNAK_DATAVALUE_TYPE_GLOBECOORDINATE: str = "globecoordinate"
+    SNAK_DATAVALUE_TYPE_MONOLINGUALTEXT: str = "monolingualtext"
+    SNAK_DATAVALUE_TYPE_QUANTITY: str = "quantity"
+    SNAK_DATAVALUE_TYPE_STRING: str = "string"
+    SNAK_DATAVALUE_TYPE_TIME: str = "time"
+    SNAK_DATAVALUE_TYPE_WIKIBASE_ENTITYID: str = "wikibase-entityid"
+
+    # Map SNAK datatypes to SNAK datavalue types.  We assume that each
+    # SNAK datatype maps to only one SNAK datavalue type.
+    SNAK_DATATYPE_PAIRS: typing.Mapping[str, str] = {
+        SNAK_DATATYPE_COMMONSMEDIA: SNAK_DATAVALUE_TYPE_STRING,
+        SNAK_DATATYPE_EXTERNALID: SNAK_DATAVALUE_TYPE_STRING,
+        SNAK_DATATYPE_GEOSHAPE: SNAK_DATAVALUE_TYPE_STRING,
+        SNAK_DATATYPE_GLOBECOORDINATE: SNAK_DATAVALUE_TYPE_GLOBECOORDINATE,
+        SNAK_DATATYPE_MONOLINGUALTEXT: SNAK_DATAVALUE_TYPE_MONOLINGUALTEXT,
+        SNAK_DATATYPE_QUANTITY: SNAK_DATAVALUE_TYPE_QUANTITY,
+        SNAK_DATATYPE_STRING: SNAK_DATAVALUE_TYPE_STRING,
+        SNAK_DATATYPE_TIME: SNAK_DATAVALUE_TYPE_TIME,
+        SNAK_DATATYPE_URL: SNAK_DATAVALUE_TYPE_STRING,
+        SNAK_DATATYPE_WIKIBASE_FORM: SNAK_DATAVALUE_TYPE_WIKIBASE_ENTITYID,
+        SNAK_DATATYPE_WIKIBASE_ITEM: SNAK_DATAVALUE_TYPE_WIKIBASE_ENTITYID,
+        SNAK_DATATYPE_WIKIBASE_LEXEME: SNAK_DATAVALUE_TYPE_WIKIBASE_ENTITYID,
+        SNAK_DATATYPE_WIKIBASE_PROPERTY: SNAK_DATAVALUE_TYPE_WIKIBASE_ENTITYID,
+        SNAK_DATATYPE_WIKIBASE_SENSE: SNAK_DATAVALUE_TYPE_WIKIBASE_ENTITYID,
+    }
+
+    SNAK_DATAVALUE_VALUE_ENTITY_TYPE: str = "entity-type"
+    SNAK_DATAVALUE_VALUE_ID: str = "id"
+    SNAK_DATAVALUE_VALUE_NUMERIC_ID: str = "numeric-id"
+
+    SNAK_DATAVALUE_VALUE_ENTITY_TYPE_ITEM: str = "item"
+    SNAK_DATAVALUE_VALUE_ENTITY_TYPE_LEXEME: str = "lexeme"
+    SNAK_DATAVALUE_VALUE_ENTITY_TYPE_PROPERTY: str = "property"
+    SNAK_DATAVALUE_VALUE_ENTITY_TYPE_UNKNOWN: str = "unknown" # This marker is internal to this code.
+
+    # Each Wikibase entity should have a specific type of entity:
+    SNAK_DATATYPE_WIKIBASE_ENTITY_TYPES: typing.Mapping[str, str] = {
+        SNAK_DATATYPE_WIKIBASE_FORM: SNAK_DATAVALUE_VALUE_ENTITY_TYPE_ITEM,
+        SNAK_DATATYPE_WIKIBASE_ITEM: SNAK_DATAVALUE_VALUE_ENTITY_TYPE_ITEM,
+        SNAK_DATATYPE_WIKIBASE_LEXEME: SNAK_DATAVALUE_VALUE_ENTITY_TYPE_LEXEME,
+        SNAK_DATATYPE_WIKIBASE_PROPERTY: SNAK_DATAVALUE_VALUE_ENTITY_TYPE_PROPERTY,
+        SNAK_DATATYPE_WIKIBASE_SENSE: SNAK_DATAVALUE_VALUE_ENTITY_TYPE_ITEM,
+    }
+
+    def extract_snak_value(snak: str,
+                           expected_prop: typing.Optional[str] = None)-> typing.Tuple[str, str]:
+        snak_prop: typing.Optional[str] = snak.get(MAINSNAK_PROPERTY, '')
+        if len(snak_prop) == 0:
+            raise ValueError("SNAK without property.")
+
+        if expected_prop is not None and expected_prop != snak_prop:
+            raise ValueError("Expected property %s does not match SNAK property %s" % (repr(expected_prop),
+                                                                                       repr(snak[MAINSNAK_PROPERTY])))
+        
+        snak_datatype: typing.Optional[str] = snak.get(MAINSNAK_DATATYPE)
+        if snak_datatype is None:
+            raise ValueError("SNAK is missing a DATATYPE.")
+
+        snak_type: typing.Optional[str] = snak.get(MAINSNAK_SNAKTYPE)
+        if snak_type is None:
+            raise ValueError("SNAK is missing a SNAKTYPE.")
+
+        if snak_type != SNAKTYPE_VALUE:
+            # Process somevalue and novalue:
+            return snak_type, snak_datatype
+        
+        snak_datavalue = snak.get(MAINSNAK_DATAVALUE)
+        if snak_datavalue is None:
+            raise ValueError("SNAK is missing a DATAVALUE.")
+
+        snak_datavalue_type: typing.Optional[str] = snak_datavalue.get(DATAVALUE_TYPE_TAG)
+        if snak_datavalue_type is None:
+            raise ValueError("SNAK datavalue is missing a TYPE.")
+        
+        snak_datavalue_value = snak_datavalue.get("value")
+        if snak_datavalue_value is None:
+            raise ValueError("SNAK datavalue is missing a VALUE.")
+
+        if snak_datatype not in SNAK_DATATYPE_PAIRS:
+            raise ValueError ("SNAK with unexpected datatype %s and datavalue type %s" % (repr(snak_datatype),
+                                                                                                    repr(snak_datavalue_type)))
+        
+        if SNAK_DATATYPE_PAIRS[snak_datatype] != snak_datavalue_type:
+            raise ValueError ("SNAK with mismatched datatype %s and datavalue type %s" % (repr(snak_datatype),
+                                                                                                    repr(snak_datavalue_type)))
+
+        if snak_datatype == SNAK_DATATYPE_COMMONSMEDIA:
+            if not isinstance(snak_datavalue_value, str):
+                raise ValueError("Expecting a string value for a commons media datatype.")
+            return KgtkFormat.stringify(snak_datavalue_value), snak_datatype
+                                                            
+        elif snak_datatype == SNAK_DATATYPE_EXTERNALID:
+            if not isinstance(snak_datavalue_value, str):
+                raise ValueError("Expecting a string value for an external id datatype.")
+            return KgtkFormat.stringify(snak_datavalue_value), snak_datatype
+
+        elif snak_datatype == SNAK_DATATYPE_GEOSHAPE:
+            if not isinstance(snak_datavalue_value, str):
+                raise ValueError("Expecting a string value for a geo shape datatype.")
+            return KgtkFormat.stringify(snak_datavalue_value), snak_datatype
+
+        elif snak_datatype == SNAK_DATATYPE_GLOBECOORDINATE:
+            if not isinstance(snak_datavalue_value, dict):
+                raise ValueError("Expecting a dict for a globe coordinate.")
+
+            # TODO: Do a better job of validating this value.
+            coord_lat: str = str(snak_datavalue_value.get('latitude', ''))
+            if len(coord_lat) == 0:
+                raise ValueError("Globe coordinate without latitude.")
+
+            # TODO: Do a better job of validating this value.
+            coord_long: str = str(snak_datavalue_value.get('longitude', ''))
+            if len(coord_long) == 0:
+                raise ValueError("Globe coordinate without longitude.")
+
+            # TODO: implement precision
+            # coord_precision = str(snak_datavalue_value.get('precision', ''))
+                                                            
+            return '@' + coord_lat + '/' + coord_long, snak_datatype
+
+        elif snak_datatype == SNAK_DATATYPE_MONOLINGUALTEXT:
+            if not isinstance(snak_datavalue_value, dict):
+                raise ValueError("Expecting a dict for a monolingual text.")
+
+            text: typing.Optional[str] = snak_datavalue_value.get('text')
+            if text is None:
+                raise ValueError("Monolingual text without text.")
+
+            language: typing.Optional[str] = snak_datavalue_value.get('language')
+            if language is None:
+                raise ValueError("Monolingual text without language.")
+
+            return KgtkFormat.stringify(text, language=language), snak_datatype
+
+        elif snak_datatype == SNAK_DATATYPE_QUANTITY:
+            if not isinstance(snak_datavalue_value, dict):
+                raise ValueError("Expecting a dict value for a quantity datatype.")
+
+            quantity_value: typing.Optional[str] = snak_datavalue_value.get('amount')
+            if quantity_value is None:
+                raise ValueError("Quantity without amount.")
+
+            if snak_datavalue_value.get('upperBound', None) or \
+               snak_datavalue_value.get('lowerBound', None):
+                lower_bound: str = snak_datavalue_value.get('lowerBound', '')
+                upper_bound: str = snak_datavalue_value.get('upperBound', '')
+                quantity_value += '[' + lower_bound + ',' + upper_bound + ']'
+
+            if len(snak_datavalue_value.get('unit')) > 1:
+                quantity_value += snak_datavalue_value.get('unit').split('/')[-1]
+
+            return quantity_value, snak_datatype
+
+        elif snak_datatype == SNAK_DATATYPE_STRING:
+            if not isinstance(snak_datavalue_value, str):
+                raise ValueError("Expecting a string value for a string datatype.")
+            return KgtkFormat.stringify(snak_datavalue_value), snak_datatype
+
+        elif snak_datatype == SNAK_DATATYPE_TIME:
+            if not isinstance(snak_datavalue_value, dict):
+                raise ValueError("Expecting a dict value for a time datatype.")
+
+            if 'time' not in snak_datavalue_value:
+                raise ValueError("Time without time.")
+            
+            if 'precision' not in snak_datavalue_value:
+                raise ValueError("Time without precision.")
+
+            time_prefix: str
+            if snak_datavalue_value['time'][0] == '-':
+                time_prefix = "^-"
+            else:
+                time_prefix = "^"
+
+            time_date: str = snak_datavalue_value['time'][1:]
+            precision: str = str(snak_datavalue_value['precision'])
+            # calendar = val.get('calendarmodel', '').split('/')[-1]
+            time_value: str = time_prefix + time_date + '/' + precision
+
+            return time_value, snak_datatype
+
+        elif snak_datatype == SNAK_DATATYPE_URL:
+            if not isinstance(snak_datavalue_value, str):
+                raise ValueError("Expecting a string value for a URL.")
+            return KgtkFormat.stringify(snak_datavalue_value), snak_datatype
+        
+        elif snak_datatype in SNAK_DATATYPE_WIKIBASE_TYPES:
+            expected_entity_type: typing.Optional[str] = SNAK_DATATYPE_WIKIBASE_ENTITY_TYPES.get(snak_datatype)
+            if expected_entity_type is None:
+                raise ValueError("Wikibase datatype %s is unexpected." % repr(snak_datatype))
+
+            if not isinstance(snak_datavalue_value, dict):
+                # This is possible in some old lexeme records.
+                if len(snak_datavalue_value) > 0:
+                    return snak_datavalue_value, snak_datatype
+                else:
+                    raise ValueError("Expecting a value for a wikibase entity with datatype %s." % repr(snak_datatype))
+
+            entity_id: str = str(snak_datavalue_value.get(SNAK_DATAVALUE_VALUE_ID, ''))
+            if len(entity_id) > 0:
+                return entity_id, snak_datatype
+
+            numeric_id: str = str(val.get(SNAK_DATAVALUE_VALUE_NUMERIC_ID, ''))
+            if len(numeric_id) == 0:
+                raise ValueError("Wikibase entity of datatype %s without entity id or numeric id." % repr(snak_datatype))
+
+            entity_type: typing.Optional[str] = snak_datavalue_value.get(SNAK_DATAVALUE_VALUE_ENTITY_TYPE)
+            if entity_type is None:
+                raise ValueError("Wikibase entity of datatype %s without entity type." % repr(snak_datatype))
+
+            if entity_type != expected_entity_type:
+                raise ValueError("Wikibase entity of datatype %s: expected type %s, got type %s" % (repr(snak_datatype),
+                                                                                                    repr(expected_entity_type),
+                                                                                                    repr(entity_type)))
+
+            if entity_type == SNAK_DATAVALUE_VALUE_ENTITY_TYPE_ITEM:
+                return 'Q' + numeric_id, snak_datatype
+
+            elif entity_type == SNAK_DATAVALUE_VALUE_ENTITY_TYPE_PROPERTY:
+                return 'P' + numeric_id, snak_datatype
+                                                                
+            elif entity_type == SNAK_DATAVALUE_VALUE_ENTITY_TYPE_LEXEME:
+                return 'L' + numeric_id, snak_datatype
+                                                                
+            else:
+                raise ValueError("Wikibase entity of datatype %s with unknown entity type %s" % (repr(snak_datatype), repr(entity_type)))
+
+        else:
+            raise ValueError("SNAK with unknown datatype %s" % repr(snak_datatype))
 
     collector_q: typing.Optional[pyrallel.ShmQueue] = None
     node_collector_q: typing.Optional[pyrallel.ShmQueue] = None
@@ -920,6 +1177,7 @@ def run(input_file: KGTKFiles,
                 self.collector_invalid_qrows_batch = []
 
                 self.collector_description_erows_batch = []
+                self.collector_reference_erows_batch = []
                 self.collector_sitelink_erows_batch = []
 
             self.process_row_data = \
@@ -937,17 +1195,25 @@ def run(input_file: KGTKFiles,
                             len(self.collector_erows_batch) > 0 or \
                             len(self.collector_qrows_batch) > 0 or \
                             len(self.collector_invalid_erows_batch) > 0 or \
-                            len(self.collector_invalid_qrows_batch) > 0:
+                            len(self.collector_invalid_qrows_batch) > 0 or \
+                            len(self.collector_description_erows_batch) > 0 or \
+                            len(self.collector_reference_erows_batch) > 0 or \
+                            len(self.collector_sitelink_erows_batch) > 0:
+
                         if collect_seperately:
                             if len(self.collector_nrows_batch) > 0:
                                 node_collector_q.put(("rows", self.collector_nrows_batch, [], [], [], [], None))
+
                             if len(self.collector_erows_batch) > 0:
                                 edge_collector_q.put(("rows", [], self.collector_erows_batch, [], [], [], None))
+
                             if len(self.collector_qrows_batch) > 0:
                                 qual_collector_q.put(("rows", [], [], self.collector_qrows_batch, [], [], None))
+
                             if len(self.collector_invalid_erows_batch) > 0:
                                 invalid_edge_collector_q.put(
                                     ("rows", [], [], [], self.collector_invalid_erows_batch, [], None))
+
                             if len(self.collector_invalid_qrows_batch) > 0:
                                 invalid_qual_collector_q.put(
                                     ("rows", [], [], [], [], self.collector_invalid_qrows_batch, None))
@@ -955,10 +1221,20 @@ def run(input_file: KGTKFiles,
                             if len(self.collector_description_erows_batch) > 0:
                                 description_collector_q.put(
                                     ("rows", [], self.collector_description_erows_batch, [], [], [], None))
+
+                            if len(self.collector_reference_erows_batch) > 0:
+                                reference_collector_q.put(
+                                    ("rows", [], self.collector_reference_erows_batch, [], [], [], None))
+
                             if len(self.collector_sitelink_erows_batch) > 0:
                                 sitelink_collector_q.put(
                                     ("rows", [], self.collector_sitelink_erows_batch, [], [], [], None))
+
                         else:
+                            # TODO: what about the following?
+                            # self.collector_description_erows_batch,
+                            # self.collector_reference_erows_batch,
+                            # self.collector_sitelink_erows_batch,
                             collector_q.put(("rows",
                                              self.collector_nrows_batch,
                                              self.collector_erows_batch,
@@ -1196,6 +1472,7 @@ def run(input_file: KGTKFiles,
             invalid_qrows = [] if invalid_qual_file is not None else None
 
             description_erows = []
+            reference_erows = [ ]
             sitelink_erows = []
 
             # These maps avoid avoid ID collisions due to hash collision or
@@ -1207,7 +1484,7 @@ def run(input_file: KGTKFiles,
             sitelink_id_collision_map: typing.MutableMapping[str, int] = dict()
 
             # A unique reference counter.  This is not a good long-term approach
-            # because it will not operate well for the Wikidata time machine.
+            # if it is necessary to support the Wikidata time machine.
             reference_count: int = 0
 
             clean_line = line.strip()
@@ -1485,32 +1762,32 @@ def run(input_file: KGTKFiles,
 
                                     if val is None:
                                         value = val_type
-                                    elif typ.startswith(DATATYPE_WIKIBASE_PREFIX):
+                                    elif typ in SNAK_DATATYPE_WIKIBASE_TYPES:
                                         if isinstance(val, dict):
-                                            enttype = val.get('entity-type')
-                                            value = val.get('id', '')
+                                            enttype = val.get(SNAK_DATAVALUE_VALUE_ENTITY_TYPE)
+                                            value = val.get(SNAK_DATAVALUE_VALUE_ID, '')
                                         else:
                                             value = val
                                             # TODO: Can we find something less ad-hoc to do here?
-                                            if typ == "wikibase-lexeme":
-                                                enttype = "lexeme"
+                                            if typ == SNAK_DATATYPE_WIKIBASE_LEXEME:
+                                                enttype = SNAK_DATAVALUE_VALUE_ENTITY_TYPE_LEXEME
                                             else:
-                                                enttype = "unknown"
+                                                enttype = SNAK_DATAVALUE_VALUE_ENTITY_TYPE_UNKNOWN
 
                                         # Older Wikidata dumps do not have an 'id' here.
                                         if len(value) == 0:
-                                            if isinstance(val, dict) and 'numeric-id' in val:
-                                                numeric_id = str(val['numeric-id'])
+                                            if isinstance(val, dict) and SNAK_DATAVALUE_VALUE_NUMERIC_ID in val:
+                                                numeric_id = str(val[SNAK_DATAVALUE_VALUE_NUMERIC_ID])
                                             else:
                                                 raise ValueError(
                                                     "No numeric ID for datatype %s, entity type %s, in (%s, %s)." % (
                                                         repr(typ), repr(enttype), repr(qnode), repr(prop)))
 
-                                            if enttype == "item":
+                                            if enttype == SNAK_DATAVALUE_VALUE_ENTITY_TYPE_ITEM:
                                                 value = 'Q' + numeric_id
-                                            elif enttype == "property":
+                                            elif enttype == SNAK_DATAVALUE_VALUE_ENTITY_TYPE_PROPERTY:
                                                 value = 'P' + numeric_id
-                                            elif enttype == "lexeme":
+                                            elif enttype == SNAK_DATAVALUE_VALUE_ENTITY_TYPE_LEXEME:
                                                 value = 'L' + numeric_id
                                             else:
                                                 raise ValueError(
@@ -1518,7 +1795,7 @@ def run(input_file: KGTKFiles,
                                                         repr(enttype), repr(typ), repr(qnode), repr(prop)))
                                         item = value
 
-                                    elif typ == DATATYPE_QUANTITY:
+                                    elif typ == SNAK_DATATYPE_QUANTITY:
                                         # Strip whitespace from the numeric fields.  Some older Wikidata dumps
                                         # (20150805-20160502) sometimes have trailing newlines in these fields.
                                         # Convert actual numbers to strings before attempting to strip leading
@@ -1539,7 +1816,7 @@ def run(input_file: KGTKFiles,
                                                 # TODO: don't lose track of "undefined" units.
                                                 value += unit
 
-                                    elif typ == DATATYPE_GLOBECOORDINATE:
+                                    elif typ == SNAK_DATATYPE_GLOBECOORDINATE:
                                         # Strip potential leading and trailing whitespace.
                                         lat = str(val['latitude']).strip()
                                         long = str(val['longitude']).strip()
@@ -1547,7 +1824,7 @@ def run(input_file: KGTKFiles,
                                         value = '@' + lat + '/' + long
                                         # TODO: what about "globe"?
 
-                                    elif typ == DATATYPE_TIME:
+                                    elif typ == SNAK_DATATYPE_TIME:
                                         if val['time'][0] == '-':
                                             pre = "^-"
                                         else:
@@ -1559,13 +1836,15 @@ def run(input_file: KGTKFiles,
                                         calendar = val.get('calendarmodel', '').split('/')[-1]
                                         value = date + '/' + precision
 
-                                    elif typ == DATATYPE_MONOLINGUALTEXT:
+                                    elif typ == SNAK_DATATYPE_MONOLINGUALTEXT:
                                         value = KgtkFormat.stringify(val['text'], language=val['language'])
 
                                     else:
+                                        if not isinstance(val, str):
+                                            raise ValueError("Expecting a string for type %s" % repr(typ))
                                         value = KgtkFormat.stringify(val)
 
-                                    if minimal_edge_file is not None or detailed_edge_file is not None:
+                                    if minimal_edge_file is not None or detailed_edge_file is not None or (parse_references and CLAIM_REFERENCES_TAG in cp):
                                         prop_value_hash: str
                                         if value.startswith(('P', 'Q')):
                                             prop_value_hash = value
@@ -1587,42 +1866,70 @@ def run(input_file: KGTKFiles,
                                             prop_seq_no = 0
                                         edge_id_collision_map[edgeid] = prop_seq_no + 1
                                         edgeid += '-' + str(prop_seq_no)
-                                        self.erows_append(erows,
-                                                          edge_id=edgeid,
-                                                          node1=qnode,
-                                                          label=prop,
-                                                          node2=value,
-                                                          rank=rank,
-                                                          magnitude=mag,
-                                                          unit=unit,
-                                                          date=date,
-                                                          item=item,
-                                                          lower=lower,
-                                                          upper=upper,
-                                                          latitude=lat,
-                                                          longitude=long,
-                                                          wikidatatype=typ,
-                                                          claim_id=claim_id,
-                                                          claim_type=claim_type,
-                                                          val_type=val_type,
-                                                          entity_type=enttype,
-                                                          precision=precision,
-                                                          calendar=calendar,
-                                                          invalid_erows=invalid_erows)
+
+                                        if minimal_edge_file is not None or detailed_edge_file is not None:
+                                            self.erows_append(erows,
+                                                              edge_id=edgeid,
+                                                              node1=qnode,
+                                                              label=prop,
+                                                              node2=value,
+                                                              rank=rank,
+                                                              magnitude=mag,
+                                                              unit=unit,
+                                                              date=date,
+                                                              item=item,
+                                                              lower=lower,
+                                                              upper=upper,
+                                                              latitude=lat,
+                                                              longitude=long,
+                                                              wikidatatype=typ,
+                                                              claim_id=claim_id,
+                                                              claim_type=claim_type,
+                                                              val_type=val_type,
+                                                              entity_type=enttype,
+                                                              precision=precision,
+                                                              calendar=calendar,
+                                                              invalid_erows=invalid_erows)
 
                                         if parse_references and CLAIM_REFERENCES_TAG in cp:
+                                            rerows = reference_erows if collect_seperately else erows
                                             references = cp[CLAIM_REFERENCES_TAG]
                                             for reference in references:
                                                 reference_count += 1 # Bad approach for the time machine.
-                                                reference_id: str = "R" + str(reference_count) # TODO: format this with leading zeros
+                                                reference_id: str = REFERENCE_ID_START + str(reference_count).zfill(REFERENCE_ID_WIDTH)
 
                                                 ref_edgeid: str = edgeid + "-" + reference_id
-                                                self.erows_append(erows,
+                                                self.erows_append(rerows,
                                                                   edge_id=ref_edgeid,
                                                                   node1=edgeid,
                                                                   label=REFERENCE_LABEL,
                                                                   node2=reference_id,
+                                                                  wikidatatype='reference', # Ad-hoc wikidatatype.
                                                                   invalid_erows=invalid_erows)
+
+                                                if REFERENCE_SNAKS_TAG not in reference:
+                                                    raise ValueError("Reference without SNAKS.")
+
+                                                ref_snak_count: int = 0
+
+                                                ref_snaks = reference[REFERENCE_SNAKS_TAG]
+                                                ref_snaks_prop: str
+                                                for ref_snaks_prop in sorted(ref_snaks.keys()):
+                                                    ref_snaks_list = ref_snaks[ref_snaks_prop]
+                                                    for ref_snak in ref_snaks_list:
+                                                        ref_snak_count += 1 # Bad approach for the time machine, but prevents collisions.
+                                                        ref_snak_edgeid: str = ref_edgeid + "-" + str(ref_snak_count).zfill(REFERENCE_ID_WIDTH)
+
+                                                        kgtk_snak_value: str
+                                                        wikidatatype: str
+                                                        (kgtk_snak_value, wikidatatype) = extract_snak_value(ref_snak, expected_prop=ref_snaks_prop)
+                                                        self.erows_append(rerows,
+                                                                          edge_id=ref_snak_edgeid,
+                                                                          node1=reference_id,
+                                                                          label=ref_snaks_prop,
+                                                                          node2=kgtk_snak_value,
+                                                                          wikidatatype=wikidatatype,
+                                                                          invalid_erows=invalid_erows)
 
                                     if minimal_qual_file is not None or detailed_qual_file is not None or interleave:
                                         if cp.get('qualifiers', None):
@@ -1692,7 +1999,7 @@ def run(input_file: KGTKFiles,
                                                         if val is None:
                                                             value = val_type
 
-                                                        elif typ.startswith(DATATYPE_WIKIBASE_PREFIX):
+                                                        elif typ in SNAK_DATATYPE_WIKIBASE_TYPES:
                                                             if isinstance(val, dict):
                                                                 enttype = val.get('entity-type')
                                                                 value = val.get('id', '')
@@ -1729,7 +2036,7 @@ def run(input_file: KGTKFiles,
 
                                                             item = value
 
-                                                        elif typ == DATATYPE_QUANTITY:
+                                                        elif typ == SNAK_DATATYPE_QUANTITY:
                                                             value = val['amount']
                                                             mag = val['amount']
                                                             if val.get('upperBound', None) or \
@@ -1746,7 +2053,7 @@ def run(input_file: KGTKFiles,
                                                                     'unit').split('/')[-1]
                                                                 value += unit
 
-                                                        elif typ == DATATYPE_GLOBECOORDINATE:
+                                                        elif typ == SNAK_DATATYPE_GLOBECOORDINATE:
                                                             lat = str(
                                                                 val['latitude'])
                                                             long = str(
@@ -1755,7 +2062,7 @@ def run(input_file: KGTKFiles,
                                                                 'precision', ''))
                                                             value = '@' + lat + '/' + long
 
-                                                        elif typ == DATATYPE_TIME:
+                                                        elif typ == SNAK_DATATYPE_TIME:
                                                             if val['time'][0] == '-':
                                                                 pre = "^-"
                                                             else:
@@ -1765,11 +2072,13 @@ def run(input_file: KGTKFiles,
                                                             calendar = val.get('calendarmodel', '').split('/')[-1]
                                                             value = pre + val['time'][1:] + '/' + str(val['precision'])
 
-                                                        elif typ == DATATYPE_MONOLINGUALTEXT:
+                                                        elif typ == SNAK_DATATYPE_MONOLINGUALTEXT:
                                                             value = KgtkFormat.stringify(val['text'],
                                                                                          language=val['language'])
                                                         else:
                                                             # value = '\"' + val.replace('"','\\"') + '\"'
+                                                            if not isinstance(val, str):
+                                                                raise ValueError("Expecting a string for type %s" % repr(typ))
                                                             value = KgtkFormat.stringify(val)
 
                                                         qual_value_hash: str
@@ -1949,6 +2258,7 @@ def run(input_file: KGTKFiles,
                     (invalid_erows is not None and len(invalid_erows) > 0) or \
                     (invalid_qrows is not None and len(invalid_qrows) > 0) or \
                     len(description_erows) > 0 or \
+                    len(reference_erows) > 0 or \
                     len(sitelink_erows) > 0:
                 if collect_results:
                     if collector_batch_size == 1:
@@ -1973,8 +2283,12 @@ def run(input_file: KGTKFiles,
                             if len(description_erows) > 0 and description_collector_q is not None:
                                 description_collector_q.put(("rows", [], description_erows, [], [], [], None))
 
+                            if len(reference_erows) > 0 and reference_collector_q is not None:
+                                reference_collector_q.put(("rows", [], reference_erows, [], [], [], None))
+
                             if len(sitelink_erows) > 0 and sitelink_collector_q is not None:
                                 sitelink_collector_q.put(("rows", [], sitelink_erows, [], [], [], None))
+
                         elif collector_q is not None:
                             collector_q.put(("rows", nrows, erows, qrows, invalid_erows, invalid_qrows, None))
                     else:
@@ -1988,6 +2302,7 @@ def run(input_file: KGTKFiles,
 
                         if collect_seperately:
                             self.collector_description_erows_batch.extend(description_erows)
+                            self.collector_reference_erows_batch.extend(reference_erows)
                             self.collector_sitelink_erows_batch.extend(sitelink_erows)
 
                         self.collector_batch_cnt += 1
@@ -2016,6 +2331,11 @@ def run(input_file: KGTKFiles,
                                     description_collector_q.put(
                                         ("rows", [], self.collector_description_erows_batch, [], [], [], None))
                                     self.collector_description_erows_batch.clear()
+
+                                if len(self.collector_reference_erows_batch) > 0 and reference_collector_q is not None:
+                                    reference_collector_q.put(
+                                        ("rows", [], self.collector_reference_erows_batch, [], [], [], None))
+                                    self.collector_reference_erows_batch.clear()
 
                                 if len(self.collector_sitelink_erows_batch) > 0 and sitelink_collector_q is not None:
                                     sitelink_collector_q.put(
@@ -2119,6 +2439,10 @@ def run(input_file: KGTKFiles,
             self.split_en_label_wr = None
             self.n_en_label_rows: int = 0
 
+            self.split_reference_f: typing.Optional[typing.TextIO] = None
+            self.split_reference_wr = None
+            self.n_reference_rows: int = 0
+
             self.split_sitelink_f: typing.Optional[typing.TextIO] = None
             self.split_sitelink_wr = None
             self.n_sitelink_rows: int = 0
@@ -2206,6 +2530,10 @@ def run(input_file: KGTKFiles,
 
                 elif action == "split_en_label_header":
                     self.open_split_en_label_file(header, who)
+                    self.process_split_files = True
+
+                elif action == "split_reference_header":
+                    self.open_split_reference_file(header, who)
                     self.process_split_files = True
 
                 elif action == "split_sitelink_header":
@@ -2310,6 +2638,10 @@ def run(input_file: KGTKFiles,
             self.split_en_label_f, self.split_en_label_wr = self._open_file(split_en_label_file, header,
                                                                             "English " + LABEL_LABEL, who)
 
+        def open_split_reference_file(self, header: typing.List[str], who: str):
+            self.split_reference_f, self.split_reference_wr = self._open_file(split_reference_file, header, REFERENCE_LABEL,
+                                                                              who)
+
         def open_split_sitelink_file(self, header: typing.List[str], who: str):
             self.split_sitelink_f, self.split_sitelink_wr = self._open_file(split_sitelink_file, header, SITELINK_LABEL,
                                                                             who)
@@ -2375,6 +2707,9 @@ def run(input_file: KGTKFiles,
                 if self.split_en_label_wr is not None:
                     self.split_en_label_wr.close()
 
+                if self.split_reference_wr is not None:
+                    self.split_reference_wr.close()
+
                 if self.split_sitelink_wr is not None:
                     self.split_sitelink_wr.close()
 
@@ -2432,6 +2767,9 @@ def run(input_file: KGTKFiles,
 
                 if self.split_en_label_f is not None:
                     self.split_en_label_f.close()
+
+                if self.split_reference_f is not None:
+                    self.split_reference_f.close()
 
                 if self.split_sitelink_f is not None:
                     self.split_sitelink_f.close()
@@ -2501,12 +2839,21 @@ def run(input_file: KGTKFiles,
                             label: str = row[2]  # Hack: knows the structure of the row.
                             method: typing.Optional[
                                 typing.Callable[[typing.List[str]], bool]] = self.split_dispatcher.get(label)
+
+                            # Hack: knows the structure of the row.
+                            # This outrageous hack supports references.  It routes reference details to the
+                            # split reference file when there is a split reference file. Otherwise, references
+                            # will go to the edge file.
+                            # TODO: remove this hack.  Perhaps we need a seperate top-level file for references?
+                            if method is None and row[1].startswith(REFERENCE_ID_START):
+                                method = self.split_dispatcher.get(REFERENCE_LABEL)
+
                             if method is not None:
                                 split = method(row)
                             if not split:
                                 if self.minimal_edge_wr is None and self.detailed_edge_wr is None and \
                                         self.split_property_edge_wr is None:
-                                    raise ValueError("Unexpected %s edge rows in the %s collector." % (label, who))
+                                    raise ValueError("Unexpected %s edge rows in the %s collector: %s." % (label, who, repr(row)))
 
                                 if self.split_property_edge_wr is not None and row[1].startswith(
                                         "P"):  # Hack: knows the structure of the row.
@@ -2600,6 +2947,7 @@ def run(input_file: KGTKFiles,
             self.split_dispatcher[DATATYPE_LABEL] = self.split_datatype
             self.split_dispatcher[DESCRIPTION_LABEL] = self.split_description
             self.split_dispatcher[LABEL_LABEL] = self.split_label
+            self.split_dispatcher[REFERENCE_LABEL] = self.split_reference
             self.split_dispatcher[SITELINK_LABEL] = self.split_sitelink
             self.split_dispatcher[SITELINK_BADGE_LABEL] = self.split_sitelink
             self.split_dispatcher[SITELINK_LANGUAGE_LABEL] = self.split_sitelink
@@ -2665,6 +3013,18 @@ def run(input_file: KGTKFiles,
 
             return split
 
+        def split_reference(self, row: typing.List[str]) -> bool:
+            split: bool = False
+
+            lang: str = row[-1]  # Hack: knows the structure of the row.
+
+            if self.split_reference_wr is not None:
+                self.split_reference_wr.write(
+                    (row[0], row[1], row[2], row[3], row[5]))  # Hack: knows the structure of the row.
+                split = True
+
+            return split
+
         def split_sitelink(self, row: typing.List[str]) -> bool:
             split: bool = False
 
@@ -2692,7 +3052,7 @@ def run(input_file: KGTKFiles,
             return split
 
     try:
-        UPDATE_VERSION: str = "2022-09-20T00:17:25.216280+00:00#tJHN60BhfUeGMFYknDV0F6xAI3BBzYgM17g9xDKj/VcVskqBr2aLIUTVQPDVNzVLSUI6Cn47V4f+sYNM58+IaQ=="
+        UPDATE_VERSION: str = "2022-09-27T23:03:25.315324+00:00#KV7HtQeRqPXs1zrB6HYgmHbAg86GONZfwi/Edt6VY5uQ6OSzhJneC8HSPCvOf7tnTuPlfK37ahADcxjt0y04Rg=="
         print("kgtk import-wikidata version: %s" % UPDATE_VERSION, file=sys.stderr, flush=True)
         print("Starting main process (pid %d)." % os.getpid(), file=sys.stderr, flush=True)
         inp_path = KGTKArgumentParser.get_input_file(input_file)
@@ -2833,6 +3193,20 @@ def run(input_file: KGTKFiles,
                         description_collector_p.start()
                         print("Started the description collector process.", file=sys.stderr, flush=True)
 
+                    if split_reference_file is not None:
+                        reference_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
+                        print("The collector reference queue has been created (maxsize=%d)." % collector_q_maxsize,
+                              file=sys.stderr, flush=True)
+
+                        print("Creating the reference collector.", file=sys.stderr, flush=True)
+                        reference_collector: MyCollector = MyCollector()
+                        print("Creating the reference collector process.", file=sys.stderr, flush=True)
+                        reference_collector_p = mp.Process(target=reference_collector.run,
+                                                           args=(reference_collector_q, "reference"))
+                        print("Starting the reference collector process.", file=sys.stderr, flush=True)
+                        reference_collector_p.start()
+                        print("Started the reference collector process.", file=sys.stderr, flush=True)
+
                     if split_sitelink_file is not None:
                         sitelink_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
                         print("The collector sitelink queue has been created (maxsize=%d)." % collector_q_maxsize,
@@ -2958,6 +3332,13 @@ def run(input_file: KGTKFiles,
                 print("Sending the English label file header to the collector.", file=sys.stderr, flush=True)
                 ecq.put(("split_en_label_header", None, None, None, None, None, en_label_file_header))
                 print("Sent the English label file header to the collector.", file=sys.stderr, flush=True)
+
+            rcq = collector_q if collector_q is not None else reference_collector_q
+            if split_reference_file and rcq is not None:
+                reference_file_header = ['id', 'node1', 'label', 'node2', 'node2;wikidatatype']
+                print("Sending the reference file header to the collector.", file=sys.stderr, flush=True)
+                rcq.put(("split_reference_header", None, None, None, None, None, reference_file_header))
+                print("Sent the reference file header to the collector.", file=sys.stderr, flush=True)
 
             scq = collector_q if collector_q is not None else sitelink_collector_q
             if split_sitelink_file and scq is not None:
@@ -3152,6 +3533,16 @@ def run(input_file: KGTKFiles,
                 print('Description collector shut down is complete.', file=sys.stderr, flush=True)
             if description_collector_q is not None:
                 description_collector_q.close()
+
+            if reference_collector_q is not None:
+                print('Telling the reference collector to shut down.', file=sys.stderr, flush=True)
+                reference_collector_q.put(("shutdown", None, None, None, None, None, None))
+            if reference_collector_p is not None:
+                print('Waiting for the reference collector to shut down.', file=sys.stderr, flush=True)
+                reference_collector_p.join()
+                print('Reference collector shut down is complete.', file=sys.stderr, flush=True)
+            if reference_collector_q is not None:
+                reference_collector_q.close()
 
             if sitelink_collector_q is not None:
                 print('Telling the sitelink collector to shut down.', file=sys.stderr, flush=True)
