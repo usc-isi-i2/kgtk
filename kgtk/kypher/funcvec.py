@@ -354,7 +354,7 @@ class TopKCosineSimilarity(VirtualGraphFunction, VectorFunction):
 
     DEFAULT_K = 10
     DEFAULT_MAXK = 0
-    DEFAULT_NPROBE = 1
+    DEFAULT_NPROBE = 1 # TO DO: should we use the value from the nn index spec as the default?
 
     @staticmethod
     def initialize(vtfun, node1, k=DEFAULT_K, maxk=DEFAULT_MAXK, nprobe=DEFAULT_NPROBE):
