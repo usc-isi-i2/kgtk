@@ -1139,6 +1139,10 @@ class FaissIndex(NearestNeighborIndex):
     DEFAULT_NPROBE = 8
     MIN_TEMP_TABLE_SIZE = 2 ** 31    # 2GB, assume temp tables can be at least this big
     
+    # if true, incrementally grow the search index for more and more qcells up to a limit;
+    # this is primarily here to allow us to turn this off for debugging or memory issues:
+    REUSE_SEARCH_INDEX = True
+    
     def __init__(self, store):
         """Initialize a FAISS nearest neighbor index for the vector store 'store'.
         """
@@ -1158,6 +1162,7 @@ class FaissIndex(NearestNeighborIndex):
         self.quantizer = None
         self.search_index = None
         self.search_index_qcells = None
+        self.search_index_max_size = None
         self.compute_parameters()
 
     def compute_parameters(self):
@@ -1420,12 +1425,22 @@ class FaissIndex(NearestNeighborIndex):
         with relevant vectors retrieved from the database using the 'index.add_core' method.  It uses a fast,
         multi-threaded, heap-based search implementation by FAISS which beats anything we might create from scratch.
         """
-        if self.search_index is None or not reuse:
+        # if the index exists and 'reuse' is True, we reuse the index in a size-limited fashion, that is only
+        # if the total size occupied by the currently indexed vectors is less than the max RAM for the index;
+        # reuse speeds things up significantly (5x or more) and basically incrementally loads a full FAISS index
+        # up to the specified RAM limit:
+        if self.search_index is None or not reuse or self.search_index.ntotal > self.search_index_max_size:
             quantizer = self.get_quantizer()
             self.search_index = faiss.IndexIVFFlat(quantizer, self.vector_ndim, self.nlist, quantizer.metric_type)
             self.search_index.is_trained = True
             self.search_index.verbose = self.sql_store.loglevel >= 2
             self.search_index_qcells = set()
+            # compute a maximum number of vectors to store in the index:
+            # TO DO: factor out these memory computations into some utility functions
+            max_allowed_ram = self.index_options.get('ram') or self.DEFAULT_MAX_ALLOWED_RAM
+            max_allowed_ram *= 0.8 # safety cushion for other buffers, etc.
+            nbytes = np.zeros(1, dtype=self.FAISS_FLOAT_TYPE).nbytes
+            self.search_index_max_size = int(max_allowed_ram // (self.vector_ndim * nbytes))
         # just doing this doesn't free up memory for some reason, so we eventually run out of RAM:
         #elif not reuse:
         #    self.search_index.reset()
@@ -1435,16 +1450,13 @@ class FaissIndex(NearestNeighborIndex):
     def get_search_index_for_qcells(self, qcells):
         """Return a search index that contains (at least) all vectors of the identified 'qcells'.
         """
-        # TO DO: reuse the search index in a size-limited fashion (we can key in on index.ntotal for that), so
-        # that we only add new qcells which would speed things up across repeat queries; however, this also
-        # would make the results non-deterministic depending on how many and which qcells have been cached...
-        # ...instead, ordering inputs of a larger vector join by qcell might be a better option
-        index = self.get_search_index(reuse=False)
-        # this can speed things up but makes results unstable:
-        #index = self.get_search_index(reuse=True)
+        # NOTE: having more qcells stored in the index than asked for in 'qcells' does not affect the results,
+        # since those are the nprobe nearest neighbors from running a vector V through the quantizer, which will
+        # be the same qcells selected when V is searched against the full index with the given nprobe;
+        # TO DO: figure out what the speedup is from running multiple vectors through the search instead of 1-by-1
+        index = self.get_search_index(reuse=self.REUSE_SEARCH_INDEX)
         loaded_qcells = self.search_index_qcells
         vstore = self.vector_store
-        nprobe = 0
         for row in self.ensure_vector_array(qcells):
             for qcell in row:
                 # -1 is a FAISS code for "not found":
@@ -1458,11 +1470,6 @@ class FaissIndex(NearestNeighborIndex):
                     # we use 'add_core' which is very fast, since we already know the qcell IDs of the added vectors:
                     index.add_core(nvecs, faiss.swig_ptr(vecs), faiss.swig_ptr(vecids), faiss.swig_ptr(qcellids))
                     loaded_qcells.add(qcell)
-                    nprobe += 1
-        # IMPORTANT: by default the nprobe value of the IndexIVFFlat index is set to 1, and there is no parameter
-        # that allows us to control that value from the 'search' method, so we set it here to correspond to the
-        # number of 'qcells' we are searching
-        index.nprobe = max(nprobe, 1)
         return index
     
     def search_quantizer(self, vectors, k=None):
@@ -1484,6 +1491,9 @@ class FaissIndex(NearestNeighborIndex):
         vectors = self.ensure_vector_array(vectors)
         _, qcells = self.search_quantizer(vectors, k=nprobe)
         index = self.get_search_index_for_qcells(qcells)
+        # IMPORTANT: by default the nprobe value of the IndexIVFFlat index is set to 1, and there is no parameter
+        # that allows us to control that from the 'search' method, so we set it here to correspond to 'nprobe':
+        index.nprobe = max(nprobe or self.nprobe, 1)
         return index
     
     def search(self, vectors, k=1, nprobe=None, index=None):
