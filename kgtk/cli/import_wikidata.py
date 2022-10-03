@@ -1053,7 +1053,7 @@ def run(input_file: KGTKFiles,
     def extract_snak_wikibase_sense(snak_datavalue_value, where: str)->typing.Optional[str]:
         return extract_snak_wikibase_types(SNAK_DATATYPE_WIKIBASE_SENSE, snak_datavalue_value, where)
 
-    EXTRACT_SNAK_DATATYPE_DISPATCH = {
+    extract_snak_datatype_dispatcher = {
         SNAK_DATATYPE_COMMONSMEDIA: extract_snak_commonsmedia,
         SNAK_DATATYPE_EXTERNALID: extract_snak_externalid,
         SNAK_DATATYPE_GEOSHAPE: extract_snak_geoshape,
@@ -1081,36 +1081,40 @@ def run(input_file: KGTKFiles,
                            subprop: typing.Optional[str] = None,
                            who: str = "",
                            )-> typing.Tuple[typing.Optional[str], typing.Optional[str]]:
-        where: str = "Qnode %s prop %s %s" % (repr(qnode), repr(prop), who)
-        if subprop is not None:
-            where += " %s" % repr(subprop)
+        def where()->str:
+            # Construct an error message prefix that helps identify the JSON
+            # phrase that led to the error.
+            result: str = "Qnode %s prop %s %s" % (repr(qnode), repr(prop), who)
+            if subprop is not None:
+                result += " %s" % repr(subprop)
+            return result
 
         snak_prop: typing.Optional[str] = snak.get(MAINSNAK_PROPERTY, '')
         if len(snak_prop) == 0:
-            print("%s: SNAK without property." % (where), file=sys.stderr, flush=True)
+            print("%s: SNAK without property." % (where()), file=sys.stderr, flush=True)
             return (None, None)
 
         if subprop is None:
             if prop != snak_prop:
-                print("%s: expected property does not match SNAK property %s" % (where,
+                print("%s: expected property does not match SNAK property %s" % (where(),
                                                                                  repr(snak[MAINSNAK_PROPERTY])),
                       file=sys.stderr, flush=True)
                 return (None, None)
         else:
             if subprop != snak_prop:
-                print("%s: expected property does not match SNAK property %s" % (where,
+                print("%s: expected property does not match SNAK property %s" % (where(),
                                                                                  repr(snak[MAINSNAK_PROPERTY])),
                       file=sys.stderr, flush=True)
                 return (None, None)
         
         snak_datatype: typing.Optional[str] = snak.get(MAINSNAK_DATATYPE)
         if snak_datatype is None:
-            print("%s: SNAK is missing a DATATYPE." % (where), file=sys.stderr, flush=True)
+            print("%s: SNAK is missing a DATATYPE." % (where()), file=sys.stderr, flush=True)
             return (None, None)
 
         snak_type: typing.Optional[str] = snak.get(MAINSNAK_SNAKTYPE)
         if snak_type is None:
-            print("%s: SNAK is missing a SNAKTYPE." % (where), file=sys.stderr, flush=True)
+            print("%s: SNAK is missing a SNAKTYPE." % (where()), file=sys.stderr, flush=True)
             return (None, None)
 
         if snak_type != SNAKTYPE_VALUE:
@@ -1119,28 +1123,36 @@ def run(input_file: KGTKFiles,
         
         snak_datavalue = snak.get(MAINSNAK_DATAVALUE)
         if snak_datavalue is None:
-            raise ValueError("Qnode %s: SNAK is missing a DATAVALUE." % repr(qnode))
+            print("%s: Qnode %s: SNAK is missing a DATAVALUE." % where(), file=sys.stderr, flush=True)
+            return (None, None)
 
         snak_datavalue_type: typing.Optional[str] = snak_datavalue.get(DATAVALUE_TYPE_TAG)
         if snak_datavalue_type is None:
-            raise ValueError("SNAK datavalue is missing a TYPE.")
+            print("%s: SNAK datavalue is missing a TYPE." % where(), file=sys.stderr, flush=True)
+            return (None, None)
         
         snak_datavalue_value = snak_datavalue.get("value")
         if snak_datavalue_value is None:
-            raise ValueError("SNAK datavalue is missing a VALUE.")
+            print("%s: SNAK datavalue is missing a VALUE." % where(), file=sys.stderr, flush=True)
+            return (None, None)
 
         expected_snak_datavalue_type: typing.Optional[str] = SNAK_DATATYPE_PAIRS.get(snak_datatype)
         if expected_snak_datavalue_type is None:
-            raise ValueError ("SNAK with unexpected datatype %s and datavalue type %s" % (repr(snak_datatype),
-                                                                                          repr(snak_datavalue_type)))
+            print("%s: SNAK with unexpected datatype %s and datavalue type %s" % (where(),
+                                                                                  repr(snak_datatype),
+                                                                                  repr(snak_datavalue_type)), file=sys.stderr, flush=True)
+            return (None, None)
 
         if expected_snak_datavalue_type != snak_datavalue_type:
-            raise ValueError ("SNAK with mismatched datatype %s and datavalue type %s" % (repr(snak_datatype),
-                                                                                          repr(snak_datavalue_type)))
+            print("%s: SNAK with mismatched datatype %s and datavalue type %s" % (where(),
+                                                                                  repr(snak_datatype),
+                                                                                  repr(snak_datavalue_type)), file=sys.stderr, flush=True)
+            return (None, None)
 
-        extractor = EXTRACT_SNAK_DATATYPE_DISPATCH.get(snak_datatype)
+        extractor = extract_snak_datatype_dispatcher.get(snak_datatype)
         if extractor is None:
-            raise ValueError("SNAK with datatype %s without extractor." % repr(snak_datatype))
+            print("%s: SNAK with datatype %s without extractor." % (where(), repr(snak_datatype)), file=sys.stderr, flush=True)
+            return (None, None)
 
         kgtk_snak_value: typing.Optional[str] = extractor(snak_datavalue_value, where)
         if kgtk_snak_value is None:
