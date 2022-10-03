@@ -726,25 +726,26 @@ def run(input_file: KGTKFiles,
     }
 
     def extract_snak_commonsmedia(snak_datavalue_value, where: str)->typing.Optional[str]:
-        if isinstance(snak_datavalue_value, str):
-            return KgtkFormat.stringify(snak_datavalue_value)
+        if not isinstance(snak_datavalue_value, str):
+            print("%s: Expecting a string value for a commons media datatype." % where, file=sys.stderr, flush=True)
+            return None
 
-        print("%s: Expecting a string value for a commons media datatype." % where, file=sys.stderr, flush=True)
-        return None
+        return KgtkFormat.stringify(snak_datavalue_value)
                                                             
     def extract_snak_externalid(snak_datavalue_value, where: str)->typing.Optional[str]:
-        if isinstance(snak_datavalue_value, str):
-            return KgtkFormat.stringify(snak_datavalue_value)
+        if not isinstance(snak_datavalue_value, str):
+            print("%s: Expecting a string value for an external id datatype." % where, file=sys.stderr, flush=True)
+            return None
 
-        print("%s: Expecting a string value for an external id datatype." % where, file=sys.stderr, flush=True)
-        return None
+        return KgtkFormat.stringify(snak_datavalue_value)
+
 
     def extract_snak_geoshape(snak_datavalue_value, where: str)->typing.Optional[str]:
-        if isinstance(snak_datavalue_value, str):
-            return KgtkFormat.stringify(snak_datavalue_value)
+        if not isinstance(snak_datavalue_value, str):
+            print("%s: Expecting a string value for a geo shape datatype." % where, file=sys.stderr, flush=True)
+            return None
 
-        print("%s: Expecting a string value for a geo shape datatype." % where, file=sys.stderr, flush=True)
-        return None
+        return KgtkFormat.stringify(snak_datavalue_value)
 
     def extract_snak_globecoordinate(snak_datavalue_value, where: str)->typing.Optional[str]:
         if not isinstance(snak_datavalue_value, dict):
@@ -769,11 +770,11 @@ def run(input_file: KGTKFiles,
         return '@' + coord_lat + '/' + coord_long
 
     def extract_snak_math(snak_datavalue_value, where: str)->typing.Optional[str]:
-        if isinstance(snak_datavalue_value, str):
-            return KgtkFormat.stringify(snak_datavalue_value)
+        if not isinstance(snak_datavalue_value, str):
+            print("%s: Expecting a string value for a math datatype." % where, file=sys.stderr, flush=True)
+            return None
 
-        print("%s: Expecting a string value for a math datatype." % where, file=sys.stderr, flush=True)
-        return None
+        return KgtkFormat.stringify(snak_datavalue_value)
 
     def extract_snak_monolingual_text(snak_datavalue_value, where: str)->typing.Optional[str]:
         if not isinstance(snak_datavalue_value, dict):
@@ -793,11 +794,11 @@ def run(input_file: KGTKFiles,
         return KgtkFormat.stringify(text, language=language)
 
     def extract_snak_musical_notation(snak_datavalue_value, where: str)->typing.Optional[str]:
-        if isinstance(snak_datavalue_value, str):
-            return KgtkFormat.stringify(snak_datavalue_value)
+        if not isinstance(snak_datavalue_value, str):
+            print("%s: Expecting a string value for a musical notation datatype." % where, file=sys.stderr, flush=True)
+            return None
 
-        print("%s: Expecting a string value for a musical notation datatype." % where, file=sys.stderr, flush=True)
-        return None
+        return KgtkFormat.stringify(snak_datavalue_value)
 
     def extract_snak_quantity(snak_datavalue_value, where: str)->typing.Optional[str]:
         if not isinstance(snak_datavalue_value, dict):
@@ -824,18 +825,18 @@ def run(input_file: KGTKFiles,
         return quantity_value
 
     def extract_snak_string(snak_datavalue_value, where: str)->typing.Optional[str]:
-        if isinstance(snak_datavalue_value, str):
-            return KgtkFormat.stringify(snak_datavalue_value)
+        if not isinstance(snak_datavalue_value, str):
+            print("%s: Expecting a string value for a string datatype." % where, file=sys.stderr, flush=True)
+            return None
 
-        print("%s: Expecting a string value for a string datatype." % where, file=sys.stderr, flush=True)
-        return None
+        return KgtkFormat.stringify(snak_datavalue_value)
 
     def extract_snak_tabular_data(snak_datavalue_value, where: str)->typing.Optional[str]:
-        if isinstance(snak_datavalue_value, str):
-            return KgtkFormat.stringify(snak_datavalue_value)
+        if not isinstance(snak_datavalue_value, str):
+            print("%s: Expecting a string value for a tabular data datatype." % where, file=sys.stderr, flush=True)
+            return None
 
-        print("%s: Expecting a string value for a tabular data datatype." % where, file=sys.stderr, flush=True)
-        return None
+        return KgtkFormat.stringify(snak_datavalue_value)
 
     def extract_snak_time(snak_datavalue_value, where: str)->typing.Optional[str]:
         if not isinstance(snak_datavalue_value, dict):
@@ -864,12 +865,12 @@ def run(input_file: KGTKFiles,
         return time_value
 
     def extract_snak_url(snak_datavalue_value, where: str)->typing.Optional[str]:
-        if isinstance(snak_datavalue_value, str):
-            return KgtkFormat.stringify(snak_datavalue_value)
-
-        print("%s: Expecting a string value for a URL." % where, file=sys.stderr, flush=True)
-        return None
+        if not isinstance(snak_datavalue_value, str):
+            print("%s: Expecting a string value for a URL." % where, file=sys.stderr, flush=True)
+            return None
         
+        return KgtkFormat.stringify(snak_datavalue_value)
+
     def extract_snak_wikibase_types(snak_datatype: str, snak_datavalue_value, where: str)->typing.Optional[str]:
         expected_entity_type: typing.Optional[str] = SNAK_DATATYPE_WIKIBASE_ENTITY_TYPES.get(snak_datatype)
         if expected_entity_type is None:
