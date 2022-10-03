@@ -845,6 +845,235 @@ def run(input_file: KGTKFiles,
         SNAK_DATATYPE_WIKIBASE_SENSE: SNAK_DATAVALUE_VALUE_ENTITY_TYPE_ITEM,
     }
 
+    def extract_snak_commonsmedia(snak_datavalue_value, where: str)->typing.Optional[str]:
+        if isinstance(snak_datavalue_value, str):
+            return KgtkFormat.stringify(snak_datavalue_value)
+
+        print("%s: Expecting a string value for a commons media datatype." % where, file=sys.stderr, flush=True)
+        return None
+                                                            
+    def extract_snak_externalid(snak_datavalue_value, where: str)->typing.Optional[str]:
+        if isinstance(snak_datavalue_value, str):
+            return KgtkFormat.stringify(snak_datavalue_value)
+
+        print("%s: Expecting a string value for an external id datatype." % where, file=sys.stderr, flush=True)
+        return None
+
+    def extract_snak_geoshape(snak_datavalue_value, where: str)->typing.Optional[str]:
+        if isinstance(snak_datavalue_value, str):
+            return KgtkFormat.stringify(snak_datavalue_value)
+
+        print("%s: Expecting a string value for a geo shape datatype." % where, file=sys.stderr, flush=True)
+        return None
+
+    def extract_snak_globecoordinate(snak_datavalue_value, where: str)->typing.Optional[str]:
+        if not isinstance(snak_datavalue_value, dict):
+            print("%s: Expecting a dict for a globe coordinate." % where, file=sys.stderr, flush=True)
+            return None
+
+        # TODO: Do a better job of validating this value.
+        coord_lat: str = str(snak_datavalue_value.get('latitude', ''))
+        if len(coord_lat) == 0:
+            print("%s: Globe coordinate without latitude." % where, file=sys.stderr, flush=True)
+            return None
+
+        # TODO: Do a better job of validating this value.
+        coord_long: str = str(snak_datavalue_value.get('longitude', ''))
+        if len(coord_long) == 0:
+            print("%s: Globe coordinate without longitude." % where, file=sys.stderr, flush=True)
+            return None
+
+        # TODO: implement precision
+        # coord_precision = str(snak_datavalue_value.get('precision', ''))
+                                                            
+        return '@' + coord_lat + '/' + coord_long
+
+    def extract_snak_math(snak_datavalue_value, where: str)->typing.Optional[str]:
+        if isinstance(snak_datavalue_value, str):
+            return KgtkFormat.stringify(snak_datavalue_value)
+
+        print("%s: Expecting a string value for a math datatype." % where, file=sys.stderr, flush=True)
+        return None
+
+    def extract_snak_monolingual_text(snak_datavalue_value, where: str)->typing.Optional[str]:
+        if not isinstance(snak_datavalue_value, dict):
+            print("%s: Expecting a dict for a monolingual text." % where, file=sys.stderr, flush=True)
+            return None
+
+        text: typing.Optional[str] = snak_datavalue_value.get('text')
+        if text is None:
+            print("%s: Monolingual text without text." % where, file=sys.stderr, flush=True)
+            return None
+
+        language: typing.Optional[str] = snak_datavalue_value.get('language')
+        if language is None:
+            print("%s: Monolingual text without language." % where, file=sys.stderr, flush=True)
+            return None
+
+        return KgtkFormat.stringify(text, language=language)
+
+    def extract_snak_musical_notation(snak_datavalue_value, where: str)->typing.Optional[str]:
+        if isinstance(snak_datavalue_value, str):
+            return KgtkFormat.stringify(snak_datavalue_value)
+
+        print("%s: Expecting a string value for a musical notation datatype." % where, file=sys.stderr, flush=True)
+        return None
+
+    def extract_snak_quantity(snak_datavalue_value, where: str)->typing.Optional[str]:
+        if not isinstance(snak_datavalue_value, dict):
+            print("%s: Expecting a dict value for a quantity datatype." % where, file=sys.stderr, flush=True)
+            return None
+
+        quantity_value: typing.Optional[str] = snak_datavalue_value.get('amount')
+        if quantity_value is None:
+            print("%s: Quantity without amount." % where, file=sys.stderr, flush=True)
+            return None
+
+        if snak_datavalue_value.get('upperBound', None) or \
+           snak_datavalue_value.get('lowerBound', None):
+            lower_bound: str = snak_datavalue_value.get('lowerBound', '')
+            upper_bound: str = snak_datavalue_value.get('upperBound', '')
+            quantity_value += '[' + lower_bound + ',' + upper_bound + ']'
+
+        unitstr: typing.optional[str] = snak_datavalue_value.get('unit')
+        if len(unitstr) > 1:
+            unit: str = unitstr.split('/')[-1]
+            if unit not in ('undefined'):
+                quantity_value += unit
+
+        return quantity_value
+
+    def extract_snak_string(snak_datavalue_value, where: str)->typing.Optional[str]:
+        if isinstance(snak_datavalue_value, str):
+            return KgtkFormat.stringify(snak_datavalue_value)
+
+        print("%s: Expecting a string value for a string datatype." % where, file=sys.stderr, flush=True)
+        return None
+
+    def extract_snak_tabular_data(snak_datavalue_value, where: str)->typing.Optional[str]:
+        if isinstance(snak_datavalue_value, str):
+            return KgtkFormat.stringify(snak_datavalue_value)
+
+        print("%s: Expecting a string value for a tabular data datatype." % where, file=sys.stderr, flush=True)
+        return None
+
+    def extract_snak_time(snak_datavalue_value, where: str)->typing.Optional[str]:
+        if not isinstance(snak_datavalue_value, dict):
+            print("%s: Expecting a dict value for a time datatype." % where, file=sys.stderr, flush=True)
+            return None
+
+        if 'time' not in snak_datavalue_value:
+            print("%s: Time without time." % where, file=sys.stderr, flush=True)
+            return None
+            
+        if 'precision' not in snak_datavalue_value:
+            print("%s: Time without precision." % where, file=sys.stderr, flush=True)
+            return None
+
+        time_prefix: str
+        if snak_datavalue_value['time'][0] == '-':
+            time_prefix = "^-"
+        else:
+            time_prefix = "^"
+
+        time_date: str = snak_datavalue_value['time'][1:]
+        precision: str = str(snak_datavalue_value['precision'])
+        # calendar = val.get('calendarmodel', '').split('/')[-1]
+        time_value: str = time_prefix + time_date + '/' + precision
+
+        return time_value
+
+    def extract_snak_url(snak_datavalue_value, where: str)->typing.Optional[str]:
+        if isinstance(snak_datavalue_value, str):
+            return KgtkFormat.stringify(snak_datavalue_value)
+
+        print("%s: Expecting a string value for a URL." % where, file=sys.stderr, flush=True)
+        return None
+        
+    def extract_snak_wikibase_types(snak_datatype: str, snak_datavalue_value, where: str)->typing.Optional[str]:
+        expected_entity_type: typing.Optional[str] = SNAK_DATATYPE_WIKIBASE_ENTITY_TYPES.get(snak_datatype)
+        if expected_entity_type is None:
+            print("%s: Wikibase datatype %s is unexpected." % (where, repr(snak_datatype)), file=sys.stderr, flush=True)
+            return None
+
+        if not isinstance(snak_datavalue_value, dict):
+            # This is possible in some old lexeme records.
+            if len(snak_datavalue_value) > 0:
+                return snak_datavalue_value
+            else:
+                print("%s: Expecting a value for a wikibase entity with datatype %s." % (where, repr(snak_datatype)), file=sys.stderr, flush=True)
+                return None
+
+        entity_id: str = str(snak_datavalue_value.get(SNAK_DATAVALUE_VALUE_ID, ''))
+        if len(entity_id) > 0:
+            return entity_id
+
+        numeric_id: str = str(val.get(SNAK_DATAVALUE_VALUE_NUMERIC_ID, ''))
+        if len(numeric_id) == 0:
+            print("%s: Wikibase entity of datatype %s without entity id or numeric id." % (where, repr(snak_datatype)), file=sys.stderr, flush=True)
+            return None
+
+        entity_type: typing.Optional[str] = snak_datavalue_value.get(SNAK_DATAVALUE_VALUE_ENTITY_TYPE)
+        if entity_type is None:
+            print("%s: Wikibase entity of datatype %s without entity type." % (where, repr(snak_datatype)), file=sys.stderr, flush=True)
+            return None
+
+        if entity_type != expected_entity_type:
+            print("%s: Wikibase entity of datatype %s: expected type %s, got type %s" % (where,
+                                                                                         repr(snak_datatype),
+                                                                                         repr(expected_entity_type),
+                                                                                         repr(entity_type)), file=sys.stderr, flush=True)
+            return None
+
+        if entity_type == SNAK_DATAVALUE_VALUE_ENTITY_TYPE_ITEM:
+            return 'Q' + numeric_id
+
+        elif entity_type == SNAK_DATAVALUE_VALUE_ENTITY_TYPE_PROPERTY:
+            return 'P' + numeric_id
+                                                                
+        elif entity_type == SNAK_DATAVALUE_VALUE_ENTITY_TYPE_LEXEME:
+            return 'L' + numeric_id
+                                                                
+        else:
+            print("%s: Wikibase entity of datatype %s with unknown entity type %s" % (where, repr(snak_datatype), repr(entity_type)), file=sys.stderr, flush=True)
+            return None
+
+    def extract_snak_wikibase_form(snak_datavalue_value, where: str)->typing.Optional[str]:
+        return extract_snak_wikibase_types(SNAK_DATATYPE_WIKIBASE_FORM, snak_datavalue_value, where)
+        
+    def extract_snak_wikibase_item(snak_datavalue_value, where: str)->typing.Optional[str]:
+        return extract_snak_wikibase_types(SNAK_DATATYPE_WIKIBASE_ITEM, snak_datavalue_value, where)
+        
+    def extract_snak_wikibase_lexeme(snak_datavalue_value, where: str)->typing.Optional[str]:
+        return extract_snak_wikibase_types(SNAK_DATATYPE_WIKIBASE_LEXEME, snak_datavalue_value, where)
+        
+    def extract_snak_wikibase_property(snak_datavalue_value, where: str)->typing.Optional[str]:
+        return extract_snak_wikibase_types(SNAK_DATATYPE_WIKIBASE_PROPERTY, snak_datavalue_value, where)
+        
+    def extract_snak_wikibase_sense(snak_datavalue_value, where: str)->typing.Optional[str]:
+        return extract_snak_wikibase_types(SNAK_DATATYPE_WIKIBASE_SENSE, snak_datavalue_value, where)
+
+    EXTRACT_SNAK_DATATYPE_DISPATCH = {
+        SNAK_DATATYPE_COMMONSMEDIA: extract_snak_commonsmedia,
+        SNAK_DATATYPE_EXTERNALID: extract_snak_externalid,
+        SNAK_DATATYPE_GEOSHAPE: extract_snak_geoshape,
+        SNAK_DATATYPE_GLOBECOORDINATE: extract_snak_globecoordinate,
+        SNAK_DATATYPE_MATH: extract_snak_math,
+        SNAK_DATATYPE_MONOLINGUALTEXT: extract_snak_monolingual_text,
+        SNAK_DATATYPE_MUSICAL_NOTATION: extract_snak_musical_notation,
+        SNAK_DATATYPE_QUANTITY: extract_snak_quantity,
+        SNAK_DATATYPE_STRING: extract_snak_string,
+        SNAK_DATATYPE_TABULAR_DATA: extract_snak_tabular_data,
+        SNAK_DATATYPE_TIME: extract_snak_time,
+        SNAK_DATATYPE_URL: extract_snak_url,
+        SNAK_DATATYPE_WIKIBASE_FORM: extract_snak_wikibase_form,
+        SNAK_DATATYPE_WIKIBASE_ITEM: extract_snak_wikibase_item,
+        SNAK_DATATYPE_WIKIBASE_LEXEME: extract_snak_wikibase_lexeme,
+        SNAK_DATATYPE_WIKIBASE_PROPERTY: extract_snak_wikibase_property,
+        SNAK_DATATYPE_WIKIBASE_SENSE: extract_snak_wikibase_sense,
+        
+    }
+
     # returns: (kgtk_snak_value, wikidatatype)
     def extract_snak_value(snak: str,
                            qnode: str,
@@ -900,175 +1129,24 @@ def run(input_file: KGTKFiles,
         if snak_datavalue_value is None:
             raise ValueError("SNAK datavalue is missing a VALUE.")
 
-        if snak_datatype not in SNAK_DATATYPE_PAIRS:
+        expected_snak_datavalue_type: typing.Optional[str] = SNAK_DATATYPE_PAIRS.get(snak_datatype)
+        if expected_snak_datavalue_type is None:
             raise ValueError ("SNAK with unexpected datatype %s and datavalue type %s" % (repr(snak_datatype),
-                                                                                                    repr(snak_datavalue_type)))
-        
-        if SNAK_DATATYPE_PAIRS[snak_datatype] != snak_datavalue_type:
+                                                                                          repr(snak_datavalue_type)))
+
+        if expected_snak_datavalue_type != snak_datavalue_type:
             raise ValueError ("SNAK with mismatched datatype %s and datavalue type %s" % (repr(snak_datatype),
-                                                                                                    repr(snak_datavalue_type)))
+                                                                                          repr(snak_datavalue_type)))
 
-        if snak_datatype == SNAK_DATATYPE_COMMONSMEDIA:
-            if not isinstance(snak_datavalue_value, str):
-                raise ValueError("Expecting a string value for a commons media datatype.")
-            return KgtkFormat.stringify(snak_datavalue_value), snak_datatype
-                                                            
-        elif snak_datatype == SNAK_DATATYPE_EXTERNALID:
-            if not isinstance(snak_datavalue_value, str):
-                raise ValueError("Expecting a string value for an external id datatype.")
-            return KgtkFormat.stringify(snak_datavalue_value), snak_datatype
+        extractor = EXTRACT_SNAK_DATATYPE_DISPATCH.get(snak_datatype)
+        if extractor is None:
+            raise ValueError("SNAK with datatype %s without extractor." % repr(snak_datatype))
 
-        elif snak_datatype == SNAK_DATATYPE_GEOSHAPE:
-            if not isinstance(snak_datavalue_value, str):
-                raise ValueError("Expecting a string value for a geo shape datatype.")
-            return KgtkFormat.stringify(snak_datavalue_value), snak_datatype
-
-        elif snak_datatype == SNAK_DATATYPE_GLOBECOORDINATE:
-            if not isinstance(snak_datavalue_value, dict):
-                raise ValueError("Expecting a dict for a globe coordinate.")
-
-            # TODO: Do a better job of validating this value.
-            coord_lat: str = str(snak_datavalue_value.get('latitude', ''))
-            if len(coord_lat) == 0:
-                raise ValueError("Globe coordinate without latitude.")
-
-            # TODO: Do a better job of validating this value.
-            coord_long: str = str(snak_datavalue_value.get('longitude', ''))
-            if len(coord_long) == 0:
-                raise ValueError("Globe coordinate without longitude.")
-
-            # TODO: implement precision
-            # coord_precision = str(snak_datavalue_value.get('precision', ''))
-                                                            
-            return '@' + coord_lat + '/' + coord_long, snak_datatype
-
-        elif snak_datatype == SNAK_DATATYPE_MATH:
-            if not isinstance(snak_datavalue_value, str):
-                raise ValueError("Expecting a string value for a math datatype.")
-            return KgtkFormat.stringify(snak_datavalue_value), snak_datatype
-
-        elif snak_datatype == SNAK_DATATYPE_MONOLINGUALTEXT:
-            if not isinstance(snak_datavalue_value, dict):
-                raise ValueError("Expecting a dict for a monolingual text.")
-
-            text: typing.Optional[str] = snak_datavalue_value.get('text')
-            if text is None:
-                raise ValueError("Monolingual text without text.")
-
-            language: typing.Optional[str] = snak_datavalue_value.get('language')
-            if language is None:
-                raise ValueError("Monolingual text without language.")
-
-            return KgtkFormat.stringify(text, language=language), snak_datatype
-
-        elif snak_datatype == SNAK_DATATYPE_MUSICAL_NOTATION:
-            if not isinstance(snak_datavalue_value, str):
-                raise ValueError("Expecting a string value for a musical notation datatype.")
-            return KgtkFormat.stringify(snak_datavalue_value), snak_datatype
-
-        elif snak_datatype == SNAK_DATATYPE_QUANTITY:
-            if not isinstance(snak_datavalue_value, dict):
-                raise ValueError("Expecting a dict value for a quantity datatype.")
-
-            quantity_value: typing.Optional[str] = snak_datavalue_value.get('amount')
-            if quantity_value is None:
-                raise ValueError("Quantity without amount.")
-
-            if snak_datavalue_value.get('upperBound', None) or \
-               snak_datavalue_value.get('lowerBound', None):
-                lower_bound: str = snak_datavalue_value.get('lowerBound', '')
-                upper_bound: str = snak_datavalue_value.get('upperBound', '')
-                quantity_value += '[' + lower_bound + ',' + upper_bound + ']'
-
-            unitstr: typing.optional[str] = snak_datavalue_value.get('unit')
-            if len(unitstr) > 1:
-                unit: str = unitstr.split('/')[-1]
-                if unit not in ('undefined'):
-                    quantity_value += unit
-
-            return quantity_value, snak_datatype
-
-        elif snak_datatype == SNAK_DATATYPE_STRING:
-            if not isinstance(snak_datavalue_value, str):
-                raise ValueError("Expecting a string value for a string datatype.")
-            return KgtkFormat.stringify(snak_datavalue_value), snak_datatype
-
-        elif snak_datatype == SNAK_DATATYPE_TABULAR_DATA:
-            if not isinstance(snak_datavalue_value, str):
-                raise ValueError("Expecting a string value for a tabular data datatype.")
-            return KgtkFormat.stringify(snak_datavalue_value), snak_datatype
-
-        elif snak_datatype == SNAK_DATATYPE_TIME:
-            if not isinstance(snak_datavalue_value, dict):
-                raise ValueError("Expecting a dict value for a time datatype.")
-
-            if 'time' not in snak_datavalue_value:
-                raise ValueError("Time without time.")
-            
-            if 'precision' not in snak_datavalue_value:
-                raise ValueError("Time without precision.")
-
-            time_prefix: str
-            if snak_datavalue_value['time'][0] == '-':
-                time_prefix = "^-"
-            else:
-                time_prefix = "^"
-
-            time_date: str = snak_datavalue_value['time'][1:]
-            precision: str = str(snak_datavalue_value['precision'])
-            # calendar = val.get('calendarmodel', '').split('/')[-1]
-            time_value: str = time_prefix + time_date + '/' + precision
-
-            return time_value, snak_datatype
-
-        elif snak_datatype == SNAK_DATATYPE_URL:
-            if not isinstance(snak_datavalue_value, str):
-                raise ValueError("Expecting a string value for a URL.")
-            return KgtkFormat.stringify(snak_datavalue_value), snak_datatype
-        
-        elif snak_datatype in SNAK_DATATYPE_WIKIBASE_TYPES:
-            expected_entity_type: typing.Optional[str] = SNAK_DATATYPE_WIKIBASE_ENTITY_TYPES.get(snak_datatype)
-            if expected_entity_type is None:
-                raise ValueError("Wikibase datatype %s is unexpected." % repr(snak_datatype))
-
-            if not isinstance(snak_datavalue_value, dict):
-                # This is possible in some old lexeme records.
-                if len(snak_datavalue_value) > 0:
-                    return snak_datavalue_value, snak_datatype
-                else:
-                    raise ValueError("Expecting a value for a wikibase entity with datatype %s." % repr(snak_datatype))
-
-            entity_id: str = str(snak_datavalue_value.get(SNAK_DATAVALUE_VALUE_ID, ''))
-            if len(entity_id) > 0:
-                return entity_id, snak_datatype
-
-            numeric_id: str = str(val.get(SNAK_DATAVALUE_VALUE_NUMERIC_ID, ''))
-            if len(numeric_id) == 0:
-                raise ValueError("Wikibase entity of datatype %s without entity id or numeric id." % repr(snak_datatype))
-
-            entity_type: typing.Optional[str] = snak_datavalue_value.get(SNAK_DATAVALUE_VALUE_ENTITY_TYPE)
-            if entity_type is None:
-                raise ValueError("Wikibase entity of datatype %s without entity type." % repr(snak_datatype))
-
-            if entity_type != expected_entity_type:
-                raise ValueError("Wikibase entity of datatype %s: expected type %s, got type %s" % (repr(snak_datatype),
-                                                                                                    repr(expected_entity_type),
-                                                                                                    repr(entity_type)))
-
-            if entity_type == SNAK_DATAVALUE_VALUE_ENTITY_TYPE_ITEM:
-                return 'Q' + numeric_id, snak_datatype
-
-            elif entity_type == SNAK_DATAVALUE_VALUE_ENTITY_TYPE_PROPERTY:
-                return 'P' + numeric_id, snak_datatype
-                                                                
-            elif entity_type == SNAK_DATAVALUE_VALUE_ENTITY_TYPE_LEXEME:
-                return 'L' + numeric_id, snak_datatype
-                                                                
-            else:
-                raise ValueError("Wikibase entity of datatype %s with unknown entity type %s" % (repr(snak_datatype), repr(entity_type)))
-
+        kgtk_snak_value: typing.Optional[str] = extractor(snak_datavalue_value, where)
+        if kgtk_snak_value is None:
+            return None, None
         else:
-            raise ValueError("SNAK with unknown datatype %s" % repr(snak_datatype))
+            return kgtk_snak_value, snak_datatype
 
     collector_q: typing.Optional[pyrallel.ShmQueue] = None
     node_collector_q: typing.Optional[pyrallel.ShmQueue] = None
