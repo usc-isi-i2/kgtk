@@ -29,8 +29,6 @@ kgtk ${KGTK_FLAGS} \
      --minimal-qual-file ${TEMPDIR}/qualifiers.raw.${UNSORTED_KGTK} \
      --invalid-edge-file ${TEMPDIR}/claims.badvalue.${UNSORTED_KGTK} \
      --invalid-qual-file ${TEMPDIR}/qualifiers.badvalue.${UNSORTED_KGTK} \
-     --node-file-id-only \
-     --explode-values False \
      --all-languages \
      --alias-edges True \
      --split-alias-file ${TEMPDIR}/aliases.${UNSORTED_KGTK} \
@@ -45,6 +43,8 @@ kgtk ${KGTK_FLAGS} \
      --split-datatype-file ${TEMPDIR}/metadata.property.datatypes.${UNSORTED_KGTK} \
      --entry-type-edges True \
      --split-type-file ${TEMPDIR}/metadata.types.${UNSORTED_KGTK} \
+     --reference-edges True \
+     --reference-detail-edges True \
      --split-reference-file ${TEMPDIR}/references.raw.${UNSORTED_KGTK} \
      --sitelink-edges True \
      --sitelink-verbose-edges True \
@@ -52,15 +52,13 @@ kgtk ${KGTK_FLAGS} \
      --split-en-sitelink-file ${TEMPDIR}/sitelinks.en.raw.${UNSORTED_KGTK} \
      --value-hash-width 6 \
      --claim-id-hash-width 8 \
-     --use-kgtkwriter True \
      --use-mgzip-for-input False \
      --use-mgzip-for-output False \
      --use-shm True \
-     --procs 6 \
+     --procs 10 \
      --mapper-batch-size 5 \
      --max-size-per-mapper-queue 3 \
      --single-mapper-queue True \
-     --collect-results True \
      --collect-seperately True\
      --collector-batch-size 5 \
      --collector-queue-per-proc-size 3 \

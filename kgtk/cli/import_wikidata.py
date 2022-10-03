@@ -83,18 +83,6 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     )
 
     parser.add_argument(
-        "--collect-results",
-        nargs='?',
-        type=optional_bool,
-        dest="collect_results",
-        const=True,
-        default=False,
-        metavar="True/False",
-        help="If true, collect the results before writing to disk.  "
-             "If false, write results to disk, then concatenate. (default=%(default)s).",
-    )
-
-    parser.add_argument(
         "--collect-seperately",
         nargs='?',
         type=optional_bool,
@@ -141,15 +129,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         help='path to output node file')
 
     parser.add_argument(
-        "--edge", '--edge-file', '--detailed-edge-file',
-        action="store",
-        type=str,
-        dest="detailed_edge_file",
-        default=None,
-        help='path to output edge file with detailed data')
-
-    parser.add_argument(
-        '--minimal-edge-file',
+        "--edge", '--edge-file', '--minimal-edge-file',
         action="store",
         type=str,
         dest="minimal_edge_file",
@@ -157,31 +137,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         help='path to output edge file with minimal data')
 
     parser.add_argument(
-        "--qual", '--qual-file', '--detailed-qual-file',
-        action="store",
-        type=str,
-        dest="detailed_qual_file",
-        default=None,
-        help='path to output qualifier file with full data')
-
-    parser.add_argument(
-        '--minimal-qual-file',
+        "--qual", '--qual-file', '--minimal-qual-file',
         action="store",
         type=str,
         dest="minimal_qual_file",
         default=None,
-        help='path to output qualifier file with minimal data')
-
-    # Optionally write only the ID column to the node file.
-    parser.add_argument(
-        '--node-file-id-only',
-        nargs='?',
-        type=optional_bool,
-        dest="node_id_only",
-        const=True,
-        default=False,
-        metavar="True/False",
-        help='Option to write only the node ID in the node file. (default=%(default)s)')
+        help='path to output qual file with minimal data')
 
     # The remaining files are KGTK edge files that split out
     # special properties, removing them from the edge file.
@@ -192,6 +153,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         dest="split_alias_file",
         default=None,
         help='path to output split alias file')
+
     parser.add_argument(
         '--split-en-alias-file',
         action="store",
@@ -199,6 +161,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         dest="split_en_alias_file",
         default=None,
         help='path to output split English alias file')
+
     parser.add_argument(
         '--split-datatype-file',
         action="store",
@@ -206,6 +169,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         dest="split_datatype_file",
         default=None,
         help='path to output split datatype file')
+
     parser.add_argument(
         '--split-description-file',
         action="store",
@@ -213,6 +177,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         dest="split_description_file",
         default=None,
         help='path to output splitdescription file')
+
     parser.add_argument(
         '--split-en-description-file',
         action="store",
@@ -220,6 +185,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         dest="split_en_description_file",
         default=None,
         help='path to output split English description file')
+
     parser.add_argument(
         '--split-label-file',
         action="store",
@@ -227,6 +193,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         dest="split_label_file",
         default=None,
         help='path to output split label file')
+
     parser.add_argument(
         '--split-en-label-file',
         action="store",
@@ -234,6 +201,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         dest="split_en_label_file",
         default=None,
         help='path to output split English label file')
+
     parser.add_argument(
         '--split-reference-file',
         action="store",
@@ -241,6 +209,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         dest="split_reference_file",
         default=None,
         help='path to output split reference file')
+
     parser.add_argument(
         '--split-sitelink-file',
         action="store",
@@ -248,6 +217,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         dest="split_sitelink_file",
         default=None,
         help='path to output split sitelink file')
+
     parser.add_argument(
         '--split-en-sitelink-file',
         action="store",
@@ -255,6 +225,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         dest="split_en_sitelink_file",
         default=None,
         help='path to output split English sitelink file')
+
     parser.add_argument(
         '--split-type-file', '--split-entity-type-file',
         action="store",
@@ -302,6 +273,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         dest="lang",
         default="en",
         help='languages to extract, comma separated, default en')
+
     parser.add_argument(
         "--source",
         action="store",
@@ -309,22 +281,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         dest="source",
         default="wikidata",
         help='wikidata version number, default: wikidata')
+
     parser.add_argument(
         "--deprecated",
         action="store_true",
         dest="deprecated",
         help='option to include deprecated statements, not included by default')
-
-    parser.add_argument(
-        "--explode-values",
-        nargs='?',
-        type=optional_bool,
-        dest="explode_values",
-        const=True,
-        default=True,
-        metavar="True/False",
-        help="If true, create columns with exploded value information. (default=%(default)s).",
-    )
 
     parser.add_argument(
         "--use-python-cat",
@@ -335,39 +297,6 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         default=False,
         metavar="True/False",
         help="If true, use portable code to combine file fragments. (default=%(default)s).",
-    )
-
-    parser.add_argument(
-        "--keep-temp-files",
-        nargs='?',
-        type=optional_bool,
-        dest="keep_temp_files",
-        const=True,
-        default=False,
-        metavar="True/False",
-        help="If true, keep temporary files (for debugging). (default=%(default)s).",
-    )
-
-    parser.add_argument(
-        "--skip-processing",
-        nargs='?',
-        type=optional_bool,
-        dest="skip_processing",
-        const=True,
-        default=False,
-        metavar="True/False",
-        help="If true, skip processing the input file (for debugging). (default=%(default)s).",
-    )
-
-    parser.add_argument(
-        "--skip-merging",
-        nargs='?',
-        type=optional_bool,
-        dest="skip_merging",
-        const=True,
-        default=False,
-        metavar="True/False",
-        help="If true, skip merging temporary files (for debugging). (default=%(default)s).",
     )
 
     parser.add_argument(
@@ -434,6 +363,28 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         default=False,
         metavar="True/False",
         help="If true, create edge records for labels. (default=%(default)s).",
+    )
+
+    parser.add_argument(
+        "--reference-edges",
+        nargs='?',
+        type=optional_bool,
+        dest="reference_edges",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help="If true, create edge records for references. (default=%(default)s).",
+    )
+
+    parser.add_argument(
+        "--reference-detail-edges",
+        nargs='?',
+        type=optional_bool,
+        dest="reference_detail_edges",
+        const=True,
+        default=False,
+        metavar="True/False",
+        help="If true, create edge records for reference details. (default=%(default)s).",
     )
 
     parser.add_argument(
@@ -578,16 +529,6 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
         help='How often to report progress. (default=%(default)d)')
 
     parser.add_argument(
-        "--use-kgtkwriter",
-        nargs='?',
-        type=optional_bool,
-        dest="use_kgtkwriter",
-        const=True,
-        default=True,
-        metavar="True/False",
-        help="If true, use KgtkWriter instead of csv.writer. (default=%(default)s).")
-
-    parser.add_argument(
         "--use-mgzip-for-input",
         nargs='?',
         type=optional_bool,
@@ -696,14 +637,11 @@ def run(input_file: KGTKFiles,
         procs: int,
         max_size_per_mapper_queue: int,
         node_file: typing.Optional[str],
-        detailed_edge_file: typing.Optional[str],
         minimal_edge_file: typing.Optional[str],
-        detailed_qual_file: typing.Optional[str],
         minimal_qual_file: typing.Optional[str],
         invalid_edge_file: typing.Optional[str],
         invalid_qual_file: typing.Optional[str],
 
-        node_id_only: bool,
         split_alias_file: typing.Optional[str],
         split_en_alias_file: typing.Optional[str],
         split_datatype_file: typing.Optional[str],
@@ -723,17 +661,15 @@ def run(input_file: KGTKFiles,
         lang: str,
         source: str,
         deprecated: bool,
-        explode_values: bool,
         use_python_cat: bool,
-        keep_temp_files: bool,
-        skip_processing: bool,
-        skip_merging: bool,
         interleave: bool,
         entry_type_edges: bool,
         alias_edges: bool,
         datatype_edges: bool,
         descr_edges: bool,
         label_edges: bool,
+        reference_edges: bool,
+        reference_detail_edges: bool,
         sitelink_edges: bool,
         sitelink_verbose_edges: bool,
         sitelink_verbose_qualifiers: bool,
@@ -746,7 +682,6 @@ def run(input_file: KGTKFiles,
         fail_if_missing: bool,
         all_languages: bool,
         warn_if_missing: bool,
-        collect_results: bool,
         collect_seperately: bool,
         collector_queue_per_proc_size: int,
         progress_interval: int,
@@ -754,7 +689,6 @@ def run(input_file: KGTKFiles,
         mapper_batch_size: int,
         collector_batch_size: int,
         single_mapper_queue: bool,
-        use_kgtkwriter: bool,
         use_mgzip_for_input: bool,
         use_mgzip_for_output: bool,
         mgzip_threads_for_input: int,
@@ -769,7 +703,6 @@ def run(input_file: KGTKFiles,
     # import modules locally
     import bz2
     import simplejson as json
-    import csv
     import hashlib
     import io
     import multiprocessing as mp
@@ -844,9 +777,12 @@ def run(input_file: KGTKFiles,
     SNAK_DATATYPE_EXTERNALID: str = "external-id"
     SNAK_DATATYPE_GEOSHAPE: str = "geo-shape"
     SNAK_DATATYPE_GLOBECOORDINATE: str = "globe-coordinate"
+    SNAK_DATATYPE_MATH: str = "math"
     SNAK_DATATYPE_MONOLINGUALTEXT: str = "monolingualtext"
+    SNAK_DATATYPE_MUSICAL_NOTATION: str = "musical-notation"
     SNAK_DATATYPE_QUANTITY: str = "quantity"
     SNAK_DATATYPE_STRING: str = "string"
+    SNAK_DATATYPE_TABULAR_DATA: str = "tabular-data"
     SNAK_DATATYPE_TIME: str = "time"
     SNAK_DATATYPE_URL: str = "url"
     SNAK_DATATYPE_WIKIBASE_FORM: str = "wikibase-form"
@@ -876,9 +812,12 @@ def run(input_file: KGTKFiles,
         SNAK_DATATYPE_EXTERNALID: SNAK_DATAVALUE_TYPE_STRING,
         SNAK_DATATYPE_GEOSHAPE: SNAK_DATAVALUE_TYPE_STRING,
         SNAK_DATATYPE_GLOBECOORDINATE: SNAK_DATAVALUE_TYPE_GLOBECOORDINATE,
+        SNAK_DATATYPE_MATH: SNAK_DATAVALUE_TYPE_STRING,
         SNAK_DATATYPE_MONOLINGUALTEXT: SNAK_DATAVALUE_TYPE_MONOLINGUALTEXT,
+        SNAK_DATATYPE_MUSICAL_NOTATION: SNAK_DATAVALUE_TYPE_STRING,
         SNAK_DATATYPE_QUANTITY: SNAK_DATAVALUE_TYPE_QUANTITY,
         SNAK_DATATYPE_STRING: SNAK_DATAVALUE_TYPE_STRING,
+        SNAK_DATATYPE_TABULAR_DATA: SNAK_DATAVALUE_TYPE_STRING,
         SNAK_DATATYPE_TIME: SNAK_DATAVALUE_TYPE_TIME,
         SNAK_DATATYPE_URL: SNAK_DATAVALUE_TYPE_STRING,
         SNAK_DATATYPE_WIKIBASE_FORM: SNAK_DATAVALUE_TYPE_WIKIBASE_ENTITYID,
@@ -906,23 +845,277 @@ def run(input_file: KGTKFiles,
         SNAK_DATATYPE_WIKIBASE_SENSE: SNAK_DATAVALUE_VALUE_ENTITY_TYPE_ITEM,
     }
 
+    def extract_snak_commonsmedia(snak_datavalue_value, where: str)->typing.Optional[str]:
+        if isinstance(snak_datavalue_value, str):
+            return KgtkFormat.stringify(snak_datavalue_value)
+
+        print("%s: Expecting a string value for a commons media datatype." % where, file=sys.stderr, flush=True)
+        return None
+                                                            
+    def extract_snak_externalid(snak_datavalue_value, where: str)->typing.Optional[str]:
+        if isinstance(snak_datavalue_value, str):
+            return KgtkFormat.stringify(snak_datavalue_value)
+
+        print("%s: Expecting a string value for an external id datatype." % where, file=sys.stderr, flush=True)
+        return None
+
+    def extract_snak_geoshape(snak_datavalue_value, where: str)->typing.Optional[str]:
+        if isinstance(snak_datavalue_value, str):
+            return KgtkFormat.stringify(snak_datavalue_value)
+
+        print("%s: Expecting a string value for a geo shape datatype." % where, file=sys.stderr, flush=True)
+        return None
+
+    def extract_snak_globecoordinate(snak_datavalue_value, where: str)->typing.Optional[str]:
+        if not isinstance(snak_datavalue_value, dict):
+            print("%s: Expecting a dict for a globe coordinate." % where, file=sys.stderr, flush=True)
+            return None
+
+        # TODO: Do a better job of validating this value.
+        coord_lat: str = str(snak_datavalue_value.get('latitude', ''))
+        if len(coord_lat) == 0:
+            print("%s: Globe coordinate without latitude." % where, file=sys.stderr, flush=True)
+            return None
+
+        # TODO: Do a better job of validating this value.
+        coord_long: str = str(snak_datavalue_value.get('longitude', ''))
+        if len(coord_long) == 0:
+            print("%s: Globe coordinate without longitude." % where, file=sys.stderr, flush=True)
+            return None
+
+        # TODO: implement precision
+        # coord_precision = str(snak_datavalue_value.get('precision', ''))
+                                                            
+        return '@' + coord_lat + '/' + coord_long
+
+    def extract_snak_math(snak_datavalue_value, where: str)->typing.Optional[str]:
+        if isinstance(snak_datavalue_value, str):
+            return KgtkFormat.stringify(snak_datavalue_value)
+
+        print("%s: Expecting a string value for a math datatype." % where, file=sys.stderr, flush=True)
+        return None
+
+    def extract_snak_monolingual_text(snak_datavalue_value, where: str)->typing.Optional[str]:
+        if not isinstance(snak_datavalue_value, dict):
+            print("%s: Expecting a dict for a monolingual text." % where, file=sys.stderr, flush=True)
+            return None
+
+        text: typing.Optional[str] = snak_datavalue_value.get('text')
+        if text is None:
+            print("%s: Monolingual text without text." % where, file=sys.stderr, flush=True)
+            return None
+
+        language: typing.Optional[str] = snak_datavalue_value.get('language')
+        if language is None:
+            print("%s: Monolingual text without language." % where, file=sys.stderr, flush=True)
+            return None
+
+        return KgtkFormat.stringify(text, language=language)
+
+    def extract_snak_musical_notation(snak_datavalue_value, where: str)->typing.Optional[str]:
+        if isinstance(snak_datavalue_value, str):
+            return KgtkFormat.stringify(snak_datavalue_value)
+
+        print("%s: Expecting a string value for a musical notation datatype." % where, file=sys.stderr, flush=True)
+        return None
+
+    def extract_snak_quantity(snak_datavalue_value, where: str)->typing.Optional[str]:
+        if not isinstance(snak_datavalue_value, dict):
+            print("%s: Expecting a dict value for a quantity datatype." % where, file=sys.stderr, flush=True)
+            return None
+
+        quantity_value: typing.Optional[str] = snak_datavalue_value.get('amount')
+        if quantity_value is None:
+            print("%s: Quantity without amount." % where, file=sys.stderr, flush=True)
+            return None
+
+        if snak_datavalue_value.get('upperBound', None) or \
+           snak_datavalue_value.get('lowerBound', None):
+            lower_bound: str = snak_datavalue_value.get('lowerBound', '')
+            upper_bound: str = snak_datavalue_value.get('upperBound', '')
+            quantity_value += '[' + lower_bound + ',' + upper_bound + ']'
+
+        unitstr: typing.optional[str] = snak_datavalue_value.get('unit')
+        if len(unitstr) > 1:
+            unit: str = unitstr.split('/')[-1]
+            if unit not in ('undefined'):
+                quantity_value += unit
+
+        return quantity_value
+
+    def extract_snak_string(snak_datavalue_value, where: str)->typing.Optional[str]:
+        if isinstance(snak_datavalue_value, str):
+            return KgtkFormat.stringify(snak_datavalue_value)
+
+        print("%s: Expecting a string value for a string datatype." % where, file=sys.stderr, flush=True)
+        return None
+
+    def extract_snak_tabular_data(snak_datavalue_value, where: str)->typing.Optional[str]:
+        if isinstance(snak_datavalue_value, str):
+            return KgtkFormat.stringify(snak_datavalue_value)
+
+        print("%s: Expecting a string value for a tabular data datatype." % where, file=sys.stderr, flush=True)
+        return None
+
+    def extract_snak_time(snak_datavalue_value, where: str)->typing.Optional[str]:
+        if not isinstance(snak_datavalue_value, dict):
+            print("%s: Expecting a dict value for a time datatype." % where, file=sys.stderr, flush=True)
+            return None
+
+        if 'time' not in snak_datavalue_value:
+            print("%s: Time without time." % where, file=sys.stderr, flush=True)
+            return None
+            
+        if 'precision' not in snak_datavalue_value:
+            print("%s: Time without precision." % where, file=sys.stderr, flush=True)
+            return None
+
+        time_prefix: str
+        if snak_datavalue_value['time'][0] == '-':
+            time_prefix = "^-"
+        else:
+            time_prefix = "^"
+
+        time_date: str = snak_datavalue_value['time'][1:]
+        precision: str = str(snak_datavalue_value['precision'])
+        # calendar = val.get('calendarmodel', '').split('/')[-1]
+        time_value: str = time_prefix + time_date + '/' + precision
+
+        return time_value
+
+    def extract_snak_url(snak_datavalue_value, where: str)->typing.Optional[str]:
+        if isinstance(snak_datavalue_value, str):
+            return KgtkFormat.stringify(snak_datavalue_value)
+
+        print("%s: Expecting a string value for a URL." % where, file=sys.stderr, flush=True)
+        return None
+        
+    def extract_snak_wikibase_types(snak_datatype: str, snak_datavalue_value, where: str)->typing.Optional[str]:
+        expected_entity_type: typing.Optional[str] = SNAK_DATATYPE_WIKIBASE_ENTITY_TYPES.get(snak_datatype)
+        if expected_entity_type is None:
+            print("%s: Wikibase datatype %s is unexpected." % (where, repr(snak_datatype)), file=sys.stderr, flush=True)
+            return None
+
+        if not isinstance(snak_datavalue_value, dict):
+            # This is possible in some old lexeme records.
+            if len(snak_datavalue_value) > 0:
+                return snak_datavalue_value
+            else:
+                print("%s: Expecting a value for a wikibase entity with datatype %s." % (where, repr(snak_datatype)), file=sys.stderr, flush=True)
+                return None
+
+        entity_id: str = str(snak_datavalue_value.get(SNAK_DATAVALUE_VALUE_ID, ''))
+        if len(entity_id) > 0:
+            return entity_id
+
+        numeric_id: str = str(val.get(SNAK_DATAVALUE_VALUE_NUMERIC_ID, ''))
+        if len(numeric_id) == 0:
+            print("%s: Wikibase entity of datatype %s without entity id or numeric id." % (where, repr(snak_datatype)), file=sys.stderr, flush=True)
+            return None
+
+        entity_type: typing.Optional[str] = snak_datavalue_value.get(SNAK_DATAVALUE_VALUE_ENTITY_TYPE)
+        if entity_type is None:
+            print("%s: Wikibase entity of datatype %s without entity type." % (where, repr(snak_datatype)), file=sys.stderr, flush=True)
+            return None
+
+        if entity_type != expected_entity_type:
+            print("%s: Wikibase entity of datatype %s: expected type %s, got type %s" % (where,
+                                                                                         repr(snak_datatype),
+                                                                                         repr(expected_entity_type),
+                                                                                         repr(entity_type)), file=sys.stderr, flush=True)
+            return None
+
+        if entity_type == SNAK_DATAVALUE_VALUE_ENTITY_TYPE_ITEM:
+            return 'Q' + numeric_id
+
+        elif entity_type == SNAK_DATAVALUE_VALUE_ENTITY_TYPE_PROPERTY:
+            return 'P' + numeric_id
+                                                                
+        elif entity_type == SNAK_DATAVALUE_VALUE_ENTITY_TYPE_LEXEME:
+            return 'L' + numeric_id
+                                                                
+        else:
+            print("%s: Wikibase entity of datatype %s with unknown entity type %s" % (where, repr(snak_datatype), repr(entity_type)), file=sys.stderr, flush=True)
+            return None
+
+    def extract_snak_wikibase_form(snak_datavalue_value, where: str)->typing.Optional[str]:
+        return extract_snak_wikibase_types(SNAK_DATATYPE_WIKIBASE_FORM, snak_datavalue_value, where)
+        
+    def extract_snak_wikibase_item(snak_datavalue_value, where: str)->typing.Optional[str]:
+        return extract_snak_wikibase_types(SNAK_DATATYPE_WIKIBASE_ITEM, snak_datavalue_value, where)
+        
+    def extract_snak_wikibase_lexeme(snak_datavalue_value, where: str)->typing.Optional[str]:
+        return extract_snak_wikibase_types(SNAK_DATATYPE_WIKIBASE_LEXEME, snak_datavalue_value, where)
+        
+    def extract_snak_wikibase_property(snak_datavalue_value, where: str)->typing.Optional[str]:
+        return extract_snak_wikibase_types(SNAK_DATATYPE_WIKIBASE_PROPERTY, snak_datavalue_value, where)
+        
+    def extract_snak_wikibase_sense(snak_datavalue_value, where: str)->typing.Optional[str]:
+        return extract_snak_wikibase_types(SNAK_DATATYPE_WIKIBASE_SENSE, snak_datavalue_value, where)
+
+    extract_snak_datatype_dispatcher = {
+        SNAK_DATATYPE_COMMONSMEDIA: extract_snak_commonsmedia,
+        SNAK_DATATYPE_EXTERNALID: extract_snak_externalid,
+        SNAK_DATATYPE_GEOSHAPE: extract_snak_geoshape,
+        SNAK_DATATYPE_GLOBECOORDINATE: extract_snak_globecoordinate,
+        SNAK_DATATYPE_MATH: extract_snak_math,
+        SNAK_DATATYPE_MONOLINGUALTEXT: extract_snak_monolingual_text,
+        SNAK_DATATYPE_MUSICAL_NOTATION: extract_snak_musical_notation,
+        SNAK_DATATYPE_QUANTITY: extract_snak_quantity,
+        SNAK_DATATYPE_STRING: extract_snak_string,
+        SNAK_DATATYPE_TABULAR_DATA: extract_snak_tabular_data,
+        SNAK_DATATYPE_TIME: extract_snak_time,
+        SNAK_DATATYPE_URL: extract_snak_url,
+        SNAK_DATATYPE_WIKIBASE_FORM: extract_snak_wikibase_form,
+        SNAK_DATATYPE_WIKIBASE_ITEM: extract_snak_wikibase_item,
+        SNAK_DATATYPE_WIKIBASE_LEXEME: extract_snak_wikibase_lexeme,
+        SNAK_DATATYPE_WIKIBASE_PROPERTY: extract_snak_wikibase_property,
+        SNAK_DATATYPE_WIKIBASE_SENSE: extract_snak_wikibase_sense,
+        
+    }
+
+    # returns: (kgtk_snak_value, wikidatatype)
     def extract_snak_value(snak: str,
-                           expected_prop: typing.Optional[str] = None)-> typing.Tuple[str, str]:
+                           qnode: str,
+                           prop: str,
+                           subprop: typing.Optional[str] = None,
+                           who: str = "",
+                           )-> typing.Tuple[typing.Optional[str], typing.Optional[str]]:
+        def where()->str:
+            # Construct an error message prefix that helps identify the JSON
+            # phrase that led to the error.
+            result: str = "Qnode %s prop %s %s" % (repr(qnode), repr(prop), who)
+            if subprop is not None:
+                result += " %s" % repr(subprop)
+            return result
+
         snak_prop: typing.Optional[str] = snak.get(MAINSNAK_PROPERTY, '')
         if len(snak_prop) == 0:
-            raise ValueError("SNAK without property.")
+            print("%s: SNAK without property." % (where()), file=sys.stderr, flush=True)
+            return (None, None)
 
-        if expected_prop is not None and expected_prop != snak_prop:
-            raise ValueError("Expected property %s does not match SNAK property %s" % (repr(expected_prop),
-                                                                                       repr(snak[MAINSNAK_PROPERTY])))
+        if subprop is None:
+            if prop != snak_prop:
+                print("%s: expected property does not match SNAK property %s" % (where(),
+                                                                                 repr(snak[MAINSNAK_PROPERTY])),
+                      file=sys.stderr, flush=True)
+                return (None, None)
+        else:
+            if subprop != snak_prop:
+                print("%s: expected property does not match SNAK property %s" % (where(),
+                                                                                 repr(snak[MAINSNAK_PROPERTY])),
+                      file=sys.stderr, flush=True)
+                return (None, None)
         
         snak_datatype: typing.Optional[str] = snak.get(MAINSNAK_DATATYPE)
         if snak_datatype is None:
-            raise ValueError("SNAK is missing a DATATYPE.")
+            print("%s: SNAK is missing a DATATYPE." % (where()), file=sys.stderr, flush=True)
+            return (None, None)
 
         snak_type: typing.Optional[str] = snak.get(MAINSNAK_SNAKTYPE)
         if snak_type is None:
-            raise ValueError("SNAK is missing a SNAKTYPE.")
+            print("%s: SNAK is missing a SNAKTYPE." % (where()), file=sys.stderr, flush=True)
+            return (None, None)
 
         if snak_type != SNAKTYPE_VALUE:
             # Process somevalue and novalue:
@@ -930,167 +1123,42 @@ def run(input_file: KGTKFiles,
         
         snak_datavalue = snak.get(MAINSNAK_DATAVALUE)
         if snak_datavalue is None:
-            raise ValueError("SNAK is missing a DATAVALUE.")
+            print("%s: Qnode %s: SNAK is missing a DATAVALUE." % where(), file=sys.stderr, flush=True)
+            return (None, None)
 
         snak_datavalue_type: typing.Optional[str] = snak_datavalue.get(DATAVALUE_TYPE_TAG)
         if snak_datavalue_type is None:
-            raise ValueError("SNAK datavalue is missing a TYPE.")
+            print("%s: SNAK datavalue is missing a TYPE." % where(), file=sys.stderr, flush=True)
+            return (None, None)
         
         snak_datavalue_value = snak_datavalue.get("value")
         if snak_datavalue_value is None:
-            raise ValueError("SNAK datavalue is missing a VALUE.")
+            print("%s: SNAK datavalue is missing a VALUE." % where(), file=sys.stderr, flush=True)
+            return (None, None)
 
-        if snak_datatype not in SNAK_DATATYPE_PAIRS:
-            raise ValueError ("SNAK with unexpected datatype %s and datavalue type %s" % (repr(snak_datatype),
-                                                                                                    repr(snak_datavalue_type)))
-        
-        if SNAK_DATATYPE_PAIRS[snak_datatype] != snak_datavalue_type:
-            raise ValueError ("SNAK with mismatched datatype %s and datavalue type %s" % (repr(snak_datatype),
-                                                                                                    repr(snak_datavalue_type)))
+        expected_snak_datavalue_type: typing.Optional[str] = SNAK_DATATYPE_PAIRS.get(snak_datatype)
+        if expected_snak_datavalue_type is None:
+            print("%s: SNAK with unexpected datatype %s and datavalue type %s" % (where(),
+                                                                                  repr(snak_datatype),
+                                                                                  repr(snak_datavalue_type)), file=sys.stderr, flush=True)
+            return (None, None)
 
-        if snak_datatype == SNAK_DATATYPE_COMMONSMEDIA:
-            if not isinstance(snak_datavalue_value, str):
-                raise ValueError("Expecting a string value for a commons media datatype.")
-            return KgtkFormat.stringify(snak_datavalue_value), snak_datatype
-                                                            
-        elif snak_datatype == SNAK_DATATYPE_EXTERNALID:
-            if not isinstance(snak_datavalue_value, str):
-                raise ValueError("Expecting a string value for an external id datatype.")
-            return KgtkFormat.stringify(snak_datavalue_value), snak_datatype
+        if expected_snak_datavalue_type != snak_datavalue_type:
+            print("%s: SNAK with mismatched datatype %s and datavalue type %s" % (where(),
+                                                                                  repr(snak_datatype),
+                                                                                  repr(snak_datavalue_type)), file=sys.stderr, flush=True)
+            return (None, None)
 
-        elif snak_datatype == SNAK_DATATYPE_GEOSHAPE:
-            if not isinstance(snak_datavalue_value, str):
-                raise ValueError("Expecting a string value for a geo shape datatype.")
-            return KgtkFormat.stringify(snak_datavalue_value), snak_datatype
+        extractor = extract_snak_datatype_dispatcher.get(snak_datatype)
+        if extractor is None:
+            print("%s: SNAK with datatype %s without extractor." % (where(), repr(snak_datatype)), file=sys.stderr, flush=True)
+            return (None, None)
 
-        elif snak_datatype == SNAK_DATATYPE_GLOBECOORDINATE:
-            if not isinstance(snak_datavalue_value, dict):
-                raise ValueError("Expecting a dict for a globe coordinate.")
-
-            # TODO: Do a better job of validating this value.
-            coord_lat: str = str(snak_datavalue_value.get('latitude', ''))
-            if len(coord_lat) == 0:
-                raise ValueError("Globe coordinate without latitude.")
-
-            # TODO: Do a better job of validating this value.
-            coord_long: str = str(snak_datavalue_value.get('longitude', ''))
-            if len(coord_long) == 0:
-                raise ValueError("Globe coordinate without longitude.")
-
-            # TODO: implement precision
-            # coord_precision = str(snak_datavalue_value.get('precision', ''))
-                                                            
-            return '@' + coord_lat + '/' + coord_long, snak_datatype
-
-        elif snak_datatype == SNAK_DATATYPE_MONOLINGUALTEXT:
-            if not isinstance(snak_datavalue_value, dict):
-                raise ValueError("Expecting a dict for a monolingual text.")
-
-            text: typing.Optional[str] = snak_datavalue_value.get('text')
-            if text is None:
-                raise ValueError("Monolingual text without text.")
-
-            language: typing.Optional[str] = snak_datavalue_value.get('language')
-            if language is None:
-                raise ValueError("Monolingual text without language.")
-
-            return KgtkFormat.stringify(text, language=language), snak_datatype
-
-        elif snak_datatype == SNAK_DATATYPE_QUANTITY:
-            if not isinstance(snak_datavalue_value, dict):
-                raise ValueError("Expecting a dict value for a quantity datatype.")
-
-            quantity_value: typing.Optional[str] = snak_datavalue_value.get('amount')
-            if quantity_value is None:
-                raise ValueError("Quantity without amount.")
-
-            if snak_datavalue_value.get('upperBound', None) or \
-               snak_datavalue_value.get('lowerBound', None):
-                lower_bound: str = snak_datavalue_value.get('lowerBound', '')
-                upper_bound: str = snak_datavalue_value.get('upperBound', '')
-                quantity_value += '[' + lower_bound + ',' + upper_bound + ']'
-
-            if len(snak_datavalue_value.get('unit')) > 1:
-                quantity_value += snak_datavalue_value.get('unit').split('/')[-1]
-
-            return quantity_value, snak_datatype
-
-        elif snak_datatype == SNAK_DATATYPE_STRING:
-            if not isinstance(snak_datavalue_value, str):
-                raise ValueError("Expecting a string value for a string datatype.")
-            return KgtkFormat.stringify(snak_datavalue_value), snak_datatype
-
-        elif snak_datatype == SNAK_DATATYPE_TIME:
-            if not isinstance(snak_datavalue_value, dict):
-                raise ValueError("Expecting a dict value for a time datatype.")
-
-            if 'time' not in snak_datavalue_value:
-                raise ValueError("Time without time.")
-            
-            if 'precision' not in snak_datavalue_value:
-                raise ValueError("Time without precision.")
-
-            time_prefix: str
-            if snak_datavalue_value['time'][0] == '-':
-                time_prefix = "^-"
-            else:
-                time_prefix = "^"
-
-            time_date: str = snak_datavalue_value['time'][1:]
-            precision: str = str(snak_datavalue_value['precision'])
-            # calendar = val.get('calendarmodel', '').split('/')[-1]
-            time_value: str = time_prefix + time_date + '/' + precision
-
-            return time_value, snak_datatype
-
-        elif snak_datatype == SNAK_DATATYPE_URL:
-            if not isinstance(snak_datavalue_value, str):
-                raise ValueError("Expecting a string value for a URL.")
-            return KgtkFormat.stringify(snak_datavalue_value), snak_datatype
-        
-        elif snak_datatype in SNAK_DATATYPE_WIKIBASE_TYPES:
-            expected_entity_type: typing.Optional[str] = SNAK_DATATYPE_WIKIBASE_ENTITY_TYPES.get(snak_datatype)
-            if expected_entity_type is None:
-                raise ValueError("Wikibase datatype %s is unexpected." % repr(snak_datatype))
-
-            if not isinstance(snak_datavalue_value, dict):
-                # This is possible in some old lexeme records.
-                if len(snak_datavalue_value) > 0:
-                    return snak_datavalue_value, snak_datatype
-                else:
-                    raise ValueError("Expecting a value for a wikibase entity with datatype %s." % repr(snak_datatype))
-
-            entity_id: str = str(snak_datavalue_value.get(SNAK_DATAVALUE_VALUE_ID, ''))
-            if len(entity_id) > 0:
-                return entity_id, snak_datatype
-
-            numeric_id: str = str(val.get(SNAK_DATAVALUE_VALUE_NUMERIC_ID, ''))
-            if len(numeric_id) == 0:
-                raise ValueError("Wikibase entity of datatype %s without entity id or numeric id." % repr(snak_datatype))
-
-            entity_type: typing.Optional[str] = snak_datavalue_value.get(SNAK_DATAVALUE_VALUE_ENTITY_TYPE)
-            if entity_type is None:
-                raise ValueError("Wikibase entity of datatype %s without entity type." % repr(snak_datatype))
-
-            if entity_type != expected_entity_type:
-                raise ValueError("Wikibase entity of datatype %s: expected type %s, got type %s" % (repr(snak_datatype),
-                                                                                                    repr(expected_entity_type),
-                                                                                                    repr(entity_type)))
-
-            if entity_type == SNAK_DATAVALUE_VALUE_ENTITY_TYPE_ITEM:
-                return 'Q' + numeric_id, snak_datatype
-
-            elif entity_type == SNAK_DATAVALUE_VALUE_ENTITY_TYPE_PROPERTY:
-                return 'P' + numeric_id, snak_datatype
-                                                                
-            elif entity_type == SNAK_DATAVALUE_VALUE_ENTITY_TYPE_LEXEME:
-                return 'L' + numeric_id, snak_datatype
-                                                                
-            else:
-                raise ValueError("Wikibase entity of datatype %s with unknown entity type %s" % (repr(snak_datatype), repr(entity_type)))
-
+        kgtk_snak_value: typing.Optional[str] = extractor(snak_datavalue_value, where)
+        if kgtk_snak_value is None:
+            return None, None
         else:
-            raise ValueError("SNAK with unknown datatype %s" % repr(snak_datatype))
+            return kgtk_snak_value, snak_datatype
 
     collector_q: typing.Optional[pyrallel.ShmQueue] = None
     node_collector_q: typing.Optional[pyrallel.ShmQueue] = None
@@ -1100,6 +1168,7 @@ def run(input_file: KGTKFiles,
     invalid_qual_collector_q: typing.Optional[pyrallel.ShmQueue] = None
 
     description_collector_q: typing.Optional[pyrallel.ShmQueue] = None
+    reference_collector_q: typing.Optional[pyrallel.ShmQueue] = None
     sitelink_collector_q: typing.Optional[pyrallel.ShmQueue] = None
 
     mp.set_start_method("fork")
@@ -1113,62 +1182,7 @@ def run(input_file: KGTKFiles,
             self.cnt = 0
             self.write_mode = 'w'
 
-            self.node_f = None
-            if node_file and not collect_results:
-                self.node_f = open(node_file + '_{}'.format(self._idx), self.write_mode, newline='')
-                self.node_wr = csv.writer(
-                    self.node_f,
-                    quoting=csv.QUOTE_NONE,
-                    delimiter="\t",
-                    escapechar="\n",
-                    quotechar='',
-                    lineterminator=csv_line_terminator)
-
-            self.edge_f = None
-            if detailed_edge_file and not collect_results:
-                self.edge_f = open(detailed_edge_file + '_{}'.format(self._idx), self.write_mode, newline='')
-                self.edge_wr = csv.writer(
-                    self.edge_f,
-                    quoting=csv.QUOTE_NONE,
-                    delimiter="\t",
-                    escapechar="\n",
-                    quotechar='',
-                    lineterminator=csv_line_terminator)
-
-            self.qual_f = None
-            if detailed_qual_file and not collect_results:
-                self.qual_f = open(detailed_qual_file + '_{}'.format(self._idx), self.write_mode, newline='')
-                self.qual_wr = csv.writer(
-                    self.qual_f,
-                    quoting=csv.QUOTE_NONE,
-                    delimiter="\t",
-                    escapechar="\n",
-                    quotechar='',
-                    lineterminator=csv_line_terminator)
-
-            self.invalid_edge_f = None
-            if invalid_edge_file and not collect_results:
-                self.invalid_edge_f = open(invalid_edge_file + '_{}'.format(self._idx), self.write_mode, newline='')
-                self.invalid_edge_wr = csv.writer(
-                    self.invalid_edge_f,
-                    quoting=csv.QUOTE_NONE,
-                    delimiter="\t",
-                    escapechar="\n",
-                    quotechar='',
-                    lineterminator=csv_line_terminator)
-
-            self.invalid_qual_f = None
-            if invalid_qual_file and not collect_results:
-                self.invalid_qual_f = open(invalid_qual_file + '_{}'.format(self._idx), self.write_mode, newline='')
-                self.invalid_qual_wr = csv.writer(
-                    self.invalid_qual_f,
-                    quoting=csv.QUOTE_NONE,
-                    delimiter="\t",
-                    escapechar="\n",
-                    quotechar='',
-                    lineterminator=csv_line_terminator)
-
-            if collect_results and collector_batch_size > 1:
+            if collector_batch_size > 1:
                 self.collector_batch_cnt = 0
                 self.collector_nrows_batch = []
                 self.collector_erows_batch = []
@@ -1189,99 +1203,65 @@ def run(input_file: KGTKFiles,
 
         def exit(self, *args, **kwargs):
             print("Exiting worker process {} (pid {}).".format(self._idx, os.getpid()), file=sys.stderr, flush=True)
-            if collect_results:
-                if collector_batch_size > 1:
-                    if len(self.collector_nrows_batch) > 0 or \
-                            len(self.collector_erows_batch) > 0 or \
-                            len(self.collector_qrows_batch) > 0 or \
-                            len(self.collector_invalid_erows_batch) > 0 or \
-                            len(self.collector_invalid_qrows_batch) > 0 or \
-                            len(self.collector_description_erows_batch) > 0 or \
-                            len(self.collector_reference_erows_batch) > 0 or \
-                            len(self.collector_sitelink_erows_batch) > 0:
+            if collector_batch_size > 1:
+                if len(self.collector_nrows_batch) > 0 or \
+                   len(self.collector_erows_batch) > 0 or \
+                   len(self.collector_qrows_batch) > 0 or \
+                   len(self.collector_invalid_erows_batch) > 0 or \
+                   len(self.collector_invalid_qrows_batch) > 0 or \
+                   len(self.collector_description_erows_batch) > 0 or \
+                   len(self.collector_reference_erows_batch) > 0 or \
+                   len(self.collector_sitelink_erows_batch) > 0:
 
-                        if collect_seperately:
-                            if len(self.collector_nrows_batch) > 0:
-                                node_collector_q.put(("rows", self.collector_nrows_batch, [], [], [], [], None))
+                    if collect_seperately:
+                        if len(self.collector_nrows_batch) > 0:
+                            node_collector_q.put(("rows", self.collector_nrows_batch, [], [], [], [], None))
 
-                            if len(self.collector_erows_batch) > 0:
-                                edge_collector_q.put(("rows", [], self.collector_erows_batch, [], [], [], None))
+                        if len(self.collector_erows_batch) > 0:
+                            edge_collector_q.put(("rows", [], self.collector_erows_batch, [], [], [], None))
 
-                            if len(self.collector_qrows_batch) > 0:
-                                qual_collector_q.put(("rows", [], [], self.collector_qrows_batch, [], [], None))
+                        if len(self.collector_qrows_batch) > 0:
+                            qual_collector_q.put(("rows", [], [], self.collector_qrows_batch, [], [], None))
 
-                            if len(self.collector_invalid_erows_batch) > 0:
-                                invalid_edge_collector_q.put(
-                                    ("rows", [], [], [], self.collector_invalid_erows_batch, [], None))
+                        if len(self.collector_invalid_erows_batch) > 0:
+                            invalid_edge_collector_q.put(
+                                ("rows", [], [], [], self.collector_invalid_erows_batch, [], None))
 
-                            if len(self.collector_invalid_qrows_batch) > 0:
-                                invalid_qual_collector_q.put(
-                                    ("rows", [], [], [], [], self.collector_invalid_qrows_batch, None))
+                        if len(self.collector_invalid_qrows_batch) > 0:
+                            invalid_qual_collector_q.put(
+                                ("rows", [], [], [], [], self.collector_invalid_qrows_batch, None))
 
-                            if len(self.collector_description_erows_batch) > 0:
-                                description_collector_q.put(
-                                    ("rows", [], self.collector_description_erows_batch, [], [], [], None))
+                        if len(self.collector_description_erows_batch) > 0:
+                            description_collector_q.put(
+                                ("rows", [], self.collector_description_erows_batch, [], [], [], None))
 
-                            if len(self.collector_reference_erows_batch) > 0:
-                                reference_collector_q.put(
-                                    ("rows", [], self.collector_reference_erows_batch, [], [], [], None))
+                        if len(self.collector_reference_erows_batch) > 0:
+                            reference_collector_q.put(
+                                ("rows", [], self.collector_reference_erows_batch, [], [], [], None))
 
-                            if len(self.collector_sitelink_erows_batch) > 0:
-                                sitelink_collector_q.put(
-                                    ("rows", [], self.collector_sitelink_erows_batch, [], [], [], None))
+                        if len(self.collector_sitelink_erows_batch) > 0:
+                            sitelink_collector_q.put(
+                                ("rows", [], self.collector_sitelink_erows_batch, [], [], [], None))
 
-                        else:
-                            # TODO: what about the following?
-                            # self.collector_description_erows_batch,
-                            # self.collector_reference_erows_batch,
-                            # self.collector_sitelink_erows_batch,
-                            collector_q.put(("rows",
-                                             self.collector_nrows_batch,
-                                             self.collector_erows_batch,
-                                             self.collector_qrows_batch,
-                                             self.collector_invalid_erows_batch,
-                                             self.collector_invalid_qrows_batch,
-                                             None))
-
-            else:
-                if self.node_f is not None:
-                    self.node_f.close()
-
-                if self.edge_f is not None:
-                    self.edge_f.close()
-
-                if self.qual_f is not None:
-                    self.qual_f.close()
-
-                if self.invalid_edge_f is not None:
-                    self.invalid_edge_f.close()
-
-                if self.invalid_qual_f is not None:
-                    self.invalid_qual_f.close()
+                    else:
+                        # TODO: what about the following?
+                        # self.collector_description_erows_batch,
+                        # self.collector_reference_erows_batch,
+                        # self.collector_sitelink_erows_batch,
+                        collector_q.put(("rows",
+                                         self.collector_nrows_batch,
+                                         self.collector_erows_batch,
+                                         self.collector_qrows_batch,
+                                         self.collector_invalid_erows_batch,
+                                         self.collector_invalid_qrows_batch,
+                                         None))
 
         def erows_append(self, erows, edge_id, node1, label, node2,
                          rank="",
-                         magnitude="",
-                         unit="",
-                         date="",
-                         item="",
-                         lower="",
-                         upper="",
-                         latitude="",
-                         longitude="",
                          wikidatatype="",
-                         claim_id="",
-                         claim_type="",
-                         val_type="",
-                         entity_type="",
-                         datahash="",
-                         precision="",
-                         calendar="",
                          entrylang="",
                          invalid_erows=None,
                          ) -> bool:
-            if len(claim_type) > 0 and claim_type != "statement":
-                raise ValueError("Unexpected claim type %s" % claim_type)
 
             values_are_valid: bool = True
             if clean_input_values:
@@ -1314,61 +1294,19 @@ def run(input_file: KGTKFiles,
                           file=sys.stderr, flush=True)
                 error_buffer.close()
 
-            if explode_values:
-                erows.append([edge_id,
-                              node1,
-                              label,
-                              node2,
-                              rank,
-                              magnitude,
-                              unit,
-                              date,
-                              item,
-                              lower,
-                              upper,
-                              latitude,
-                              longitude,
-                              precision,
-                              calendar,
-                              entity_type,
-                              wikidatatype,
-                              entrylang,
-                              ]
-                             )
-            else:
-                erows.append([edge_id,
-                              node1,
-                              label,
-                              node2,
-                              rank,
-                              wikidatatype,
-                              claim_id,
-                              # claim_type,
-                              val_type,
-                              entity_type,
-                              datahash,
-                              precision,
-                              calendar,
-                              entrylang,
-                              ]
-                             )
+            erows.append([edge_id,
+                          node1,
+                          label,
+                          node2,
+                          rank,
+                          wikidatatype,
+                          entrylang,
+                          ]
+                         )
             return values_are_valid
 
         def qrows_append(self, qrows, edge_id, node1, label, node2,
-                         magnitude="",
-                         unit="",
-                         date="",
-                         item="",
-                         lower="",
-                         upper="",
-                         latitude="",
-                         longitude="",
                          wikidatatype="",
-                         val_type="",
-                         entity_type="",
-                         datahash="",
-                         precision="",
-                         calendar="",
                          invalid_qrows=None,
                          erows=None,
                          invalid_erows=None,
@@ -1405,37 +1343,13 @@ def run(input_file: KGTKFiles,
                           file=sys.stderr, flush=True)
                 error_buffer.close()
 
-            if minimal_qual_file is not None or detailed_qual_file is not None:
-                if explode_values:
-                    qrows.append([edge_id,
-                                  node1,
-                                  label,
-                                  node2,
-                                  magnitude,
-                                  unit,
-                                  date,
-                                  item,
-                                  lower,
-                                  upper,
-                                  latitude,
-                                  longitude,
-                                  precision,
-                                  calendar,
-                                  entity_type,
-                                  wikidatatype,
-                                  ])
-                else:
-                    qrows.append([edge_id,
-                                  node1,
-                                  label,
-                                  node2,
-                                  wikidatatype,
-                                  val_type,
-                                  entity_type,
-                                  datahash,
-                                  precision,
-                                  calendar,
-                                  ])
+            if minimal_qual_file is not None:
+                qrows.append([edge_id,
+                              node1,
+                              label,
+                              node2,
+                              wikidatatype,
+                              ])
 
             if interleave:
                 self.erows_append(erows,
@@ -1443,19 +1357,7 @@ def run(input_file: KGTKFiles,
                                   node1=node1,
                                   label=label,
                                   node2=node2,
-                                  magnitude=magnitude,
-                                  unit=unit,
-                                  date=date,
-                                  item=item,
-                                  lower=lower,
-                                  upper=upper,
-                                  latitude=latitude,
-                                  longitude=longitude,
                                   wikidatatype=wikidatatype,
-                                  entity_type=entity_type,
-                                  datahash=datahash,
-                                  precision=precision,
-                                  calendar=calendar,
                                   invalid_erows=invalid_erows)
             return values_are_valid
 
@@ -1464,7 +1366,6 @@ def run(input_file: KGTKFiles,
             if progress_interval > 0 and self.cnt % progress_interval == 0 and self.cnt > 0:
                 print("{} lines processed by processor {}".format(self.cnt, self._idx), file=sys.stderr, flush=True)
             self.cnt += 1
-            # csv_line_terminator = "\n" if os.name == 'posix' else "\r\n"
             nrows = []
             erows = []
             qrows = []
@@ -1500,9 +1401,13 @@ def run(input_file: KGTKFiles,
                     print("Unknown object type {}.".format(entry_type), file=sys.stderr, flush=True)
 
                 if self.process_row_data and keep:
-                    row = []
-                    qnode = obj["id"]
-                    row.append(qnode)
+                    qnode: typing.Optional[str] = obj.get("id")
+                    if qnode is None:
+                        print("Object with no id.", file=sys.stderr, flush=True)
+                        return
+ 
+                    if node_file:
+                        nrows.append([qnode])
 
                     if parse_labels:
                         labels = obj.get("labels")
@@ -1538,15 +1443,6 @@ def run(input_file: KGTKFiles,
                                                           node2=value,
                                                           entrylang=lang,
                                                           invalid_erows=invalid_erows)
-
-                        if not node_id_only:
-                            if len(label_list) > 0:
-                                row.append("|".join(label_list))
-                            else:
-                                row.append("")
-
-                    if not node_id_only:
-                        row.append(entry_type)
 
                     if entry_type_edges:
                         typeid: str = qnode + '-' + TYPE_LABEL + '-' + entry_type
@@ -1590,12 +1486,6 @@ def run(input_file: KGTKFiles,
                                                           node2=value,
                                                           entrylang=lang,
                                                           invalid_erows=invalid_erows)
-
-                        if not node_id_only:
-                            if len(descr_list) > 0:
-                                row.append("|".join(descr_list))
-                            else:
-                                row.append("")
 
                     if parse_aliases:
                         aliases = obj.get("aliases")
@@ -1641,15 +1531,7 @@ def run(input_file: KGTKFiles,
                                                               entrylang=lang,
                                                               invalid_erows=invalid_erows)
 
-                        if not node_id_only:
-                            if len(alias_list) > 0:
-                                row.append("|".join(alias_list))
-                            else:
-                                row.append("")
-
                     datatype = obj.get("datatype", "")
-                    if not node_id_only:
-                        row.append(datatype)
                     if len(datatype) > 0 and datatype_edges:
                         datatypeid: str = qnode + '-' + "datatype"
                         # We expect the datatype to be a valid KGTK symbol, so
@@ -1660,10 +1542,6 @@ def run(input_file: KGTKFiles,
                                           label=DATATYPE_LABEL,
                                           node2=datatype,
                                           invalid_erows=invalid_erows)
-
-                    # row.append(source)
-                    if node_file:
-                        nrows.append(row)
 
                 if parse_claims and CLAIMS_TAG not in obj:
                     if fail_if_missing:
@@ -1686,167 +1564,47 @@ def run(input_file: KGTKFiles,
                         for prop, claim_property in claims.items():
                             for cp in claim_property:
                                 if (deprecated or cp[CLAIM_RANK_TAG] != RANK_DEPRECATED):
-                                    mainsnak = cp[CLAIM_MAINSNAK_TAG]
-                                    snaktype = mainsnak.get(MAINSNAK_SNAKTYPE)
-                                    rank = cp[CLAIM_RANK_TAG]
-                                    claim_id = cp[CLAIM_ID_TAG]
-                                    claim_type = cp[CLAIM_TYPE_TAG]
+                                    mainsnak = cp.get(CLAIM_MAINSNAK_TAG)
+                                    if mainsnak is None:
+                                        print("Qnode %s Prop %s: claim without mainsnak." % (repr(qnode), repr(prop)),
+                                              file=sys.stderr, flush=True)
+                                        continue
+
+                                    rank: typing.Optional[str] = cp.get(CLAIM_RANK_TAG)
+                                    if rank is None:
+                                        print("Qnode %s Prop %s: claim without rank." % (repr(qnode), repr(prop)),
+                                              file=sys.stderr, flush=True)
+                                        continue
+
+                                    claim_id: typing.Optional[str] = cp.get(CLAIM_ID_TAG)
+                                    if claim_id is None:
+                                        print("Qnode %s Prop %s: claim without claim_id." % (repr(qnode), repr(prop)),
+                                              file=sys.stderr, flush=True)
+                                        continue
+
+                                    claim_type: typi9ng.Optional[str] = cp[CLAIM_TYPE_TAG]
+                                    if claim_type is None:
+                                        print("Qnode %s Prop %s: claim without claim_type." % (repr(qnode), repr(prop)),
+                                              file=sys.stderr, flush=True)
+                                        continue
+
                                     if claim_type != CLAIM_TYPE_STATEMENT:
-                                        print("Unknown claim type %s, ignoring claim_property for (%s, %s)." % (
-                                            repr(claim_type), repr(qnode), repr(prop)),
+                                        print("Qnode %s Prop %s: Unknown claim type %s, ignoring." % (repr(qnode), repr(prop), repr(claim_type)),
                                               file=sys.stderr, flush=True)
                                         continue
 
-                                    if snaktype is None:
-                                        print("Mainsnak without snaktype, ignoring claim_property for (%s, %s)." % (repr(qnode),
-                                                                                                                    repr(prop)),
-                                              file=sys.stderr, flush=True)
-                                        continue
-                                    if snaktype == SNAKTYPE_VALUE:
-                                        datavalue = mainsnak[MAINSNAK_DATAVALUE]
-                                        val = datavalue.get(DATAVALUE_VALUE_TAG)
-                                        val_type = datavalue.get(DATAVALUE_TYPE_TAG, "")
-                                        if val is not None:
-                                            if val_type in (DATAVALUE_TYPE_STRING, DATAVALUE_TYPE_WIKIBASE_UNMAPPED_ENTITYID):
-                                                if not isinstance(val, str):
-                                                    print("Value type is %s but the value is not a string, "
-                                                          "ignoring claim_property for (%s, %s)." % (repr(val_type),
-                                                                                                     repr(qnode),
-                                                                                                     repr(prop)),
-                                                          file=sys.stderr, flush=True)
-                                                    continue
-                                            elif not isinstance(val, dict):
-                                                print(
-                                                    "Value type %s is not a known string type and value is not a dict, "
-                                                    "ignoring claim_property for (%s, %s)." % (repr(val_type),
-                                                                                               repr(qnode),
-                                                                                               repr(prop)),
-                                                    file=sys.stderr, flush=True)
-                                                continue
-
-                                    elif snaktype == SNAKTYPE_SOMEVALUE:
-                                        val = None
-                                        val_type = SOMEVALUE_VALUE
-
-                                    elif snaktype == SNAKTYPE_NOVALUE:
-                                        val = None
-                                        val_type = NOVALUE_VALUE
-
-                                    else:
-                                        print("Unknown snaktype %s, ignoring claim_property for (%s, %s)." % (
-                                            repr(snaktype), repr(qnode), repr(prop)),
-                                              file=sys.stderr, flush=True)
+                                    value: typing.Optional[str]
+                                    wikidatatype: typing.Optional[str]
+                                    (value, wikidatatype) = extract_snak_value(mainsnak,
+                                                                               qnode=qnode,
+                                                                               prop=prop,
+                                                                               who="claim")
+                                    if value is None or wikidatatype is None:
                                         continue
 
-                                    typ = mainsnak.get(MAINSNAK_DATATYPE)
-                                    if typ is None:
-                                        print("Mainsnak without datatype, ignoring claim_property for (%s, %s)" % (
-                                            repr(qnode), repr(prop)),
-                                              file=sys.stderr, flush=True)
-                                        continue
-                                    # if typ != val_type:
-                                    #     print("typ %s != val_type %s" % (typ, val_type), file=sys.stderr, flush=True)
-
-                                    value = ''
-                                    mag = ''
-                                    unit = ''
-                                    date = ''
-                                    item = ''
-                                    lower = ''
-                                    upper = ''
-                                    precision = ''
-                                    calendar = ''
-                                    lat = ''
-                                    long = ''
-                                    enttype = ''
-
-                                    if val is None:
-                                        value = val_type
-                                    elif typ in SNAK_DATATYPE_WIKIBASE_TYPES:
-                                        if isinstance(val, dict):
-                                            enttype = val.get(SNAK_DATAVALUE_VALUE_ENTITY_TYPE)
-                                            value = val.get(SNAK_DATAVALUE_VALUE_ID, '')
-                                        else:
-                                            value = val
-                                            # TODO: Can we find something less ad-hoc to do here?
-                                            if typ == SNAK_DATATYPE_WIKIBASE_LEXEME:
-                                                enttype = SNAK_DATAVALUE_VALUE_ENTITY_TYPE_LEXEME
-                                            else:
-                                                enttype = SNAK_DATAVALUE_VALUE_ENTITY_TYPE_UNKNOWN
-
-                                        # Older Wikidata dumps do not have an 'id' here.
-                                        if len(value) == 0:
-                                            if isinstance(val, dict) and SNAK_DATAVALUE_VALUE_NUMERIC_ID in val:
-                                                numeric_id = str(val[SNAK_DATAVALUE_VALUE_NUMERIC_ID])
-                                            else:
-                                                raise ValueError(
-                                                    "No numeric ID for datatype %s, entity type %s, in (%s, %s)." % (
-                                                        repr(typ), repr(enttype), repr(qnode), repr(prop)))
-
-                                            if enttype == SNAK_DATAVALUE_VALUE_ENTITY_TYPE_ITEM:
-                                                value = 'Q' + numeric_id
-                                            elif enttype == SNAK_DATAVALUE_VALUE_ENTITY_TYPE_PROPERTY:
-                                                value = 'P' + numeric_id
-                                            elif enttype == SNAK_DATAVALUE_VALUE_ENTITY_TYPE_LEXEME:
-                                                value = 'L' + numeric_id
-                                            else:
-                                                raise ValueError(
-                                                    'Unknown entity type %s for datatype %s in (%s, %s).' % (
-                                                        repr(enttype), repr(typ), repr(qnode), repr(prop)))
-                                        item = value
-
-                                    elif typ == SNAK_DATATYPE_QUANTITY:
-                                        # Strip whitespace from the numeric fields.  Some older Wikidata dumps
-                                        # (20150805-20160502) sometimes have trailing newlines in these fields.
-                                        # Convert actual numbers to strings before attempting to strip leading
-                                        # and trailing whitespace.
-                                        value = str(val['amount']).strip()
-                                        mag = value
-                                        if val.get('upperBound', None) or val.get('lowerBound', None):
-                                            lower = str(val.get('lowerBound', '')).strip()
-                                            upper = str(val.get('upperBound', '')).strip()
-                                            value += '[' + lower + \
-                                                     ',' + upper + ']'
-                                        # TODO: Don't lose the single-character unit code.
-                                        #  At a minimum, verify that it is the value "1".
-                                        if len(val.get('unit')) > 1:
-                                            unit = val.get(
-                                                'unit').split('/')[-1]
-                                            if unit not in ["undefined"]:
-                                                # TODO: don't lose track of "undefined" units.
-                                                value += unit
-
-                                    elif typ == SNAK_DATATYPE_GLOBECOORDINATE:
-                                        # Strip potential leading and trailing whitespace.
-                                        lat = str(val['latitude']).strip()
-                                        long = str(val['longitude']).strip()
-                                        precision = str(val.get('precision', ''))
-                                        value = '@' + lat + '/' + long
-                                        # TODO: what about "globe"?
-
-                                    elif typ == SNAK_DATATYPE_TIME:
-                                        if val['time'][0] == '-':
-                                            pre = "^-"
-                                        else:
-                                            pre = "^"
-                                        # TODO: Maybe strip leading and traiming whitespace here?
-                                        date = pre + val['time'][1:]
-                                        # Cautiously strip leading and trailing whitespace from precision?
-                                        precision = str(val['precision']).strip()
-                                        calendar = val.get('calendarmodel', '').split('/')[-1]
-                                        value = date + '/' + precision
-
-                                    elif typ == SNAK_DATATYPE_MONOLINGUALTEXT:
-                                        value = KgtkFormat.stringify(val['text'], language=val['language'])
-
-                                    else:
-                                        if not isinstance(val, str):
-                                            raise ValueError("Expecting a string for type %s" % repr(typ))
-                                        value = KgtkFormat.stringify(val)
-
-                                    if minimal_edge_file is not None or detailed_edge_file is not None or (parse_references and CLAIM_REFERENCES_TAG in cp):
+                                    if minimal_edge_file is not None or (parse_references and CLAIM_REFERENCES_TAG in cp):
                                         prop_value_hash: str
-                                        if value.startswith(('P', 'Q')):
+                                        if value.startswith(('P', 'Q', 'L')):
                                             prop_value_hash = value
                                         else:
                                             prop_value_hash = hashlib.sha256(value.encode('utf-8')).hexdigest()[
@@ -1867,28 +1625,14 @@ def run(input_file: KGTKFiles,
                                         edge_id_collision_map[edgeid] = prop_seq_no + 1
                                         edgeid += '-' + str(prop_seq_no)
 
-                                        if minimal_edge_file is not None or detailed_edge_file is not None:
+                                        if minimal_edge_file is not None:
                                             self.erows_append(erows,
                                                               edge_id=edgeid,
                                                               node1=qnode,
                                                               label=prop,
                                                               node2=value,
                                                               rank=rank,
-                                                              magnitude=mag,
-                                                              unit=unit,
-                                                              date=date,
-                                                              item=item,
-                                                              lower=lower,
-                                                              upper=upper,
-                                                              latitude=lat,
-                                                              longitude=long,
-                                                              wikidatatype=typ,
-                                                              claim_id=claim_id,
-                                                              claim_type=claim_type,
-                                                              val_type=val_type,
-                                                              entity_type=enttype,
-                                                              precision=precision,
-                                                              calendar=calendar,
+                                                              wikidatatype=wikidatatype,
                                                               invalid_erows=invalid_erows)
 
                                         if parse_references and CLAIM_REFERENCES_TAG in cp:
@@ -1899,20 +1643,23 @@ def run(input_file: KGTKFiles,
                                                 reference_id: str = REFERENCE_ID_START + str(reference_count).zfill(REFERENCE_ID_WIDTH)
 
                                                 ref_edgeid: str = edgeid + "-" + reference_id
-                                                self.erows_append(rerows,
-                                                                  edge_id=ref_edgeid,
-                                                                  node1=edgeid,
-                                                                  label=REFERENCE_LABEL,
-                                                                  node2=reference_id,
-                                                                  wikidatatype='reference', # Ad-hoc wikidatatype.
-                                                                  invalid_erows=invalid_erows)
+                                                if reference_edges:
+                                                    self.erows_append(rerows,
+                                                                      edge_id=ref_edgeid,
+                                                                      node1=edgeid,
+                                                                      label=REFERENCE_LABEL,
+                                                                      node2=reference_id,
+                                                                      wikidatatype='reference', # Ad-hoc wikidatatype.
+                                                                      invalid_erows=invalid_erows)
 
-                                                if REFERENCE_SNAKS_TAG not in reference:
-                                                    raise ValueError("Reference without SNAKS.")
+                                                ref_snaks = reference.get(REFERENCE_SNAKS_TAG)
+                                                if ref_snaks is None:
+                                                    print("Qnode %s Prop %s: reference without SNAKS." % (repr(qnode), repr(prop)),
+                                                          file=sys.stderr, flush=True)
+                                                    continue
 
                                                 ref_snak_count: int = 0
 
-                                                ref_snaks = reference[REFERENCE_SNAKS_TAG]
                                                 ref_snaks_prop: str
                                                 for ref_snaks_prop in sorted(ref_snaks.keys()):
                                                     ref_snaks_list = ref_snaks[ref_snaks_prop]
@@ -1920,180 +1667,50 @@ def run(input_file: KGTKFiles,
                                                         ref_snak_count += 1 # Bad approach for the time machine, but prevents collisions.
                                                         ref_snak_edgeid: str = ref_edgeid + "-" + str(ref_snak_count).zfill(REFERENCE_ID_WIDTH)
 
-                                                        kgtk_snak_value: str
-                                                        wikidatatype: str
-                                                        (kgtk_snak_value, wikidatatype) = extract_snak_value(ref_snak, expected_prop=ref_snaks_prop)
-                                                        self.erows_append(rerows,
-                                                                          edge_id=ref_snak_edgeid,
-                                                                          node1=reference_id,
-                                                                          label=ref_snaks_prop,
-                                                                          node2=kgtk_snak_value,
-                                                                          wikidatatype=wikidatatype,
-                                                                          invalid_erows=invalid_erows)
+                                                        kgtk_ref_snak_value: typing.Optional[str]
+                                                        ref_wikidatatype: typing.Optional[str]
+                                                        (kgtk_ref_snak_value, ref_wikidatatype) = extract_snak_value(ref_snak,
+                                                                                                                     qnode=qnode,
+                                                                                                                     prop=prop,
+                                                                                                                     subprop=ref_snaks_prop,
+                                                                                                                     who="reference")
+                                                        if reference_detail_edges and kgtk_ref_snak_value is not None and ref_wikidatatype is not None:
+                                                            self.erows_append(rerows,
+                                                                              edge_id=ref_snak_edgeid,
+                                                                              node1=reference_id,
+                                                                              label=ref_snaks_prop,
+                                                                              node2=kgtk_ref_snak_value,
+                                                                              wikidatatype=ref_wikidatatype,
+                                                                              invalid_erows=invalid_erows)
 
-                                    if minimal_qual_file is not None or detailed_qual_file is not None or interleave:
-                                        if cp.get('qualifiers', None):
-                                            quals = cp['qualifiers']
-                                            for qual_prop, qual_claim_property in quals.items():
-                                                for qcp in qual_claim_property:
-                                                    snaktype = qcp[MAINSNAK_SNAKTYPE]
-
-                                                    if snaktype == SNAKTYPE_VALUE:
-                                                        datavalue = qcp[MAINSNAK_DATAVALUE]
-                                                        val = datavalue.get('value')
-                                                        val_type = datavalue.get("type", "")
-
-                                                    elif snaktype == SNAKTYPE_SOMEVALUE:
-                                                        val = None
-                                                        val_type = SOMEVALUE_VALUE
-
-                                                    elif snaktype == SNAKTYPE_NOVALUE:
-                                                        val = None
-                                                        val_type = NOVALUE_VALUE
-
-                                                    else:
-                                                        raise ValueError(
-                                                            "Unknown qualifier snaktype %s" % repr(snaktype))
-
-                                                    if True:
-                                                        value = ''
-                                                        mag = ''
-                                                        unit = ''
-                                                        date = ''
-                                                        item = ''
-                                                        lower = ''
-                                                        upper = ''
-                                                        precision = ''
-                                                        calendar = ''
-                                                        lat = ''
-                                                        long = ''
-                                                        enttype = ''
-                                                        datahash = '"' + qcp['hash'] + '"'
-                                                        typ = qcp.get(MAINSNAK_DATATYPE)
-                                                        if typ is None:
-                                                            if fail_if_missing:
-                                                                raise KGTKException(
-                                                                    "Found qualifier %s without a datatype for (%s, %s)"
-                                                                    % (repr(qual_prop), repr(qnode), repr(prop)))
-                                                            elif warn_if_missing:
-                                                                if val_type == SOMEVALUE_VALUE:
-                                                                    print("Somevalue qualifier %s without a datatype "
-                                                                          "for (%s, %s)" % (repr(qual_prop),
-                                                                                            repr(qnode),
-                                                                                            repr(prop)),
-                                                                          file=sys.stderr, flush=True)
-                                                                elif val_type == NOVALUE_VALUE:
-                                                                    print("Novalue qualifier %s without a datatype "
-                                                                          "for (%s, %s)" % (repr(qual_prop),
-                                                                                            repr(qnode),
-                                                                                            repr(prop)),
-                                                                          file=sys.stderr, flush=True)
-                                                                else:
-                                                                    print("Found qualifier %s without a datatype "
-                                                                          "for (%s, %s)" % (repr(qual_prop),
-                                                                                            repr(qnode),
-                                                                                            repr(prop)),
-                                                                          file=sys.stderr, flush=True)
+                                    if minimal_qual_file is not None or interleave:
+                                        quals = cp.get('qualifiers')
+                                        if quals is not None:
+                                            for qual_prop, qual_prop_snaks in quals.items():
+                                                for qual_snak in qual_prop_snaks:
+                                                        qual_value: typing.Optional[str]
+                                                        qual_wikidatatype: typing.Optional[str]
+                                                        (qual_value, qual_wikidatatype) = extract_snak_value(qual_snak,
+                                                                                                             qnode=qnode,
+                                                                                                             prop=prop,
+                                                                                                             subprop=qual_prop,
+                                                                                                             who="qualifier")
+                                                        if qual_value is None or qual_wikidatatype is None:
                                                             continue
-
-                                                        if val is None:
-                                                            value = val_type
-
-                                                        elif typ in SNAK_DATATYPE_WIKIBASE_TYPES:
-                                                            if isinstance(val, dict):
-                                                                enttype = val.get('entity-type')
-                                                                value = val.get('id', '')
-                                                            else:
-                                                                value = val
-                                                                if typ == "wikibase-lexeme":
-                                                                    enttype = "lexeme"
-                                                                else:
-                                                                    enttype = "unknown"
-
-                                                            # Older Wikidata dumps do not have an 'id' here.
-                                                            if len(value) == 0:
-                                                                if isinstance(val, dict) and 'numeric-id' in val:
-                                                                    numeric_id = str(val['numeric-id'])
-                                                                else:
-                                                                    raise ValueError("No numeric ID for datatype %s, "
-                                                                                     "entity type %s, in (%s, %s)." % (
-                                                                                         repr(typ), repr(enttype),
-                                                                                         repr(qnode),
-                                                                                         repr(prop)))
-
-                                                                if enttype == "item":
-                                                                    value = 'Q' + numeric_id
-                                                                elif enttype == "property":
-                                                                    value = 'P' + numeric_id
-                                                                elif enttype == "lexeme":
-                                                                    value = 'L' + numeric_id
-                                                                else:
-                                                                    raise ValueError('Unknown entity type %s for '
-                                                                                     'datatype %s in (%s, %s).' % (
-                                                                                         repr(enttype), repr(typ),
-                                                                                         repr(qnode),
-                                                                                         repr(prop)))
-
-                                                            item = value
-
-                                                        elif typ == SNAK_DATATYPE_QUANTITY:
-                                                            value = val['amount']
-                                                            mag = val['amount']
-                                                            if val.get('upperBound', None) or \
-                                                                    val.get('lowerBound', None):
-                                                                lower = val.get(
-                                                                    'lowerBound', '')
-                                                                upper = val.get(
-                                                                    'upperBound', '')
-                                                                value += '[' + lower + \
-                                                                         ',' + upper + ']'
-                                                            if len(
-                                                                    val.get('unit')) > 1:
-                                                                unit = val.get(
-                                                                    'unit').split('/')[-1]
-                                                                value += unit
-
-                                                        elif typ == SNAK_DATATYPE_GLOBECOORDINATE:
-                                                            lat = str(
-                                                                val['latitude'])
-                                                            long = str(
-                                                                val['longitude'])
-                                                            precision = str(val.get(
-                                                                'precision', ''))
-                                                            value = '@' + lat + '/' + long
-
-                                                        elif typ == SNAK_DATATYPE_TIME:
-                                                            if val['time'][0] == '-':
-                                                                pre = "^-"
-                                                            else:
-                                                                pre = "^"
-                                                            date = pre + val['time'][1:]
-                                                            precision = str(val['precision'])
-                                                            calendar = val.get('calendarmodel', '').split('/')[-1]
-                                                            value = pre + val['time'][1:] + '/' + str(val['precision'])
-
-                                                        elif typ == SNAK_DATATYPE_MONOLINGUALTEXT:
-                                                            value = KgtkFormat.stringify(val['text'],
-                                                                                         language=val['language'])
-                                                        else:
-                                                            # value = '\"' + val.replace('"','\\"') + '\"'
-                                                            if not isinstance(val, str):
-                                                                raise ValueError("Expecting a string for type %s" % repr(typ))
-                                                            value = KgtkFormat.stringify(val)
-
+                                                        
                                                         qual_value_hash: str
-                                                        if value.startswith(('P', 'Q')):
-                                                            qual_value_hash = value
+                                                        if qual_value.startswith(('P', 'Q', 'L')):
+                                                            qual_value_hash = qual_value
                                                         else:
                                                             qual_value_hash = hashlib.sha256(
-                                                                value.encode('utf-8')).hexdigest()[:value_hash_width]
+                                                                qual_value.encode('utf-8')).hexdigest()[:value_hash_width]
                                                         qualid: str = edgeid + '-' + qual_prop + '-' + qual_value_hash
                                                         qual_seq_no: int  # In case of hash collision
                                                         if qualid in qual_id_collision_map:
                                                             qual_seq_no = qual_id_collision_map[qualid]
                                                             print(
                                                                 "\n*** Qualifier collision #%d detected for %s (%s)" % (
-                                                                    qual_seq_no, qualid, value), file=sys.stderr,
+                                                                    qual_seq_no, qualid, qual_value), file=sys.stderr,
                                                                 flush=True)
                                                         else:
                                                             qual_seq_no = 0
@@ -2103,20 +1720,8 @@ def run(input_file: KGTKFiles,
                                                                           edge_id=qualid,
                                                                           node1=edgeid,
                                                                           label=qual_prop,
-                                                                          node2=value,
-                                                                          magnitude=mag,
-                                                                          unit=unit,
-                                                                          date=date,
-                                                                          item=item,
-                                                                          lower=lower,
-                                                                          upper=upper,
-                                                                          latitude=lat,
-                                                                          longitude=long,
-                                                                          wikidatatype=typ,
-                                                                          entity_type=enttype,
-                                                                          datahash=datahash,
-                                                                          precision=precision,
-                                                                          calendar=calendar,
+                                                                          node2=qual_value,
+                                                                          wikidatatype=qual_wikidatatype,
                                                                           invalid_qrows=invalid_qrows,
                                                                           erows=erows,
                                                                           invalid_erows=invalid_erows)
@@ -2260,206 +1865,160 @@ def run(input_file: KGTKFiles,
                     len(description_erows) > 0 or \
                     len(reference_erows) > 0 or \
                     len(sitelink_erows) > 0:
-                if collect_results:
-                    if collector_batch_size == 1:
+                if collector_batch_size == 1:
+                    if collect_seperately:
+                        if len(nrows) > 0 and node_collector_q is not None:
+                            node_collector_q.put(("rows", nrows, [], [], [], [], None))
+
+                        if len(erows) > 0 and edge_collector_q is not None:
+                            edge_collector_q.put(("rows", [], erows, [], [], [], None))
+
+                        if len(qrows) > 0 and qual_collector_q is not None:
+                            qual_collector_q.put(("rows", [], [], qrows, [], [], None))
+
+                        if invalid_erows is not None and len(
+                                invalid_erows) > 0 and invalid_edge_collector_q is not None:
+                            invalid_edge_collector_q.put(("rows", [], [], [], invalid_erows, [], None))
+
+                        if invalid_qrows is not None and len(
+                                invalid_qrows) > 0 and invalid_qual_collector_q is not None:
+                            invalid_qual_collector_q.put(("rows", [], [], [], [], invalid_qrows, None))
+
+                        if len(description_erows) > 0 and description_collector_q is not None:
+                            description_collector_q.put(("rows", [], description_erows, [], [], [], None))
+
+                        if len(reference_erows) > 0 and reference_collector_q is not None:
+                            reference_collector_q.put(("rows", [], reference_erows, [], [], [], None))
+
+                        if len(sitelink_erows) > 0 and sitelink_collector_q is not None:
+                            sitelink_collector_q.put(("rows", [], sitelink_erows, [], [], [], None))
+
+                    elif collector_q is not None:
+                        collector_q.put(("rows", nrows, erows, qrows, invalid_erows, invalid_qrows, None))
+                else:
+                    self.collector_nrows_batch.extend(nrows)
+                    self.collector_erows_batch.extend(erows)
+                    self.collector_qrows_batch.extend(qrows)
+                    if invalid_erows is not None:
+                        self.collector_invalid_erows_batch.extend(invalid_erows)
+                    if invalid_qrows is not None:
+                        self.collector_invalid_qrows_batch.extend(invalid_qrows)
+
+                    if collect_seperately:
+                        self.collector_description_erows_batch.extend(description_erows)
+                        self.collector_reference_erows_batch.extend(reference_erows)
+                        self.collector_sitelink_erows_batch.extend(sitelink_erows)
+
+                    self.collector_batch_cnt += 1
+
+                    if self.collector_batch_cnt >= collector_batch_size:
                         if collect_seperately:
-                            if len(nrows) > 0 and node_collector_q is not None:
-                                node_collector_q.put(("rows", nrows, [], [], [], [], None))
+                            if len(self.collector_nrows_batch) > 0 and node_collector_q is not None:
+                                node_collector_q.put(("rows", self.collector_nrows_batch, [], [], [], [], None))
 
-                            if len(erows) > 0 and edge_collector_q is not None:
-                                edge_collector_q.put(("rows", [], erows, [], [], [], None))
+                            if len(self.collector_erows_batch) > 0 and edge_collector_q is not None:
+                                edge_collector_q.put(("rows", [], self.collector_erows_batch, [], [], [], None))
 
-                            if len(qrows) > 0 and qual_collector_q is not None:
-                                qual_collector_q.put(("rows", [], [], qrows, [], [], None))
+                            if len(self.collector_qrows_batch) > 0 and qual_collector_q is not None:
+                                qual_collector_q.put(("rows", [], [], self.collector_qrows_batch, [], [], None))
 
-                            if invalid_erows is not None and len(
-                                    invalid_erows) > 0 and invalid_edge_collector_q is not None:
-                                invalid_edge_collector_q.put(("rows", [], [], [], invalid_erows, [], None))
+                            if len(self.collector_invalid_erows_batch) > 0 and invalid_edge_collector_q is not None:
+                                invalid_edge_collector_q.put(
+                                    ("rows", [], [], [], self.collector_invalid_erows_batch, [], None))
 
-                            if invalid_qrows is not None and len(
-                                    invalid_qrows) > 0 and invalid_qual_collector_q is not None:
-                                invalid_qual_collector_q.put(("rows", [], [], [], [], invalid_qrows, None))
+                            if len(self.collector_invalid_qrows_batch) > 0 and invalid_qual_collector_q is not None:
+                                invalid_qual_collector_q.put(
+                                    ("rows", [], [], [], [], self.collector_invalid_qrows_batch, None))
 
-                            if len(description_erows) > 0 and description_collector_q is not None:
-                                description_collector_q.put(("rows", [], description_erows, [], [], [], None))
+                            if len(self.collector_description_erows_batch) > 0 and \
+                                    description_collector_q is not None:
+                                description_collector_q.put(
+                                    ("rows", [], self.collector_description_erows_batch, [], [], [], None))
+                                self.collector_description_erows_batch.clear()
 
-                            if len(reference_erows) > 0 and reference_collector_q is not None:
-                                reference_collector_q.put(("rows", [], reference_erows, [], [], [], None))
+                            if len(self.collector_reference_erows_batch) > 0 and reference_collector_q is not None:
+                                reference_collector_q.put(
+                                    ("rows", [], self.collector_reference_erows_batch, [], [], [], None))
+                                self.collector_reference_erows_batch.clear()
 
-                            if len(sitelink_erows) > 0 and sitelink_collector_q is not None:
-                                sitelink_collector_q.put(("rows", [], sitelink_erows, [], [], [], None))
+                            if len(self.collector_sitelink_erows_batch) > 0 and sitelink_collector_q is not None:
+                                sitelink_collector_q.put(
+                                    ("rows", [], self.collector_sitelink_erows_batch, [], [], [], None))
+                                self.collector_sitelink_erows_batch.clear()
 
                         elif collector_q is not None:
-                            collector_q.put(("rows", nrows, erows, qrows, invalid_erows, invalid_qrows, None))
-                    else:
-                        self.collector_nrows_batch.extend(nrows)
-                        self.collector_erows_batch.extend(erows)
-                        self.collector_qrows_batch.extend(qrows)
-                        if invalid_erows is not None:
-                            self.collector_invalid_erows_batch.extend(invalid_erows)
-                        if invalid_qrows is not None:
-                            self.collector_invalid_qrows_batch.extend(invalid_qrows)
+                            collector_q.put(("rows",
+                                             self.collector_nrows_batch,
+                                             self.collector_erows_batch,
+                                             self.collector_qrows_batch,
+                                             self.collector_invalid_erows_batch,
+                                             self.collector_invalid_qrows_batch,
+                                             None))
 
-                        if collect_seperately:
-                            self.collector_description_erows_batch.extend(description_erows)
-                            self.collector_reference_erows_batch.extend(reference_erows)
-                            self.collector_sitelink_erows_batch.extend(sitelink_erows)
-
-                        self.collector_batch_cnt += 1
-
-                        if self.collector_batch_cnt >= collector_batch_size:
-                            if collect_seperately:
-                                if len(self.collector_nrows_batch) > 0 and node_collector_q is not None:
-                                    node_collector_q.put(("rows", self.collector_nrows_batch, [], [], [], [], None))
-
-                                if len(self.collector_erows_batch) > 0 and edge_collector_q is not None:
-                                    edge_collector_q.put(("rows", [], self.collector_erows_batch, [], [], [], None))
-
-                                if len(self.collector_qrows_batch) > 0 and qual_collector_q is not None:
-                                    qual_collector_q.put(("rows", [], [], self.collector_qrows_batch, [], [], None))
-
-                                if len(self.collector_invalid_erows_batch) > 0 and invalid_edge_collector_q is not None:
-                                    invalid_edge_collector_q.put(
-                                        ("rows", [], [], [], self.collector_invalid_erows_batch, [], None))
-
-                                if len(self.collector_invalid_qrows_batch) > 0 and invalid_qual_collector_q is not None:
-                                    invalid_qual_collector_q.put(
-                                        ("rows", [], [], [], [], self.collector_invalid_qrows_batch, None))
-
-                                if len(self.collector_description_erows_batch) > 0 and \
-                                        description_collector_q is not None:
-                                    description_collector_q.put(
-                                        ("rows", [], self.collector_description_erows_batch, [], [], [], None))
-                                    self.collector_description_erows_batch.clear()
-
-                                if len(self.collector_reference_erows_batch) > 0 and reference_collector_q is not None:
-                                    reference_collector_q.put(
-                                        ("rows", [], self.collector_reference_erows_batch, [], [], [], None))
-                                    self.collector_reference_erows_batch.clear()
-
-                                if len(self.collector_sitelink_erows_batch) > 0 and sitelink_collector_q is not None:
-                                    sitelink_collector_q.put(
-                                        ("rows", [], self.collector_sitelink_erows_batch, [], [], [], None))
-                                    self.collector_sitelink_erows_batch.clear()
-
-                            elif collector_q is not None:
-                                collector_q.put(("rows",
-                                                 self.collector_nrows_batch,
-                                                 self.collector_erows_batch,
-                                                 self.collector_qrows_batch,
-                                                 self.collector_invalid_erows_batch,
-                                                 self.collector_invalid_qrows_batch,
-                                                 None))
-
-                            self.collector_nrows_batch.clear()
-                            self.collector_erows_batch.clear()
-                            self.collector_qrows_batch.clear()
-                            self.collector_invalid_erows_batch.clear()
-                            self.collector_invalid_qrows_batch.clear()
-                            self.collector_batch_cnt = 0
-
-                else:
-                    if node_file:
-                        for row in nrows:
-                            self.node_wr.writerow(row)
-
-                    if detailed_edge_file:
-                        for row in erows:
-                            if skip_validation or validate(row, "detailed edge uncollected"):
-                                self.edge_wr.writerow(row)
-
-                    if detailed_qual_file:
-                        for row in qrows:
-                            if skip_validation or validate(row, "detailed qual uncollected"):
-                                self.qual_wr.writerow(row)
-
-                    if invalid_edge_file and invalid_erows is not None:
-                        for row in invalid_erows:
-                            self.invalid_edge_wr.writerow(row)
-
-                    if invalid_qual_file and invalid_qrows is not None:
-                        for row in invalid_qrows:
-                            self.invalid_qual_wr.writerow(row)
+                        self.collector_nrows_batch.clear()
+                        self.collector_erows_batch.clear()
+                        self.collector_qrows_batch.clear()
+                        self.collector_invalid_erows_batch.clear()
+                        self.collector_invalid_qrows_batch.clear()
+                        self.collector_batch_cnt = 0
 
     class MyCollector:
 
         def __init__(self):
             # Prepare to use the collector.
-            self.node_f: typing.Optional[typing.TextIO] = None
             self.node_wr = None
             self.nrows: int = 0
 
-            self.minimal_edge_f: typing.Optional[typing.TextIO] = None
             self.minimal_edge_wr = None
 
-            self.detailed_edge_f: typing.Optional[typing.TextIO] = None
             self.detailed_edge_wr = None
             self.erows: int = 0
 
-            self.minimal_qual_f: typing.Optional[typing.TextIO] = None
             self.minimal_qual_wr = None
-
-            self.detailed_qual_f: typing.Optional[typing.TextIO] = None
-            self.detailed_qual_wr = None
             self.qrows: int = 0
 
-            self.invalid_edge_f: typing.Optional[typing.TextIO] = None
             self.invalid_edge_wr = None
             self.invalid_erows: int = 0
 
-            self.invalid_qual_f: typing.Optional[typing.TextIO] = None
             self.invalid_qual_wr = None
             self.invalid_qrows: int = 0
 
-            self.split_alias_f: typing.Optional[typing.TextIO] = None
             self.split_alias_wr = None
             self.n_alias_rows: int = 0
 
-            self.split_en_alias_f: typing.Optional[typing.TextIO] = None
             self.split_en_alias_wr = None
             self.n_en_alias_rows: int = 0
 
-            self.split_datatype_f: typing.Optional[typing.TextIO] = None
             self.split_datatype_wr = None
             self.n_datatype_rows: int = 0
 
-            self.split_description_f: typing.Optional[typing.TextIO] = None
             self.split_description_wr = None
             self.n_description_rows: int = 0
 
-            self.split_en_description_f: typing.Optional[typing.TextIO] = None
             self.split_en_description_wr = None
             self.n_en_description_rows: int = 0
 
-            self.split_label_f: typing.Optional[typing.TextIO] = None
             self.split_label_wr = None
             self.n_label_rows: int = 0
 
-            self.split_en_label_f: typing.Optional[typing.TextIO] = None
             self.split_en_label_wr = None
             self.n_en_label_rows: int = 0
 
-            self.split_reference_f: typing.Optional[typing.TextIO] = None
             self.split_reference_wr = None
             self.n_reference_rows: int = 0
 
-            self.split_sitelink_f: typing.Optional[typing.TextIO] = None
             self.split_sitelink_wr = None
             self.n_sitelink_rows: int = 0
 
-            self.split_en_sitelink_f: typing.Optional[typing.TextIO] = None
             self.split_en_sitelink_wr = None
             self.n_en_sitelink_rows: int = 0
 
-            self.split_type_f: typing.Optional[typing.TextIO] = None
             self.split_type_wr = None
             self.n_type_rows: int = 0
 
-            self.split_property_edge_f: typing.Optional[typing.TextIO] = None
             self.split_property_edge_wr = None
             self.n_property_edge_rows: int = 0
 
-            self.split_property_qual_f: typing.Optional[typing.TextIO] = None
             self.split_property_qual_wr = None
             self.n_property_qual_rows: int = 0
 
@@ -2489,14 +2048,8 @@ def run(input_file: KGTKFiles,
                     self.open_minimal_edge_file(header, who)
                     self.process_split_files = True
 
-                elif action == "detailed_edge_header":
-                    self.open_detailed_edge_file(header, who)
-
                 elif action == "minimal_qual_header":
                     self.open_minimal_qual_file(header, who)
-
-                elif action == "detailed_qual_header":
-                    self.open_detailed_qual_file(header, who)
 
                 elif action == "invalid_edge_header":
                     self.open_invalid_edge_file(header, who)
@@ -2563,228 +2116,138 @@ def run(input_file: KGTKFiles,
             if the_file is None or len(the_file) == 0:
                 raise ValueError("%s header without a %s file in the %s collector." % (file_type, file_type, who))
 
-            f: typing.Optional[typing.TextIO]
-            wr: typing.Any
-            if use_kgtkwriter:
-                from kgtk.io.kgtkwriter import KgtkWriter
-                print("Opening the %s file in the %s collector with KgtkWriter: %s" % (file_type, who, the_file),
-                      file=sys.stderr, flush=True)
-                wr = KgtkWriter.open(header, Path(the_file), who=who + " collector", use_mgzip=use_mgzip_for_output,
-                                     mgzip_threads=mgzip_threads_for_output)
-                return None, wr
-
-            else:
-                print("Opening the %s file in the %s collector with csv.writer." % (file_type, who), file=sys.stderr,
-                      flush=True)
-                csv_line_terminator = "\n" if os.name == 'posix' else "\r\n"
-                f = open(the_file, "w", newline='')
-                wr = csv.writer(
-                    f,
-                    quoting=csv.QUOTE_NONE,
-                    delimiter="\t",
-                    escapechar="\n",
-                    quotechar='',
-                    lineterminator=csv_line_terminator)
-                wr.writerow(header)
-                return f, wr
+            from kgtk.io.kgtkwriter import KgtkWriter
+            print("Opening the %s file in the %s collector with KgtkWriter: %s" % (file_type, who, the_file),
+                  file=sys.stderr, flush=True)
+            wr: KgtkWriter = KgtkWriter.open(header, Path(the_file), who=who + " collector", use_mgzip=use_mgzip_for_output,
+                                             mgzip_threads=mgzip_threads_for_output)
+            return wr
 
         def open_node_file(self, header: typing.List[str], who: str):
-            self.node_f, self.node_wr = self._open_file(node_file, header, "node", who)
+            self.node_wr = self._open_file(node_file, header, "node", who)
 
         def open_minimal_edge_file(self, header: typing.List[str], who: str):
-            self.minimal_edge_f, self.minimal_edge_wr = self._open_file(minimal_edge_file, header, "minimal edge", who)
-
-        def open_detailed_edge_file(self, header: typing.List[str], who: str):
-            self.detailed_edge_f, self.detailed_edge_wr = self._open_file(detailed_edge_file, header, "detailed edge",
-                                                                          who)
+            self.minimal_edge_wr = self._open_file(minimal_edge_file, header, "minimal edge", who)
 
         def open_minimal_qual_file(self, header: typing.List[str], who: str):
-            self.minimal_qual_f, self.minimal_qual_wr = self._open_file(minimal_qual_file, header, "minimal qual", who)
-
-        def open_detailed_qual_file(self, header: typing.List[str], who: str):
-            self.detailed_qual_f, self.detailed_qual_wr = self._open_file(detailed_qual_file, header, "qual", who)
+            self.minimal_qual_wr = self._open_file(minimal_qual_file, header, "minimal qual", who)
 
         def open_invalid_edge_file(self, header: typing.List[str], who: str):
-            self.invalid_edge_f, self.invalid_edge_wr = self._open_file(invalid_edge_file, header, "invalid edge", who)
+            self.invalid_edge_wr = self._open_file(invalid_edge_file, header, "invalid edge", who)
 
         def open_invalid_qual_file(self, header: typing.List[str], who: str):
-            self.invalid_qual_f, self.invalid_qual_wr = self._open_file(invalid_qual_file, header, "qual", who)
+            self.invalid_qual_wr = self._open_file(invalid_qual_file, header, "qual", who)
 
         def open_split_alias_file(self, header: typing.List[str], who: str):
-            self.split_alias_f, self.split_alias_wr = self._open_file(split_alias_file, header, ALIAS_LABEL, who)
+            self.split_alias_wr = self._open_file(split_alias_file, header, ALIAS_LABEL, who)
 
         def open_split_en_alias_file(self, header: typing.List[str], who: str):
-            self.split_en_alias_f, self.split_en_alias_wr = self._open_file(split_en_alias_file, header,
-                                                                            "English " + ALIAS_LABEL, who)
+            self.split_en_alias_wr = self._open_file(split_en_alias_file, header,
+                                                     "English " + ALIAS_LABEL, who)
 
         def open_split_datatype_file(self, header: typing.List[str], who: str):
-            self.split_datatype_f, self.split_datatype_wr = self._open_file(split_datatype_file, header, DATATYPE_LABEL,
-                                                                            who)
+             self.split_datatype_wr = self._open_file(split_datatype_file, header, DATATYPE_LABEL,
+                                                      who)
 
         def open_split_description_file(self, header: typing.List[str], who: str):
-            self.split_description_f, self.split_description_wr = self._open_file(split_description_file, header,
-                                                                                  DESCRIPTION_LABEL, who)
+            self.split_description_wr = self._open_file(split_description_file, header,
+                                                        DESCRIPTION_LABEL, who)
 
         def open_split_en_description_file(self, header: typing.List[str], who: str):
-            self.split_en_description_f, self.split_en_description_wr = self._open_file(split_en_description_file,
-                                                                                        header,
-                                                                                        "English " + DESCRIPTION_LABEL,
-                                                                                        who)
+            self.split_en_description_wr = self._open_file(split_en_description_file,
+                                                           header,
+                                                           "English " + DESCRIPTION_LABEL,
+                                                           who)
 
         def open_split_label_file(self, header: typing.List[str], who: str):
-            self.split_label_f, self.split_label_wr = self._open_file(split_label_file, header, LABEL_LABEL, who)
+            self.split_label_wr = self._open_file(split_label_file, header, LABEL_LABEL, who)
 
         def open_split_en_label_file(self, header: typing.List[str], who: str):
-            self.split_en_label_f, self.split_en_label_wr = self._open_file(split_en_label_file, header,
-                                                                            "English " + LABEL_LABEL, who)
+            self.split_en_label_wr = self._open_file(split_en_label_file, header,
+                                                     "English " + LABEL_LABEL, who)
 
         def open_split_reference_file(self, header: typing.List[str], who: str):
-            self.split_reference_f, self.split_reference_wr = self._open_file(split_reference_file, header, REFERENCE_LABEL,
-                                                                              who)
+            self.split_reference_wr = self._open_file(split_reference_file, header, REFERENCE_LABEL,
+                                                      who)
 
         def open_split_sitelink_file(self, header: typing.List[str], who: str):
-            self.split_sitelink_f, self.split_sitelink_wr = self._open_file(split_sitelink_file, header, SITELINK_LABEL,
-                                                                            who)
+            self.split_sitelink_wr = self._open_file(split_sitelink_file, header, SITELINK_LABEL,
+                                                     who)
 
         def open_split_en_sitelink_file(self, header: typing.List[str], who: str):
-            self.split_en_sitelink_f, self.split_en_sitelink_wr = self._open_file(split_en_sitelink_file, header,
-                                                                                  "English " + SITELINK_LABEL, who)
+            self.split_en_sitelink_wr = self._open_file(split_en_sitelink_file, header,
+                                                        "English " + SITELINK_LABEL, who)
 
         def open_split_type_file(self, header: typing.List[str], who: str):
-            self.split_type_f, self.split_type_wr = self._open_file(split_type_file, header, TYPE_LABEL, who)
+            self.split_type_wr = self._open_file(split_type_file, header, TYPE_LABEL, who)
 
         def open_split_property_edge_file(self, header: typing.List[str], who: str):
-            self.split_property_edge_f, self.split_property_edge_wr = self._open_file(split_property_edge_file, header,
-                                                                                      "property edge", who)
+            self.split_property_edge_wr = self._open_file(split_property_edge_file, header,
+                                                          "property edge", who)
 
         def open_split_property_qual_file(self, header: typing.List[str], who: str):
-            self.split_property_qual_f, self.split_property_qual_wr = self._open_file(split_property_qual_file, header,
-                                                                                      "property qual", who)
+            self.split_property_qual_wr = self._open_file(split_property_qual_file, header,
+                                                          "property qual", who)
 
         def shutdown(self, who: str):
             print("Exiting the %s collector (pid %d)." % (who, os.getpid()), file=sys.stderr, flush=True)
 
-            if use_kgtkwriter:
-                if self.node_wr is not None:
-                    self.node_wr.close()
+            if self.node_wr is not None:
+                self.node_wr.close()
 
-                if self.minimal_edge_wr is not None:
-                    self.minimal_edge_wr.close()
+            if self.minimal_edge_wr is not None:
+                self.minimal_edge_wr.close()
 
-                if self.detailed_edge_wr is not None:
-                    self.detailed_edge_wr.close()
+            if self.detailed_edge_wr is not None:
+                self.detailed_edge_wr.close()
 
-                if self.invalid_edge_wr is not None:
-                    self.invalid_edge_wr.close()
+            if self.invalid_edge_wr is not None:
+                self.invalid_edge_wr.close()
 
-                if self.minimal_qual_wr is not None:
-                    self.minimal_qual_wr.close()
+            if self.minimal_qual_wr is not None:
+                self.minimal_qual_wr.close()
 
-                if self.detailed_qual_wr is not None:
-                    self.detailed_qual_wr.close()
+            if self.invalid_qual_wr is not None:
+                self.invalid_qual_wr.close()
 
-                if self.invalid_qual_wr is not None:
-                    self.invalid_qual_wr.close()
+            if self.split_alias_wr is not None:
+                self.split_alias_wr.close()
 
-                if self.split_alias_wr is not None:
-                    self.split_alias_wr.close()
+            if self.split_en_alias_wr is not None:
+                self.split_en_alias_wr.close()
 
-                if self.split_en_alias_wr is not None:
-                    self.split_en_alias_wr.close()
+            if self.split_datatype_wr is not None:
+                self.split_datatype_wr.close()
 
-                if self.split_datatype_wr is not None:
-                    self.split_datatype_wr.close()
+            if self.split_description_wr is not None:
+                self.split_description_wr.close()
 
-                if self.split_description_wr is not None:
-                    self.split_description_wr.close()
+            if self.split_en_description_wr is not None:
+                self.split_en_description_wr.close()
 
-                if self.split_en_description_wr is not None:
-                    self.split_en_description_wr.close()
+            if self.split_label_wr is not None:
+                self.split_label_wr.close()
 
-                if self.split_label_wr is not None:
-                    self.split_label_wr.close()
+            if self.split_en_label_wr is not None:
+                self.split_en_label_wr.close()
 
-                if self.split_en_label_wr is not None:
-                    self.split_en_label_wr.close()
+            if self.split_reference_wr is not None:
+                self.split_reference_wr.close()
 
-                if self.split_reference_wr is not None:
-                    self.split_reference_wr.close()
+            if self.split_sitelink_wr is not None:
+                self.split_sitelink_wr.close()
 
-                if self.split_sitelink_wr is not None:
-                    self.split_sitelink_wr.close()
+            if self.split_en_sitelink_wr is not None:
+                self.split_en_sitelink_wr.close()
 
-                if self.split_en_sitelink_wr is not None:
-                    self.split_en_sitelink_wr.close()
+            if self.split_type_wr is not None:
+                self.split_type_wr.close()
 
-                if self.split_type_wr is not None:
-                    self.split_type_wr.close()
+            if self.split_property_edge_wr is not None:
+                self.split_property_edge_wr.close()
 
-                if self.split_property_edge_wr is not None:
-                    self.split_property_edge_wr.close()
-
-                if self.split_property_edge_wr is not None:
-                    self.split_property_edge_wr.close()
-
-            else:
-                if self.node_f is not None:
-                    self.node_f.close()
-
-                if self.minimal_edge_f is not None:
-                    self.minimal_edge_f.close()
-
-                if self.detailed_edge_f is not None:
-                    self.detailed_edge_f.close()
-
-                if self.minimal_qual_f is not None:
-                    self.minimal_qual_f.close()
-
-                if self.detailed_qual_f is not None:
-                    self.detailed_qual_f.close()
-
-                if self.invalid_edge_f is not None:
-                    self.invalid_edge_f.close()
-
-                if self.invalid_qual_f is not None:
-                    self.invalid_qual_f.close()
-
-                if self.split_alias_f is not None:
-                    self.split_alias_f.close()
-
-                if self.split_en_alias_f is not None:
-                    self.split_en_alias_f.close()
-
-                if self.split_datatype_f is not None:
-                    self.split_datatype_f.close()
-
-                if self.split_description_f is not None:
-                    self.split_description_f.close()
-
-                if self.split_en_description_f is not None:
-                    self.split_en_description_f.close()
-
-                if self.split_label_f is not None:
-                    self.split_label_f.close()
-
-                if self.split_en_label_f is not None:
-                    self.split_en_label_f.close()
-
-                if self.split_reference_f is not None:
-                    self.split_reference_f.close()
-
-                if self.split_sitelink_f is not None:
-                    self.split_sitelink_f.close()
-
-                if self.split_en_sitelink_f is not None:
-                    self.split_en_sitelink_f.close()
-
-                if self.split_type_f is not None:
-                    self.split_type_f.close()
-
-                if self.split_property_edge_f is not None:
-                    self.split_property_edge_f.close()
-
-                if self.split_property_qual_f is not None:
-                    self.split_property_qual_f.close()
+            if self.split_property_edge_wr is not None:
+                self.split_property_edge_wr.close()
 
             print("The %s collector has closed its output files." % who, file=sys.stderr, flush=True)
 
@@ -2819,126 +2282,92 @@ def run(input_file: KGTKFiles,
                 if self.node_wr is None:
                     raise ValueError("Unexpected node rows in the %s collector." % who)
 
-                if use_kgtkwriter:
-                    for row in nrows:
-                        self.node_wr.write(row)
-                else:
-                    self.node_wr.writerows(nrows)
+                for row in nrows:
+                    self.node_wr.write(row)
 
             if len(erows) > 0:
-                if use_kgtkwriter:
-                    if not self.process_split_files:
-                        if self.detailed_edge_wr is None:
-                            raise ValueError("Unexpected edge rows in the %s collector." % who)
-                        for row in erows:
-                            if skip_validation or validate(row, "unsplit detailed edge"):
-                                self.detailed_edge_wr.write(row)
-                    else:
-                        for row in erows:
-                            split: bool = False
-                            label: str = row[2]  # Hack: knows the structure of the row.
-                            method: typing.Optional[
-                                typing.Callable[[typing.List[str]], bool]] = self.split_dispatcher.get(label)
-
-                            # Hack: knows the structure of the row.
-                            # This outrageous hack supports references.  It routes reference details to the
-                            # split reference file when there is a split reference file. Otherwise, references
-                            # will go to the edge file.
-                            # TODO: remove this hack.  Perhaps we need a seperate top-level file for references?
-                            if method is None and row[1].startswith(REFERENCE_ID_START):
-                                method = self.split_dispatcher.get(REFERENCE_LABEL)
-
-                            if method is not None:
-                                split = method(row)
-                            if not split:
-                                if self.minimal_edge_wr is None and self.detailed_edge_wr is None and \
-                                        self.split_property_edge_wr is None:
-                                    raise ValueError("Unexpected %s edge rows in the %s collector: %s." % (label, who, repr(row)))
-
-                                if self.split_property_edge_wr is not None and row[1].startswith(
-                                        "P"):  # Hack: knows the structure of the row.
-                                    # For now, split property files are minimal.
-                                    if skip_validation or validate(row, "split property edge"):
-                                        self.split_property_edge_wr.write((row[0], row[1], row[2], row[3], row[4], row[
-                                            5]))  # Hack: knows the structure of the row.
-
-                                elif self.minimal_edge_wr is not None:
-                                    if skip_validation or validate(row, "minimal edge"):
-                                        self.minimal_edge_wr.write((row[0], row[1], row[2], row[3], row[4],
-                                                                    row[5]))  # Hack: knows the structure of the row.
-
-                                if self.detailed_edge_wr is not None:
-                                    if skip_validation or validate(row, "split detailed edge"):
-                                        self.detailed_edge_wr.write(row)
-                else:
-                    if self.minimal_edge_wr is None:
+                if not self.process_split_files:
+                    if self.detailed_edge_wr is None:
                         raise ValueError("Unexpected edge rows in the %s collector." % who)
+                    for row in erows:
+                        if skip_validation or validate(row, "unsplit detailed edge"):
+                            self.detailed_edge_wr.write(row)
+                else:
+                    for row in erows:
+                        split: bool = False
+                        label: str = row[2]  # Hack: knows the structure of the row.
+                        method: typing.Optional[
+                            typing.Callable[[typing.List[str]], bool]] = self.split_dispatcher.get(label)
 
-                    if skip_validation:
-                        self.minimal_edge_wr.writerows(erows)
-                    else:
-                        for row in erows:
-                            if validate(row, "minimal edge csv"):
-                                self.minimal_edge_wr.write(row)
+                        # Hack: knows the structure of the row.
+                        # This outrageous hack supports references.  It routes reference details to the
+                        # split reference file when there is a split reference file. Otherwise, references
+                        # will go to the edge file.
+                        # TODO: remove this hack.  Perhaps we need a seperate top-level file for references?
+                        if method is None and row[1].startswith(REFERENCE_ID_START):
+                            method = self.split_dispatcher.get(REFERENCE_LABEL)
+
+                        if method is not None:
+                            split = method(row)
+                        if not split:
+                            if self.minimal_edge_wr is None and self.detailed_edge_wr is None and \
+                                    self.split_property_edge_wr is None:
+                                raise ValueError("Unexpected %s edge rows in the %s collector: %s." % (label, who, repr(row)))
+
+                            if self.split_property_edge_wr is not None and row[1].startswith(
+                                    "P"):  # Hack: knows the structure of the row.
+                                # For now, split property files are minimal.
+                                if skip_validation or validate(row, "split property edge"):
+                                    self.split_property_edge_wr.write((row[0], row[1], row[2], row[3], row[4], row[
+                                        5]))  # Hack: knows the structure of the row.
+
+                            elif self.minimal_edge_wr is not None:
+                                if skip_validation or validate(row, "minimal edge"):
+                                    self.minimal_edge_wr.write((row[0], row[1], row[2], row[3], row[4],
+                                                                row[5]))  # Hack: knows the structure of the row.
+
+                            if self.detailed_edge_wr is not None:
+                                if skip_validation or validate(row, "split detailed edge"):
+                                    self.detailed_edge_wr.write(row)
 
             if len(qrows) > 0:
-                if use_kgtkwriter:
-                    if self.minimal_qual_wr is None and self.detailed_qual_wr is None:
-                        raise ValueError("Unexpected qual rows in the %s collector." % who)
+                if self.minimal_qual_wr is None:
+                    raise ValueError("Unexpected qual rows in the %s collector." % who)
 
-                    for row in qrows:
-                        if self.split_property_qual_wr is not None and row[0].startswith(
-                                "P"):  # Hack: knows the structure of the row.
-                            if skip_validation or validate(row, "split property qual"):
-                                self.split_property_qual_wr.write(
-                                    (row[0], row[1], row[2], row[3], row[4]))  # Hack: knows the structure of the row.
+                for row in qrows:
+                    if self.split_property_qual_wr is not None and row[0].startswith(
+                            "P"):  # Hack: knows the structure of the row.
+                        if skip_validation or validate(row, "split property qual"):
+                            self.split_property_qual_wr.write(
+                                (row[0], row[1], row[2], row[3], row[4]))  # Hack: knows the structure of the row.
 
-                        elif self.minimal_qual_wr is not None:
-                            if skip_validation or validate(row, "minimal qual"):
-                                self.minimal_qual_wr.write(
-                                    (row[0], row[1], row[2], row[3], row[4]))  # Hack: knows the structure of the row.
-
-                        if self.detailed_qual_wr is not None:
-                            if skip_validation or validate(row, "detailed qual"):
-                                self.detailed_qual_wr.write(row)
-                else:
-                    if self.detailed_qual_wr is None:
-                        raise ValueError("Unexpected qual rows in the %s collector." % who)
-                    if skip_validation:
-                        self.detailed_qual_wr.writerows(qrows)
-                    else:
-                        for row in qrows:
-                            if validate(row, "detailed qual csv"):
-                                self.detailed_qual_wr.write(row)
+                    elif self.minimal_qual_wr is not None:
+                        if skip_validation or validate(row, "minimal qual"):
+                            self.minimal_qual_wr.write(
+                                (row[0], row[1], row[2], row[3], row[4]))  # Hack: knows the structure of the row.
 
             if len(invalid_erows) > 0:
                 # print("Writing invalid erows", file=sys.stderr, flush=True) # ***
                 if self.invalid_edge_wr is None:
                     raise ValueError("Unexpected invalid edge rows in the %s collector." % who)
 
-                if use_kgtkwriter:
-                    for row in invalid_erows:
-                        if minimal_edge_file is not None:  # messy
-                            self.invalid_edge_wr.write((row[0], row[1], row[2], row[3], row[4],
-                                                        row[5]))  # Hack: knows the structure of the row.
-                        else:
-                            self.invalid_edge_wr.write(row)
-                else:
-                    self.invalid_edge_wr.writerows(invalid_erows)
+                for row in invalid_erows:
+                    if minimal_edge_file is not None:  # messy
+                        self.invalid_edge_wr.write((row[0], row[1], row[2], row[3], row[4],
+                                                    row[5]))  # Hack: knows the structure of the row.
+                    else:
+                        self.invalid_edge_wr.write(row)
 
             if len(invalid_qrows) > 0:
                 if self.invalid_qual_wr is None:
                     raise ValueError("Unexpected invalid qual rows in the %s collector." % who)
 
-                if use_kgtkwriter:
-                    for row in invalid_qrows:
-                        if minimal_qual_file is not None:  # messy
-                            self.invalid_qual_wr.write(
-                                (row[0], row[1], row[2], row[3], row[4]))  # Hack: knows the structure of the row.
-                        else:
-                            self.invalid_qual_wr.write(row)
-                else:
-                    self.invalid_qual_wr.writerows(invalid_qrows)
+                for row in invalid_qrows:
+                    if minimal_qual_file is not None:  # messy
+                        self.invalid_qual_wr.write(
+                            (row[0], row[1], row[2], row[3], row[4]))  # Hack: knows the structure of the row.
+                    else:
+                        self.invalid_qual_wr.write(row)
 
         def setup_split_dispatcher(self):
             self.split_dispatcher: typing.MutableMapping[str, typing.Callable[[typing.List[str]], bool]] = dict()
@@ -3052,539 +2481,432 @@ def run(input_file: KGTKFiles,
             return split
 
     try:
-        UPDATE_VERSION: str = "2022-09-27T23:03:25.315324+00:00#KV7HtQeRqPXs1zrB6HYgmHbAg86GONZfwi/Edt6VY5uQ6OSzhJneC8HSPCvOf7tnTuPlfK37ahADcxjt0y04Rg=="
+        UPDATE_VERSION: str = "2022-10-03T17:24:00.159637+00:00#DdtbnhD32DIb0SFizrjm1/Y9Vs8qb779IeI0vAPWuA7KZenvR+PQruk6J+6OCeGU7rz8qdKkutZ8KgZ1ZaJtWQ=="
         print("kgtk import-wikidata version: %s" % UPDATE_VERSION, file=sys.stderr, flush=True)
         print("Starting main process (pid %d)." % os.getpid(), file=sys.stderr, flush=True)
         inp_path = KGTKArgumentParser.get_input_file(input_file)
 
-        csv_line_terminator = "\n" if os.name == 'posix' else "\r\n"
-
         start = time.time()
 
-        if not skip_processing:
-            from gzip import GzipFile
-            print("Processing.", file=sys.stderr, flush=True)
-
-            # Open the input file first to make it easier to monitor with "pv".
-            input_f: typing.Union[GzipFile, typing.IO[typing.Any]]
-            if str(inp_path) == "-":
-                print('Processing wikidata from standard input', file=sys.stderr, flush=True)
-                # It is not well documented, but this is how you read binary data
-                # from stdin in Python 3.
-                #
-                # TODO: Add decompression.
-                input_f = sys.stdin.buffer
-
-            else:
-                print('Processing wikidata file %s' % str(inp_path), file=sys.stderr, flush=True)
-                input_f = open(inp_path, mode='rb')
-                progress_startup(fd=input_f.fileno())  # Start the custom progress monitor.
-
-                if str(inp_path).endswith(".bz2"):
-                    print('Decompressing (bz2)', file=sys.stderr, flush=True)
-                    # TODO: Optionally use a system decompression program.
-                    input_f = bz2.open(input_f)
-
-                elif str(inp_path).endswith(".gz"):
-                    # TODO: Optionally use a system decompression program.
-                    if use_mgzip_for_input:
-                        import mgzip # type: ignore
-                        print('Decompressing (mgzip)', file=sys.stderr, flush=True)
-                        input_f = mgzip.open(input_f, thread=mgzip_threads_for_input)
-                    else:
-                        import gzip
-                        print('Decompressing (gzip)', file=sys.stderr, flush=True)
-                        input_f = gzip.open(input_f)
-
-            collector_p = None
-            node_collector_p = None
-            edge_collector_p = None
-            qual_collector_p = None
-            invalid_edge_collector_p = None
-            invalid_qual_collector_p = None
-
-            description_collector_p = None
-            sitelink_collector_p = None
-
-            if collect_results:
-                print("Creating the collector queue.", file=sys.stderr, flush=True)
-                # collector_q = pyrallel.ShmQueue()
-                collector_q_maxsize = procs * collector_queue_per_proc_size
-                if collect_seperately:
-
-                    if node_file is not None:
-                        node_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
-                        print("The collector node queue has been created (maxsize=%d)." % collector_q_maxsize,
-                              file=sys.stderr, flush=True)
-
-                        print("Creating the node_collector.", file=sys.stderr, flush=True)
-                        node_collector: MyCollector = MyCollector()
-                        print("Creating the node collector process.", file=sys.stderr, flush=True)
-                        node_collector_p = mp.Process(target=node_collector.run, args=(node_collector_q, "node"))
-                        print("Starting the node collector process.", file=sys.stderr, flush=True)
-                        node_collector_p.start()
-                        print("Started the node collector process.", file=sys.stderr, flush=True)
-
-                    if minimal_edge_file is not None or detailed_edge_file is not None:
-                        edge_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
-                        print("The collector edge queue has been created (maxsize=%d)." % collector_q_maxsize,
-                              file=sys.stderr, flush=True)
-
-                        print("Creating the edge_collector.", file=sys.stderr, flush=True)
-                        edge_collector: MyCollector = MyCollector()
-                        print("Creating the edge collector process.", file=sys.stderr, flush=True)
-                        edge_collector_p = mp.Process(target=edge_collector.run, args=(edge_collector_q, "edge"))
-                        print("Starting the edge collector process.", file=sys.stderr, flush=True)
-                        edge_collector_p.start()
-                        print("Started the edge collector process.", file=sys.stderr, flush=True)
-
-                    if minimal_qual_file is not None or detailed_qual_file is not None:
-                        qual_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
-                        print("The collector qual queue has been created (maxsize=%d)." % collector_q_maxsize,
-                              file=sys.stderr, flush=True)
-
-                        print("Creating the qual_collector.", file=sys.stderr, flush=True)
-                        qual_collector: MyCollector = MyCollector()
-                        print("Creating the qual collector process.", file=sys.stderr, flush=True)
-                        qual_collector_p = mp.Process(target=qual_collector.run, args=(qual_collector_q, "qual"))
-                        print("Starting the qual collector process.", file=sys.stderr, flush=True)
-                        qual_collector_p.start()
-                        print("Started the qual collector process.", file=sys.stderr, flush=True)
-
-                    if invalid_edge_file is not None:
-                        invalid_edge_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
-                        print("The collector invalid edge queue has been created (maxsize=%d)." % collector_q_maxsize,
-                              file=sys.stderr, flush=True)
-
-                        print("Creating the invalid_edge_collector.", file=sys.stderr, flush=True)
-                        invalid_edge_collector: MyCollector = MyCollector()
-                        print("Creating the invalid edge collector process.", file=sys.stderr, flush=True)
-                        invalid_edge_collector_p = mp.Process(target=invalid_edge_collector.run,
-                                                              args=(invalid_edge_collector_q, "invalid edge"))
-                        print("Starting the invalid edge collector process.", file=sys.stderr, flush=True)
-                        invalid_edge_collector_p.start()
-                        print("Started the invalid edge collector process.", file=sys.stderr, flush=True)
-
-                    if invalid_qual_file is not None:
-                        invalid_qual_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
-                        print("The collector invalid qual queue has been created (maxsize=%d)." % collector_q_maxsize,
-                              file=sys.stderr, flush=True)
-
-                        print("Creating the invalid_qual_collector.", file=sys.stderr, flush=True)
-                        invalid_qual_collector: MyCollector = MyCollector()
-                        print("Creating the invalid qual collector process.", file=sys.stderr, flush=True)
-                        invalid_qual_collector_p = mp.Process(target=invalid_qual_collector.run,
-                                                              args=(invalid_qual_collector_q, "invalid qual"))
-                        print("Starting the invalid qual collector process.", file=sys.stderr, flush=True)
-                        invalid_qual_collector_p.start()
-                        print("Started the invalid qual collector process.", file=sys.stderr, flush=True)
-
-                    if split_description_file is not None:
-                        description_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
-                        print("The collector description queue has been created (maxsize=%d)." % collector_q_maxsize,
-                              file=sys.stderr, flush=True)
-
-                        print("Creating the description collector.", file=sys.stderr, flush=True)
-                        description_collector: MyCollector = MyCollector()
-                        print("Creating the description collector process.", file=sys.stderr, flush=True)
-                        description_collector_p = mp.Process(target=description_collector.run,
-                                                             args=(description_collector_q, "description"))
-                        print("Starting the description collector process.", file=sys.stderr, flush=True)
-                        description_collector_p.start()
-                        print("Started the description collector process.", file=sys.stderr, flush=True)
-
-                    if split_reference_file is not None:
-                        reference_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
-                        print("The collector reference queue has been created (maxsize=%d)." % collector_q_maxsize,
-                              file=sys.stderr, flush=True)
-
-                        print("Creating the reference collector.", file=sys.stderr, flush=True)
-                        reference_collector: MyCollector = MyCollector()
-                        print("Creating the reference collector process.", file=sys.stderr, flush=True)
-                        reference_collector_p = mp.Process(target=reference_collector.run,
-                                                           args=(reference_collector_q, "reference"))
-                        print("Starting the reference collector process.", file=sys.stderr, flush=True)
-                        reference_collector_p.start()
-                        print("Started the reference collector process.", file=sys.stderr, flush=True)
-
-                    if split_sitelink_file is not None:
-                        sitelink_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
-                        print("The collector sitelink queue has been created (maxsize=%d)." % collector_q_maxsize,
-                              file=sys.stderr, flush=True)
-
-                        print("Creating the sitelink collector.", file=sys.stderr, flush=True)
-                        sitelink_collector: MyCollector = MyCollector()
-                        print("Creating the sitelink collector process.", file=sys.stderr, flush=True)
-                        sitelink_collector_p = mp.Process(target=sitelink_collector.run,
-                                                          args=(sitelink_collector_q, "sitelink"))
-                        print("Starting the sitelink collector process.", file=sys.stderr, flush=True)
-                        sitelink_collector_p.start()
-                        print("Started the sitelink collector process.", file=sys.stderr, flush=True)
-
-                else:
-                    collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
-                    print("The common collector queue has been created (maxsize=%d)." % collector_q_maxsize,
-                          file=sys.stderr, flush=True)
-
-                    print("Creating the common collector.", file=sys.stderr, flush=True)
-                    collector: MyCollector = MyCollector()
-                    print("Creating the common collector process.", file=sys.stderr, flush=True)
-                    collector_p = mp.Process(target=collector.run, args=(collector_q, "common"))
-                    print("Starting the common collector process.", file=sys.stderr, flush=True)
-                    collector_p.start()
-                    print("Started the common collector process.", file=sys.stderr, flush=True)
-
-            if node_file:
-                if node_id_only:
-                    node_file_header = ['id']
-                else:
-                    node_file_header = ['id', 'label', 'type', 'description', 'alias', 'datatype']
-
-                ncq = collector_q if collector_q is not None else node_collector_q
-                if ncq is not None:
-                    print("Sending the node header to the collector.", file=sys.stderr, flush=True)
-                    ncq.put(("node_header", None, None, None, None, None, node_file_header))
-                    print("Sent the node header to the collector.", file=sys.stderr, flush=True)
-
-                else:
-                    with open(node_file + '_header', 'w', newline='') as myfile:
-                        wr = csv.writer(
-                            myfile,
-                            quoting=csv.QUOTE_NONE,
-                            delimiter="\t",
-                            escapechar="\n",
-                            quotechar='',
-                            lineterminator=csv_line_terminator)
-                        wr.writerow(node_file_header)
-
-            if explode_values:
-                edge_file_header = ['id', 'node1', 'label', 'node2', 'rank', 'node2;magnitude', 'node2;unit',
-                                    'node2;date', 'node2;item', 'node2;lower', 'node2;upper',
-                                    'node2;latitude', 'node2;longitude', 'node2;precision', 'node2;calendar',
-                                    'node2;entity-type', 'node2;wikidatatype', 'lang']
-            else:
-                edge_file_header = ['id', 'node1', 'label', 'node2',
-                                    'rank', 'node2;wikidatatype',
-                                    'claim_id', 'val_type', 'entity_type', 'datahash', 'precision', 'calendar', 'lang']
-
-            ecq = collector_q if collector_q is not None else edge_collector_q
-            if detailed_edge_file:
-                if ecq is not None:
-                    print("Sending the detailed edge header to the collector.", file=sys.stderr, flush=True)
-                    ecq.put(("detailed_edge_header", None, None, None, None, None, edge_file_header))
-                    print("Sent the detailed edge header to the collector.", file=sys.stderr, flush=True)
-
-                else:
-                    with open(detailed_edge_file + '_header', 'w', newline='') as myfile:
-                        wr = csv.writer(
-                            myfile,
-                            quoting=csv.QUOTE_NONE,
-                            delimiter="\t",
-                            escapechar="\n",
-                            quotechar='',
-                            lineterminator=csv_line_terminator)
-                        wr.writerow(edge_file_header)
-
-            if minimal_edge_file and ecq is not None:
-                print("Sending the minimal edge file header to the collector.", file=sys.stderr, flush=True)
-                ecq.put(("minimal_edge_header", None, None, None, None, None, edge_file_header[0:6]))
-                print("Sent the minimal edge file header to the collector.", file=sys.stderr, flush=True)
-
-            if split_alias_file and ecq is not None:
-                alias_file_header = ['id', 'node1', 'label', 'node2', 'lang']
-                print("Sending the alias file header to the collector.", file=sys.stderr, flush=True)
-                ecq.put(("split_alias_header", None, None, None, None, None, alias_file_header))
-                print("Sent the alias file header to the collector.", file=sys.stderr, flush=True)
-
-            if split_en_alias_file and ecq is not None:
-                en_alias_file_header = ['id', 'node1', 'label', 'node2']
-                print("Sending the English alias file header to the collector.", file=sys.stderr, flush=True)
-                ecq.put(("split_en_alias_header", None, None, None, None, None, en_alias_file_header))
-                print("Sent the English alias file header to the collector.", file=sys.stderr, flush=True)
-
-            if split_datatype_file and ecq is not None:
-                datatype_file_header = ['id', 'node1', 'label', 'node2']
-                print("Sending the datatype file header to the collector.", file=sys.stderr, flush=True)
-                ecq.put(("split_datatype_header", None, None, None, None, None, datatype_file_header))
-                print("Sent the datatype file header to the collector.", file=sys.stderr, flush=True)
-
-            dcq = collector_q if collector_q is not None else description_collector_q
-            if split_description_file and dcq is not None:
-                description_file_header = ['id', 'node1', 'label', 'node2', 'lang']
-                print("Sending the description file header to the collector.", file=sys.stderr, flush=True)
-                dcq.put(("split_description_header", None, None, None, None, None, description_file_header))
-                print("Sent the description file header to the collector.", file=sys.stderr, flush=True)
-
-            if split_en_description_file and dcq is not None:
-                en_description_file_header = ['id', 'node1', 'label', 'node2']
-                print("Sending the English description file header to the collector.", file=sys.stderr, flush=True)
-                dcq.put(("split_en_description_header", None, None, None, None, None, en_description_file_header))
-                print("Sent the English description file header to the collector.", file=sys.stderr, flush=True)
-
-            if split_label_file and ecq is not None:
-                label_file_header = ['id', 'node1', 'label', 'node2', 'lang']
-                print("Sending the label file header to the collector.", file=sys.stderr, flush=True)
-                ecq.put(("split_label_header", None, None, None, None, None, label_file_header))
-                print("Sent the label file header to the collector.", file=sys.stderr, flush=True)
-
-            if split_en_label_file and ecq is not None:
-                en_label_file_header = ['id', 'node1', 'label', 'node2']
-                print("Sending the English label file header to the collector.", file=sys.stderr, flush=True)
-                ecq.put(("split_en_label_header", None, None, None, None, None, en_label_file_header))
-                print("Sent the English label file header to the collector.", file=sys.stderr, flush=True)
-
-            rcq = collector_q if collector_q is not None else reference_collector_q
-            if split_reference_file and rcq is not None:
-                reference_file_header = ['id', 'node1', 'label', 'node2', 'node2;wikidatatype']
-                print("Sending the reference file header to the collector.", file=sys.stderr, flush=True)
-                rcq.put(("split_reference_header", None, None, None, None, None, reference_file_header))
-                print("Sent the reference file header to the collector.", file=sys.stderr, flush=True)
-
-            scq = collector_q if collector_q is not None else sitelink_collector_q
-            if split_sitelink_file and scq is not None:
-                sitelink_file_header = ['id', 'node1', 'label', 'node2', 'lang']
-                print("Sending the sitelink file header to the collector.", file=sys.stderr, flush=True)
-                scq.put(("split_sitelink_header", None, None, None, None, None, sitelink_file_header))
-                print("Sent the sitelink file header to the collector.", file=sys.stderr, flush=True)
-
-            if split_en_sitelink_file and scq is not None:
-                en_sitelink_file_header = ['id', 'node1', 'label', 'node2']
-                print("Sending the English sitelink file header to the collector.", file=sys.stderr, flush=True)
-                scq.put(("split_en_sitelink_header", None, None, None, None, None, en_sitelink_file_header))
-                print("Sent the English sitelink file header to the collector.", file=sys.stderr, flush=True)
-
-            if split_type_file and ecq is not None:
-                type_file_header = ['id', 'node1', 'label', 'node2']
-                print("Sending the entry type file header to the collector.", file=sys.stderr, flush=True)
-                ecq.put(("split_type_header", None, None, None, None, None, type_file_header))
-                print("Sent the entry type file header to the collector.", file=sys.stderr, flush=True)
-
-            if split_property_edge_file and ecq is not None:
-                print("Sending the property edge file header to the collector.", file=sys.stderr, flush=True)
-                ecq.put(("split_property_edge_header", None, None, None, None, None, edge_file_header[0:6]))
-                print("Sent the property edge file header to the collector.", file=sys.stderr, flush=True)
-
-            if invalid_edge_file and invalid_edge_collector_q is not None:
-                if detailed_edge_file:
-                    print("Sending the detailed invalid edge header to the collector.", file=sys.stderr, flush=True)
-                    invalid_edge_collector_q.put(
-                        ("invalid_edge_header", None, None, None, None, None, edge_file_header))
-                    print("Sent the detailed invalid edge header to the collector.", file=sys.stderr, flush=True)
-                elif minimal_edge_file:
-                    print("Sending the minimal invalid edge header to the collector.", file=sys.stderr, flush=True)
-                    invalid_edge_collector_q.put(
-                        ("invalid_edge_header", None, None, None, None, None, edge_file_header[0:6]))
-                    print("Sent the minimal invalid edge header to the collector.", file=sys.stderr, flush=True)
-
-            if minimal_qual_file is not None or detailed_qual_file is not None or split_property_qual_file is not None:
-                qual_file_header = edge_file_header.copy()
-                if "rank" in qual_file_header:
-                    qual_file_header.remove('rank')
-                if "claim_type" in qual_file_header:
-                    qual_file_header.remove('claim_type')
-                if "claim_id" in qual_file_header:
-                    qual_file_header.remove('claim_id')
-                if "lang" in qual_file_header:
-                    qual_file_header.remove('lang')
-
-                qcq = collector_q if collector_q is not None else qual_collector_q
-
-                if detailed_qual_file is not None:
-                    if qcq is not None:
-                        print("Sending the detailed qual file header to the collector.", file=sys.stderr, flush=True)
-                        qcq.put(("detailed_qual_header", None, None, None, None, None, qual_file_header))
-                        print("Sent the detailed qual file header to the collector.", file=sys.stderr, flush=True)
-
-                    else:
-                        with open(detailed_qual_file + '_header', 'w', newline='') as myfile:
-                            wr = csv.writer(
-                                myfile,
-                                quoting=csv.QUOTE_NONE,
-                                delimiter="\t",
-                                escapechar="\n",
-                                quotechar='',
-                                lineterminator=csv_line_terminator)
-                            wr.writerow(qual_file_header)
-                if minimal_qual_file is not None and qcq is not None:
-                    print("Sending the minimal qual file header to the collector.", file=sys.stderr, flush=True)
-                    qcq.put(("minimal_qual_header", None, None, None, None, None, qual_file_header[0:5]))
-                    print("Sent the minimal qual file header to the collector.", file=sys.stderr, flush=True)
-
-                if split_property_qual_file and qcq is not None:
-                    print("Sending the property qual file header to the collector.", file=sys.stderr, flush=True)
-                    qcq.put(("split_property_qual_header", None, None, None, None, None, qual_file_header[0:5]))
-                    print("Sent the property qual file header to the collector.", file=sys.stderr, flush=True)
-
-                if invalid_qual_file and invalid_qual_collector_q is not None:
-                    if detailed_qual_file:
-                        print("Sending the detailed invalid qual header to the collector.", file=sys.stderr, flush=True)
-                        invalid_qual_collector_q.put(
-                            ("invalid_qual_header", None, None, None, None, None, qual_file_header))
-                        print("Sent the detailed invalid qual header to the collector.", file=sys.stderr, flush=True)
-                    elif minimal_qual_file:
-                        print("Sending the minimal invalid qual header to the collector.", file=sys.stderr, flush=True)
-                        invalid_qual_collector_q.put(
-                            ("invalid_qual_header", None, None, None, None, None, qual_file_header[0:5]))
-                        print("Sent the minimal invalid qual header to the collector.", file=sys.stderr, flush=True)
-
-            print('Creating parallel processor for {}'.format(str(inp_path)), file=sys.stderr, flush=True)
-            if use_shm or single_mapper_queue:
-                pp = pyrallel.ParallelProcessor(procs, MyMapper, enable_process_id=True,
-                                                max_size_per_mapper_queue=max_size_per_mapper_queue,
-                                                use_shm=use_shm, enable_collector_queues=False,
-                                                batch_size=mapper_batch_size,
-                                                single_mapper_queue=single_mapper_queue)
-            else:
-                pp = pyrallel.ParallelProcessor(procs, MyMapper, enable_process_id=True,
-                                                max_size_per_mapper_queue=max_size_per_mapper_queue,
-                                                batch_size=mapper_batch_size)
-            print('Start parallel processing', file=sys.stderr, flush=True)
-            pp.start()
-
-            lines_processed: int = 0
-            for cnt, line in enumerate(input_f):
-                # Is there a limit on the number of input lines to process?
-                if limit and cnt >= limit:
-                    break
-
-                # Shall process every nth input line (within th elimit)?
-                if nth and cnt % nth != 0:
-                    continue
-
-                # pp.add_task(line,node_file,edge_file,qual_file,languages,source)
-                pp.add_task(line)
-                lines_processed += 1
-
-            print('Done processing {}, {} lines processed'.format(str(inp_path), lines_processed), file=sys.stderr, flush=True)
-            input_f.close()
-
-            print('Telling the workers to shut down.', file=sys.stderr, flush=True)
-            pp.task_done()
-            print('Waiting for the workers to shut down.', file=sys.stderr, flush=True)
-            pp.join()
-            print('Worker shut down is complete.', file=sys.stderr, flush=True)
-
-            if collector_q is not None:
-                print('Telling the collector to shut down.', file=sys.stderr, flush=True)
-                collector_q.put(("shutdown", None, None, None, None, None, None))
-            if collector_p is not None:
-                print('Waiting for the collector to shut down.', file=sys.stderr, flush=True)
-                collector_p.join()
-                print('Collector shut down is complete.', file=sys.stderr, flush=True)
-            if collector_q is not None:
-                collector_q.close()
-
-            if node_collector_q is not None:
-                print('Telling the node collector to shut down.', file=sys.stderr, flush=True)
-                node_collector_q.put(("shutdown", None, None, None, None, None, None))
-            if node_collector_p is not None:
-                print('Waiting for the node collector to shut down.', file=sys.stderr, flush=True)
-                node_collector_p.join()
-                print('Node collector shut down is complete.', file=sys.stderr, flush=True)
-            if node_collector_q is not None:
-                node_collector_q.close()
-
-            if edge_collector_q is not None:
-                print('Telling the edge collector to shut down.', file=sys.stderr, flush=True)
-                edge_collector_q.put(("shutdown", None, None, None, None, None, None))
-            if edge_collector_p is not None:
-                print('Waiting for the edge collector to shut down.', file=sys.stderr, flush=True)
-                edge_collector_p.join()
-                print('Edge collector shut down is complete.', file=sys.stderr, flush=True)
-            if edge_collector_q is not None:
-                edge_collector_q.close()
-
-            if qual_collector_q is not None:
-                print('Telling the qual collector to shut down.', file=sys.stderr, flush=True)
-                qual_collector_q.put(("shutdown", None, None, None, None, None, None))
-            if qual_collector_p is not None:
-                print('Waiting for the qual collector to shut down.', file=sys.stderr, flush=True)
-                qual_collector_p.join()
-                print('Qual collector shut down is complete.', file=sys.stderr, flush=True)
-            if qual_collector_q is not None:
-                qual_collector_q.close()
-
-            if invalid_edge_collector_q is not None:
-                print('Telling the invalid edge collector to shut down.', file=sys.stderr, flush=True)
-                invalid_edge_collector_q.put(("shutdown", None, None, None, None, None, None))
-            if invalid_edge_collector_p is not None:
-                print('Waiting for the invalid edge collector to shut down.', file=sys.stderr, flush=True)
-                invalid_edge_collector_p.join()
-                print('Invalid edge collector shut down is complete.', file=sys.stderr, flush=True)
-            if invalid_edge_collector_q is not None:
-                invalid_edge_collector_q.close()
-
-            if invalid_qual_collector_q is not None:
-                print('Telling the invalid qual collector to shut down.', file=sys.stderr, flush=True)
-                invalid_qual_collector_q.put(("shutdown", None, None, None, None, None, None))
-            if invalid_qual_collector_p is not None:
-                print('Waiting for the invalid qual collector to shut down.', file=sys.stderr, flush=True)
-                invalid_qual_collector_p.join()
-                print('Invalid qual collector shut down is complete.', file=sys.stderr, flush=True)
-            if invalid_qual_collector_q is not None:
-                invalid_qual_collector_q.close()
-
-            if description_collector_q is not None:
-                print('Telling the description collector to shut down.', file=sys.stderr, flush=True)
-                description_collector_q.put(("shutdown", None, None, None, None, None, None))
-            if description_collector_p is not None:
-                print('Waiting for the description collector to shut down.', file=sys.stderr, flush=True)
-                description_collector_p.join()
-                print('Description collector shut down is complete.', file=sys.stderr, flush=True)
-            if description_collector_q is not None:
-                description_collector_q.close()
-
-            if reference_collector_q is not None:
-                print('Telling the reference collector to shut down.', file=sys.stderr, flush=True)
-                reference_collector_q.put(("shutdown", None, None, None, None, None, None))
-            if reference_collector_p is not None:
-                print('Waiting for the reference collector to shut down.', file=sys.stderr, flush=True)
-                reference_collector_p.join()
-                print('Reference collector shut down is complete.', file=sys.stderr, flush=True)
-            if reference_collector_q is not None:
-                reference_collector_q.close()
-
-            if sitelink_collector_q is not None:
-                print('Telling the sitelink collector to shut down.', file=sys.stderr, flush=True)
-                sitelink_collector_q.put(("shutdown", None, None, None, None, None, None))
-            if sitelink_collector_p is not None:
-                print('Waiting for the sitelink collector to shut down.', file=sys.stderr, flush=True)
-                sitelink_collector_p.join()
-                print('Sitelink collector shut down is complete.', file=sys.stderr, flush=True)
-            if sitelink_collector_q is not None:
-                sitelink_collector_q.close()
-
-        if not skip_merging and not collect_results:
-            # We've finished processing the input data, possibly using multiple
-            # server processes.  We need to assemble the final output file(s) with
-            # the header first, then the fragments produced by parallel
-            # processing.
+        from gzip import GzipFile
+        print("Processing.", file=sys.stderr, flush=True)
+
+        # Open the input file first to make it easier to monitor with "pv".
+        input_f: typing.Union[GzipFile, typing.IO[typing.Any]]
+        if str(inp_path) == "-":
+            print('Processing wikidata from standard input', file=sys.stderr, flush=True)
+            # It is not well documented, but this is how you read binary data
+            # from stdin in Python 3.
             #
-            # If we assume that we are on Linux, then os.sendfile(...)
-            # should provide the simplest, highest-performing solution.
-            if node_file:
-                print('Combining the node file fragments', file=sys.stderr, flush=True)
-                node_file_fragments = [node_file + '_header']
-                for n in range(procs):
-                    node_file_fragments.append(node_file + '_' + str(n))
-                platform_cat(node_file_fragments, node_file, remove=not keep_temp_files, use_python_cat=use_python_cat,
-                             verbose=True)
+            # TODO: Add decompression.
+            input_f = sys.stdin.buffer
 
-            if detailed_edge_file:
-                print('Combining the edge file fragments', file=sys.stderr, flush=True)
-                edge_file_fragments = [detailed_edge_file + '_header']
-                for n in range(procs):
-                    edge_file_fragments.append(detailed_edge_file + '_' + str(n))
-                platform_cat(edge_file_fragments, detailed_edge_file, remove=not keep_temp_files,
-                             use_python_cat=use_python_cat, verbose=True)
+        else:
+            print('Processing wikidata file %s' % str(inp_path), file=sys.stderr, flush=True)
+            input_f = open(inp_path, mode='rb')
+            progress_startup(fd=input_f.fileno())  # Start the custom progress monitor.
 
-            if detailed_qual_file:
-                print('Combining the qualifier file fragments', file=sys.stderr, flush=True)
-                qual_file_fragments = [detailed_qual_file + '_header']
-                for n in range(procs):
-                    qual_file_fragments.append(detailed_qual_file + '_' + str(n))
-                platform_cat(qual_file_fragments, detailed_qual_file, remove=not keep_temp_files,
-                             use_python_cat=use_python_cat, verbose=True)
+            if str(inp_path).endswith(".bz2"):
+                print('Decompressing (bz2)', file=sys.stderr, flush=True)
+                # TODO: Optionally use a system decompression program.
+                input_f = bz2.open(input_f)
+
+            elif str(inp_path).endswith(".gz"):
+                # TODO: Optionally use a system decompression program.
+                if use_mgzip_for_input:
+                    import mgzip # type: ignore
+                    print('Decompressing (mgzip)', file=sys.stderr, flush=True)
+                    input_f = mgzip.open(input_f, thread=mgzip_threads_for_input)
+                else:
+                    import gzip
+                    print('Decompressing (gzip)', file=sys.stderr, flush=True)
+                    input_f = gzip.open(input_f)
+
+        collector_p = None
+        node_collector_p = None
+        edge_collector_p = None
+        qual_collector_p = None
+        invalid_edge_collector_p = None
+        invalid_qual_collector_p = None
+
+        description_collector_p = None
+        reference_collector_p = None
+        sitelink_collector_p = None
+
+        print("Creating the collector queue.", file=sys.stderr, flush=True)
+        # collector_q = pyrallel.ShmQueue()
+        collector_q_maxsize = procs * collector_queue_per_proc_size
+        if collect_seperately:
+
+            if node_file is not None:
+                node_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
+                print("The collector node queue has been created (maxsize=%d)." % collector_q_maxsize,
+                      file=sys.stderr, flush=True)
+
+                print("Creating the node_collector.", file=sys.stderr, flush=True)
+                node_collector: MyCollector = MyCollector()
+                print("Creating the node collector process.", file=sys.stderr, flush=True)
+                node_collector_p = mp.Process(target=node_collector.run, args=(node_collector_q, "node"))
+                print("Starting the node collector process.", file=sys.stderr, flush=True)
+                node_collector_p.start()
+                print("Started the node collector process.", file=sys.stderr, flush=True)
+
+            if minimal_edge_file is not None:
+                edge_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
+                print("The collector edge queue has been created (maxsize=%d)." % collector_q_maxsize,
+                      file=sys.stderr, flush=True)
+
+                print("Creating the edge_collector.", file=sys.stderr, flush=True)
+                edge_collector: MyCollector = MyCollector()
+                print("Creating the edge collector process.", file=sys.stderr, flush=True)
+                edge_collector_p = mp.Process(target=edge_collector.run, args=(edge_collector_q, "edge"))
+                print("Starting the edge collector process.", file=sys.stderr, flush=True)
+                edge_collector_p.start()
+                print("Started the edge collector process.", file=sys.stderr, flush=True)
+
+            if minimal_qual_file is not None:
+                qual_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
+                print("The collector qual queue has been created (maxsize=%d)." % collector_q_maxsize,
+                      file=sys.stderr, flush=True)
+
+                print("Creating the qual_collector.", file=sys.stderr, flush=True)
+                qual_collector: MyCollector = MyCollector()
+                print("Creating the qual collector process.", file=sys.stderr, flush=True)
+                qual_collector_p = mp.Process(target=qual_collector.run, args=(qual_collector_q, "qual"))
+                print("Starting the qual collector process.", file=sys.stderr, flush=True)
+                qual_collector_p.start()
+                print("Started the qual collector process.", file=sys.stderr, flush=True)
+
+            if invalid_edge_file is not None:
+                invalid_edge_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
+                print("The collector invalid edge queue has been created (maxsize=%d)." % collector_q_maxsize,
+                      file=sys.stderr, flush=True)
+
+                print("Creating the invalid_edge_collector.", file=sys.stderr, flush=True)
+                invalid_edge_collector: MyCollector = MyCollector()
+                print("Creating the invalid edge collector process.", file=sys.stderr, flush=True)
+                invalid_edge_collector_p = mp.Process(target=invalid_edge_collector.run,
+                                                      args=(invalid_edge_collector_q, "invalid edge"))
+                print("Starting the invalid edge collector process.", file=sys.stderr, flush=True)
+                invalid_edge_collector_p.start()
+                print("Started the invalid edge collector process.", file=sys.stderr, flush=True)
+
+            if invalid_qual_file is not None:
+                invalid_qual_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
+                print("The collector invalid qual queue has been created (maxsize=%d)." % collector_q_maxsize,
+                      file=sys.stderr, flush=True)
+
+                print("Creating the invalid_qual_collector.", file=sys.stderr, flush=True)
+                invalid_qual_collector: MyCollector = MyCollector()
+                print("Creating the invalid qual collector process.", file=sys.stderr, flush=True)
+                invalid_qual_collector_p = mp.Process(target=invalid_qual_collector.run,
+                                                      args=(invalid_qual_collector_q, "invalid qual"))
+                print("Starting the invalid qual collector process.", file=sys.stderr, flush=True)
+                invalid_qual_collector_p.start()
+                print("Started the invalid qual collector process.", file=sys.stderr, flush=True)
+
+            if split_description_file is not None:
+                description_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
+                print("The collector description queue has been created (maxsize=%d)." % collector_q_maxsize,
+                      file=sys.stderr, flush=True)
+
+                print("Creating the description collector.", file=sys.stderr, flush=True)
+                description_collector: MyCollector = MyCollector()
+                print("Creating the description collector process.", file=sys.stderr, flush=True)
+                description_collector_p = mp.Process(target=description_collector.run,
+                                                     args=(description_collector_q, "description"))
+                print("Starting the description collector process.", file=sys.stderr, flush=True)
+                description_collector_p.start()
+                print("Started the description collector process.", file=sys.stderr, flush=True)
+
+            if split_reference_file is not None:
+                reference_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
+                print("The collector reference queue has been created (maxsize=%d)." % collector_q_maxsize,
+                      file=sys.stderr, flush=True)
+
+                print("Creating the reference collector.", file=sys.stderr, flush=True)
+                reference_collector: MyCollector = MyCollector()
+                print("Creating the reference collector process.", file=sys.stderr, flush=True)
+                reference_collector_p = mp.Process(target=reference_collector.run,
+                                                   args=(reference_collector_q, "reference"))
+                print("Starting the reference collector process.", file=sys.stderr, flush=True)
+                reference_collector_p.start()
+                print("Started the reference collector process.", file=sys.stderr, flush=True)
+
+            if split_sitelink_file is not None:
+                sitelink_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
+                print("The collector sitelink queue has been created (maxsize=%d)." % collector_q_maxsize,
+                      file=sys.stderr, flush=True)
+
+                print("Creating the sitelink collector.", file=sys.stderr, flush=True)
+                sitelink_collector: MyCollector = MyCollector()
+                print("Creating the sitelink collector process.", file=sys.stderr, flush=True)
+                sitelink_collector_p = mp.Process(target=sitelink_collector.run,
+                                                  args=(sitelink_collector_q, "sitelink"))
+                print("Starting the sitelink collector process.", file=sys.stderr, flush=True)
+                sitelink_collector_p.start()
+                print("Started the sitelink collector process.", file=sys.stderr, flush=True)
+
+        else:
+            collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
+            print("The common collector queue has been created (maxsize=%d)." % collector_q_maxsize,
+                  file=sys.stderr, flush=True)
+
+            print("Creating the common collector.", file=sys.stderr, flush=True)
+            collector: MyCollector = MyCollector()
+            print("Creating the common collector process.", file=sys.stderr, flush=True)
+            collector_p = mp.Process(target=collector.run, args=(collector_q, "common"))
+            print("Starting the common collector process.", file=sys.stderr, flush=True)
+            collector_p.start()
+            print("Started the common collector process.", file=sys.stderr, flush=True)
+
+        if node_file:
+            node_file_header = ['id']
+
+            ncq = collector_q if collector_q is not None else node_collector_q
+            if ncq is not None:
+                print("Sending the node header to the collector.", file=sys.stderr, flush=True)
+                ncq.put(("node_header", None, None, None, None, None, node_file_header))
+                print("Sent the node header to the collector.", file=sys.stderr, flush=True)
+
+        edge_file_header = ['id', 'node1', 'label', 'node2', 'rank', 'node2;wikidatatype']
+
+        ecq = collector_q if collector_q is not None else edge_collector_q
+
+        if minimal_edge_file and ecq is not None:
+            print("Sending the minimal edge file header to the collector.", file=sys.stderr, flush=True)
+            ecq.put(("minimal_edge_header", None, None, None, None, None, edge_file_header))
+            print("Sent the minimal edge file header to the collector.", file=sys.stderr, flush=True)
+
+        if split_alias_file and ecq is not None:
+            alias_file_header = ['id', 'node1', 'label', 'node2', 'lang']
+            print("Sending the alias file header to the collector.", file=sys.stderr, flush=True)
+            ecq.put(("split_alias_header", None, None, None, None, None, alias_file_header))
+            print("Sent the alias file header to the collector.", file=sys.stderr, flush=True)
+
+        if split_en_alias_file and ecq is not None:
+            en_alias_file_header = ['id', 'node1', 'label', 'node2']
+            print("Sending the English alias file header to the collector.", file=sys.stderr, flush=True)
+            ecq.put(("split_en_alias_header", None, None, None, None, None, en_alias_file_header))
+            print("Sent the English alias file header to the collector.", file=sys.stderr, flush=True)
+
+        if split_datatype_file and ecq is not None:
+            datatype_file_header = ['id', 'node1', 'label', 'node2']
+            print("Sending the datatype file header to the collector.", file=sys.stderr, flush=True)
+            ecq.put(("split_datatype_header", None, None, None, None, None, datatype_file_header))
+            print("Sent the datatype file header to the collector.", file=sys.stderr, flush=True)
+
+        dcq = collector_q if collector_q is not None else description_collector_q
+        if split_description_file and dcq is not None:
+            description_file_header = ['id', 'node1', 'label', 'node2', 'lang']
+            print("Sending the description file header to the collector.", file=sys.stderr, flush=True)
+            dcq.put(("split_description_header", None, None, None, None, None, description_file_header))
+            print("Sent the description file header to the collector.", file=sys.stderr, flush=True)
+
+        if split_en_description_file and dcq is not None:
+            en_description_file_header = ['id', 'node1', 'label', 'node2']
+            print("Sending the English description file header to the collector.", file=sys.stderr, flush=True)
+            dcq.put(("split_en_description_header", None, None, None, None, None, en_description_file_header))
+            print("Sent the English description file header to the collector.", file=sys.stderr, flush=True)
+
+        if split_label_file and ecq is not None:
+            label_file_header = ['id', 'node1', 'label', 'node2', 'lang']
+            print("Sending the label file header to the collector.", file=sys.stderr, flush=True)
+            ecq.put(("split_label_header", None, None, None, None, None, label_file_header))
+            print("Sent the label file header to the collector.", file=sys.stderr, flush=True)
+
+        if split_en_label_file and ecq is not None:
+            en_label_file_header = ['id', 'node1', 'label', 'node2']
+            print("Sending the English label file header to the collector.", file=sys.stderr, flush=True)
+            ecq.put(("split_en_label_header", None, None, None, None, None, en_label_file_header))
+            print("Sent the English label file header to the collector.", file=sys.stderr, flush=True)
+
+        rcq = collector_q if collector_q is not None else reference_collector_q
+        if split_reference_file and rcq is not None:
+            reference_file_header = ['id', 'node1', 'label', 'node2', 'node2;wikidatatype']
+            print("Sending the reference file header to the collector.", file=sys.stderr, flush=True)
+            rcq.put(("split_reference_header", None, None, None, None, None, reference_file_header))
+            print("Sent the reference file header to the collector.", file=sys.stderr, flush=True)
+
+        scq = collector_q if collector_q is not None else sitelink_collector_q
+        if split_sitelink_file and scq is not None:
+            sitelink_file_header = ['id', 'node1', 'label', 'node2', 'lang']
+            print("Sending the sitelink file header to the collector.", file=sys.stderr, flush=True)
+            scq.put(("split_sitelink_header", None, None, None, None, None, sitelink_file_header))
+            print("Sent the sitelink file header to the collector.", file=sys.stderr, flush=True)
+
+        if split_en_sitelink_file and scq is not None:
+            en_sitelink_file_header = ['id', 'node1', 'label', 'node2']
+            print("Sending the English sitelink file header to the collector.", file=sys.stderr, flush=True)
+            scq.put(("split_en_sitelink_header", None, None, None, None, None, en_sitelink_file_header))
+            print("Sent the English sitelink file header to the collector.", file=sys.stderr, flush=True)
+
+        if split_type_file and ecq is not None:
+            type_file_header = ['id', 'node1', 'label', 'node2']
+            print("Sending the entry type file header to the collector.", file=sys.stderr, flush=True)
+            ecq.put(("split_type_header", None, None, None, None, None, type_file_header))
+            print("Sent the entry type file header to the collector.", file=sys.stderr, flush=True)
+
+        if split_property_edge_file and ecq is not None:
+            print("Sending the property edge file header to the collector.", file=sys.stderr, flush=True)
+            ecq.put(("split_property_edge_header", None, None, None, None, None, edge_file_header))
+            print("Sent the property edge file header to the collector.", file=sys.stderr, flush=True)
+
+        if invalid_edge_file and invalid_edge_collector_q is not None:
+            if minimal_edge_file:
+                print("Sending the minimal invalid edge header to the collector.", file=sys.stderr, flush=True)
+                invalid_edge_collector_q.put(
+                    ("invalid_edge_header", None, None, None, None, None, edge_file_header))
+                print("Sent the minimal invalid edge header to the collector.", file=sys.stderr, flush=True)
+
+        if minimal_qual_file is not None or split_property_qual_file is not None:
+            qual_file_header = ['id', 'node1', 'label', 'node2', 'node2;wikidatatype']
+
+            qcq = collector_q if collector_q is not None else qual_collector_q
+
+            if minimal_qual_file is not None and qcq is not None:
+                print("Sending the minimal qual file header to the collector.", file=sys.stderr, flush=True)
+                qcq.put(("minimal_qual_header", None, None, None, None, None, qual_file_header))
+                print("Sent the minimal qual file header to the collector.", file=sys.stderr, flush=True)
+
+            if split_property_qual_file and qcq is not None:
+                print("Sending the property qual file header to the collector.", file=sys.stderr, flush=True)
+                qcq.put(("split_property_qual_header", None, None, None, None, None, qual_file_header))
+                print("Sent the property qual file header to the collector.", file=sys.stderr, flush=True)
+
+            if invalid_qual_file and invalid_qual_collector_q is not None:
+                if minimal_qual_file:
+                    print("Sending the minimal invalid qual header to the collector.", file=sys.stderr, flush=True)
+                    invalid_qual_collector_q.put(
+                        ("invalid_qual_header", None, None, None, None, None, qual_file_header))
+                    print("Sent the minimal invalid qual header to the collector.", file=sys.stderr, flush=True)
+
+        print('Creating parallel processor for {}'.format(str(inp_path)), file=sys.stderr, flush=True)
+        if use_shm or single_mapper_queue:
+            pp = pyrallel.ParallelProcessor(procs, MyMapper, enable_process_id=True,
+                                            max_size_per_mapper_queue=max_size_per_mapper_queue,
+                                            use_shm=use_shm, enable_collector_queues=False,
+                                            batch_size=mapper_batch_size,
+                                            single_mapper_queue=single_mapper_queue)
+        else:
+            pp = pyrallel.ParallelProcessor(procs, MyMapper, enable_process_id=True,
+                                            max_size_per_mapper_queue=max_size_per_mapper_queue,
+                                            batch_size=mapper_batch_size)
+        print('Start parallel processing', file=sys.stderr, flush=True)
+        pp.start()
+
+        lines_processed: int = 0
+        for cnt, line in enumerate(input_f):
+            # Is there a limit on the number of input lines to process?
+            if limit and cnt >= limit:
+                break
+
+            # Shall process every nth input line (within th elimit)?
+            if nth and cnt % nth != 0:
+                continue
+
+            # pp.add_task(line,node_file,edge_file,qual_file,languages,source)
+            pp.add_task(line)
+            lines_processed += 1
+
+        print('Done processing {}, {} lines processed'.format(str(inp_path), lines_processed), file=sys.stderr, flush=True)
+        input_f.close()
+
+        print('Telling the workers to shut down.', file=sys.stderr, flush=True)
+        pp.task_done()
+        print('Waiting for the workers to shut down.', file=sys.stderr, flush=True)
+        pp.join()
+        print('Worker shut down is complete.', file=sys.stderr, flush=True)
+
+        if collector_q is not None:
+            print('Telling the collector to shut down.', file=sys.stderr, flush=True)
+            collector_q.put(("shutdown", None, None, None, None, None, None))
+        if collector_p is not None:
+            print('Waiting for the collector to shut down.', file=sys.stderr, flush=True)
+            collector_p.join()
+            print('Collector shut down is complete.', file=sys.stderr, flush=True)
+        if collector_q is not None:
+            collector_q.close()
+
+        if node_collector_q is not None:
+            print('Telling the node collector to shut down.', file=sys.stderr, flush=True)
+            node_collector_q.put(("shutdown", None, None, None, None, None, None))
+        if node_collector_p is not None:
+            print('Waiting for the node collector to shut down.', file=sys.stderr, flush=True)
+            node_collector_p.join()
+            print('Node collector shut down is complete.', file=sys.stderr, flush=True)
+        if node_collector_q is not None:
+            node_collector_q.close()
+
+        if edge_collector_q is not None:
+            print('Telling the edge collector to shut down.', file=sys.stderr, flush=True)
+            edge_collector_q.put(("shutdown", None, None, None, None, None, None))
+        if edge_collector_p is not None:
+            print('Waiting for the edge collector to shut down.', file=sys.stderr, flush=True)
+            edge_collector_p.join()
+            print('Edge collector shut down is complete.', file=sys.stderr, flush=True)
+        if edge_collector_q is not None:
+            edge_collector_q.close()
+
+        if qual_collector_q is not None:
+            print('Telling the qual collector to shut down.', file=sys.stderr, flush=True)
+            qual_collector_q.put(("shutdown", None, None, None, None, None, None))
+        if qual_collector_p is not None:
+            print('Waiting for the qual collector to shut down.', file=sys.stderr, flush=True)
+            qual_collector_p.join()
+            print('Qual collector shut down is complete.', file=sys.stderr, flush=True)
+        if qual_collector_q is not None:
+            qual_collector_q.close()
+
+        if invalid_edge_collector_q is not None:
+            print('Telling the invalid edge collector to shut down.', file=sys.stderr, flush=True)
+            invalid_edge_collector_q.put(("shutdown", None, None, None, None, None, None))
+        if invalid_edge_collector_p is not None:
+            print('Waiting for the invalid edge collector to shut down.', file=sys.stderr, flush=True)
+            invalid_edge_collector_p.join()
+            print('Invalid edge collector shut down is complete.', file=sys.stderr, flush=True)
+        if invalid_edge_collector_q is not None:
+            invalid_edge_collector_q.close()
+
+        if invalid_qual_collector_q is not None:
+            print('Telling the invalid qual collector to shut down.', file=sys.stderr, flush=True)
+            invalid_qual_collector_q.put(("shutdown", None, None, None, None, None, None))
+        if invalid_qual_collector_p is not None:
+            print('Waiting for the invalid qual collector to shut down.', file=sys.stderr, flush=True)
+            invalid_qual_collector_p.join()
+            print('Invalid qual collector shut down is complete.', file=sys.stderr, flush=True)
+        if invalid_qual_collector_q is not None:
+            invalid_qual_collector_q.close()
+
+        if description_collector_q is not None:
+            print('Telling the description collector to shut down.', file=sys.stderr, flush=True)
+            description_collector_q.put(("shutdown", None, None, None, None, None, None))
+        if description_collector_p is not None:
+            print('Waiting for the description collector to shut down.', file=sys.stderr, flush=True)
+            description_collector_p.join()
+            print('Description collector shut down is complete.', file=sys.stderr, flush=True)
+        if description_collector_q is not None:
+            description_collector_q.close()
+
+        if reference_collector_q is not None:
+            print('Telling the reference collector to shut down.', file=sys.stderr, flush=True)
+            reference_collector_q.put(("shutdown", None, None, None, None, None, None))
+        if reference_collector_p is not None:
+            print('Waiting for the reference collector to shut down.', file=sys.stderr, flush=True)
+            reference_collector_p.join()
+            print('Reference collector shut down is complete.', file=sys.stderr, flush=True)
+        if reference_collector_q is not None:
+            reference_collector_q.close()
+
+        if sitelink_collector_q is not None:
+            print('Telling the sitelink collector to shut down.', file=sys.stderr, flush=True)
+            sitelink_collector_q.put(("shutdown", None, None, None, None, None, None))
+        if sitelink_collector_p is not None:
+            print('Waiting for the sitelink collector to shut down.', file=sys.stderr, flush=True)
+            sitelink_collector_p.join()
+            print('Sitelink collector shut down is complete.', file=sys.stderr, flush=True)
+        if sitelink_collector_q is not None:
+            sitelink_collector_q.close()
 
         print('import complete', file=sys.stderr, flush=True)
         end = time.time()
