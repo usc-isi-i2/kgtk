@@ -285,7 +285,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     parser.add_argument(
         "--deprecated",
         action="store_true",
-        dest="deprecated",
+        dest="include_deprecated",
         help='option to include deprecated statements, not included by default')
 
     parser.add_argument(
@@ -550,7 +550,7 @@ def run(input_file: KGTKFiles,
         nth: int,
         lang: str,
         source: str,
-        deprecated: bool,
+        include_deprecated: bool,
         use_python_cat: bool,
         interleave: bool,
         parse_aliases: bool,
@@ -872,6 +872,7 @@ def run(input_file: KGTKFiles,
         return KgtkFormat.stringify(snak_datavalue_value)
 
     def extract_snak_wikibase_types(snak_datatype: str, snak_datavalue_value, where: str)->typing.Optional[str]:
+        # Common code for wikibase datatype extraction.
         expected_entity_type: typing.Optional[str] = SNAK_DATATYPE_WIKIBASE_ENTITY_TYPES.get(snak_datatype)
         if expected_entity_type is None:
             print("%s: Wikibase datatype %s is unexpected." % (where, repr(snak_datatype)), file=sys.stderr, flush=True)
@@ -934,6 +935,7 @@ def run(input_file: KGTKFiles,
     def extract_snak_wikibase_sense(snak_datavalue_value, where: str)->typing.Optional[str]:
         return extract_snak_wikibase_types(SNAK_DATATYPE_WIKIBASE_SENSE, snak_datavalue_value, where)
 
+    # Map each SNAK datatype to the proper extractor.
     extract_snak_datatype_dispatcher = {
         SNAK_DATATYPE_COMMONSMEDIA: extract_snak_commonsmedia,
         SNAK_DATATYPE_EXTERNALID: extract_snak_externalid,
@@ -955,6 +957,8 @@ def run(input_file: KGTKFiles,
         
     }
 
+    # Extract a SNAK value as a KGTK encoded value.
+    #
     # returns: (kgtk_snak_value, wikidatatype)
     def extract_snak_value(snak: str,
                            qnode: str,
@@ -1235,6 +1239,443 @@ def run(input_file: KGTKFiles,
                                   invalid_erows=invalid_erows)
             return values_are_valid
 
+        def process_datatype(self, qnode: str, obj, erows, invalid_erows):
+            datatype = obj.get("datatype", "")
+            if len(datatype) > 0:
+                datatypeid: str = qnode + '-' + "datatype"
+                # We expect the datatype to be a valid KGTK symbol, so
+                # there's no need to stringify it.
+                self.erows_append(erows,
+                                  edge_id=datatypeid,
+                                  node1=qnode,
+                                  label=DATATYPE_LABEL,
+                                  node2=datatype,
+                                  invalid_erows=invalid_erows)
+
+        def process_labels(self, qnode: str, obj, erows, invalid_erows):
+            labels = obj.get("labels")
+            if labels is None:
+                if fail_if_missing:
+                    raise KGTKException("Qnode %s is missing its labels" % qnode)
+                elif warn_if_missing:
+                    print("Object id {} has no labels.".format(qnode), file=sys.stderr, flush=True)
+                return
+
+            # Extract all languages or just a specific subset?
+            if all_languages:
+                label_languages = labels.keys()
+            else:
+                label_languages = languages
+
+            for lang in label_languages:
+                lang_label = labels.get(lang, None)
+                if lang_label:
+                    # We needn't worry about duplicate label entries if this check passes.
+                    if lang_label['language'] != lang:
+                        print("*** Conflicting language key %s for the %s label for %s" % (
+                            repr(lang_label['language']), repr(lang), qnode),
+                              file=sys.stderr, flush=True)
+
+                    value = KgtkFormat.stringify(lang_label['value'], language=lang)
+
+                    langid: str = qnode + '-' + LABEL_LABEL + '-' + lang
+                    self.erows_append(erows,
+                                      edge_id=langid,
+                                      node1=qnode,
+                                      label=LABEL_LABEL,
+                                      node2=value,
+                                      entrylang=lang,
+                                      invalid_erows=invalid_erows)
+            
+
+        def process_descriptions(self, qnode: str, obj, derows, invalid_erows):
+            descriptions = obj.get("descriptions")
+            if descriptions is None:
+                if fail_if_missing:
+                    raise KGTKException("Qnode %s is missing its descriptions" % qnode)
+                elif warn_if_missing:
+                    print("Object id {} has no descriptions.".format(qnode), file=sys.stderr, flush=True)
+                return
+
+            # Extract all languages or just a specific subset?
+            if all_languages:
+                desc_languages = descriptions.keys()
+            else:
+                desc_languages = languages
+
+            for lang in desc_languages:
+                lang_descr = descriptions.get(lang, None)
+                if lang_descr:
+                    # We needn't worry about duplicate description entries if this check passes.
+                    if lang_descr['language'] != lang:
+                        print("*** Conflicting language key %s for the %s description for %s" % (
+                            repr(lang_descr['language']), repr(lang), qnode), file=sys.stderr, flush=True)
+
+                    value = KgtkFormat.stringify(lang_descr['value'], language=lang)
+
+                    descrid: str = qnode + '-' + DESCRIPTION_LABEL + '-' + lang
+                    self.erows_append(derows,
+                                      edge_id=descrid,
+                                      node1=qnode,
+                                      label=DESCRIPTION_LABEL,
+                                      node2=value,
+                                      entrylang=lang,
+                                      invalid_erows=invalid_erows)
+
+        def process_aliases(self, qnode: str, obj, alias_id_collision_map, erows, invalid_erows):
+            aliases = obj.get("aliases")
+            if aliases is None:
+                if fail_if_missing:
+                    raise KGTKException("Qnode %s is missing its aliases" % qnode)
+                elif warn_if_missing:
+                    print("Object id {} has no aliasees.".format(qnode), file=sys.stderr, flush=True)
+                return
+
+            # Extract all languages or just a specific subset?
+            if all_languages:
+                alias_languages = aliases.keys()
+            else:
+                alias_languages = languages
+
+            for lang in alias_languages:
+                lang_aliases = aliases.get(lang, None)
+                if lang_aliases:
+                    for item in lang_aliases:
+                        # item['value']=item['value'].replace('|','\\|')
+                        value = KgtkFormat.stringify(item['value'], language=lang)
+
+                        # Hash the value to save space and avoid syntactic difficulties.
+                        # Take a subset of the hash value to save space.
+                        alias_value_hash: str = hashlib.sha256(value.encode('utf-8')).hexdigest()[
+                            :value_hash_width]
+                        aliasid = qnode + '-' + ALIAS_LABEL + "-" + lang + '-' + alias_value_hash
+                        alias_seq_no: int  # In case of hash collision
+                        if aliasid in alias_id_collision_map:
+                            alias_seq_no = alias_id_collision_map[aliasid]
+                            print("\n*** Alias collision #%d detected for %s (%s)" % (
+                                alias_seq_no, aliasid, value), file=sys.stderr, flush=True)
+                        else:
+                            alias_seq_no = 0
+                        alias_id_collision_map[aliasid] = alias_seq_no + 1
+                        aliasid += '-' + str(alias_seq_no)
+                        self.erows_append(erows,
+                                          edge_id=aliasid,
+                                          node1=qnode,
+                                          label=ALIAS_LABEL,
+                                          node2=value,
+                                          entrylang=lang,
+                                          invalid_erows=invalid_erows)
+
+        def process_sitelinks(self, qnode: str, obj, sitelink_id_collision_map, serows, invalid_erows):
+            sitelinks = obj.get('sitelinks', None)
+            if sitelinks is None:
+                return
+
+            for link in sitelinks:
+                # TODO: If the title might contain vertical bar, more work is needed
+                # to make the sitetitle safe for KGTK.
+                if link.endswith('wiki') and link not in ('commonswiki', 'simplewiki'):
+                    linklabel = SITELINK_LABEL
+                    sitetitle = '_'.join(sitelinks[link]['title'].split())
+
+                    # The following leads to ambuiguity if there are both
+                    # "afwiki" and "afwikibooks".
+                    #
+                    # TODO: Need to research the sitelink structure more fully.
+                    sitelang = link.split('wiki')[0].replace('_', '-')
+
+                    sitelink = 'https://' + sitelang + '.wikipedia.org/wiki/' + sitetitle
+                else:
+                    linklabel = ADDL_SITELINK_LABEL
+                    sitetitle = '_'.join(sitelinks[link]['title'].split())
+                    if "wiki" in link:
+                        # TODO: needs more work here.
+                        sitelang = link.split("wiki")[0]
+                        if sitelang in ("commons", "simple"):
+                            sitelang = "en"  # TODO: Need to retain the distinction we lose here.
+                    else:
+                        sitelang = ""
+                    sitehost = link + '.org'  # TODO: Needs more work here
+                    sitelink = 'https://' + sitehost + '/wiki/' + sitetitle
+
+                if sitelink is not None:
+                    sitelink_value_hash: str = hashlib.sha256(sitelink.encode('utf-8')).hexdigest()[
+                                               :value_hash_width]
+                    sitelinkid: str = qnode + '-' + linklabel + '-' + sitelink_value_hash
+                    sitelink_seq_no: int = 0
+                    if sitelinkid in sitelink_id_collision_map:
+                        sitelink_seq_no = sitelink_id_collision_map[sitelinkid]
+                        print("\n*** Sitelink collision #%d detected for %s (%s)" % (
+                            sitelink_seq_no, sitelinkid, sitelink), file=sys.stderr, flush=True)
+                    else:
+                        sitelink_seq_no = 0
+                    sitelink_id_collision_map[sitelinkid] = sitelink_seq_no + 1
+                    sitelinkid += '-' + str(sitelink_seq_no)
+
+                    self.erows_append(serows,
+                                      edge_id=sitelinkid,
+                                      node1=qnode,
+                                      label=linklabel,
+                                      node2=sitelink,
+                                      entrylang=sitelang,
+                                      invalid_erows=invalid_erows)
+
+
+                    if len(sitelang) > 0:
+                        self.erows_append(serows,
+                                          edge_id=sitelinkid + '-language-0',
+                                          node1=sitelinkid,
+                                          label=SITELINK_LANGUAGE_LABEL,
+                                          node2=sitelang,
+                                          entrylang=sitelang,
+                                          invalid_erows=invalid_erows)
+
+                    self.erows_append(serows,
+                                      edge_id=sitelinkid + '-site-0',
+                                      node1=sitelinkid,
+                                      label=SITELINK_SITE_LABEL,
+                                      node2=link,
+                                      entrylang=sitelang,
+                                      invalid_erows=invalid_erows)
+
+                    self.erows_append(serows,
+                                      edge_id=sitelinkid + '-title-0',
+                                      node1=sitelinkid,
+                                      label=SITELINK_TITLE_LABEL,
+                                      node2=KgtkFormat.stringify(sitelinks[link]['title']),
+                                      entrylang=sitelang, invalid_erows=invalid_erows)
+
+                    for badge in sitelinks[link]['badges']:
+                        badgeid = sitelinkid + '-badge-' + badge
+                        self.erows_append(serows,
+                                          edge_id=badgeid,
+                                          node1=sitelinkid,
+                                          label=SITELINK_BADGE_LABEL,
+                                          node2=badge,
+                                          entrylang=sitelang,
+                                          invalid_erows=invalid_erows)
+
+        def process_claims(self,
+                            qnode: str,
+                            obj,
+                            edge_id_collision_map,
+                            erows,
+                            invalid_erows,
+                            qual_id_collision_map,
+                            qrows,
+                            invalid_qrows,
+                            rerows,
+                            reference_count: int)->int:
+            claims = obj.get(CLAIMS_TAG)
+            if claims is None:
+                if fail_if_missing:
+                    raise KGTKException("Object id %s is missing its claims" % repr(qnode))
+                elif warn_if_missing:
+                    print("Object id %s is missing its claims." % repr(qnode), file=sys.stderr, flush=True)
+                return
+
+            for prop, claim_property_list in claims.items():
+                for cp in claim_property_list:
+                    reference_count = self.process_claim_property(qnode,
+                                                                  prop,
+                                                                  cp,
+                                                                  edge_id_collision_map,
+                                                                  erows,
+                                                                  invalid_erows,
+                                                                  qual_id_collision_map,
+                                                                  qrows,
+                                                                  invalid_qrows,
+                                                                  rerows,
+                                                                  reference_count)
+
+        def process_claim_property(self,
+                                   qnode: str,
+                                   prop: str,
+                                   cp,
+                                   edge_id_collision_map,
+                                   erows,
+                                   invalid_erows,
+                                   qual_id_collision_map,
+                                   qrows,
+                                   invalid_qrows,
+                                   rerows,
+                                   reference_count: int)->int:
+
+            rank: typing.Optional[str] = cp.get(CLAIM_RANK_TAG)
+            if rank is None:
+                print("Qnode %s Prop %s: claim without rank." % (repr(qnode), repr(prop)),
+                      file=sys.stderr, flush=True)
+                return reference_count
+
+            if rank == RANK_DEPRECATED and not include_deprecated:
+                return reference_count
+
+            mainsnak = cp.get(CLAIM_MAINSNAK_TAG)
+            if mainsnak is None:
+                print("Qnode %s Prop %s: claim without mainsnak." % (repr(qnode), repr(prop)),
+                      file=sys.stderr, flush=True)
+                return reference_count
+
+            claim_id: typing.Optional[str] = cp.get(CLAIM_ID_TAG)
+            if claim_id is None:
+                print("Qnode %s Prop %s: claim without claim_id." % (repr(qnode), repr(prop)),
+                      file=sys.stderr, flush=True)
+                return reference_count
+
+            claim_type: typing.Optional[str] = cp[CLAIM_TYPE_TAG]
+            if claim_type is None:
+                print("Qnode %s Prop %s: claim without claim_type." % (repr(qnode), repr(prop)),
+                      file=sys.stderr, flush=True)
+                return reference_count
+
+            if claim_type != CLAIM_TYPE_STATEMENT:
+                print("Qnode %s Prop %s: Unknown claim type %s, ignoring." % (repr(qnode), repr(prop), repr(claim_type)),
+                      file=sys.stderr, flush=True)
+                return reference_count
+
+            value: typing.Optional[str]
+            wikidatatype: typing.Optional[str]
+            (value, wikidatatype) = extract_snak_value(mainsnak,
+                                                       qnode=qnode,
+                                                       prop=prop,
+                                                       who="claim")
+            if value is None or wikidatatype is None:
+                return reference_count
+
+            prop_value_hash: str
+            if value.startswith(('P', 'Q', 'L')):
+                prop_value_hash = value
+            else:
+                prop_value_hash = hashlib.sha256(value.encode('utf-8')).hexdigest()[:value_hash_width]
+            edgeid: str = qnode + '-' + prop + '-' + prop_value_hash + '-'
+            if claim_id_hash_width == 0:
+                edgeid += claim_id.lower()
+            else:
+                edgeid += hashlib.sha256(claim_id.lower().encode('utf-8')).hexdigest()[:claim_id_hash_width]
+            prop_seq_no: int  # In case of hash collision
+            if edgeid in edge_id_collision_map:
+                prop_seq_no = edge_id_collision_map[edgeid]
+                print("\n*** Edge collision #%d detected for %s (%s)" % (
+                    prop_seq_no, edgeid, value), file=sys.stderr, flush=True)
+            else:
+                prop_seq_no = 0
+            edge_id_collision_map[edgeid] = prop_seq_no + 1
+            edgeid += '-' + str(prop_seq_no)
+
+            if minimal_edge_file is not None:
+                self.erows_append(erows,
+                                  edge_id=edgeid,
+                                  node1=qnode,
+                                  label=prop,
+                                  node2=value,
+                                  rank=rank,
+                                  wikidatatype=wikidatatype,
+                                  invalid_erows=invalid_erows)
+
+            self.process_qualifiers(qnode, prop, cp, edgeid, qual_id_collision_map, erows, invalid_erows, qrows, invalid_qrows)
+
+            if parse_references:
+                reference_count = self.process_references(qnode, prop, cp, edgeid, rerows, invalid_erows, reference_count)
+
+            return reference_count
+
+        def process_references(self, qnode: str, prop: str, cp, edgeid: str, rerows, invalid_erows, reference_count: int)->int:
+            references = cp.get(CLAIM_REFERENCES_TAG)
+            if references is None:
+                return reference_count
+            
+            for reference in references:
+                reference_count += 1 # Bad approach for the time machine.
+                reference_id: str = REFERENCE_ID_START + str(reference_count).zfill(REFERENCE_ID_WIDTH)
+
+                ref_edgeid: str = edgeid + "-" + reference_id
+
+                self.erows_append(rerows,
+                                  edge_id=ref_edgeid,
+                                  node1=edgeid,
+                                  label=REFERENCE_LABEL,
+                                  node2=reference_id,
+                                  wikidatatype='reference', # Ad-hoc wikidatatype.
+                                  invalid_erows=invalid_erows)
+
+                ref_snaks = reference.get(REFERENCE_SNAKS_TAG)
+                if ref_snaks is None:
+                    print("Qnode %s Prop %s: reference without SNAKS." % (repr(qnode), repr(prop)),
+                          file=sys.stderr, flush=True)
+                    continue
+
+                ref_snak_count: int = 0
+
+                ref_snaks_prop: str
+                for ref_snaks_prop in sorted(ref_snaks.keys()):
+                    ref_snaks_list = ref_snaks[ref_snaks_prop]
+                    for ref_snak in ref_snaks_list:
+                        ref_snak_count += 1 # Bad approach for the time machine, but prevents collisions.
+                        ref_snak_edgeid: str = ref_edgeid + "-" + str(ref_snak_count).zfill(REFERENCE_ID_WIDTH)
+
+                        kgtk_ref_snak_value: typing.Optional[str]
+                        ref_wikidatatype: typing.Optional[str]
+                        (kgtk_ref_snak_value, ref_wikidatatype) = extract_snak_value(ref_snak,
+                                                                                     qnode=qnode,
+                                                                                     prop=prop,
+                                                                                     subprop=ref_snaks_prop,
+                                                                                     who="reference")
+                        if kgtk_ref_snak_value is not None and ref_wikidatatype is not None:
+                            self.erows_append(rerows,
+                                              edge_id=ref_snak_edgeid,
+                                              node1=reference_id,
+                                              label=ref_snaks_prop,
+                                              node2=kgtk_ref_snak_value,
+                                              wikidatatype=ref_wikidatatype,
+                                              invalid_erows=invalid_erows)
+            return reference_count
+ 
+        def process_qualifiers(self, qnode: str, prop: str, cp, edgeid: str, qual_id_collision_map, erows, invalid_erows, qrows, invalid_qrows):
+            if minimal_qual_file is None and not interleave:
+                return
+
+            quals = cp.get('qualifiers')
+            if quals is not None:
+                for qual_prop, qual_prop_snaks in quals.items():
+                    for qual_snak in qual_prop_snaks:
+                            qual_value: typing.Optional[str]
+                            qual_wikidatatype: typing.Optional[str]
+                            (qual_value, qual_wikidatatype) = extract_snak_value(qual_snak,
+                                                                                 qnode=qnode,
+                                                                                 prop=prop,
+                                                                                 subprop=qual_prop,
+                                                                                 who="qualifier")
+                            if qual_value is None or qual_wikidatatype is None:
+                                continue
+
+                            qual_value_hash: str
+                            if qual_value.startswith(('P', 'Q', 'L')):
+                                qual_value_hash = qual_value
+                            else:
+                                qual_value_hash = hashlib.sha256(
+                                    qual_value.encode('utf-8')).hexdigest()[:value_hash_width]
+                            qualid: str = edgeid + '-' + qual_prop + '-' + qual_value_hash
+                            qual_seq_no: int  # In case of hash collision
+                            if qualid in qual_id_collision_map:
+                                qual_seq_no = qual_id_collision_map[qualid]
+                                print(
+                                    "\n*** Qualifier collision #%d detected for %s (%s)" % (
+                                        qual_seq_no, qualid, qual_value), file=sys.stderr,
+                                    flush=True)
+                            else:
+                                qual_seq_no = 0
+                            qual_id_collision_map[qualid] = qual_seq_no + 1
+                            qualid += '-' + str(qual_seq_no)
+                            self.qrows_append(qrows=qrows,
+                                              edge_id=qualid,
+                                              node1=edgeid,
+                                              label=qual_prop,
+                                              node2=qual_value,
+                                              wikidatatype=qual_wikidatatype,
+                                              invalid_qrows=invalid_qrows,
+                                              erows=erows,
+                                              invalid_erows=invalid_erows)
+
         # def process(self,line,node_file,edge_file,qual_file,languages,source):
         def process(self, line):
             if progress_interval > 0 and self.cnt % progress_interval == 0 and self.cnt > 0:
@@ -1249,6 +1690,10 @@ def run(input_file: KGTKFiles,
             description_erows = []
             reference_erows = [ ]
             sitelink_erows = []
+
+            derows = description_erows if collect_seperately else erows
+            rerows = reference_erows if collect_seperately else erows
+            serows = sitelink_erows if collect_seperately else erows
 
             # These maps avoid avoid ID collisions due to hash collision or
             # repeated values in the input data.  We assume that a top-level
@@ -1282,43 +1727,6 @@ def run(input_file: KGTKFiles,
                     print("Object with no id.", file=sys.stderr, flush=True)
                     return
 
-                if node_file:
-                    nrows.append([qnode])
-
-                if parse_labels:
-                    labels = obj.get("labels")
-                    if labels is None:
-                        if fail_if_missing:
-                            raise KGTKException("Qnode %s is missing its labels" % qnode)
-                        elif warn_if_missing:
-                            print("Object id {} has no labels.".format(qnode), file=sys.stderr, flush=True)
-                    label_list = []
-                    if labels:
-                        if all_languages:
-                            label_languages = labels.keys()
-                        else:
-                            label_languages = languages
-                        for lang in label_languages:
-                            lang_label = labels.get(lang, None)
-                            if lang_label:
-                                # We needn't worry about duplicate label entries if this check passes.
-                                if lang_label['language'] != lang:
-                                    print("*** Conflicting language key %s for the %s label for %s" % (
-                                        repr(lang_label['language']), repr(lang), qnode),
-                                          file=sys.stderr, flush=True)
-
-                                value = KgtkFormat.stringify(lang_label['value'], language=lang)
-                                label_list.append(value)
-
-                                langid: str = qnode + '-' + LABEL_LABEL + '-' + lang
-                                self.erows_append(erows,
-                                                  edge_id=langid,
-                                                  node1=qnode,
-                                                  label=LABEL_LABEL,
-                                                  node2=value,
-                                                  entrylang=lang,
-                                                  invalid_erows=invalid_erows)
-
                 typeid: str = qnode + '-' + TYPE_LABEL + '-' + entry_type
                 self.erows_append(erows,
                                   edge_id=typeid,
@@ -1327,359 +1735,34 @@ def run(input_file: KGTKFiles,
                                   node2=entry_type,
                                   invalid_erows=invalid_erows)
 
+                if node_file:
+                    nrows.append([qnode])
+
+                self.process_datatype(qnode, obj, erows, invalid_erows)
+
+                if parse_labels:
+                    self.process_labels(qnode, obj, erows, invalid_erows)
+
                 if parse_descr:
-                    descriptions = obj.get("descriptions")
-                    if descriptions is None:
-                        if fail_if_missing:
-                            raise KGTKException("Qnode %s is missing its descriptions" % qnode)
-                        elif warn_if_missing:
-                            print("Object id {} has no descriptions.".format(qnode), file=sys.stderr, flush=True)
-                    descr_list = []
-
-                    if descriptions:
-                        if all_languages:
-                            desc_languages = descriptions.keys()
-                        else:
-                            desc_languages = languages
-                        for lang in desc_languages:
-                            lang_descr = descriptions.get(lang, None)
-                            if lang_descr:
-                                # We needn't worry about duplicate description entries if this check passes.
-                                if lang_descr['language'] != lang:
-                                    print("*** Conflicting language key %s for the %s description for %s" % (
-                                        repr(lang_descr['language']), repr(lang), qnode), file=sys.stderr, flush=True)
-
-                                value = KgtkFormat.stringify(lang_descr['value'], language=lang)
-                                descr_list.append(value)
-
-                                descrid: str = qnode + '-' + DESCRIPTION_LABEL + '-' + lang
-                                self.erows_append(description_erows if collect_seperately else erows,
-                                                  edge_id=descrid,
-                                                  node1=qnode,
-                                                  label=DESCRIPTION_LABEL,
-                                                  node2=value,
-                                                  entrylang=lang,
-                                                  invalid_erows=invalid_erows)
+                    self.process_descriptions(qnode, obj, derows, invalid_erows)
 
                 if parse_aliases:
-                    aliases = obj.get("aliases")
-                    if aliases is None:
-                        if fail_if_missing:
-                            raise KGTKException("Qnode %s is missing its aliases" % qnode)
-                        elif warn_if_missing:
-                            print("Object id {} has no aliasees.".format(qnode), file=sys.stderr, flush=True)
-                    alias_list = []
-                    if aliases:
-                        if all_languages:
-                            alias_languages = aliases.keys()
-                        else:
-                            alias_languages = languages
-                        for lang in alias_languages:
-                            lang_aliases = aliases.get(lang, None)
-                            if lang_aliases:
-                                for item in lang_aliases:
-                                    # item['value']=item['value'].replace('|','\\|')
-                                    # alias_list.append('\'' + item['value'].replace("'","\\'") + '\'' + "@" + lang)
-                                    value = KgtkFormat.stringify(item['value'], language=lang)
-                                    alias_list.append(value)
-
-                                    # Hash the value to save space and avoid syntactic difficulties.
-                                    # Take a subset of the hash value to save space.
-                                    alias_value_hash: str = hashlib.sha256(value.encode('utf-8')).hexdigest()[
-                                        :value_hash_width]
-                                    aliasid = qnode + '-' + ALIAS_LABEL + "-" + lang + '-' + alias_value_hash
-                                    alias_seq_no: int  # In case of hash collision
-                                    if aliasid in alias_id_collision_map:
-                                        alias_seq_no = alias_id_collision_map[aliasid]
-                                        print("\n*** Alias collision #%d detected for %s (%s)" % (
-                                            alias_seq_no, aliasid, value), file=sys.stderr, flush=True)
-                                    else:
-                                        alias_seq_no = 0
-                                    alias_id_collision_map[aliasid] = alias_seq_no + 1
-                                    aliasid += '-' + str(alias_seq_no)
-                                    self.erows_append(erows,
-                                                      edge_id=aliasid,
-                                                      node1=qnode,
-                                                      label=ALIAS_LABEL,
-                                                      node2=value,
-                                                      entrylang=lang,
-                                                      invalid_erows=invalid_erows)
+                    self.process_aliases(qnode, obj, alias_id_collision_map, erows, invalid_erows)
                                     
-                datatype = obj.get("datatype", "")
-                if len(datatype) > 0:
-                    datatypeid: str = qnode + '-' + "datatype"
-                    # We expect the datatype to be a valid KGTK symbol, so
-                    # there's no need to stringify it.
-                    self.erows_append(erows,
-                                      edge_id=datatypeid,
-                                      node1=qnode,
-                                      label=DATATYPE_LABEL,
-                                      node2=datatype,
-                                      invalid_erows=invalid_erows)
+                if parse_sitelinks:
+                    self.process_sitelinks(qnode, obj, sitelink_id_collision_map, serows, invalid_erows)
 
                 if parse_claims:
-                    claims = obj.get(CLAIMS_TAG)
-                    if claims is None:
-                        if fail_if_missing:
-                            raise KGTKException("Object id %s is missing its claims" % repr(qnode))
-                        elif warn_if_missing:
-                            print("Object id %s is missing its claims." % repr(qnode), file=sys.stderr, flush=True)
-
-                    else:
-                        for prop, claim_property in claims.items():
-                            for cp in claim_property:
-                                if (deprecated or cp[CLAIM_RANK_TAG] != RANK_DEPRECATED):
-                                    mainsnak = cp.get(CLAIM_MAINSNAK_TAG)
-                                    if mainsnak is None:
-                                        print("Qnode %s Prop %s: claim without mainsnak." % (repr(qnode), repr(prop)),
-                                              file=sys.stderr, flush=True)
-                                        continue
-
-                                    rank: typing.Optional[str] = cp.get(CLAIM_RANK_TAG)
-                                    if rank is None:
-                                        print("Qnode %s Prop %s: claim without rank." % (repr(qnode), repr(prop)),
-                                              file=sys.stderr, flush=True)
-                                        continue
-
-                                    claim_id: typing.Optional[str] = cp.get(CLAIM_ID_TAG)
-                                    if claim_id is None:
-                                        print("Qnode %s Prop %s: claim without claim_id." % (repr(qnode), repr(prop)),
-                                              file=sys.stderr, flush=True)
-                                        continue
-
-                                    claim_type: typi9ng.Optional[str] = cp[CLAIM_TYPE_TAG]
-                                    if claim_type is None:
-                                        print("Qnode %s Prop %s: claim without claim_type." % (repr(qnode), repr(prop)),
-                                              file=sys.stderr, flush=True)
-                                        continue
-
-                                    if claim_type != CLAIM_TYPE_STATEMENT:
-                                        print("Qnode %s Prop %s: Unknown claim type %s, ignoring." % (repr(qnode), repr(prop), repr(claim_type)),
-                                              file=sys.stderr, flush=True)
-                                        continue
-
-                                    value: typing.Optional[str]
-                                    wikidatatype: typing.Optional[str]
-                                    (value, wikidatatype) = extract_snak_value(mainsnak,
-                                                                               qnode=qnode,
-                                                                               prop=prop,
-                                                                               who="claim")
-                                    if value is None or wikidatatype is None:
-                                        continue
-
-                                    if minimal_edge_file is not None or (parse_references and CLAIM_REFERENCES_TAG in cp):
-                                        prop_value_hash: str
-                                        if value.startswith(('P', 'Q', 'L')):
-                                            prop_value_hash = value
-                                        else:
-                                            prop_value_hash = hashlib.sha256(value.encode('utf-8')).hexdigest()[
-                                                              :value_hash_width]
-                                        edgeid: str = qnode + '-' + prop + '-' + prop_value_hash + '-'
-                                        if claim_id_hash_width == 0:
-                                            edgeid += claim_id.lower()
-                                        else:
-                                            edgeid += hashlib.sha256(claim_id.lower().encode('utf-8')).hexdigest()[
-                                                      :claim_id_hash_width]
-                                        prop_seq_no: int  # In case of hash collision
-                                        if edgeid in edge_id_collision_map:
-                                            prop_seq_no = edge_id_collision_map[edgeid]
-                                            print("\n*** Edge collision #%d detected for %s (%s)" % (
-                                                prop_seq_no, edgeid, value), file=sys.stderr, flush=True)
-                                        else:
-                                            prop_seq_no = 0
-                                        edge_id_collision_map[edgeid] = prop_seq_no + 1
-                                        edgeid += '-' + str(prop_seq_no)
-
-                                        if minimal_edge_file is not None:
-                                            self.erows_append(erows,
-                                                              edge_id=edgeid,
-                                                              node1=qnode,
-                                                              label=prop,
-                                                              node2=value,
-                                                              rank=rank,
-                                                              wikidatatype=wikidatatype,
-                                                              invalid_erows=invalid_erows)
-
-                                        if parse_references and CLAIM_REFERENCES_TAG in cp:
-                                            rerows = reference_erows if collect_seperately else erows
-                                            references = cp[CLAIM_REFERENCES_TAG]
-                                            for reference in references:
-                                                reference_count += 1 # Bad approach for the time machine.
-                                                reference_id: str = REFERENCE_ID_START + str(reference_count).zfill(REFERENCE_ID_WIDTH)
-
-                                                ref_edgeid: str = edgeid + "-" + reference_id
-
-                                                self.erows_append(rerows,
-                                                                  edge_id=ref_edgeid,
-                                                                  node1=edgeid,
-                                                                  label=REFERENCE_LABEL,
-                                                                  node2=reference_id,
-                                                                  wikidatatype='reference', # Ad-hoc wikidatatype.
-                                                                  invalid_erows=invalid_erows)
-
-                                                ref_snaks = reference.get(REFERENCE_SNAKS_TAG)
-                                                if ref_snaks is None:
-                                                    print("Qnode %s Prop %s: reference without SNAKS." % (repr(qnode), repr(prop)),
-                                                          file=sys.stderr, flush=True)
-                                                    continue
-
-                                                ref_snak_count: int = 0
-
-                                                ref_snaks_prop: str
-                                                for ref_snaks_prop in sorted(ref_snaks.keys()):
-                                                    ref_snaks_list = ref_snaks[ref_snaks_prop]
-                                                    for ref_snak in ref_snaks_list:
-                                                        ref_snak_count += 1 # Bad approach for the time machine, but prevents collisions.
-                                                        ref_snak_edgeid: str = ref_edgeid + "-" + str(ref_snak_count).zfill(REFERENCE_ID_WIDTH)
-
-                                                        kgtk_ref_snak_value: typing.Optional[str]
-                                                        ref_wikidatatype: typing.Optional[str]
-                                                        (kgtk_ref_snak_value, ref_wikidatatype) = extract_snak_value(ref_snak,
-                                                                                                                     qnode=qnode,
-                                                                                                                     prop=prop,
-                                                                                                                     subprop=ref_snaks_prop,
-                                                                                                                     who="reference")
-                                                        if kgtk_ref_snak_value is not None and ref_wikidatatype is not None:
-                                                            self.erows_append(rerows,
-                                                                              edge_id=ref_snak_edgeid,
-                                                                              node1=reference_id,
-                                                                              label=ref_snaks_prop,
-                                                                              node2=kgtk_ref_snak_value,
-                                                                              wikidatatype=ref_wikidatatype,
-                                                                              invalid_erows=invalid_erows)
-
-                                    if minimal_qual_file is not None or interleave:
-                                        quals = cp.get('qualifiers')
-                                        if quals is not None:
-                                            for qual_prop, qual_prop_snaks in quals.items():
-                                                for qual_snak in qual_prop_snaks:
-                                                        qual_value: typing.Optional[str]
-                                                        qual_wikidatatype: typing.Optional[str]
-                                                        (qual_value, qual_wikidatatype) = extract_snak_value(qual_snak,
-                                                                                                             qnode=qnode,
-                                                                                                             prop=prop,
-                                                                                                             subprop=qual_prop,
-                                                                                                             who="qualifier")
-                                                        if qual_value is None or qual_wikidatatype is None:
-                                                            continue
-
-                                                        qual_value_hash: str
-                                                        if qual_value.startswith(('P', 'Q', 'L')):
-                                                            qual_value_hash = qual_value
-                                                        else:
-                                                            qual_value_hash = hashlib.sha256(
-                                                                qual_value.encode('utf-8')).hexdigest()[:value_hash_width]
-                                                        qualid: str = edgeid + '-' + qual_prop + '-' + qual_value_hash
-                                                        qual_seq_no: int  # In case of hash collision
-                                                        if qualid in qual_id_collision_map:
-                                                            qual_seq_no = qual_id_collision_map[qualid]
-                                                            print(
-                                                                "\n*** Qualifier collision #%d detected for %s (%s)" % (
-                                                                    qual_seq_no, qualid, qual_value), file=sys.stderr,
-                                                                flush=True)
-                                                        else:
-                                                            qual_seq_no = 0
-                                                        qual_id_collision_map[qualid] = qual_seq_no + 1
-                                                        qualid += '-' + str(qual_seq_no)
-                                                        self.qrows_append(qrows=qrows,
-                                                                          edge_id=qualid,
-                                                                          node1=edgeid,
-                                                                          label=qual_prop,
-                                                                          node2=qual_value,
-                                                                          wikidatatype=qual_wikidatatype,
-                                                                          invalid_qrows=invalid_qrows,
-                                                                          erows=erows,
-                                                                          invalid_erows=invalid_erows)
-
-                    if parse_sitelinks:
-                        sitelinks = obj.get('sitelinks', None)
-                    else:
-                        sitelinks = None
-                    if sitelinks:
-                        for link in sitelinks:
-                            # TODO: If the title might contain vertical bar, more work is needed
-                            # to make the sitetitle safe for KGTK.
-                            if link.endswith('wiki') and link not in ('commonswiki', 'simplewiki'):
-                                linklabel = SITELINK_LABEL
-                                sitetitle = '_'.join(sitelinks[link]['title'].split())
-
-                                # The following leads to ambuiguity if there are both
-                                # "afwiki" and "afwikibooks".
-                                #
-                                # TODO: Need to research the sitelink structure more fully.
-                                sitelang = link.split('wiki')[0].replace('_', '-')
-
-                                sitelink = 'https://' + sitelang + '.wikipedia.org/wiki/' + sitetitle
-                            else:
-                                linklabel = ADDL_SITELINK_LABEL
-                                sitetitle = '_'.join(sitelinks[link]['title'].split())
-                                if "wiki" in link:
-                                    # TODO: needs more work here.
-                                    sitelang = link.split("wiki")[0]
-                                    if sitelang in ("commons", "simple"):
-                                        sitelang = "en"  # TODO: Need to retain the distinction we lose here.
-                                else:
-                                    sitelang = ""
-                                sitehost = link + '.org'  # TODO: Needs more work here
-                                sitelink = 'https://' + sitehost + '/wiki/' + sitetitle
-
-                            if sitelink is not None:
-                                serows = sitelink_erows if collect_seperately else erows
-                                sitelink_value_hash: str = hashlib.sha256(sitelink.encode('utf-8')).hexdigest()[
-                                                           :value_hash_width]
-                                sitelinkid: str = qnode + '-' + linklabel + '-' + sitelink_value_hash
-                                sitelink_seq_no: int = 0
-                                if sitelinkid in sitelink_id_collision_map:
-                                    sitelink_seq_no = sitelink_id_collision_map[sitelinkid]
-                                    print("\n*** Sitelink collision #%d detected for %s (%s)" % (
-                                        sitelink_seq_no, sitelinkid, sitelink), file=sys.stderr, flush=True)
-                                else:
-                                    sitelink_seq_no = 0
-                                sitelink_id_collision_map[sitelinkid] = sitelink_seq_no + 1
-                                sitelinkid += '-' + str(sitelink_seq_no)
-
-                                self.erows_append(serows,
-                                                  edge_id=sitelinkid,
-                                                  node1=qnode,
-                                                  label=linklabel,
-                                                  node2=sitelink,
-                                                  entrylang=sitelang,
-                                                  invalid_erows=invalid_erows)
-
-
-                                if len(sitelang) > 0:
-                                    self.erows_append(serows,
-                                                      edge_id=sitelinkid + '-language-0',
-                                                      node1=sitelinkid,
-                                                      label=SITELINK_LANGUAGE_LABEL,
-                                                      node2=sitelang,
-                                                      entrylang=sitelang,
-                                                      invalid_erows=invalid_erows)
-
-                                self.erows_append(serows,
-                                                  edge_id=sitelinkid + '-site-0',
-                                                  node1=sitelinkid,
-                                                  label=SITELINK_SITE_LABEL,
-                                                  node2=link,
-                                                  entrylang=sitelang,
-                                                  invalid_erows=invalid_erows)
-
-                                self.erows_append(serows,
-                                                  edge_id=sitelinkid + '-title-0',
-                                                  node1=sitelinkid,
-                                                  label=SITELINK_TITLE_LABEL,
-                                                  node2=KgtkFormat.stringify(sitelinks[link]['title']),
-                                                  entrylang=sitelang, invalid_erows=invalid_erows)
-
-                                for badge in sitelinks[link]['badges']:
-                                    badgeid = sitelinkid + '-badge-' + badge
-                                    self.erows_append(serows,
-                                                      edge_id=badgeid,
-                                                      node1=sitelinkid,
-                                                      label=SITELINK_BADGE_LABEL,
-                                                      node2=badge,
-                                                      entrylang=sitelang,
-                                                      invalid_erows=invalid_erows)
+                    reference_count = self.process_claims(qnode,
+                                                          obj,
+                                                          edge_id_collision_map,
+                                                          erows,
+                                                          invalid_erows,
+                                                          qual_id_collision_map,
+                                                          qrows,
+                                                          invalid_qrows,
+                                                          rerows,
+                                                          reference_count)
 
             if len(nrows) > 0 or \
                     len(erows) > 0 or \
@@ -2305,7 +2388,7 @@ def run(input_file: KGTKFiles,
             return split
 
     try:
-        UPDATE_VERSION: str = "2022-10-03T19:58:05.332412+00:00#RalJVZosOFSVIEyQZIAp7qtTvAckvLwuLuChiH5PemnyZgumV8pP5PbHxrEZwSFqNgtCnoxLXMtrPFMijtaQ4w=="
+        UPDATE_VERSION: str = "2022-10-03T23:43:12.824193+00:00#2LHPYBRiQYQ5NnXWRettIc2PC81XsAPG0Z1fMtRnnbJ4olQbYkjJIm7Oy2HVtK6CBg7FDjeYxD/D41I26VTi7g=="
         print("kgtk import-wikidata version: %s" % UPDATE_VERSION, file=sys.stderr, flush=True)
         print("Starting main process (pid %d)." % os.getpid(), file=sys.stderr, flush=True)
         inp_path = KGTKArgumentParser.get_input_file(input_file)
