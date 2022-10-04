@@ -50,7 +50,6 @@ kgtk ${KGTK_FLAGS} \
      --mapper-batch-size 5 \
      --max-size-per-mapper-queue 3 \
      --single-mapper-queue True \
-     --collect-seperately True\
      --collector-batch-size 5 \
      --collector-queue-per-proc-size 3 \
      --progress-interval 500000 \

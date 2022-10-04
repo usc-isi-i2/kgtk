@@ -83,18 +83,6 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     )
 
     parser.add_argument(
-        "--collect-seperately",
-        nargs='?',
-        type=optional_bool,
-        dest="collect_seperately",
-        const=True,
-        default=False,
-        metavar="True/False",
-        help="If true, collect the node, edge, and qualifier results using seperate processes.  "
-             "If false, collect the results with a single process. (default=%(default)s).",
-    )
-
-    parser.add_argument(
         '--collector-batch-size',
         action="store",
         type=int,
@@ -562,7 +550,6 @@ def run(input_file: KGTKFiles,
         fail_if_missing: bool,
         all_languages: bool,
         warn_if_missing: bool,
-        collect_seperately: bool,
         collector_queue_per_proc_size: int,
         progress_interval: int,
         use_shm: bool,
@@ -1045,7 +1032,6 @@ def run(input_file: KGTKFiles,
         else:
             return kgtk_snak_value, snak_datatype
 
-    collector_q: typing.Optional[pyrallel.ShmQueue] = None
     node_collector_q: typing.Optional[pyrallel.ShmQueue] = None
     edge_collector_q: typing.Optional[pyrallel.ShmQueue] = None
     qual_collector_q: typing.Optional[pyrallel.ShmQueue] = None
@@ -1091,48 +1077,34 @@ def run(input_file: KGTKFiles,
                    len(self.collector_reference_erows_batch) > 0 or \
                    len(self.collector_sitelink_erows_batch) > 0:
 
-                    if collect_seperately:
-                        if len(self.collector_nrows_batch) > 0:
-                            node_collector_q.put(("rows", self.collector_nrows_batch, [], [], [], [], None))
+                    if len(self.collector_nrows_batch) > 0:
+                        node_collector_q.put(("rows", self.collector_nrows_batch, [], [], [], [], None))
 
-                        if len(self.collector_erows_batch) > 0:
-                            edge_collector_q.put(("rows", [], self.collector_erows_batch, [], [], [], None))
+                    if len(self.collector_erows_batch) > 0:
+                        edge_collector_q.put(("rows", [], self.collector_erows_batch, [], [], [], None))
 
-                        if len(self.collector_qrows_batch) > 0:
-                            qual_collector_q.put(("rows", [], [], self.collector_qrows_batch, [], [], None))
+                    if len(self.collector_qrows_batch) > 0:
+                        qual_collector_q.put(("rows", [], [], self.collector_qrows_batch, [], [], None))
 
-                        if len(self.collector_invalid_erows_batch) > 0:
-                            invalid_edge_collector_q.put(
-                                ("rows", [], [], [], self.collector_invalid_erows_batch, [], None))
+                    if len(self.collector_invalid_erows_batch) > 0:
+                        invalid_edge_collector_q.put(
+                            ("rows", [], [], [], self.collector_invalid_erows_batch, [], None))
 
-                        if len(self.collector_invalid_qrows_batch) > 0:
-                            invalid_qual_collector_q.put(
-                                ("rows", [], [], [], [], self.collector_invalid_qrows_batch, None))
+                    if len(self.collector_invalid_qrows_batch) > 0:
+                        invalid_qual_collector_q.put(
+                            ("rows", [], [], [], [], self.collector_invalid_qrows_batch, None))
 
-                        if len(self.collector_description_erows_batch) > 0:
-                            description_collector_q.put(
-                                ("rows", [], self.collector_description_erows_batch, [], [], [], None))
+                    if len(self.collector_description_erows_batch) > 0:
+                        description_collector_q.put(
+                            ("rows", [], self.collector_description_erows_batch, [], [], [], None))
 
-                        if len(self.collector_reference_erows_batch) > 0:
-                            reference_collector_q.put(
-                                ("rows", [], self.collector_reference_erows_batch, [], [], [], None))
+                    if len(self.collector_reference_erows_batch) > 0:
+                        reference_collector_q.put(
+                            ("rows", [], self.collector_reference_erows_batch, [], [], [], None))
 
-                        if len(self.collector_sitelink_erows_batch) > 0:
-                            sitelink_collector_q.put(
-                                ("rows", [], self.collector_sitelink_erows_batch, [], [], [], None))
-
-                    else:
-                        # TODO: what about the following?
-                        # self.collector_description_erows_batch,
-                        # self.collector_reference_erows_batch,
-                        # self.collector_sitelink_erows_batch,
-                        collector_q.put(("rows",
-                                         self.collector_nrows_batch,
-                                         self.collector_erows_batch,
-                                         self.collector_qrows_batch,
-                                         self.collector_invalid_erows_batch,
-                                         self.collector_invalid_qrows_batch,
-                                         None))
+                    if len(self.collector_sitelink_erows_batch) > 0:
+                        sitelink_collector_q.put(
+                            ("rows", [], self.collector_sitelink_erows_batch, [], [], [], None))
 
         def erows_append(self, erows, edge_id, node1, label, node2,
                          rank="",
@@ -1691,9 +1663,9 @@ def run(input_file: KGTKFiles,
             reference_erows = [ ]
             sitelink_erows = []
 
-            derows = description_erows if collect_seperately else erows
-            rerows = reference_erows if collect_seperately else erows
-            serows = sitelink_erows if collect_seperately else erows
+            derows = description_erows
+            rerows = reference_erows
+            serows = sitelink_erows
 
             # These maps avoid avoid ID collisions due to hash collision or
             # repeated values in the input data.  We assume that a top-level
@@ -1773,35 +1745,32 @@ def run(input_file: KGTKFiles,
                     len(reference_erows) > 0 or \
                     len(sitelink_erows) > 0:
                 if collector_batch_size == 1:
-                    if collect_seperately:
-                        if len(nrows) > 0 and node_collector_q is not None:
-                            node_collector_q.put(("rows", nrows, [], [], [], [], None))
+                    if len(nrows) > 0 and node_collector_q is not None:
+                        node_collector_q.put(("rows", nrows, [], [], [], [], None))
 
-                        if len(erows) > 0 and edge_collector_q is not None:
-                            edge_collector_q.put(("rows", [], erows, [], [], [], None))
+                    if len(erows) > 0 and edge_collector_q is not None:
+                        edge_collector_q.put(("rows", [], erows, [], [], [], None))
 
-                        if len(qrows) > 0 and qual_collector_q is not None:
-                            qual_collector_q.put(("rows", [], [], qrows, [], [], None))
+                    if len(qrows) > 0 and qual_collector_q is not None:
+                        qual_collector_q.put(("rows", [], [], qrows, [], [], None))
 
-                        if invalid_erows is not None and len(
-                                invalid_erows) > 0 and invalid_edge_collector_q is not None:
-                            invalid_edge_collector_q.put(("rows", [], [], [], invalid_erows, [], None))
+                    if invalid_erows is not None and len(
+                            invalid_erows) > 0 and invalid_edge_collector_q is not None:
+                        invalid_edge_collector_q.put(("rows", [], [], [], invalid_erows, [], None))
 
-                        if invalid_qrows is not None and len(
-                                invalid_qrows) > 0 and invalid_qual_collector_q is not None:
-                            invalid_qual_collector_q.put(("rows", [], [], [], [], invalid_qrows, None))
+                    if invalid_qrows is not None and len(
+                            invalid_qrows) > 0 and invalid_qual_collector_q is not None:
+                        invalid_qual_collector_q.put(("rows", [], [], [], [], invalid_qrows, None))
 
-                        if len(description_erows) > 0 and description_collector_q is not None:
-                            description_collector_q.put(("rows", [], description_erows, [], [], [], None))
+                    if len(description_erows) > 0 and description_collector_q is not None:
+                        description_collector_q.put(("rows", [], description_erows, [], [], [], None))
 
-                        if len(reference_erows) > 0 and reference_collector_q is not None:
-                            reference_collector_q.put(("rows", [], reference_erows, [], [], [], None))
+                    if len(reference_erows) > 0 and reference_collector_q is not None:
+                        reference_collector_q.put(("rows", [], reference_erows, [], [], [], None))
 
-                        if len(sitelink_erows) > 0 and sitelink_collector_q is not None:
-                            sitelink_collector_q.put(("rows", [], sitelink_erows, [], [], [], None))
+                    if len(sitelink_erows) > 0 and sitelink_collector_q is not None:
+                        sitelink_collector_q.put(("rows", [], sitelink_erows, [], [], [], None))
 
-                    elif collector_q is not None:
-                        collector_q.put(("rows", nrows, erows, qrows, invalid_erows, invalid_qrows, None))
                 else:
                     self.collector_nrows_batch.extend(nrows)
                     self.collector_erows_batch.extend(erows)
@@ -1811,56 +1780,45 @@ def run(input_file: KGTKFiles,
                     if invalid_qrows is not None:
                         self.collector_invalid_qrows_batch.extend(invalid_qrows)
 
-                    if collect_seperately:
-                        self.collector_description_erows_batch.extend(description_erows)
-                        self.collector_reference_erows_batch.extend(reference_erows)
-                        self.collector_sitelink_erows_batch.extend(sitelink_erows)
+                    self.collector_description_erows_batch.extend(description_erows)
+                    self.collector_reference_erows_batch.extend(reference_erows)
+                    self.collector_sitelink_erows_batch.extend(sitelink_erows)
 
                     self.collector_batch_cnt += 1
 
                     if self.collector_batch_cnt >= collector_batch_size:
-                        if collect_seperately:
-                            if len(self.collector_nrows_batch) > 0 and node_collector_q is not None:
-                                node_collector_q.put(("rows", self.collector_nrows_batch, [], [], [], [], None))
+                        if len(self.collector_nrows_batch) > 0 and node_collector_q is not None:
+                            node_collector_q.put(("rows", self.collector_nrows_batch, [], [], [], [], None))
 
-                            if len(self.collector_erows_batch) > 0 and edge_collector_q is not None:
-                                edge_collector_q.put(("rows", [], self.collector_erows_batch, [], [], [], None))
+                        if len(self.collector_erows_batch) > 0 and edge_collector_q is not None:
+                            edge_collector_q.put(("rows", [], self.collector_erows_batch, [], [], [], None))
 
-                            if len(self.collector_qrows_batch) > 0 and qual_collector_q is not None:
-                                qual_collector_q.put(("rows", [], [], self.collector_qrows_batch, [], [], None))
+                        if len(self.collector_qrows_batch) > 0 and qual_collector_q is not None:
+                            qual_collector_q.put(("rows", [], [], self.collector_qrows_batch, [], [], None))
 
-                            if len(self.collector_invalid_erows_batch) > 0 and invalid_edge_collector_q is not None:
-                                invalid_edge_collector_q.put(
-                                    ("rows", [], [], [], self.collector_invalid_erows_batch, [], None))
+                        if len(self.collector_invalid_erows_batch) > 0 and invalid_edge_collector_q is not None:
+                            invalid_edge_collector_q.put(
+                                ("rows", [], [], [], self.collector_invalid_erows_batch, [], None))
 
-                            if len(self.collector_invalid_qrows_batch) > 0 and invalid_qual_collector_q is not None:
-                                invalid_qual_collector_q.put(
-                                    ("rows", [], [], [], [], self.collector_invalid_qrows_batch, None))
+                        if len(self.collector_invalid_qrows_batch) > 0 and invalid_qual_collector_q is not None:
+                            invalid_qual_collector_q.put(
+                                ("rows", [], [], [], [], self.collector_invalid_qrows_batch, None))
 
-                            if len(self.collector_description_erows_batch) > 0 and \
-                                    description_collector_q is not None:
-                                description_collector_q.put(
-                                    ("rows", [], self.collector_description_erows_batch, [], [], [], None))
-                                self.collector_description_erows_batch.clear()
+                        if len(self.collector_description_erows_batch) > 0 and \
+                                description_collector_q is not None:
+                            description_collector_q.put(
+                                ("rows", [], self.collector_description_erows_batch, [], [], [], None))
+                            self.collector_description_erows_batch.clear()
 
-                            if len(self.collector_reference_erows_batch) > 0 and reference_collector_q is not None:
-                                reference_collector_q.put(
-                                    ("rows", [], self.collector_reference_erows_batch, [], [], [], None))
-                                self.collector_reference_erows_batch.clear()
+                        if len(self.collector_reference_erows_batch) > 0 and reference_collector_q is not None:
+                            reference_collector_q.put(
+                                ("rows", [], self.collector_reference_erows_batch, [], [], [], None))
+                            self.collector_reference_erows_batch.clear()
 
-                            if len(self.collector_sitelink_erows_batch) > 0 and sitelink_collector_q is not None:
-                                sitelink_collector_q.put(
-                                    ("rows", [], self.collector_sitelink_erows_batch, [], [], [], None))
-                                self.collector_sitelink_erows_batch.clear()
-
-                        elif collector_q is not None:
-                            collector_q.put(("rows",
-                                             self.collector_nrows_batch,
-                                             self.collector_erows_batch,
-                                             self.collector_qrows_batch,
-                                             self.collector_invalid_erows_batch,
-                                             self.collector_invalid_qrows_batch,
-                                             None))
+                        if len(self.collector_sitelink_erows_batch) > 0 and sitelink_collector_q is not None:
+                            sitelink_collector_q.put(
+                                ("rows", [], self.collector_sitelink_erows_batch, [], [], [], None))
+                            self.collector_sitelink_erows_batch.clear()
 
                         self.collector_nrows_batch.clear()
                         self.collector_erows_batch.clear()
@@ -2428,136 +2386,122 @@ def run(input_file: KGTKFiles,
         sitelink_collector_p = None
 
         print("Creating the collector queue.", file=sys.stderr, flush=True)
-        # collector_q = pyrallel.ShmQueue()
+
         collector_q_maxsize = procs * collector_queue_per_proc_size
-        if collect_seperately:
 
-            if node_file is not None:
-                node_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
-                print("The collector node queue has been created (maxsize=%d)." % collector_q_maxsize,
-                      file=sys.stderr, flush=True)
-
-                print("Creating the node_collector.", file=sys.stderr, flush=True)
-                node_collector: MyCollector = MyCollector()
-                print("Creating the node collector process.", file=sys.stderr, flush=True)
-                node_collector_p = mp.Process(target=node_collector.run, args=(node_collector_q, "node"))
-                print("Starting the node collector process.", file=sys.stderr, flush=True)
-                node_collector_p.start()
-                print("Started the node collector process.", file=sys.stderr, flush=True)
-
-            if minimal_edge_file is not None:
-                edge_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
-                print("The collector edge queue has been created (maxsize=%d)." % collector_q_maxsize,
-                      file=sys.stderr, flush=True)
-
-                print("Creating the edge_collector.", file=sys.stderr, flush=True)
-                edge_collector: MyCollector = MyCollector()
-                print("Creating the edge collector process.", file=sys.stderr, flush=True)
-                edge_collector_p = mp.Process(target=edge_collector.run, args=(edge_collector_q, "edge"))
-                print("Starting the edge collector process.", file=sys.stderr, flush=True)
-                edge_collector_p.start()
-                print("Started the edge collector process.", file=sys.stderr, flush=True)
-
-            if minimal_qual_file is not None:
-                qual_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
-                print("The collector qual queue has been created (maxsize=%d)." % collector_q_maxsize,
-                      file=sys.stderr, flush=True)
-
-                print("Creating the qual_collector.", file=sys.stderr, flush=True)
-                qual_collector: MyCollector = MyCollector()
-                print("Creating the qual collector process.", file=sys.stderr, flush=True)
-                qual_collector_p = mp.Process(target=qual_collector.run, args=(qual_collector_q, "qual"))
-                print("Starting the qual collector process.", file=sys.stderr, flush=True)
-                qual_collector_p.start()
-                print("Started the qual collector process.", file=sys.stderr, flush=True)
-
-            if invalid_edge_file is not None:
-                invalid_edge_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
-                print("The collector invalid edge queue has been created (maxsize=%d)." % collector_q_maxsize,
-                      file=sys.stderr, flush=True)
-
-                print("Creating the invalid_edge_collector.", file=sys.stderr, flush=True)
-                invalid_edge_collector: MyCollector = MyCollector()
-                print("Creating the invalid edge collector process.", file=sys.stderr, flush=True)
-                invalid_edge_collector_p = mp.Process(target=invalid_edge_collector.run,
-                                                      args=(invalid_edge_collector_q, "invalid edge"))
-                print("Starting the invalid edge collector process.", file=sys.stderr, flush=True)
-                invalid_edge_collector_p.start()
-                print("Started the invalid edge collector process.", file=sys.stderr, flush=True)
-
-            if invalid_qual_file is not None:
-                invalid_qual_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
-                print("The collector invalid qual queue has been created (maxsize=%d)." % collector_q_maxsize,
-                      file=sys.stderr, flush=True)
-
-                print("Creating the invalid_qual_collector.", file=sys.stderr, flush=True)
-                invalid_qual_collector: MyCollector = MyCollector()
-                print("Creating the invalid qual collector process.", file=sys.stderr, flush=True)
-                invalid_qual_collector_p = mp.Process(target=invalid_qual_collector.run,
-                                                      args=(invalid_qual_collector_q, "invalid qual"))
-                print("Starting the invalid qual collector process.", file=sys.stderr, flush=True)
-                invalid_qual_collector_p.start()
-                print("Started the invalid qual collector process.", file=sys.stderr, flush=True)
-
-            if split_description_file is not None:
-                description_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
-                print("The collector description queue has been created (maxsize=%d)." % collector_q_maxsize,
-                      file=sys.stderr, flush=True)
-
-                print("Creating the description collector.", file=sys.stderr, flush=True)
-                description_collector: MyCollector = MyCollector()
-                print("Creating the description collector process.", file=sys.stderr, flush=True)
-                description_collector_p = mp.Process(target=description_collector.run,
-                                                     args=(description_collector_q, "description"))
-                print("Starting the description collector process.", file=sys.stderr, flush=True)
-                description_collector_p.start()
-                print("Started the description collector process.", file=sys.stderr, flush=True)
-
-            if split_reference_file is not None:
-                reference_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
-                print("The collector reference queue has been created (maxsize=%d)." % collector_q_maxsize,
-                      file=sys.stderr, flush=True)
-
-                print("Creating the reference collector.", file=sys.stderr, flush=True)
-                reference_collector: MyCollector = MyCollector()
-                print("Creating the reference collector process.", file=sys.stderr, flush=True)
-                reference_collector_p = mp.Process(target=reference_collector.run,
-                                                   args=(reference_collector_q, "reference"))
-                print("Starting the reference collector process.", file=sys.stderr, flush=True)
-                reference_collector_p.start()
-                print("Started the reference collector process.", file=sys.stderr, flush=True)
-
-            if split_sitelink_file is not None:
-                sitelink_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
-                print("The collector sitelink queue has been created (maxsize=%d)." % collector_q_maxsize,
-                      file=sys.stderr, flush=True)
-
-                print("Creating the sitelink collector.", file=sys.stderr, flush=True)
-                sitelink_collector: MyCollector = MyCollector()
-                print("Creating the sitelink collector process.", file=sys.stderr, flush=True)
-                sitelink_collector_p = mp.Process(target=sitelink_collector.run,
-                                                  args=(sitelink_collector_q, "sitelink"))
-                print("Starting the sitelink collector process.", file=sys.stderr, flush=True)
-                sitelink_collector_p.start()
-                print("Started the sitelink collector process.", file=sys.stderr, flush=True)
-
-        else:
-            collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
-            print("The common collector queue has been created (maxsize=%d)." % collector_q_maxsize,
+        if node_file is not None:
+            node_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
+            print("The collector node queue has been created (maxsize=%d)." % collector_q_maxsize,
                   file=sys.stderr, flush=True)
 
-            print("Creating the common collector.", file=sys.stderr, flush=True)
-            collector: MyCollector = MyCollector()
-            print("Creating the common collector process.", file=sys.stderr, flush=True)
-            collector_p = mp.Process(target=collector.run, args=(collector_q, "common"))
-            print("Starting the common collector process.", file=sys.stderr, flush=True)
-            collector_p.start()
-            print("Started the common collector process.", file=sys.stderr, flush=True)
+            print("Creating the node_collector.", file=sys.stderr, flush=True)
+            node_collector: MyCollector = MyCollector()
+            print("Creating the node collector process.", file=sys.stderr, flush=True)
+            node_collector_p = mp.Process(target=node_collector.run, args=(node_collector_q, "node"))
+            print("Starting the node collector process.", file=sys.stderr, flush=True)
+            node_collector_p.start()
+            print("Started the node collector process.", file=sys.stderr, flush=True)
+
+        if minimal_edge_file is not None:
+            edge_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
+            print("The collector edge queue has been created (maxsize=%d)." % collector_q_maxsize,
+                  file=sys.stderr, flush=True)
+
+            print("Creating the edge_collector.", file=sys.stderr, flush=True)
+            edge_collector: MyCollector = MyCollector()
+            print("Creating the edge collector process.", file=sys.stderr, flush=True)
+            edge_collector_p = mp.Process(target=edge_collector.run, args=(edge_collector_q, "edge"))
+            print("Starting the edge collector process.", file=sys.stderr, flush=True)
+            edge_collector_p.start()
+            print("Started the edge collector process.", file=sys.stderr, flush=True)
+
+        if minimal_qual_file is not None:
+            qual_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
+            print("The collector qual queue has been created (maxsize=%d)." % collector_q_maxsize,
+                  file=sys.stderr, flush=True)
+
+            print("Creating the qual_collector.", file=sys.stderr, flush=True)
+            qual_collector: MyCollector = MyCollector()
+            print("Creating the qual collector process.", file=sys.stderr, flush=True)
+            qual_collector_p = mp.Process(target=qual_collector.run, args=(qual_collector_q, "qual"))
+            print("Starting the qual collector process.", file=sys.stderr, flush=True)
+            qual_collector_p.start()
+            print("Started the qual collector process.", file=sys.stderr, flush=True)
+
+        if invalid_edge_file is not None:
+            invalid_edge_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
+            print("The collector invalid edge queue has been created (maxsize=%d)." % collector_q_maxsize,
+                  file=sys.stderr, flush=True)
+
+            print("Creating the invalid_edge_collector.", file=sys.stderr, flush=True)
+            invalid_edge_collector: MyCollector = MyCollector()
+            print("Creating the invalid edge collector process.", file=sys.stderr, flush=True)
+            invalid_edge_collector_p = mp.Process(target=invalid_edge_collector.run,
+                                                  args=(invalid_edge_collector_q, "invalid edge"))
+            print("Starting the invalid edge collector process.", file=sys.stderr, flush=True)
+            invalid_edge_collector_p.start()
+            print("Started the invalid edge collector process.", file=sys.stderr, flush=True)
+
+        if invalid_qual_file is not None:
+            invalid_qual_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
+            print("The collector invalid qual queue has been created (maxsize=%d)." % collector_q_maxsize,
+                  file=sys.stderr, flush=True)
+
+            print("Creating the invalid_qual_collector.", file=sys.stderr, flush=True)
+            invalid_qual_collector: MyCollector = MyCollector()
+            print("Creating the invalid qual collector process.", file=sys.stderr, flush=True)
+            invalid_qual_collector_p = mp.Process(target=invalid_qual_collector.run,
+                                                  args=(invalid_qual_collector_q, "invalid qual"))
+            print("Starting the invalid qual collector process.", file=sys.stderr, flush=True)
+            invalid_qual_collector_p.start()
+            print("Started the invalid qual collector process.", file=sys.stderr, flush=True)
+
+        if split_description_file is not None:
+            description_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
+            print("The collector description queue has been created (maxsize=%d)." % collector_q_maxsize,
+                  file=sys.stderr, flush=True)
+
+            print("Creating the description collector.", file=sys.stderr, flush=True)
+            description_collector: MyCollector = MyCollector()
+            print("Creating the description collector process.", file=sys.stderr, flush=True)
+            description_collector_p = mp.Process(target=description_collector.run,
+                                                 args=(description_collector_q, "description"))
+            print("Starting the description collector process.", file=sys.stderr, flush=True)
+            description_collector_p.start()
+            print("Started the description collector process.", file=sys.stderr, flush=True)
+
+        if split_reference_file is not None:
+            reference_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
+            print("The collector reference queue has been created (maxsize=%d)." % collector_q_maxsize,
+                  file=sys.stderr, flush=True)
+
+            print("Creating the reference collector.", file=sys.stderr, flush=True)
+            reference_collector: MyCollector = MyCollector()
+            print("Creating the reference collector process.", file=sys.stderr, flush=True)
+            reference_collector_p = mp.Process(target=reference_collector.run,
+                                               args=(reference_collector_q, "reference"))
+            print("Starting the reference collector process.", file=sys.stderr, flush=True)
+            reference_collector_p.start()
+            print("Started the reference collector process.", file=sys.stderr, flush=True)
+
+        if split_sitelink_file is not None:
+            sitelink_collector_q = pyrallel.ShmQueue(maxsize=collector_q_maxsize)
+            print("The collector sitelink queue has been created (maxsize=%d)." % collector_q_maxsize,
+                  file=sys.stderr, flush=True)
+
+            print("Creating the sitelink collector.", file=sys.stderr, flush=True)
+            sitelink_collector: MyCollector = MyCollector()
+            print("Creating the sitelink collector process.", file=sys.stderr, flush=True)
+            sitelink_collector_p = mp.Process(target=sitelink_collector.run,
+                                              args=(sitelink_collector_q, "sitelink"))
+            print("Starting the sitelink collector process.", file=sys.stderr, flush=True)
+            sitelink_collector_p.start()
+            print("Started the sitelink collector process.", file=sys.stderr, flush=True)
 
         if node_file:
             node_file_header = ['id']
 
-            ncq = collector_q if collector_q is not None else node_collector_q
+            ncq = node_collector_q
             if ncq is not None:
                 print("Sending the node header to the collector.", file=sys.stderr, flush=True)
                 ncq.put(("node_header", None, None, None, None, None, node_file_header))
@@ -2565,7 +2509,7 @@ def run(input_file: KGTKFiles,
 
         edge_file_header = ['id', 'node1', 'label', 'node2', 'rank', 'node2;wikidatatype']
 
-        ecq = collector_q if collector_q is not None else edge_collector_q
+        ecq = edge_collector_q
 
         if minimal_edge_file and ecq is not None:
             print("Sending the minimal edge file header to the collector.", file=sys.stderr, flush=True)
@@ -2590,7 +2534,7 @@ def run(input_file: KGTKFiles,
             ecq.put(("split_datatype_header", None, None, None, None, None, datatype_file_header))
             print("Sent the datatype file header to the collector.", file=sys.stderr, flush=True)
 
-        dcq = collector_q if collector_q is not None else description_collector_q
+        dcq = description_collector_q
         if split_description_file and dcq is not None:
             description_file_header = ['id', 'node1', 'label', 'node2', 'lang']
             print("Sending the description file header to the collector.", file=sys.stderr, flush=True)
@@ -2615,14 +2559,14 @@ def run(input_file: KGTKFiles,
             ecq.put(("split_en_label_header", None, None, None, None, None, en_label_file_header))
             print("Sent the English label file header to the collector.", file=sys.stderr, flush=True)
 
-        rcq = collector_q if collector_q is not None else reference_collector_q
+        rcq = reference_collector_q
         if split_reference_file and rcq is not None:
             reference_file_header = ['id', 'node1', 'label', 'node2', 'node2;wikidatatype']
             print("Sending the reference file header to the collector.", file=sys.stderr, flush=True)
             rcq.put(("split_reference_header", None, None, None, None, None, reference_file_header))
             print("Sent the reference file header to the collector.", file=sys.stderr, flush=True)
 
-        scq = collector_q if collector_q is not None else sitelink_collector_q
+        scq = sitelink_collector_q
         if split_sitelink_file and scq is not None:
             sitelink_file_header = ['id', 'node1', 'label', 'node2', 'lang']
             print("Sending the sitelink file header to the collector.", file=sys.stderr, flush=True)
@@ -2656,7 +2600,7 @@ def run(input_file: KGTKFiles,
         if minimal_qual_file is not None or split_property_qual_file is not None:
             qual_file_header = ['id', 'node1', 'label', 'node2', 'node2;wikidatatype']
 
-            qcq = collector_q if collector_q is not None else qual_collector_q
+            qcq = qual_collector_q
 
             if minimal_qual_file is not None and qcq is not None:
                 print("Sending the minimal qual file header to the collector.", file=sys.stderr, flush=True)
@@ -2711,16 +2655,6 @@ def run(input_file: KGTKFiles,
         print('Waiting for the workers to shut down.', file=sys.stderr, flush=True)
         pp.join()
         print('Worker shut down is complete.', file=sys.stderr, flush=True)
-
-        if collector_q is not None:
-            print('Telling the collector to shut down.', file=sys.stderr, flush=True)
-            collector_q.put(("shutdown", None, None, None, None, None, None))
-        if collector_p is not None:
-            print('Waiting for the collector to shut down.', file=sys.stderr, flush=True)
-            collector_p.join()
-            print('Collector shut down is complete.', file=sys.stderr, flush=True)
-        if collector_q is not None:
-            collector_q.close()
 
         if node_collector_q is not None:
             print('Telling the node collector to shut down.', file=sys.stderr, flush=True)
