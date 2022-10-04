@@ -1877,8 +1877,6 @@ def run(input_file: KGTKFiles,
             self.nrows: int = 0
 
             self.minimal_edge_wr = None
-
-            self.detailed_edge_wr = None
             self.erows: int = 0
 
             self.minimal_qual_wr = None
@@ -2105,9 +2103,6 @@ def run(input_file: KGTKFiles,
             if self.minimal_edge_wr is not None:
                 self.minimal_edge_wr.close()
 
-            if self.detailed_edge_wr is not None:
-                self.detailed_edge_wr.close()
-
             if self.invalid_edge_wr is not None:
                 self.invalid_edge_wr.close()
 
@@ -2194,11 +2189,7 @@ def run(input_file: KGTKFiles,
 
             if len(erows) > 0:
                 if not self.process_split_files:
-                    if self.detailed_edge_wr is None:
-                        raise ValueError("Unexpected edge rows in the %s collector." % who)
-                    for row in erows:
-                        if skip_validation or validate(row, "unsplit detailed edge"):
-                            self.detailed_edge_wr.write(row)
+                    raise ValueError("Unexpected edge rows in the %s collector." % who)
                 else:
                     for row in erows:
                         split: bool = False
@@ -2217,7 +2208,7 @@ def run(input_file: KGTKFiles,
                         if method is not None:
                             split = method(row)
                         if not split:
-                            if self.minimal_edge_wr is None and self.detailed_edge_wr is None and \
+                            if self.minimal_edge_wr is None and \
                                     self.split_property_edge_wr is None:
                                 raise ValueError("Unexpected %s edge rows in the %s collector: %s." % (label, who, repr(row)))
 
@@ -2232,10 +2223,6 @@ def run(input_file: KGTKFiles,
                                 if skip_validation or validate(row, "minimal edge"):
                                     self.minimal_edge_wr.write((row[0], row[1], row[2], row[3], row[4],
                                                                 row[5]))  # Hack: knows the structure of the row.
-
-                            if self.detailed_edge_wr is not None:
-                                if skip_validation or validate(row, "split detailed edge"):
-                                    self.detailed_edge_wr.write(row)
 
             if len(qrows) > 0:
                 if self.minimal_qual_wr is None:
