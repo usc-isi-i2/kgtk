@@ -1663,10 +1663,6 @@ def run(input_file: KGTKFiles,
             reference_erows = [ ]
             sitelink_erows = []
 
-            derows = description_erows
-            rerows = reference_erows
-            serows = sitelink_erows
-
             # These maps avoid avoid ID collisions due to hash collision or
             # repeated values in the input data.  We assume that a top-level
             # property (obj["id"]) will not occur in multiple input lines.
@@ -1716,13 +1712,13 @@ def run(input_file: KGTKFiles,
                     self.process_labels(qnode, obj, erows, invalid_erows)
 
                 if parse_descr:
-                    self.process_descriptions(qnode, obj, derows, invalid_erows)
+                    self.process_descriptions(qnode, obj, description_erows, invalid_erows)
 
                 if parse_aliases:
                     self.process_aliases(qnode, obj, alias_id_collision_map, erows, invalid_erows)
                                     
                 if parse_sitelinks:
-                    self.process_sitelinks(qnode, obj, sitelink_id_collision_map, serows, invalid_erows)
+                    self.process_sitelinks(qnode, obj, sitelink_id_collision_map, sitelink_erows, invalid_erows)
 
                 if parse_claims:
                     reference_count = self.process_claims(qnode,
@@ -1733,7 +1729,7 @@ def run(input_file: KGTKFiles,
                                                           qual_id_collision_map,
                                                           qrows,
                                                           invalid_qrows,
-                                                          rerows,
+                                                          reference_erows,
                                                           reference_count)
 
             if len(nrows) > 0 or \
@@ -2333,7 +2329,7 @@ def run(input_file: KGTKFiles,
             return split
 
     try:
-        UPDATE_VERSION: str = "2022-10-04T17:59:36.520652+00:00#3mpteK3M3i571vUIDhJHkHI8kW7SZlscvmvHTI5D7Y6n5hQh4gmFU2MWI4m77MrGKdQCQajxwdE7p9eHzop/5A=="
+        UPDATE_VERSION: str = "2022-10-04T23:01:18.239213+00:00#lsGvzewWEhCmgQSAvdzEajiozO6WkYj4hcG4Y+K04PWgV/Zp7N00I6U36mFFvbstQxXRQ8QZvJf2uj30fsbmzQ=="
         print("kgtk import-wikidata version: %s" % UPDATE_VERSION, file=sys.stderr, flush=True)
         print("Starting main process (pid %d)." % os.getpid(), file=sys.stderr, flush=True)
         inp_path = KGTKArgumentParser.get_input_file(input_file)
@@ -2509,85 +2505,80 @@ def run(input_file: KGTKFiles,
 
         edge_file_header = ['id', 'node1', 'label', 'node2', 'rank', 'node2;wikidatatype']
 
-        ecq = edge_collector_q
-
-        if minimal_edge_file and ecq is not None:
+        if minimal_edge_file and edge_collector_q is not None:
             print("Sending the minimal edge file header to the collector.", file=sys.stderr, flush=True)
-            ecq.put(("minimal_edge_header", None, None, None, None, None, edge_file_header))
+            edge_collector_q.put(("minimal_edge_header", None, None, None, None, None, edge_file_header))
             print("Sent the minimal edge file header to the collector.", file=sys.stderr, flush=True)
 
-        if split_alias_file and ecq is not None:
+        if split_alias_file and edge_collector_q is not None:
             alias_file_header = ['id', 'node1', 'label', 'node2', 'lang']
             print("Sending the alias file header to the collector.", file=sys.stderr, flush=True)
-            ecq.put(("split_alias_header", None, None, None, None, None, alias_file_header))
+            edge_collector_q.put(("split_alias_header", None, None, None, None, None, alias_file_header))
             print("Sent the alias file header to the collector.", file=sys.stderr, flush=True)
 
-        if split_en_alias_file and ecq is not None:
+        if split_en_alias_file and edge_collector_q is not None:
             en_alias_file_header = ['id', 'node1', 'label', 'node2']
             print("Sending the English alias file header to the collector.", file=sys.stderr, flush=True)
-            ecq.put(("split_en_alias_header", None, None, None, None, None, en_alias_file_header))
+            edge_collector_q.put(("split_en_alias_header", None, None, None, None, None, en_alias_file_header))
             print("Sent the English alias file header to the collector.", file=sys.stderr, flush=True)
 
-        if split_datatype_file and ecq is not None:
+        if split_datatype_file and edge_collector_q is not None:
             datatype_file_header = ['id', 'node1', 'label', 'node2']
             print("Sending the datatype file header to the collector.", file=sys.stderr, flush=True)
-            ecq.put(("split_datatype_header", None, None, None, None, None, datatype_file_header))
+            edge_collector_q.put(("split_datatype_header", None, None, None, None, None, datatype_file_header))
             print("Sent the datatype file header to the collector.", file=sys.stderr, flush=True)
 
-        dcq = description_collector_q
-        if split_description_file and dcq is not None:
+        if split_description_file and description_collector_q is not None:
             description_file_header = ['id', 'node1', 'label', 'node2', 'lang']
             print("Sending the description file header to the collector.", file=sys.stderr, flush=True)
-            dcq.put(("split_description_header", None, None, None, None, None, description_file_header))
+            description_collector_q.put(("split_description_header", None, None, None, None, None, description_file_header))
             print("Sent the description file header to the collector.", file=sys.stderr, flush=True)
 
-        if split_en_description_file and dcq is not None:
+        if split_en_description_file and description_collector_q is not None:
             en_description_file_header = ['id', 'node1', 'label', 'node2']
             print("Sending the English description file header to the collector.", file=sys.stderr, flush=True)
-            dcq.put(("split_en_description_header", None, None, None, None, None, en_description_file_header))
+            description_collector_q.put(("split_en_description_header", None, None, None, None, None, en_description_file_header))
             print("Sent the English description file header to the collector.", file=sys.stderr, flush=True)
 
-        if split_label_file and ecq is not None:
+        if split_label_file and edge_collector_q is not None:
             label_file_header = ['id', 'node1', 'label', 'node2', 'lang']
             print("Sending the label file header to the collector.", file=sys.stderr, flush=True)
-            ecq.put(("split_label_header", None, None, None, None, None, label_file_header))
+            edge_collector_q.put(("split_label_header", None, None, None, None, None, label_file_header))
             print("Sent the label file header to the collector.", file=sys.stderr, flush=True)
 
-        if split_en_label_file and ecq is not None:
+        if split_en_label_file and edge_collector_q is not None:
             en_label_file_header = ['id', 'node1', 'label', 'node2']
             print("Sending the English label file header to the collector.", file=sys.stderr, flush=True)
-            ecq.put(("split_en_label_header", None, None, None, None, None, en_label_file_header))
+            edge_collector_q.put(("split_en_label_header", None, None, None, None, None, en_label_file_header))
             print("Sent the English label file header to the collector.", file=sys.stderr, flush=True)
 
-        rcq = reference_collector_q
-        if split_reference_file and rcq is not None:
+        if split_reference_file and reference_collector_q is not None:
             reference_file_header = ['id', 'node1', 'label', 'node2', 'node2;wikidatatype']
             print("Sending the reference file header to the collector.", file=sys.stderr, flush=True)
-            rcq.put(("split_reference_header", None, None, None, None, None, reference_file_header))
+            reference_collector_q.put(("split_reference_header", None, None, None, None, None, reference_file_header))
             print("Sent the reference file header to the collector.", file=sys.stderr, flush=True)
 
-        scq = sitelink_collector_q
-        if split_sitelink_file and scq is not None:
+        if split_sitelink_file and sitelink_collector_q is not None:
             sitelink_file_header = ['id', 'node1', 'label', 'node2', 'lang']
             print("Sending the sitelink file header to the collector.", file=sys.stderr, flush=True)
-            scq.put(("split_sitelink_header", None, None, None, None, None, sitelink_file_header))
+            sitelink_collector_q.put(("split_sitelink_header", None, None, None, None, None, sitelink_file_header))
             print("Sent the sitelink file header to the collector.", file=sys.stderr, flush=True)
 
-        if split_en_sitelink_file and scq is not None:
+        if split_en_sitelink_file and sitelink_collector_q is not None:
             en_sitelink_file_header = ['id', 'node1', 'label', 'node2']
             print("Sending the English sitelink file header to the collector.", file=sys.stderr, flush=True)
-            scq.put(("split_en_sitelink_header", None, None, None, None, None, en_sitelink_file_header))
+            sitelink_collector_q.put(("split_en_sitelink_header", None, None, None, None, None, en_sitelink_file_header))
             print("Sent the English sitelink file header to the collector.", file=sys.stderr, flush=True)
 
-        if split_type_file and ecq is not None:
+        if split_type_file and edge_collector_q is not None:
             type_file_header = ['id', 'node1', 'label', 'node2']
             print("Sending the entry type file header to the collector.", file=sys.stderr, flush=True)
-            ecq.put(("split_type_header", None, None, None, None, None, type_file_header))
+            edge_collector_q.put(("split_type_header", None, None, None, None, None, type_file_header))
             print("Sent the entry type file header to the collector.", file=sys.stderr, flush=True)
 
-        if split_property_edge_file and ecq is not None:
+        if split_property_edge_file and edge_collector_q is not None:
             print("Sending the property edge file header to the collector.", file=sys.stderr, flush=True)
-            ecq.put(("split_property_edge_header", None, None, None, None, None, edge_file_header))
+            edge_collector_q.put(("split_property_edge_header", None, None, None, None, None, edge_file_header))
             print("Sent the property edge file header to the collector.", file=sys.stderr, flush=True)
 
         if invalid_edge_file and invalid_edge_collector_q is not None:
@@ -2600,16 +2591,14 @@ def run(input_file: KGTKFiles,
         if minimal_qual_file is not None or split_property_qual_file is not None:
             qual_file_header = ['id', 'node1', 'label', 'node2', 'node2;wikidatatype']
 
-            qcq = qual_collector_q
-
-            if minimal_qual_file is not None and qcq is not None:
+            if minimal_qual_file is not None and qual_collector_q is not None:
                 print("Sending the minimal qual file header to the collector.", file=sys.stderr, flush=True)
-                qcq.put(("minimal_qual_header", None, None, None, None, None, qual_file_header))
+                qual_collector_q.put(("minimal_qual_header", None, None, None, None, None, qual_file_header))
                 print("Sent the minimal qual file header to the collector.", file=sys.stderr, flush=True)
 
-            if split_property_qual_file and qcq is not None:
+            if split_property_qual_file and qual_collector_q is not None:
                 print("Sending the property qual file header to the collector.", file=sys.stderr, flush=True)
-                qcq.put(("split_property_qual_header", None, None, None, None, None, qual_file_header))
+                qual_collector_q.put(("split_property_qual_header", None, None, None, None, None, qual_file_header))
                 print("Sent the property qual file header to the collector.", file=sys.stderr, flush=True)
 
             if invalid_qual_file and invalid_qual_collector_q is not None:
