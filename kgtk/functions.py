@@ -277,7 +277,7 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
         # Assume that anything else is KGTK formatted output.  Convert it to a
         # pandas DataFrame and return it.
         #
-        # TODO: Test this conversion with all KTK datatypes.  Language-qualified
+        # TODO: Test this conversion with all KGTK datatypes.  Language-qualified
         # strings are problematic.  Check what happens to quantites, date/times,
         # and locations.
         #
