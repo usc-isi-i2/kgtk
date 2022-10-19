@@ -492,8 +492,9 @@ class InlineVectorStore(VectorStore):
             buffer[i] = np.frombuffer(vec, dtype=dtype)
         return buffer, nvecs
 
-    # NOTE: 50 qcells with 16K 1K-D vectors each take up about 3GB of RAM:
-    @lru_cache(maxsize=50)
+    # NOTE: 50 qcells with 16K 1K-D vectors each take up about 3GB of RAM;
+    # this seems obsolete given that we now know how to properly reuse the search index:
+    #@lru_cache(maxsize=50)
     def get_qcell_vectors(self, qcell):
         """Return all vectors assigned to this quantizer 'qcell' as an array.
         Return their zero-based rowid's as a second array of vector IDs.
@@ -783,7 +784,6 @@ class NumpyVectorStore(VectorStore):
         else:
             return self.get_store_as_array()[offset:end], nvecs
 
-    @lru_cache(maxsize=50)
     def get_qcell_vectors(self, qcell):
         """Return all vectors assigned to this quantizer 'qcell' as an array.
         Return their zero-based rowid's as a second array of vector IDs.
@@ -979,7 +979,6 @@ class Hd5VectorStore(VectorStore):
         else:
             return self.get_store_as_array()[offset:end], nvecs
 
-    @lru_cache(maxsize=50)
     def get_qcell_vectors(self, qcell):
         """Return all vectors assigned to this quantizer 'qcell' as an array.
         Return their zero-based rowid's as a second array of vector IDs.
@@ -1390,6 +1389,8 @@ class FaissIndex(NearestNeighborIndex):
             table_size = int(nbytes * self.vector_ndim * self.ntotal * 1.2)
             # use fewer batches for smaller tables, but stay between 2 and 10:
             nbatches = min(max(math.ceil(table_size / self.MIN_TEMP_TABLE_SIZE), 2), 10)
+            # IMPORTANT: the order established here should match what's later done in 'self.sort_qcells_in_disk_order():
+            # TO DO: figure out why the INT directive here doesn't seem to do what we expect it to:
             sstore.batched_sort_table(vstore.table, f'CAST({sql_quote_ident(qcell_colname)} AS INT)', n=nbatches, commit=True)
         else:
             sstore.log(0, 'WARNING: sorting on this type of vector store not yet implemented')
@@ -1447,6 +1448,19 @@ class FaissIndex(NearestNeighborIndex):
         #    self.search_index.nprobe = 1
         return self.search_index
 
+    def sort_qcells_in_disk_order(self, qcells):
+        """Returns a deduplicated copy of 'qcells' that is sorted in vector table disk order.
+        'qcells' maybe a multi-row array which will be flattened first.  Access in disk order
+        can improve things if there is disk contention from other processes, but it might not
+        do much if there is no contention and enough RAM.
+        """
+        # IMPORTANT: this needs to (roughly) correspond to the order established by self.sort_vectors();
+        # we sort by text value here instead of as ints which seems to be the order we have despite
+        # casting to INT; either way, the sorted orders should be similar enough for improved locality:
+        qcells = list(set([(qc, str(qc)) for qc in qcells.flatten()]))
+        qcells.sort(key=lambda x: x[1])
+        return np.array([qc[0] for qc in qcells], dtype=self.FAISS_VECTOR_ID_TYPE)
+
     def get_search_index_for_qcells(self, qcells):
         """Return a search index that contains (at least) all vectors of the identified 'qcells'.
         """
@@ -1457,19 +1471,18 @@ class FaissIndex(NearestNeighborIndex):
         index = self.get_search_index(reuse=self.REUSE_SEARCH_INDEX)
         loaded_qcells = self.search_index_qcells
         vstore = self.vector_store
-        for row in self.ensure_vector_array(qcells):
-            for qcell in row:
-                # -1 is a FAISS code for "not found":
-                if qcell >= 0 and qcell not in loaded_qcells:
-                    vecs, vecids = vstore.get_qcell_vectors(qcell)
-                    nvecs = len(vecs)
-                    vecs = self.ensure_float_type(vecs)
-                    vecids = self.ensure_vector_id_type(vecids)
-                    qcellids = np.zeros(nvecs, dtype=self.FAISS_VECTOR_ID_TYPE)
-                    qcellids[:] = qcell
-                    # we use 'add_core' which is very fast, since we already know the qcell IDs of the added vectors:
-                    index.add_core(nvecs, faiss.swig_ptr(vecs), faiss.swig_ptr(vecids), faiss.swig_ptr(qcellids))
-                    loaded_qcells.add(qcell)
+        for qcell in self.sort_qcells_in_disk_order(qcells):
+            # -1 is a FAISS code for "not found":
+            if qcell >= 0 and qcell not in loaded_qcells:
+                vecs, vecids = vstore.get_qcell_vectors(qcell)
+                nvecs = len(vecs)
+                vecs = self.ensure_float_type(vecs)
+                vecids = self.ensure_vector_id_type(vecids)
+                qcellids = np.zeros(nvecs, dtype=self.FAISS_VECTOR_ID_TYPE)
+                qcellids[:] = qcell
+                # we use 'add_core' which is very fast, since we already know the qcell IDs of the added vectors:
+                index.add_core(nvecs, faiss.swig_ptr(vecs), faiss.swig_ptr(vecids), faiss.swig_ptr(qcellids))
+                loaded_qcells.add(qcell)
         return index
     
     def search_quantizer(self, vectors, k=None):
