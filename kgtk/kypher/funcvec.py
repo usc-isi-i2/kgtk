@@ -347,29 +347,52 @@ class TopKCosineSimilarity(VirtualGraphFunction, VectorFunction):
     associated vector store.
     """
 
-    # parameters needed by the 'VirtualTableFunction' API:
-    params = ['node1', 'k', 'maxk', 'nprobe']
-    columns = ['label', 'node2', 'vid', 'vrowid', 'vector', 'similarity']
+    # input parameters needed by the 'VirtualTableFunction' API:
+    params = ['node1',       # input vector for which we want to compute top-k similars
+              'key',         # optional: node1 key associated with that vector (from the vector table)
+              'k',           # optional: top-k similar nodes will be computed, defaults to 10
+              'maxk',        # optional: maximum k to try for vector joins with dynamic scaling,
+                             # defaults to 0 which means no dynamic scaling should be used
+              'nprobe',      # optional: number of closest qcells to search to find neighbors, defaults to 1
+              'batch_size',  # optional: input vector batch size to use to compute top-k similars,
+                             # defaults to 1, if this is greater than 1 and no dynamic scaling is used, this
+                             # will search batches of vectors which will greatly increase parallelism and speed
+              'ntotal'       # optional: if batching is used, this must provide the exact total of inputs that
+                             # need to be processed, needed to ensure proper processing of last batch
+    ]
+    # output parameters/columns that will be bound:
+    columns = ['out_node1',  # respective input vector associated with neighbors needed for batched processing
+               'out_key',    # respective input vector key associated with neighbors needed for batched processing
+               'label',      # name of virtual edge (constant)
+               'node2',      # node1 key of this similar vector
+               'vid',        # edge ID of this similar vector
+               'vrowid',     # row ID of this similar vector
+               'vector',     # bytes of this similar vector
+               'similarity'  # cosine similarity of this similar vector to the respective input vector
+    ]
     name = 'kvec_topk_cosine_similarity'
 
     DEFAULT_K = 10
     DEFAULT_MAXK = 0
     DEFAULT_NPROBE = 1 # TO DO: should we use the value from the nn index spec as the default?
+    DEFAULT_BATCH_SIZE = 1
 
     @staticmethod
-    def initialize(vtfun, node1, k=DEFAULT_K, maxk=DEFAULT_MAXK, nprobe=DEFAULT_NPROBE):
+    def initialize(vtfun, node1, key=None, k=DEFAULT_K, maxk=DEFAULT_MAXK, nprobe=DEFAULT_NPROBE,
+                   batch_size=DEFAULT_BATCH_SIZE, ntotal=None):
         """Called during the initialziation of the virtual table function for a set of input
         parameters 'node1' (the source vector we are comparing against), 'k' (how many top-similar
         results to compute), and 'nprobe' (how deeply to search in the nearest-neighbor index).
         If 'maxk' is non-zero, 'k' will dynamically scale all the way to 'maxk' which is only
         useful, however, in conjunction with a similarity join controller.
         """
-        # NOTE: the optional arguments don't work as expected, we always have to provide them,
-        #       so instead we fill in appropriate defaults as part of clause translation:
         vtfun.input_vector = node1
+        vtfun.input_vector_key = key
         vtfun.input_k = k
         vtfun.input_maxk = maxk
         vtfun.input_nprobe = nprobe
+        vtfun.batch_size = batch_size
+        vtfun.ntotal = int(ntotal) if ntotal is not None else None
         vtfun.current_k = vtfun.input_k
         vtfun.search_index = None
         vtfun.result_rows = None
@@ -386,6 +409,13 @@ class TopKCosineSimilarity(VirtualGraphFunction, VectorFunction):
         if vtfun.debug:
             print('kvec_cos_sim_topk.init:')
 
+        # TO DO: for now we only support batching without dynamic scaling, we'll need to generalize that,
+        # but this is tricky, since each vector in the input group will behave and converge differently:
+        vtfun.use_batching = batch_size > 1 and ntotal is not None and maxk == 0
+        if vtfun.use_batching and not hasattr(vtfun, 'batched_inputs'):
+            vtfun.nprocessed = 0
+            vtfun.batched_inputs = []
+
     def supports_sim_join(self):
         """Signal that this computation supports full similarity joins via auxiliary join controllers."""
         return True
@@ -398,7 +428,17 @@ class TopKCosineSimilarity(VirtualGraphFunction, VectorFunction):
         'vtfun.compute_result_rows()' and should generally not require any specialization on subclasses.
         """
         if vtfun.result_rows is None:
-            vtfun.result_rows = vtfun.compute_result_rows()
+            if vtfun.use_batching:
+                vtfun.batched_inputs.append((vtfun.input_vector, vtfun.input_vector_key))
+                vtfun.nprocessed += 1
+                if len(vtfun.batched_inputs) >= vtfun.batch_size or vtfun.nprocessed >= vtfun.ntotal:
+                    vtfun.result_rows = vtfun.compute_result_rows()
+                    vtfun.batched_inputs = []
+                else:
+                    vtfun.search_index = None # unlink this
+                    raise StopIteration
+            else:
+                vtfun.result_rows = vtfun.compute_result_rows()
         try:
             row = next(vtfun.result_rows)
         except StopIteration:
@@ -408,6 +448,7 @@ class TopKCosineSimilarity(VirtualGraphFunction, VectorFunction):
                 vtfun.result_rows = vtfun.compute_result_rows()
                 row = next(vtfun.result_rows)
             else:
+                vtfun.search_index = None # unlink this
                 raise StopIteration
         if vtfun.debug:
             print('kvec_cos_sim_topk.next:', row[1])
@@ -420,7 +461,12 @@ class TopKCosineSimilarity(VirtualGraphFunction, VectorFunction):
         Each row binds all output 'columns' specified above.  If no nearest-neighbor index is available
         for the associated vector store, this simply fails with an empty result.
         """
-        vector = vtfun.input_vector
+        if vtfun.use_batching:
+            vectors = [i[0] for i in vtfun.batched_inputs]
+            keys = [i[1] for i in vtfun.batched_inputs]
+        else:
+            vectors = [vtfun.input_vector]
+            keys = [vtfun.input_vector_key]
         k = vtfun.current_k
         nprobe = vtfun.input_nprobe
         vstore = vtfun.vector_store
@@ -429,28 +475,56 @@ class TopKCosineSimilarity(VirtualGraphFunction, VectorFunction):
             return iter([])
         ndim = vstore.get_vector_ndim()
         dtype = vstore.get_vector_dtype()
-        vector = np.frombuffer(vector, dtype=dtype)
+        vectors = [np.frombuffer(vector, dtype=dtype) for vector in vectors]
+        vectors = np.vstack(vectors)
+        # TO DO: reconsider caching this index here, since it creates a potential memory leak
+        # and we might not need to do that anymore now that search index reuse is working:
         if vtfun.search_index is None:
             # first time around, create the FAISS search index for the respective qcells;
             # we will reuse that if we do dynamic scaling towards maxk:
-            vtfun.search_index = nnindex.get_search_index_for_vectors(vector, nprobe=nprobe)
+            vtfun.search_index = nnindex.get_search_index_for_vectors(vectors, nprobe=nprobe)
         # TO DO: possibly increase 'k' here to account for different L2 vs. cosine distance ordering:
-        D, V = nnindex.search(vector, k, nprobe=nprobe, index=vtfun.search_index)
-        result = []
+        D, V = nnindex.search(vectors, k, nprobe=nprobe, index=vtfun.search_index)
+        
+        # for batched processing, we might get O(10000) input vectors with k neighbors for each of them;
+        # to get the best possible locality when we access their information with 'get_vector_rows_by_id',
+        # we sort all neighbor vectors by their numeric ID which is a rowid to the vector table; however,
+        # that introduces a bit of extra complexity to associate NN-vector IDs with the ID of the input
+        # vector in the current batch they are a neighbor to:
+        results = []
         label = TopKCosineSimilarity.name
-        vx = vector
-        vxnorm = np.linalg.norm(vx)
-        for row in vstore.get_vector_rows_by_id(V[0][vtfun.result_rows_offset:]):
+        # build a set of (NN-vector-ID, input-vector-ID) tuples over all search results:
+        nn_indexed_ids = [ (vid, i) for i, row in enumerate(V[:,vtfun.result_rows_offset:]) for vid in row ]
+        # sort NN-vector IDs numerically:
+        nn_indexed_ids.sort(key=lambda x: x[0])
+        nn_ids = [x[0] for x in nn_indexed_ids]
+        # this creates a 32-bit norm which changes our results when comparing to prior runs:
+        #vxnorms = np.linalg.norm(vectors , axis=1)
+        vxnorms = [np.linalg.norm(vx) for vx in vectors]
+        vxbytes = [vx.tobytes() for vx in vectors]
+        for row, (vid, i) in zip(vstore.get_vector_rows_by_id(nn_ids), nn_indexed_ids):
+            vx = vectors[i]
+            vxnorm = vxnorms[i]
+            vxbyte = vxbytes[i]
+            vxkey = keys[i]
             vy = row[4]
-            # ['label', 'node2', 'vid', 'vrowid', 'vector', 'similarity']
-            res = [label, row[1], row[0], row[3], vy.tobytes(), 0.0]
+            # [vxi, 'out_node1', 'out_key', 'label', 'node2', 'vid', 'vrowid', 'vector', 'similarity']
+            res = [i, vxbyte, vxkey, label, row[1], row[0], row[3], vy.tobytes(), 0.0]
             vynorm = np.linalg.norm(vy)
             # make sure we don't return numpy floats:
             sim = float(np.dot(vx, vy) / (vxnorm * vynorm))
             res[-1] = sim
-            result.append(res)
-        result.sort(key=lambda x: x[-1], reverse=True)
-        return iter(result)
+            results.append(res)
+        # sort each result group, first by similarity:
+        results.sort(key=lambda x: x[-1], reverse=True)
+        # then by input batch vector ID:
+        results.sort(key=lambda x: x[0])
+        # now cut out auxiliary input batch vector IDs:
+        results = [res[1:] for res in results]
+        return iter(results)
+
+    # see .old/funcvec.py.4 if we need to compare with old runs:
+    #def compute_result_rows_v1(vtfun):
 
     def get_code(self):
         """Create the virtual table code object and associate the appropriate vector store
@@ -463,44 +537,29 @@ class TopKCosineSimilarity(VirtualGraphFunction, VectorFunction):
 
     def translate_call_to_sql(self, query, clause, state):
         """Called by query.pattern_clause_to_sql() to translate a clause
-        with a virtual graph pattern.  This primarily substitutes the
-        appropriate virtual graph tables to use and computes the associated
-        vector store.
+        with a virtual graph pattern.  This primarily computes the associated
+        vector store and forces 'dont_optimize'.
         """
         node1 = clause[0]
         rel = clause[1]
         if rel.labels is None:
             return
-
         # we force dont_optimize for match clauses containing this virtual graph:
         query.get_pattern_clause_match_clause(clause).dont_optimize = True
 
-        # supply default arguments - somehow doing this with self.initialize doesn't do the trick:
-        rel.properties = rel.properties or {}
-        rel.properties.setdefault('k', parser.Literal(query.query, self.DEFAULT_K))
-        rel.properties.setdefault('maxk', parser.Literal(query.query, self.DEFAULT_MAXK))
-        rel.properties.setdefault('nprobe', parser.Literal(query.query, self.DEFAULT_NPROBE))
-
+        # supply default arguments - this isn't strictly necessary anymore and seems
+        # to be working now, but leaving inputs unbound does affect the cost estimate
+        # to the query optimizer which we can address in the new version of TableFunction;
+        # we disable this for now, but we might have to reinstate it if problems occur:
+        #rel.properties = rel.properties or {}
+        #rel.properties.setdefault('k', parser.Literal(query.query, self.DEFAULT_K))
+        #rel.properties.setdefault('maxk', parser.Literal(query.query, self.DEFAULT_MAXK))
+        #rel.properties.setdefault('nprobe', parser.Literal(query.query, self.DEFAULT_NPROBE))
+        
         # compute relevant vector store:
         self.xstore, _ = self.get_argument_vector_store(query, node1.variable, state, clause=clause)
-        
-        # load here so we get the uniquified name registered with the connection:
-        self.load()
-        old_graph = node1._graph_table
-        old_graph_alias = node1._graph_alias
-        new_graph = self.get_name()
-        # create a new alias (which is fine given we have a unique table name),
-        # this will transparently handle qualified graph table names:
-        new_graph_alias = state.get_table_aliases(new_graph, new_graph + '_c')[0]
-        node1._graph_table = new_graph
-        node1._graph_alias = new_graph_alias
-        # TO DO: support this in query.py:
-        #state.unregister_table_alias(old_graph, old_graph_alias)
-        state.register_table_alias(new_graph, new_graph_alias)
-        # prevent the generation of a label restriction based on the virtual graph name:
-        rel.labels = None
         # now finish translation with standard translator:
-        query.pattern_clause_to_sql(clause, new_graph_alias, state)
+        super().translate_call_to_sql(query, clause, state)
 
 TopKCosineSimilarity('kvec_topk_cos_sim').define()
 TopKCosineSimilarity('kvec_topk_cosine_similarity').define()
@@ -681,7 +740,10 @@ class SimilarityJoinController(VirtualGraphFunction):
         # avoid creating a join between the two vtables:
         rel.variable = query.query.create_anonymous_variable()
 
-         # supply default arguments - somehow doing this with self.initialize doesn't do the trick:
+        # supply default arguments - this isn't strictly necessary anymore and seems
+        # to be working now, but leaving inputs unbound does affect the cost estimate
+        # to the query optimizer which we can address in the new version of TableFunction,
+        # but until that's available, we leave this as is:
         rel.properties = rel.properties or {}
         rel.properties.setdefault('k', parser.Literal(query.query, self.DEFAULT_K))
 
