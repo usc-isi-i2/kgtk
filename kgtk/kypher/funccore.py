@@ -154,7 +154,10 @@ class GenerateValues(VirtualGraphFunction):
         and disables query optimization in the match clause.
         """
         rel = clause[1]
-         # supply default arguments - somehow doing this with self.initialize doesn't do the trick:
+        # supply default arguments - this isn't strictly necessary anymore and seems
+        # to be working now, but leaving inputs unbound does affect the cost estimate
+        # to the query optimizer which we can address in the new version of TableFunction,
+        # but until that's available, we leave this as is:
         rel.properties = rel.properties or {}
         rel.properties.setdefault('format', parser.Literal(query.query, self.DEFAULT_FORMAT))
         rel.properties.setdefault('module', parser.Literal(query.query, self.DEFAULT_MODULE))
