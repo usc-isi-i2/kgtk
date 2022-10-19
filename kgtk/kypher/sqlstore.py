@@ -840,10 +840,11 @@ class SqliteStore(SqlStore):
         if not self.has_graph_index(table_name, index):
             if self.readonly:
                 return
-            for col in index.get_columns():
-                if self.is_vector_column(table_name, col):
-                    # do not index any vector columns:
-                    return
+            # do not standard-index any vector columns:
+            if not isinstance(index, ispec.VectorIndex):
+                for col in index.get_columns():
+                    if self.is_vector_column(table_name, col):
+                        return
             self.ensure_transaction()
             loglevel = 0 if explain else 1
             indexes = self.get_graph_indexes(table_name)
