@@ -122,8 +122,13 @@ def cli_single_command(args, parsed_shared_args, shared_args, parser, sub_parser
     import copy
     if parsed_shared_args._pipedebug:
         print("pid %d: Executing a single command: %s" % (os.getpid(), repr(args)), file=sys.stderr, flush=True)
+
+    if len(args) > 0:
+        cmd_args = copy.deepcopy(args)
+    else:
+        cmd_args = ["no-command"]
+
     ret_code: int = 0
-    cmd_args = copy.deepcopy(args)
     cmd_name = cmd_args[0].replace("_", "-")
     cmd_args[0] = cmd_name
     # build sub-parser
