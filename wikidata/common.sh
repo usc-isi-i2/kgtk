@@ -8,8 +8,7 @@ export TMPDIR
 
 # This is the Wikidata version we will analyze:
 WIKIDATA_VERSION=wikidata-20220905
-# KGTK_WORK_DIR=/data3/rogers/kgtk/gd/kgtk_public_graphs/cache/
-KGTK_WORK_DIR=/data3/rogers/kgtk/wikidata
+KGTK_WORK_DIR=/data3/rogers/kgtk/gd/kgtk_public_graphs/cache/
 
 # The `kgtk validate-properties` pattern files are expected to
 # be in:
@@ -102,7 +101,6 @@ WIKIDATA_IMPORT_SPLIT_FILES=( \
 	"descriptions.en" \
 	"labels" \
 	"labels.en" \
-	"references" \
 	"sitelinks" \
 	"sitelinks.en" \
 	"sitelinks.en.qualifiers" \
