@@ -79,7 +79,10 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
     name of the `kgtk` command.
 
         One use for this feature is to redefine the `kgtk` command to include
-    `time` as a prefix, and/or to include common options.
+    `time` as a prefix, and/or to include common options, such as:
+
+    kgtk_command='time kgtk'
+    kgtk_command='kgtk --debug --timing'
 
     Standard Output Processing
     ======== ====== =========
