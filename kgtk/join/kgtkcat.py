@@ -374,8 +374,7 @@ class KgtkCat():
             print("system command: %s" % repr(cmd), file=self.error_file, flush=True)
 
         sh_bash = sh.Command(self.bash_command)
-        cmd_proc = sh_bash("-c", cmd, _out=sys.stdout, _err=sys.stderr,
-                           bg=True, _bg_exc=False, _internal_bufsize=1)
+        cmd_proc = sh_bash("-c", cmd, _out=sys.stdout, _err=sys.stderr, _bg=True, _bg_exc=False, _internal_bufsize=1)
 
         if self.verbose:
             print("\nRunning the cat script (pid=%d)." % cmd_proc.pid, file=self.error_file, flush=True)
