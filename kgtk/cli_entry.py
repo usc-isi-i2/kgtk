@@ -58,38 +58,78 @@ def progress_startup(pid: typing.Optional[int] = None, fd: typing.Optional[int] 
     # None, the specific fd will be monitored: it must already be open, and it
     # should be an input file.  There is no option to moitor multiple specific
     # input files other than calling this routine sequentially
-    #
-    # TODO: use the envar KGTK_PV_COMMAND to get the `pv` command.
     global _save_progress, _save_progress_tty, _save_progress_debug
+    print("progress_startup.", file=sys.stderr, flush=True)
+    if not _save_progress:
+        if _save_progress_debug:
+            print("progress_startup: Progress monitoring not requested.", file=sys.stderr, flush=True)
+        return
+
+    if _save_progress_tty is None:
+        if _save_progress_debug:
+            print("progress_startup: Progress monitoring requested but no tty.", file=sys.stderr, flush=True)
+        return
+    else:
+        if _save_progress_debug:
+            print("progress_startup: Progress monitoring requested for tty %s." % repr(_save_progress_tty), file=sys.stderr, flush=True)
+        
     if _save_progress and _save_progress_tty is not None:
         global _save_progress_command
         if _save_progress_command is not None:
             # Shut down an existing process monitor.
             try:
+                if _save_progress_debug:
+                    print("progress_startup: shutting down an existing progress monitoring command.", file=sys.stderr, flush=True)
                 _save_progress_command.terminate()
             except Exception:
                 pass
             _save_progress_command = None
 
-        # Give up if cannot find `pv`:
-        if shutil.which('pv') is None:
-            if _save_progress_debug:
-                print("progress_startup: cannot find pv.", file=sys.stderr, flush=True)
-            return
-
         # Start a process monitor.
         if pid is None:
             pid = os.getpid()
+
+        pv_cmd: str = os.getenv("KGTK_PV_COMMAND", "pv")
+        pv_preargs: str = ""
+        if " " in pv_cmd: # Check for arguments in the envar command, e.g. "kgtk pv"
+            # Split the command and arguments.  Save the arguments for later use.
+            pv_cmd, pv_preargs = pv_cmd.split(" ", 1)
+            if len(pv_preargs) > 0:
+                pv_preargs += " " # Prepare for "-d xxx"
         try:
+            sh_pv = sh.Command(pv_cmd)
+        except sh.CommandNotFound as e:
+            if _save_progress_debug:
+                print("progress_startup: command %s not found: %s" % (repr(pv_cmd), str(e)), file=sys.stderr, flush=True)
+            return
+
+        try:
+            if _save_progress_debug and _save_progress_tty is not None:
+                print("progress_startup: sending %s output to %s" % (repr(pv_cmd), repr(_save_progress_tty)), file=sys.stderr, flush=True)
+
+            pv_args: str
             if fd is None:
-                if _save_progress_debug:
-                    print("progress_startup: starting pv with pid %d" % pid, file=sys.stderr, flush=True)
-                _save_progress_command = sh.pv("-d {}".format(pid), _out=_save_progress_tty, _err=_save_progress_tty, _bg=True)
+                pv_args = "-d {}".format(pid)
             else:
-                if _save_progress_debug:
-                    print("progress_startup: starting pv with pid %d fd %d" % (pid, fd), file=sys.stderr, flush=True)
-                _save_progress_command = sh.pv("-d {}:{}".format(pid, fd),
-                                               _out=_save_progress_tty, _err=_save_progress_tty, _bg=True)
+                pv_args = "-d {}:{}".format(pid, fd)
+                
+            if _save_progress_debug:
+                print("progress_startup: starting %s with %s" % (repr(pv_cmd), repr(pv_args)), file=sys.stderr, flush=True)
+
+            _save_progress_command = sh_pv(pv_preargs + pv_args,
+                                           _out=_save_progress_tty,
+                                           _err=_save_progress_tty,
+                                           _bg=True,
+                                           _bg_exc=False,
+                                           _internal_bufsize=1,
+                                           _new_session=False)
+
+            if _save_progress_debug:
+                if _save_progress_command is None:
+                    print("progress_startup: failed to start %s" % repr(pv_cmd), file=sys.stderr, flush=True)
+                else:
+                    print("progress_startup: started %s on pid %d" % (repr(pv_cmd), _save_progress_command.pid), file=sys.stderr, flush=True)
+
         except Exception as e:
             # Ignore the exception unless _save_progress_debug is True.
             if _save_progress_debug:
@@ -100,6 +140,8 @@ def progress_shutdown():
     global _save_progress_command
     if _save_progress_command is not None:
         try:
+            if _save_progress_debug:
+                print("progress_shutdown: shutting down a progress monitoring command on pid %d." % _save_progress_command.pid, file=sys.stderr, flush=True)
             _save_progress_command.terminate()
         except Exception:
             pass
@@ -165,6 +207,10 @@ def cli_single_command(args, parsed_shared_args, shared_args, parser, sub_parser
                 del kwargs[sa]
             else:
                 kwargs[sa] = getattr(parsed_shared_args, sa)
+    else:
+        if parsed_shared_args._debug:
+            print("No parsed command found.", file=sys.stderr, flush=True)
+        return 0 # TODO: return a better code.
 
     global _save_progress
     _save_progress = parsed_shared_args._progress
@@ -173,15 +219,20 @@ def cli_single_command(args, parsed_shared_args, shared_args, parser, sub_parser
     global _save_progress_tty
     _save_progress_tty = parsed_shared_args._progress_tty
     if parsed_shared_args._progress:
+        if parsed_shared_args._debug:
+            print("Starting progress monitoring on pid %d." % (os.getpid()), file=sys.stderr, flush=True)
         if hasattr(mod, 'custom_progress') and mod.custom_progress():
+            print("Custom progress monitoring requested.", file=sys.stderr, flush=True)
             pass
         else:
             progress_startup()
 
     # run module
     try:
-      kgtk_exception_handler = KGTKExceptionHandler(debug=parsed_shared_args._debug)
-      ret_code = kgtk_exception_handler(func, **kwargs)
+        if parsed_shared_args._debug:
+            print("Starting %s on pid %d." % (repr(h), os.getpid()), file=sys.stderr, flush=True)
+        kgtk_exception_handler = KGTKExceptionHandler(debug=parsed_shared_args._debug)
+        ret_code = kgtk_exception_handler(func, **kwargs)
     except KeyboardInterrupt as e:
         print("\nKeyboard interrupt in %s." % " ".join(args), file=sys.stderr, flush=True)
         progress_shutdown()
