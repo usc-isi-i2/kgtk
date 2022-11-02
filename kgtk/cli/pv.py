@@ -52,6 +52,9 @@ def run(watch_target: int,
     # import modules locally
     from kgtk.exceptions import KGTKException
 
+    watch_fds = {}
+    rescan: bool = False
+    
     try:
         # Parse the optional file description in the watch target.
         watch_pid: int
@@ -62,12 +65,20 @@ def run(watch_target: int,
             watch_process_str, watch_fd_str = watch_target.split(":", 1)
             watch_pid = int(watch_process_str)
             watch_fd = int(watch_process_str)
-            watch_process_loop(watch_pid, [watch_fd], sleep_secs, debug)
+            maybe_watch_process_fd(watch_fds, watch_pid, watch_fd, debug)
 
         else:
+            rescan = True
             watch_pid = int(watch_target)
-            watch_process(watch_pid, sleep_secs, debug)
+            if not scan_process_fds(watch_fds, watch_pid, debug):
+                if debug:
+                    print("Unable to scan process %d for fds" % watch_pid, file=sys.stderr, flush=True)
+                return
             
+        watch_process_loop(watch_fds, watch_pid, sleep_secs, rescan=rescan, debug=debug)
+
+        for watch_fd in watch_fds.keys():
+            watch_fds[watch_fd]["file"].close()
 
     except SystemExit as e:
         raise KGTKException("Exit requested")
@@ -79,55 +90,66 @@ def run(watch_target: int,
     if debug:
         print("Done", file=sys.stderr, flush=True)
 
-def watch_process(watch_pid: int, sleep_secs: int, debug: bool):
+def scan_process_fds(watch_fds, watch_pid: int, debug: bool)->bool:
     if debug:
-        print("Watching process %d" % watch_pid, file=sys.stderr, flush=True)
+        print("Scanning process %d" % watch_pid, file=sys.stderr, flush=True)
 
     procfd_path: str = "/proc/%d/fd" % watch_pid
+    try:
+        fd_strs: typing.List[str] = os.listdir(procfd_path)
+    except FileNotFoundError as e:
+        return False
 
-    watch_fds = {}
-    
     fd_str: str
-    for fd_str in os.listdir(procfd_path):
-        maybe_watch_process_fd(watch_fds, watch_pid, int(fd_str), debug)
-    watch_process_loop(watch_pid, watch_fds, sleep_secs, debug)
+    for fd_str in fd_strs:
+        watch_fd: int = int(fd_str)
+        is_ok: bool = maybe_watch_process_fd(watch_fds, watch_pid, watch_fd, debug)
+        if watch_fd in watch_fds and not is_ok:
+            watch_fds[watch_fd]["file"].close()
+            del watch_fds[watch_fd]
 
-def watch_process_fd(watch_pid: int,
-                     watch_fd: int,
-                     debug: bool):
-    watch_fds = {}
-    maybe_watch_process_fd(watch_fds, watch_pid, watch_fd, debug)
-    watch_process_loop(watch_pid, watch_fds, debug)
+    return True
 
 def maybe_watch_process_fd(watch_fds,
                            watch_pid: int,
                            watch_fd: int,
-                           debug: bool):
+                           debug: bool)->bool:
     import time
 
     procfd_fd_path: str = "/proc/%d/fd/%d" % (watch_pid, watch_fd)
     if not os.path.islink(procfd_fd_path):
-        return
+        return False
 
     fd_target: str = os.readlink(procfd_fd_path)
     if not fd_target.startswith("/"):
-        return
+        return False
     if not os.path.isfile(fd_target):
-        return
+        return False
 
     try:
         filesize: int = os.path.getsize(fd_target)
     except OSError as e:
-        return
+        return False
 
     if filesize <= 0:
-        return
+        return False
 
     procfdinfo_path: str = "/proc/%d/fdinfo/%d" % (watch_pid, watch_fd)
     if not os.path.isfile(procfdinfo_path):
-        return
+        return False
 
-    procfdinfo_file = open(procfdinfo_path, "r")
+    if watch_fd in watch_fds:
+        watch_info = watch_fds[watch_fd]
+        if watch_info["name"] == fd_target and watch_info["size"] == filesize:
+            return True
+
+        watch_fds[watch_fd]["file"].close()
+        del watch_fds[watch_fd]
+
+    try:
+        procfdinfo_file = open(procfdinfo_path, "r")
+    except OSError as e:
+        return False
 
     watch_fds[watch_fd] = {
         "name": fd_target,
@@ -137,6 +159,8 @@ def maybe_watch_process_fd(watch_fds,
         "ipos": get_fd_pos(procfdinfo_file),
         "itim": time.time(),
     }
+
+    return True
 
 
 
@@ -150,10 +174,11 @@ def get_fd_pos(info_file)->int:
     return -1
             
 
-def watch_process_loop(watch_pid: int,
-                       watch_fds,
+def watch_process_loop(watch_fds,
+                       watch_pid: int,
                        sleep_secs: int,
-                       debug: bool):
+                       rescan: bool = False,
+                       debug: bool = False):
     import time
 
     if debug:
@@ -188,22 +213,28 @@ def watch_process_loop(watch_pid: int,
 
             size_left: int = size - pos
             pos_progress: int = pos - watch_info["ipos"]
-            if size_left > 0 and pos_progress > 0:
-                rate: float = float(pos_progress) / ( time.time() - watch_info["itim"])
-                pct_done: float = (float(pos) / float(size)) * 100
-                time_left = size_left / rate
-                time_left_str: str = time.strftime("%H:%M:%S", time.gmtime(time_left))
+            time_spent: float = time.time() - watch_info["itim"]
+            rate: float = float(pos_progress) / time_spent if time_spent > 0.0 else 0.0
+            pct_done: float = (float(pos) / float(size)) * 100 if size > 0 else 100.0
+            time_left = size_left / rate if rate > 0.0 else 0.0
+            time_left_str: str = time.strftime("%H:%M:%S", time.gmtime(time_left))
 
-                print("\033[K%4d: %s %5.1f%% ETA %s %s" % (target_fd, format_bytes(pos), pct_done, time_left_str, name), file=sys.stderr, flush=True)
-                cur_lines += 1
-                if cur_lines > max_lines:
-                    max_lines = cur_lines
+            print("\033[K%4d: %s %5.1f%% ETA %s %s" % (target_fd, format_bytes(pos), pct_done, time_left_str, name), file=sys.stderr, flush=True)
+            cur_lines += 1
+            if cur_lines > max_lines:
+                max_lines = cur_lines
 
         while (cur_lines < max_lines):
             print("\033[K", file=sys.stderr, flush=True)
             cur_lines += 1
 
         time.sleep(sleep_secs)
+
+        if rescan:
+            if not scan_process_fds(watch_fds, watch_pid, debug):
+                if debug:
+                    print("Process %d has valished" % watch_pid, file=sys.stderr, flush=True)
+                return            
 
     if debug:
         print("Done watching process %d" % watch_pid, file=sys.stderr, flush=True)
