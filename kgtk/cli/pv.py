@@ -43,7 +43,10 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         help="If true, add debugging.",
                         type=optional_bool, nargs='?', const=True, default=False)
 
+    parser.add_argument("--sleep", dest="sleep_secs", help="The sleep time between updates.", type=int, default=1)
+
 def run(watch_target: int,
+        sleep_secs: int,
         debug: bool,
 )->int:
     # import modules locally
@@ -59,11 +62,11 @@ def run(watch_target: int,
             watch_process_str, watch_fd_str = watch_target.split(":", 1)
             watch_pid = int(watch_process_str)
             watch_fd = int(watch_process_str)
-            watch_process_loop(watch_pid, [watch_fd])
+            watch_process_loop(watch_pid, [watch_fd], sleep_secs, debug)
 
         else:
             watch_pid = int(watch_target)
-            watch_process(watch_pid, debug)
+            watch_process(watch_pid, sleep_secs, debug)
             
 
     except SystemExit as e:
@@ -73,8 +76,10 @@ def run(watch_target: int,
     except Exception as e:
         raise KGTKException(str(e))
 
+    if debug:
+        print("Done", file=sys.stderr, flush=True)
 
-def watch_process(watch_pid: int, debug: bool):
+def watch_process(watch_pid: int, sleep_secs: int, debug: bool):
     if debug:
         print("Watching process %d" % watch_pid, file=sys.stderr, flush=True)
 
@@ -85,7 +90,7 @@ def watch_process(watch_pid: int, debug: bool):
     fd_str: str
     for fd_str in os.listdir(procfd_path):
         maybe_watch_process_fd(watch_fds, watch_pid, int(fd_str), debug)
-    watch_process_loop(watch_pid, watch_fds, debug)
+    watch_process_loop(watch_pid, watch_fds, sleep_secs, debug)
 
 def watch_process_fd(watch_pid: int,
                      watch_fd: int,
@@ -145,16 +150,34 @@ def get_fd_pos(info_file)->int:
     return -1
             
 
-def watch_process_loop(watch_pid: int, watch_fds: typing.MutableMapping[int, int], debug: bool):
+def watch_process_loop(watch_pid: int,
+                       watch_fds,
+                       sleep_secs: int,
+                       debug: bool):
     import time
 
     if debug:
         print("Watching process %d file descriptors %s" % (watch_pid, repr(watch_fds.keys())), file=sys.stderr, flush=True)
 
-    while len(watch_fds) >0:
+    cur_lines: int = 0
+    max_lines: int = 0
+
+    while len(watch_fds) > 0:
+        while cur_lines > 0:
+            print("\033[F", end="", file=sys.stderr, flush=True)
+            cur_lines -= 1
+
+        if debug:
+            print("\033[K%d fds remaining" % len(watch_fds), file=sys.stderr, flush=True)
+            cur_lines += 1
+
         for target_fd in sorted(watch_fds.keys()):
             watch_info = watch_fds[target_fd]
             if not os.path.isfile(watch_info["path"]):
+                if debug:
+                    print("\033[Kfd %d has vanished" % target_fd, file=sys.stderr, flush=True)
+                    cur_lines += 1
+                watch_info["file"].close()
                 del watch_fds[target_fd]
                 continue
                 
@@ -171,8 +194,26 @@ def watch_process_loop(watch_pid: int, watch_fds: typing.MutableMapping[int, int
                 time_left = size_left / rate
                 time_left_str: str = time.strftime("%H:%M:%S", time.gmtime(time_left))
 
-                print("%4d: %5.1f%% %s %s" % (target_fd, pct_done, time_left_str, name), file=sys.stderr, flush=True)
+                print("\033[K%4d: %s %5.1f%% ETA %s %s" % (target_fd, format_bytes(pos), pct_done, time_left_str, name), file=sys.stderr, flush=True)
+                cur_lines += 1
+                if cur_lines > max_lines:
+                    max_lines = cur_lines
 
-        time.sleep(1)
-        print("", file=sys.stderr, flush=True)
-    
+        while (cur_lines < max_lines):
+            print("\033[K", file=sys.stderr, flush=True)
+            cur_lines += 1
+
+        time.sleep(sleep_secs)
+
+    if debug:
+        print("Done watching process %d" % watch_pid, file=sys.stderr, flush=True)
+
+def format_bytes(size):
+    # from https://stackoverflow.com/questions/12523586/python-format-size-application-converting-b-to-kb-mb-gb-tb
+    # with modifications
+    from math import floor, log
+
+    power = 0 if size <= 0 else int(floor(log(size, 1024)))
+    if power > 4:
+        power = 4
+    return f"{round(size / 1024 ** power, 2)} {['B', 'KiB', 'MiB', 'GiB', 'TiB'][power]}"
