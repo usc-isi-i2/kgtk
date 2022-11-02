@@ -78,7 +78,9 @@ def run(watch_target: int,
         watch_process_loop(watch_fds, watch_pid, sleep_secs, rescan=rescan, debug=debug)
 
         for watch_fd in watch_fds.keys():
-            watch_fds[watch_fd]["file"].close()
+            watch_info = watch_fds[watch_fd]
+            if watch_info["good"]:
+                watch_info["file"].close()
 
     except SystemExit as e:
         raise KGTKException("Exit requested")
@@ -138,13 +140,13 @@ def maybe_watch_process_fd(watch_fds,
     if not os.path.isfile(procfdinfo_path):
         return False
 
-    if watch_fd in watch_fds:
+    if watch_fd in watch_fds and watch_fds[watch_fd]["good"]:
         watch_info = watch_fds[watch_fd]
         if watch_info["name"] == fd_target and watch_info["size"] == filesize:
             return True
 
         watch_fds[watch_fd]["file"].close()
-        del watch_fds[watch_fd]
+        watch_info["good"] = False
 
     try:
         procfdinfo_file = open(procfdinfo_path, "r")
@@ -152,6 +154,7 @@ def maybe_watch_process_fd(watch_fds,
         return False
 
     watch_fds[watch_fd] = {
+        "good": True,
         "name": fd_target,
         "size": filesize,
         "path": procfdinfo_path,
@@ -198,12 +201,19 @@ def watch_process_loop(watch_fds,
 
         for target_fd in sorted(watch_fds.keys()):
             watch_info = watch_fds[target_fd]
+
+            if not watch_info["good"]:
+                if debug:
+                    print("\033[K%4d:" % target_fd, file=sys.stderr, flush=True)
+                    cur_lines += 1
+                continue                
+
             if not os.path.isfile(watch_info["path"]):
                 if debug:
-                    print("\033[Kfd %d has vanished" % target_fd, file=sys.stderr, flush=True)
+                    print("\033[K%4d: closed" % target_fd, file=sys.stderr, flush=True)
                     cur_lines += 1
                 watch_info["file"].close()
-                del watch_fds[target_fd]
+                watch_info["good"] = False
                 continue
                 
             name: str = watch_info["name"]
@@ -233,7 +243,7 @@ def watch_process_loop(watch_fds,
         if rescan:
             if not scan_process_fds(watch_fds, watch_pid, debug):
                 if debug:
-                    print("Process %d has valished" % watch_pid, file=sys.stderr, flush=True)
+                    print("Process %d has vanished" % watch_pid, file=sys.stderr, flush=True)
                 return            
 
     if debug:
