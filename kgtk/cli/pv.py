@@ -104,15 +104,23 @@ def scan_process_fds(watch_fds, watch_pid: int, debug: bool)->bool:
 
     fd_str: str
     for fd_str in fd_strs:
-        watch_fd: int = int(fd_str)
-        is_ok: bool = maybe_watch_process_fd(watch_fds, watch_pid, watch_fd, debug)
-        if watch_fd in watch_fds and not is_ok:
-            watch_fds[watch_fd]["file"].close()
-            del watch_fds[watch_fd]
+        maybe_watch_process_fd(watch_fds, watch_pid, int(fd_str), debug)
 
     return True
 
 def maybe_watch_process_fd(watch_fds,
+                           watch_pid: int,
+                           watch_fd: int,
+                           debug: bool):
+
+    is_ok: bool = maybe_watch_process_fd2(watch_fds, watch_pid, watch_fd, debug)
+    if not is_ok and watch_fd in watch_fds:
+        if watch_fds[watch_fd]["good"]:
+            # Clean up by closing the file used to monitor progress on the fd.
+            watch_fds[watch_fd]["file"].close()
+        del watch_fds[watch_fd]
+
+def maybe_watch_process_fd2(watch_fds,
                            watch_pid: int,
                            watch_fd: int,
                            debug: bool)->bool:
@@ -142,11 +150,11 @@ def maybe_watch_process_fd(watch_fds,
 
     if watch_fd in watch_fds and watch_fds[watch_fd]["good"]:
         watch_info = watch_fds[watch_fd]
-        if watch_info["name"] == fd_target and watch_info["size"] == filesize:
+        if watch_info["name"] == fd_target:
+            watch_info["size"] == filesize
             return True
-
         watch_fds[watch_fd]["file"].close()
-        watch_info["good"] = False
+        watch_fds[watch_fd]["good"] = False
 
     try:
         procfdinfo_file = open(procfdinfo_path, "r")
@@ -156,6 +164,7 @@ def maybe_watch_process_fd(watch_fds,
     watch_fds[watch_fd] = {
         "good": True,
         "name": fd_target,
+        "isiz": filesize,
         "size": filesize,
         "path": procfdinfo_path,
         "file": procfdinfo_file,
@@ -217,6 +226,7 @@ def watch_process_loop(watch_fds,
                 continue
                 
             name: str = watch_info["name"]
+            isiz: int = watch_info["isiz"]
             size: int = watch_info["size"]
             pos: int = get_fd_pos(watch_info["file"])
 
@@ -224,12 +234,25 @@ def watch_process_loop(watch_fds,
             size_left: int = size - pos
             pos_progress: int = pos - watch_info["ipos"]
             time_spent: float = time.time() - watch_info["itim"]
-            rate: float = float(pos_progress) / time_spent if time_spent > 0.0 else 0.0
-            pct_done: float = (float(pos) / float(size)) * 100 if size > 0 else 100.0
-            time_left = size_left / rate if rate > 0.0 else 0.0
-            time_left_str: str = time.strftime("%H:%M:%S", time.gmtime(time_left))
 
-            print("\033[K%4d: %s %5.1f%% ETA %s %s" % (target_fd, format_bytes(pos), pct_done, time_left_str, name), file=sys.stderr, flush=True)
+            valid: bool = size > 0 and size == isiz and pos <= size
+
+            pct_done_str: str
+            if time_spent == 0.0 or not valid:
+                pct_done_str = "      "
+            else:
+                pct_done: float = (float(pos) / float(size)) * 100
+                pct_done_str = "%5.1f%%" % pct_done
+
+            time_left_str: str
+            if time_spent == 0.0 or pos_progress == 0 or not valid:
+                time_left_str = "        "
+            else:
+                rate: float = float(pos_progress) / time_spent
+                time_left: float = size_left / rate
+                time_left_str = time.strftime("%H:%M:%S", time.gmtime(time_left))
+
+            print("\033[K%4d: %s %s ETA %s %s" % (target_fd, format_bytes(pos), pct_done_str, time_left_str, name), file=sys.stderr, flush=True)
             cur_lines += 1
             if cur_lines > max_lines:
                 max_lines = cur_lines
@@ -257,4 +280,6 @@ def format_bytes(size):
     power = 0 if size <= 0 else int(floor(log(size, 1024)))
     if power > 4:
         power = 4
-    return f"{round(size / 1024 ** power, 2)} {['B', 'KiB', 'MiB', 'GiB', 'TiB'][power]}"
+    sz = "%5.1f" % round(size / 1024 ** power, 2)
+    units = ['B  ', 'KiB', 'MiB', 'GiB', 'TiB'][power]
+    return sz + units
