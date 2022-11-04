@@ -45,8 +45,16 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument("--sleep", dest="sleep_secs", help="The sleep time between updates.", type=int, default=1)
 
+    parser.add_argument("--tqdm", dest="use_tqdm", metavar="True|False",
+                        help="If true, use the tqdm module to display progress bars.",
+                        type=optional_bool, nargs='?', const=True, default=False)
+
+    parser.add_argument("--width", dest="max_width", help="The maximum filename width.", type=int, default=30)
+
 def run(watch_target: int,
         sleep_secs: int,
+        use_tqdm: bool,
+        max_width: int,
         debug: bool,
 )->int:
     # import modules locally
@@ -75,7 +83,10 @@ def run(watch_target: int,
                     print("Unable to scan process %d for fds" % watch_pid, file=sys.stderr, flush=True)
                 return
             
-        watch_process_loop(watch_fds, watch_pid, sleep_secs, rescan=rescan, debug=debug)
+        if use_tqdm:
+            watch_with_tqdm(watch_fds, watch_pid, sleep_secs, max_width, rescan=rescan, debug=debug)
+        else:
+            watch_process_loop(watch_fds, watch_pid, sleep_secs, rescan=rescan, debug=debug)
 
         for watch_fd in watch_fds.keys():
             watch_info = watch_fds[watch_fd]
@@ -99,7 +110,7 @@ def scan_process_fds(watch_fds, watch_pid: int, debug: bool)->bool:
     procfd_path: str = "/proc/%d/fd" % watch_pid
     try:
         fd_strs: typing.List[str] = os.listdir(procfd_path)
-    except FileNotFoundError as e:
+    except (FileNotFoundError, PermissionError) as e:
         return False
 
     fd_str: str
@@ -117,7 +128,10 @@ def maybe_watch_process_fd(watch_fds,
     if not is_ok and watch_fd in watch_fds:
         if watch_fds[watch_fd]["good"]:
             # Clean up by closing the file used to monitor progress on the fd.
-            watch_fds[watch_fd]["file"].close()
+            if "file" in watch_fds[watch_fd]:
+                watch_fds[watch_fd]["file"].close()
+            if "tqdm" in watch_fds[watch_fd]:
+                watch_fds[watch_fd]["tqdm"].close()
         del watch_fds[watch_fd]
 
 def maybe_watch_process_fd2(watch_fds,
@@ -153,7 +167,10 @@ def maybe_watch_process_fd2(watch_fds,
         if watch_info["name"] == fd_target:
             watch_info["size"] == filesize
             return True
-        watch_fds[watch_fd]["file"].close()
+        if "file" in watch_fds[watch_fd]:
+            watch_fds[watch_fd]["file"].close()
+        if "tqdm" in watch_fds[watch_fd]:
+            watch_fds[watch_fd]["tqdm"].close()
         watch_fds[watch_fd]["good"] = False
 
     try:
@@ -185,6 +202,18 @@ def get_fd_pos(info_file)->int:
 
     return -1
             
+
+def format_bytes(size):
+    # from https://stackoverflow.com/questions/12523586/python-format-size-application-converting-b-to-kb-mb-gb-tb
+    # with modifications
+    from math import floor, log
+
+    power = 0 if size <= 0 else int(floor(log(size, 1024)))
+    if power > 4:
+        power = 4
+    sz = "%5.1f" % round(size / 1024 ** power, 2)
+    units = ['B  ', 'KiB', 'MiB', 'GiB', 'TiB'][power]
+    return sz + units
 
 def watch_process_loop(watch_fds,
                        watch_pid: int,
@@ -235,27 +264,19 @@ def watch_process_loop(watch_fds,
             pos_progress: int = pos - watch_info["ipos"]
             time_spent: float = time.time() - watch_info["itim"]
 
-            valid: bool = size > 0 and size == isiz and pos <= size
-
-            pct_done_str: str
-            if time_spent == 0.0 or not valid:
-                pct_done_str = "      "
-            else:
+            valid: bool = size > 0 and size == isiz and pos <= size and time_spent > 0.0 and pos_progress > 0
+            if valid:
                 pct_done: float = (float(pos) / float(size)) * 100
-                pct_done_str = "%5.1f%%" % pct_done
+                pct_done_str: str = "%5.1f%%" % pct_done
 
-            time_left_str: str
-            if time_spent == 0.0 or pos_progress == 0 or not valid:
-                time_left_str = "        "
-            else:
                 rate: float = float(pos_progress) / time_spent
                 time_left: float = size_left / rate
-                time_left_str = time.strftime("%H:%M:%S", time.gmtime(time_left))
+                time_left_str: str = time.strftime("%H:%M:%S", time.gmtime(time_left))
 
-            print("\033[K%4d: %s %s ETA %s %s" % (target_fd, format_bytes(pos), pct_done_str, time_left_str, name), file=sys.stderr, flush=True)
-            cur_lines += 1
-            if cur_lines > max_lines:
-                max_lines = cur_lines
+                print("\033[K%4d: %s %s ETA %s %s" % (target_fd, format_bytes(pos), pct_done_str, time_left_str, name), file=sys.stderr, flush=True)
+                cur_lines += 1
+                if cur_lines > max_lines:
+                    max_lines = cur_lines
 
         while (cur_lines < max_lines):
             print("\033[K", file=sys.stderr, flush=True)
@@ -272,14 +293,66 @@ def watch_process_loop(watch_fds,
     if debug:
         print("Done watching process %d" % watch_pid, file=sys.stderr, flush=True)
 
-def format_bytes(size):
-    # from https://stackoverflow.com/questions/12523586/python-format-size-application-converting-b-to-kb-mb-gb-tb
-    # with modifications
-    from math import floor, log
+def watch_with_tqdm(watch_fds,
+                    watch_pid: int,
+                    sleep_secs: int,
+                    max_width: int,
+                    rescan: bool = False,
+                    debug: bool = False):
+    import time
+    import tqdm
 
-    power = 0 if size <= 0 else int(floor(log(size, 1024)))
-    if power > 4:
-        power = 4
-    sz = "%5.1f" % round(size / 1024 ** power, 2)
-    units = ['B  ', 'KiB', 'MiB', 'GiB', 'TiB'][power]
-    return sz + units
+    if debug:
+        print("Watching with tqdm process %d file descriptors %s" % (watch_pid, repr(watch_fds.keys())), file=sys.stderr, flush=True)
+
+    tqdm_count: int = 0
+    position_map: typing.MutableMapping[int, int] = { }
+
+    while len(watch_fds) > 0:
+        for target_fd in sorted(watch_fds.keys()):
+            watch_info = watch_fds[target_fd]
+
+            if not watch_info["good"]:
+                continue                
+
+            if not os.path.isfile(watch_info["path"]):
+                watch_info["file"].close()
+                watch_info["good"] = False
+                continue
+                
+            name: str = watch_info["name"]
+            isiz: int = watch_info["isiz"]
+            size: int = watch_info["size"]
+            pos: int = get_fd_pos(watch_info["file"])
+
+            valid: bool = size > 0 and size == isiz and pos <= size
+            if valid:
+                last_progress = watch_info.get("lpos", 0)
+                watch_info["lpos"] = pos
+                if "tqdm" not in watch_info:
+                    if target_fd not in position_map:
+                        position_map[target_fd] = len(position_map)
+                    watch_info["tqdm"] = tqdm.tqdm(total=isiz,
+                                                   desc="%4d: %s" % (target_fd, name[-max_width:]),
+                                                   leave=True,
+                                                   miniters=1,
+                                                   ascii=" #",
+                                                   unit="b",
+                                                   unit_scale=True,
+                                                   position=position_map[target_fd])
+                    tqdm_count += 1
+                new_progress = pos - last_progress
+                if new_progress > 0:
+                    watch_info["tqdm"].update(new_progress)
+
+        time.sleep(sleep_secs)
+
+        if rescan:
+            if not scan_process_fds(watch_fds, watch_pid, debug):
+                if debug:
+                    print("Process %d has vanished" % watch_pid, file=sys.stderr, flush=True)
+                return            
+
+    if debug:
+        print("Done watching process %d" % watch_pid, file=sys.stderr, flush=True)
+
