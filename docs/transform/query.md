@@ -18,15 +18,17 @@ output file which will be transparently compressed according to its file extensi
 ## Usage
 ```
 usage: kgtk query [-h] [-i INPUT_FILE [INPUT_FILE ...]] [--as NAME]
-                  [--comment COMMENT] [--query QUERY] [--match PATTERN]
-                  [--where CLAUSE] [--opt PATTERN] [--with CLAUSE]
-                  [--where: CLAUSE] [--return CLAUSE] [--order-by CLAUSE]
-                  [--skip CLAUSE] [--limit CLAUSE] [--multi N]
-                  [--para NAME=VAL] [--spara NAME=VAL] [--lqpara NAME=VAL]
-                  [--no-header] [--force] [--index MODE [MODE ...]]
+                  [--comment COMMENT] [-a FILE [FILE ...]] [--query QUERY]
+                  [--match PATTERN] [--where CLAUSE] [--opt PATTERN]
+                  [--with CLAUSE] [--where: CLAUSE] [--return CLAUSE]
+                  [--order-by CLAUSE] [--skip CLAUSE] [--limit CLAUSE]
+                  [--multi N] [--para NAME=VAL] [--spara NAME=VAL]
+                  [--lqpara NAME=VAL] [--no-header] [--force]
+                  [--dont-optimize] [--index MODE [MODE ...]]
                   [--idx SPEC [SPEC ...]] [--explain [MODE]]
-                  [--graph-cache GRAPH_CACHE_FILE] [--show-cache]
-                  [--read-only] [--import MODULE_LIST] [-o OUTPUT]
+                  [--graph-cache DBFILE] [--show-cache]
+                  [--aux-cache DBFILE [DBFILE ...]] [--read-only]
+                  [--import MODULE_LIST] [-o OUTPUT]
 
 Query one or more KGTK files with Kypher.
 IMPORTANT: input can come from stdin but chaining queries is not yet supported.
@@ -39,6 +41,9 @@ optional arguments:
   --as NAME             alias name to be used for preceding input
   --comment COMMENT     comment string to store for the preceding input
                         (displayed by --show-cache)
+  -a FILE [FILE ...], --append FILE [FILE ...]
+                        additional data file(s) to append to the specified
+                        input
   --query QUERY         complete Kypher query combining all clauses, if
                         supplied, all other specialized clause arguments will
                         be ignored
@@ -67,6 +72,8 @@ optional arguments:
                         to the query
   --no-header           do not generate a header row with column names
   --force               force problematic queries to run against advice
+  --dont-optimize       disable query optimizer and process match clause joins
+                        in the order listed
   --index MODE [MODE ...], --index-mode MODE [MODE ...]
                         default index creation MODE for all inputs (default:
                         auto); can be overridden with --idx for specific
@@ -77,11 +84,14 @@ optional arguments:
   --explain [MODE]      explain the query execution and indexing plan
                         according to MODE (plan, full, expert, default: plan).
                         This will not actually run or create anything.
-  --graph-cache GRAPH_CACHE_FILE, --gc GRAPH_CACHE_FILE
+  --graph-cache DBFILE, --gc DBFILE
                         database cache where graphs will be imported before
                         they are queried (defaults to per-user temporary file)
   --show-cache, --sc    describe the current content of the graph cache and
                         exit (does not actually run a query or import data)
+  --aux-cache DBFILE [DBFILE ...], --ac DBFILE [DBFILE ...]
+                        auxiliary read-only database file(s) to use for cross-
+                        graph-cache queries
   --read-only, --ro     do not create or update the graph cache in any way,
                         only run queries against already imported and indexed
                         data
@@ -1729,6 +1739,47 @@ Result:
 | w13 |   Joe   | works | Kaiser |
 
 
+### Appending data
+
+Use the `-a` or `--append` option to incrementally append additional data file(s) to
+a specified input.  For example:
+
+```
+kgtk query -i $GRAPH -a more-graph-edges.tsv --limit 5
+```
+
+The `-a` option applies to the previously specified input (`GRAPH` in
+this case), and there can be one or more append files specified.  The
+appended files must have the same columns as the graph data they are
+appended to, but their order can differ (import will be faster if the
+column order is also the same).  The main file can also be specified
+and imported in the same command.
+
+There are no other checks on the appended data beyond the necessary
+columns, the data is treated just as if it had been part of the
+original data file, there are no duplicate checks, ID management,
+etc., that is all left up to the user.
+
+Any indexes already defined on the original data will be updated
+automatically for the appended data.  This is a bit slower than
+building the index from scratch for all of the data, but should not
+matter for small incremental updates.
+
+After an append there is more than one file pointing to a particular
+graph table, and any of them can be used in the `-i` option to
+identify that graph.  As with regular inputs, if the data has already
+been imported and has not changed, specifying a file is a no-op,
+however, one cannot replace an appended file only with new data, in
+this case one has to replace the whole graph.
+
+One can also use this mechanism instead of the KGTK `cat` command
+if the input data has all the appropriate columns, for example:
+
+```
+kgtk query -i file1.tsv -a file2.tsv -a file3.tsv --limit 5
+```
+
+
 ### Output specification
 
 Query output is handled similar to most other commands.  By default, output
@@ -1796,6 +1847,84 @@ from the cache:
   the ability to query them, and it also allows renaming via the `--as` option
   to names that do not correspond to files on disk
 * the data file does not exist in the cache or on disk: this raises an error
+
+
+### Auxiliary graph caches
+
+For very large and complex datasets it can become useful to organize
+them into separate graph cache files.  For example, we might want to
+keep large stable Wikidata files in one graph cache, embedding vector
+data in one or more others, and use yet another for dynamic data such as
+query inputs, scenario data, etc.  One advantage for organizing things
+this way is that we can easily throw a dynamic more volatile graph
+cache away without affecting other more stable ones that took a long
+time to import and index.  Another is that we can keep graph cache
+file sizes more managable by splitting things up over multiple cache
+files.  All this is of course only really useful if we can ask queries
+across all these data files, despite their separation into different
+cache files.  That's what the `--aux-cache` or `--ac` options are for.
+
+For example, let us start by creating a very small input dataset in
+its separate cache.  We first collect all distinct qualifier properties
+into a small set `set1`, use the KGTK `add-id` command to add an ID
+column to each row, and then pipe the results to a separate query
+but giving that a distinct new graph cache file `/tmp/props.db`.
+Since we are importing from standard input in that query, we also
+use an alias `props` so we can easily refer to that later:
+
+```
+kgtk query -i $QUALS \
+     --match '(x)-[r]->(y)' \
+     --return 'distinct r.label as node1, "member" as label, "set1" as node2' \
+     / add-id \
+     / query -i - --as props --gc /tmp/props.db
+```
+Result:
+
+| node1   | label  | node2 | id |
+|---------|--------|-------|----|
+| starts  | member | set1  | E1 |
+| ends    | member | set1  | E2 |
+
+
+Next we query for all edges in the `WORKS` graph that are qualified by
+one or more edges in the `QUALS` graph with a qualifier edge label
+from `props`.  To do this we add `/tmp/props.db` as an auxiliary cache
+in addition to the default main graph cache file.  There always has to
+be exactly one main graph cache and zero or more auxiliary caches:
+
+```
+kgtk query --ac /tmp/props.db -i $WORKS -i $QUALS -i props \
+     --match 'props: (p)-[]->(), \
+              quals: (wr)-[qr {label: p}]->(), \
+              works: (x)-[wr {label: wl}]->(y)' \
+     --return 'wr as id, x, wl, y'
+```
+Result:
+
+| id  | node1 | label | node2  |
+|-----|-------|-------|--------|
+| w11 | Hans  | works | ACME   |
+| w12 | Otto  | works | Kaiser |
+| w13 | Joe   | works | Kaiser |
+| w14 | Molly | works | Renal  |
+| w15 | Susi  | works | Cakes  |
+
+!!! note
+    <b>Important:</b> when one or more auxiliary caches are used in a query
+    all graph caches are queries in read-only mode (see below).  This means
+    graph caches need to be fully constructed and indexed before they can
+    be used in such a query (this restriction might be relaxed in the future).
+
+It is possible to have a graph with the same name defined in more than
+one graph cache.  In this case it will be dereferenced to the graph
+cache in which it appears first, starting with the main graph cache
+and then continuing with auxiliary caches in the order they are
+listed on the command line.
+
+At most 10 graph caches (1 main, 9 auxiliary) can be used simultaneously
+in a query.  This is a restriction from a default SQLite configuration value
+which can only be changed through recompilation.
 
 
 ### Read-only processing
@@ -2524,6 +2653,67 @@ Result:
 | 'Otto'@de |   'oTTO'@DE  |
 
 
+### Virtual graph functions
+
+Virtual graph functions are similar to standard KGTK functions with
+the one difference that they can produce more than one result value.
+We think of them as computations that generate virtual edges, one
+edge for each result generated by a set of inputs.  For this reason
+they need to be used in a strict or optional match clause with the
+`node1` of the edge (usually) being the first input, the `label`
+being the name of the `function`, `node2` (usually) being the main
+output, and any additional inputs and outputs associated via edge
+properties.
+
+| Function                     | Description                  |
+|------------------------------|------------------------------|
+| kgtk_values                  | Dynamically generate values from a list literal or Python expression. If the 'format' property is 'auto' (the default) a value ending in any type of parenthesis is considered to be a Python expression which will be evaluated in module 'module' (defaults to 'builtins').  The result is assumed to be a Python collection whose values will be returned in order as the value of node2. Otherwise, the values literal will be split along a number of standard separators. If 'format' is 'python' an evaluation in Python will be forced.  Any other value of 'format' is assumed to be a separator string to split the values literal. This virtual graph will disable query optimization in any match clause it is used in to make sure values are generated at the desired point in the query. |
+
+Here are some examples for the potential use of `kgtk_values`.  Note that these queries specify
+an input graph (since that is required), but the graph is not really used by the queries:
+
+```
+kgtk query -i $GRAPH \
+     --match '(x:`a b c`)-[:kgtk_values]->(v)' \
+     --return 'v'
+```
+Result:
+
+| node2 |
+|-------|
+| a     |
+| b     |
+| c     |
+
+```
+kgtk query -i $GRAPH \
+     --match '(x:`range(3)`)-[:kgtk_values]->(v)' \
+     --return 'v'
+```
+Result:
+
+| node2 |
+|-------|
+| 0     |
+| 1     |
+| 2     |
+
+```
+kgtk query -i $GRAPH \
+    --match '(x)-[:kgtk_values {format: "%%"}]->(v)' \
+    --where 'x=$VALUES' \
+    --return 'v' \
+    --para VALUES='a%%b%%c'
+```
+Result:
+
+| node2 |
+|-------|
+| a     |
+| b     |
+| c     |
+
+
 <A NAME="differences-to-cypher"></A>
 ### Important differences to Cypher
 
@@ -2733,6 +2923,27 @@ performance gain is the extra disk space needed for such indexes which
 might be significant.
 
 
+### Disabling query optimization
+
+The `--dont-optimize` option can be used to force the SQLite query
+optimizer to not optimize the table order in which a join is
+processed.  Normally the query optimizer will try to guess the table
+with the smallest number of matches given what it knows about table
+sizes, indexes and selectional restrictions in the query, generate all
+rows for that table according to the given restrictions and then join
+other tables for each match using appropriate indexes (this is just
+the high-level gist of a complex query planning process).  However,
+the determined order might not always be optimal or even be bad and
+lead to much longer query run times in certain cases.  One of the reasons
+is that the graph tables used by Kypher violate many of the assumptions
+that normally hold for standard relational database tables.
+
+If this might be an explanation for overly long query run times,
+the `--dont-optimize` can be tried which will execute graph table
+joins in the order they appear in strict and optional match clauses.
+Be very careful using this, this is an **experts only** option.
+
+
 ### Explanation
 
 Before a query is executed the database will produce an optimized query
@@ -2860,3 +3071,774 @@ Result:
 |    w11  |  Hans   |  works  |  ACME    |  starts  |  ^1984-12-17T00:03:12Z/11 |
 |    w13  |  Joe    |  works  |  Kaiser  |  starts  |  ^1996-02-23T08:02:56Z/09 |
 |    w12  |  Otto   |  works  |  Kaiser  |  ends    |  ^1987-11-08T04:56:34Z/10 |
+
+
+<A NAME="kypher-v"></A>
+## Kypher-V - querying vector data
+
+Kypher-V supports import and queries over vector data.  Kypher-V
+extends Kypher to allow work with unstructured data such as text,
+images, and so on, represented by embedding vectors.  Kypher-V
+provides efficient storage, indexing and querying of large-scale
+vector data on a laptop.  It is fully integrated into Kypher to enable
+expressive hybrid queries over Wikidata-size structured and
+unstructured data.  To the best of our knowledge, this is the first
+system providing such a functionality in a query language for
+knowledge graphs.
+
+<A NAME="vector-tables"></A>
+### Vector tables are regular KGTK files
+
+Kypher-V represents vectors as special kinds of literals that are
+linked to KG objects via edges in KGTK format.  For example, the
+following KGTK edge with ID `e4925` associates Wikidata node `Q40` (or
+Austria) with a text embedding vector stored as the `node2` of the
+edge.  The format below is something we commonly use where a `node1`
+points to a vector literal in `node2` via an `emb` edge, but there is
+nothing special about this particular representation pattern or edge
+label, any scheme can be used that associates a node or edge ID with a
+vector:
+
+| id    |  node1 | label   |   node2                                        |
+|-------|--------|---------|------------------------------------------------|
+| e4925 |  Q40   | emb     |   "[0.1642,-0.5445,-0.3673,...,0.3203,0.6090]" |
+
+When vector data is queried, it is imported and cached if necessary
+just like any other KGTK data processed by Kypher.  The main
+difference is that for faster query processing vector literals get
+translated into binary format first before they are stored in the
+Kypher graph cache based on an indexing directive.  Various up-front
+transformations such as data type conversions, normalization, storage
+type, etc. can also be controlled here.  Finally, vector files are
+treated as large contiguous and homogeneous arrays, so that vectors can
+be referenced and accessed efficiently by vector table row ID instead
+of having to use an index.
+
+
+### Vector literal formats
+
+Kypher-V supports a number of different vector literal formats listed
+in the table below.  Not all of them are valid KGTK according to the
+current KGTK data model.  The canonical representation we will use in
+the documentation here is the "vector as string" format listed in the
+first row of the table.  Future versions of KGTK might support a
+bonafide vector literal type as shown in row 4.  Also note that any
+number of different separator characters from the set `,;:|` and space
+can be used in any of the text formats, an example of which is shown
+in row 5.  Any extra whitespace is legal and will be ignored.
+Finally, Base64 encoding of binary vector data is also supported shown
+in the last two rows:
+
+|   vector literal                               | description        | valid KGTK |
+|------------------------------------------------|--------------------|------------|
+|   "[0.1642,-0.5445,-0.3673,...,0.3203,0.6090]" | vector as string   | yes        |
+|   "0.1642,-0.5445,-0.3673,...,0.3203,0.6090"   | list as string     | yes        |
+|   0.1642,-0.5445,-0.3673,...,0.3203,0.6090     | list               | no         |
+|   [0.1642,-0.5445,-0.3673,...,0.3203,0.6090]   | vector             | not yet    |
+|   0.1642 -0.5445 -0.3673 ... 0.3203 0.6090     | space-sep. list    | no         |
+|   "1yO6PYj7Gb8KX2i9Pqc+vt...T63OGG92B3cPg=="   | base64 as string   | yes        |
+|   1yO6PYj7Gb8KX2i9Pqc+vt...T63OGG92B3cPg==     | base64             | no         |
+
+Binary representation is purely a contiguous set of bytes representing
+an array of floating point numbers.  It does not have any
+meta-information or header describing number of dimensions or element
+type.  For that reason, conversion into an actual vector object will
+always require an explit or implict element data type specification
+(NumPy's `dtype`) which can come from a number of different sources.
+
+
+### Vector import
+
+Once we have a KGTK file with vector literals, we can import it just
+like any other KGTK file with the `query` command.  In the following
+we will use this example dataset of embedding vectors called `EMBED`
+which associates a small subset of Wikidata nodes with 100-dimensional
+ComplEx embedding vectors:
+
+```
+EMBED=examples/docs/query-embed.tsv.gz
+ 
+zcat $EMBED | head -3
+```
+Result:
+
+| id         |  node1       | label   |   node2                         |
+|------------|--------------|---------|---------------------------------|
+| e-3bc7d18e |  Q100428034  | emb     |  "[-0.10816555,...,0.44566953]" |
+| e-ecf67b59 |  Q10061      | emb     |  "[-0.10639298,...,0.59102327]" |
+
+!!! note
+    <b>Important:</b> A vector file needs to be homogenous, which
+    means that each row has to contain a vector, each vector has to
+    have the same element type and number of dimensions, and each
+    vector literal uses the same format and separator.  Vector tables
+    are treated as large homogenous arrays, which means each row has
+    to have the same size and element type.
+
+Next we import the data using a `query` command.  The important option
+here is `--idx` which tells the system that this input data contains a
+vector column.  We accept the default values for most of the possible
+options and only tell Kypher-V that it should use a vector index here
+(indicated by the `vector` index type) and that the vector data
+resides in the `node2` column.  We also create a standard index on
+the `node1` column using the `mode:valuegraph` directive, so we can
+quickly look up the embedding vector for a given node:
+
+```
+kgtk query -i $EMBED --idx vector:node2 mode:valuegraph --limit 2
+```
+Result:
+
+| id         |  node1     | label   |   node2                         |
+|------------|------------|---------|---------------------------------|
+| e-3bc7d18e | Q100428034 | emb     | b'\xe6\x85\xdd....\xcc.\xe4>'   |
+| e-ecf67b59 | Q10061     | emb     | b'\x90\xe4\xd9....\x8e=MM\x17?' |
+
+The returned values look identical to the input file except for the
+vector column.  Vectors where transformed into byte arrays stored as
+SQLite BLOB values, displayed here in a Python byte string format.
+
+!!! note
+    <b>Important:</b> The byte strings shown here are not a valid KGTK
+    vector format, they are usually not output and only used internally.
+    One of the vector output functions described below needs to be used
+    to convert them into valid KGTK vector literals.
+    
+Here is a minimal vector import command variant that also leaves out
+the column specification, since `node2` is the default value.
+**IMPORTANT**: the colon at the end of `vector:` is mandatory here to
+designate this as a vector index type prefix, without it, the system
+would interpret it as the name of a column to index with a standard
+table index:
+
+```
+kgtk query -i $EMBED --idx vector: mode:valuegraph --limit 2
+```
+
+
+<A NAME="vector-storage options"></A>
+### Vector storage options
+
+Kypher-V implements scalable and efficient disk-based vector storage
+that allows fast vector lookup, indexing and processing without
+requiring large amounts of RAM.  After vectors are imported and indexed,
+vector queries can be run efficiently from scratch without having to
+load large amounts of data into memory.
+
+Kypher-V supports a number of different ways to store vectors in the database.
+They could be stored inline as BLOB values in a KGTK graph table, they could
+be in memory-mapped NumPy disk files, and an HD5-based disk format is also
+available.  At the moment only inline storage is fully supported, and the
+NumPy and HD5 storage options are considered experimental and in flux.
+
+When vectors are brought into memory to be processed in some form by a
+query, they are first converted to Python's
+[NumPy](https://numpy.org/) format.  Vectors are stored on disk in a
+binary byte format that mirrors the data in a NumPy vector, so
+creating vector objects is a very fast copy operation.  The Faiss
+nearest neighbor indexing package uses its own internal vector format
+which also can be created very efficiently from NumPy vectors.
+
+The vector index directive takes a number of options to control
+storage, preprocessing and indexing of vectors.  These are specified
+as column options on the vector column of a vector table.  The first
+set of options are storage options which control how vectors are
+imported, converted, normalized and stored in the database, they
+are described below:
+
+| Storage option            | Description                                                                                                      |
+|---------------------------|------------------------------------------------------------------------------------------------------------------|
+| fmt                       | Format of the data in the vector column, must be one of `text`, `base64` or `auto` (the default).  `text` is for any text list of numbers separated by one of `,;:|` or space that can be parsed by NumPy's `fromstring` (extra whitespace will be ignored), `base64` is a Base64 encoding of a NumPy vector, `auto` tries to guess the format based on the first vector |
+| dtype                     | NumPy element data type to use for the imported vectors, one of `float16`, `float32` (the default) or `float64`  |
+| norm                      | whether vectors will be normalized before they are stored and how, one of `true`, `false` (the default) or `l2` (only normalization currently supported).  The norm will be stored as well so it can be used to unnormalize a vector if needed.                                              |
+| store                     | controls how imported vectors should be stored, one of `inline` (the default), `numpy` or `hd5`, but only `inline` is fully supported for now and `hd5` will likely go away  |
+| ext                       | an external file to use for a NumPy store - experimental, see `store`, experts only                              |
+
+`dtype` can be used to control the precision of the stored vectors as
+well as the required storage space.  However, if nearest neighbor
+indexing is used it should generally be left at the default value,
+since 32-bit float values are used throughout the Faiss indexing
+package.  A different dtype will be converted dynamically to 32-bit
+whenever vectors are loaded from the database.
+
+In this example we specify a number of these options explicitly with
+their default values:
+
+```
+kgtk query -i $EMBED \
+     --idx vector:node2/fmt=auto/dtype=float32/store=inline/norm=False mode:valuegraph \
+     --limit 2
+```
+Result:
+
+| id         |  node1     | label   |   node2                         |
+|------------|------------|---------|---------------------------------|
+| e-3bc7d18e | Q100428034 | emb     | b'\xe6\x85\xdd....\xcc.\xe4>'   |
+| e-ecf67b59 | Q10061     | emb     | b'\x90\xe4\xd9....\x8e=MM\x17?' |
+
+It is possible to have more than one vector column in a vector table.  In that case a separate
+vector index option needs to be supplied for each column, for example:
+
+```
+kgtk query ... --idx vector:node2 --idx 'vector:`node1;emb2`/dtype=float16' ...
+```
+
+Unless for special circumstances, however, this should be avoided.
+Nearest neighbor indexing will sort tables for optimal data locality
+which generally can only produce good results for a single vector
+column (unless the different vector columns cluster very similarly).
+
+
+<A NAME="vector-functions"></A>
+### Vector functions
+
+Vector functions take one or more vectors accessed in a query and
+compute a function based on those vectors.  The following example
+shows one of the similarity functions available in Kypher-V.  It
+accesses embedding vectors for two given Wikidata QNodes `Q868` and
+`Q913` in our small `EMBED` dataset, computes cosine similarity
+between them and then displays the result with their labels (imported
+from the associated `LABELS` graph):
+
+```
+LABELS=examples/docs/query-embed-labels.tsv.gz
+
+kgtk query -i $EMBED -i $LABELS \
+     --match 'emb:    (x:Q868)-[]->(xv), \
+                      (y:Q913)-[]->(yv), \
+              labels: (x)-[]->(xl), \
+                      (y)-[]->(yl)' \
+     --return 'xl as xlabel, yl as ylabel, kvec_cos_sim(xv, yv) as sim'
+```
+Result:
+
+| xlabel          | ylabel         | sim                |
+|-----------------|----------------|--------------------|
+| 'Aristotle'@en  | 'Socrates'@en  | 0.6926078796386719 |
+
+
+<A NAME="builtin-vector-functions"></A>
+The following vector functions are available:
+
+| Function                    | Description                                                                                                    |
+|-----------------------------|----------------------------------------------------------------------------------------------------------------|
+| kvec_plus(x,y)              | Compute elementwise addition `x + y` between two vectors and/or numbers (`numpy.add`). If at least one argument is a vector, the result will also be a vector.               |
+| kvec_minus(x,y)             | Compute elementwise subtraction `x - y` between two vectors and/or numbers (`numpy.subtract`). If at least one argument is a vector, the result will also be a vector.       |
+| kvec_times(x,y)             | Compute elementwise multiplication `x * y` between two vectors and/or numbers (`numpy.multiply`). If at least one argument is a vector, the result will also be a vector.    |
+| kvec_divide(x,y)            | Compute elementwise division `x / y` between two vectors and/or numbers (`numpy.divide`). If at least one argument is a vector, the result will also be a vector.            |
+| kvec_l0_norm(x)             | Compute the L0-Norm of vector `x`, counts the number of non-zero elements (see `numpy.linalg.norm(x, ord=0)`)  |
+| kvec_l1_norm(x)             | Compute the L1-Norm of a vector, computes the sum of elements in `x`, aka Manhattan distance (see `numpy.linalg.norm(x, ord=1)`)     |
+| kvec_l2_norm(x)             | Compute the L2-Norm or Euclidean norm or Euclidean length of vector `x` (see `numpy.linalg.norm(x, ord=2)`)    |
+| kvec_dot(x,y)               | Compute the dot product between vectors `x` and `y`.                                                           |
+| kvec_cos_sim(x,y)           | Compute cosine similarity between vectors `x` and `y`.  If vectors are known to be L2-normalized, this will automatically substitute `kvec_dot`. |
+| kvec_euclid_dist(x,y)       | Compute the Euclidean distance between vectors `x` and `y`.                                                    |
+| kvec_stringify(x)           | Convert a vector `x` into text format as a KGTK string.  Calls `kgtk_stringify` for non-vectors.               |
+| kvec_unstringify(x)         | Convert a vector `x` from text format to vector bytes.  Return `x` for non-vector strings.                     |
+| kvec_to_base64(x,[dtype])   | Convert a vector `x` into base64 format wrapped as a KGTK string.  Returns null for non-vectors.  The optional `dtype` argument specifies the target element dtype before base64 conversion (defaults to `float32`). |
+| kvec_from_base64(x,[dtype]) | Convert a vector `x` from base64 format into vector bytes.  Returns null for non-vectors.  The optional `dtype` argument specifies the element dtype of the source vector `x` (defaults to `float32`).             |
+
+
+#### Vector function notes
+
+* vector inputs must be in internal byte format either coming from an imported vector table
+  or from a vector generating function such as `kvec_unstringify`
+* functions that take more than one vector as inputs (e.g., `kvec_cos_sim`) assume all
+  vectors to have the same dimensions
+* functions that produce vectors as their output will use `float32` as the element type
+  of the vectors they are producing; it is currently not possible to customize this
+  except for import and output via `kvec_to/from_base64`
+* input and output functions such as `kvec_unstringify` should only be used in one-off/
+  one-time situations, for example, to produce a new dataset, since they are much less
+  efficient than using the binary vectors created during a vector table import; importing
+  and exporting bytes via `base64` encoding functions is many times faster than using
+  their text-based analogs which have to parse and print floating point values
+  
+For example, here is a query that produces a 100-D unit vector on the fly to compute
+a similarity value:
+
+```
+kgtk query -i $EMBED -i $LABELS \
+     --match 'emb:    (x:Q868)-[]->(xv), \
+              labels: (x)-[]->(xl)' \
+     --return 'xl as xlabel, kvec_cos_sim(xv, kvec_unstringify(pyeval("[1] * 100"))) as sim'
+```
+Result:
+
+| xlabel          | sim                  |
+|-----------------|----------------------|
+| 'Aristotle'@en  | 0.003323602257296443 |
+
+Here we compute a cosine-similarity through combination of vector normalization and dot-product:
+
+```
+kgtk query -i $EMBED -i $LABELS \
+     --match 'emb:    (x:Q868)-[]->(xv), \
+                      (y:Q913)-[]->(yv), \
+              labels: (x)-[]->(xl), \
+                      (y)-[]->(yl)' \
+     --return 'xl as xlabel, yl as ylabel, kvec_dot(kvec_divide(xv, kvec_l2_norm(xv)), kvec_divide(yv, kvec_l2_norm(yv))) as sim'
+```
+Result:
+
+| xlabel          | ylabel         | sim                |
+|-----------------|----------------|--------------------|
+| 'Aristotle'@en  | 'Socrates'@en  | 0.6926079392433167 |
+
+
+<A NAME="similarity-search"></A>
+### Similarity search
+
+A core functionality provided by Kypher-V is similarity search, which
+allows us to find the top-*k* similar nodes for one or more nodes
+generated by a query based on embedding vectors linked to those nodes.
+Most importantly, these searches can be closely integrated with
+structured restriction as in the following high-level example queries:
+
+* Find castle ruins similar to Beaumaris Castle that are located in Austria
+* Find dresses similar to this [image] with price <= $50 and free 2-day shipping
+
+For example, we can use one of the Kypher-V similarity functions to compute the
+top-*k* similar nodes for a given node in a brute-force way.  To do that we
+simply enumerate all embedding vectors in this data and compare each of them
+to the one for Socrates (`Q913`), then we sort and report the top-5 results:
+
+```
+kgtk query -i $EMBED -i $LABELS \
+     --match 'emb:     (x:Q913)-[:emb]->(xv), \
+                       (y)-[:emb]->(yv), \
+              labels:  (x)-[]->(xl), \
+                       (y)-[]->(yl)' \
+     --return 'x as x, xl as xlabel, y as y, yl as ylabel, kvec_cos_sim(xv, yv) as sim' \
+     --order  'sim desc' \
+     --limit 5
+```
+Result:
+
+| x    | xlabel        | y       | ylabel                     | sim                |
+|------|---------------|---------|----------------------------|--------------------|
+| Q913 | 'Socrates'@en | Q913    | 'Socrates'@en              | 1.0                |
+| Q913 | 'Socrates'@en | Q179149 | 'Antisthenes'@en           | 0.8249946236610413 |
+| Q913 | 'Socrates'@en | Q409647 | 'Aeschines of Sphettus'@en | 0.8141517043113708 |
+| Q913 | 'Socrates'@en | Q666230 | 'Aristobulus of Paneas'@en | 0.8014461994171143 |
+| Q913 | 'Socrates'@en | Q380190 | 'Phaedo of Elis'@en        | 0.7857708930969238 |
+
+
+Despite the brute-force nature of the search, this query was very
+fast, since the dataset is very small and has only about 850 vectors
+in total.  On more realistic data - for example all humans in Wikidata
+with about 9 million elements - this becomes very inefficient (4
+minutes on a laptop) and we will use nearest neighbor indexing
+described below to speed things up.
+
+
+<A NAME="indexed-search"></A>
+### Indexed similarity search
+
+For much faster similarity search over large datasets, we use an
+approximate nearest neighbor search (ANNS) index that can be
+constructed with a vector index directive when data is imported, or
+sometime later when it is actually needed.
+
+Indexed vector search is expressed via a *virtual* graph edge
+`kvec_topk_cos_sim` which is implemented via an SQLite virtual table
+(a custom computation that can generate multiple rows and behaves like
+a regular table).  Virtual edges are a Kypher-V extension to Cypher
+that take a number of user-specified input parameters expressed in
+Cypher property syntax.  The parameter shown here is `k` controlling how
+many results to return, others are left at their default values.  At this
+point, the query generates an error, since no appropriate index has
+been constructed yet:
+
+```
+kgtk query -i $EMBED -i $LABELS \
+     --match 'emb:     (x:Q913)-[]->(xv), \
+                       (xv)-[r:kvec_topk_cos_sim {k: 10}]->(y), \
+              labels:  (x)-[]->(xl), \
+                       (y)-[]->(yl)' \
+     --return 'x as x, xl as xlabel, y as y, yl as ylabel, r.similarity as sim' \
+     --limit 5
+Traceback (most recent call last):
+  .....
+kgtk.exceptions.KGTKException: no trained nearest neighbor index available for 'kvec_topk_cos_sim_0'
+SQL logic error
+```
+
+Different from regular graph table indexes which can be built by
+Kypher automatically behind the scenes, ANNS indexes can be quite
+expensive to generate and might require a number of user-specified
+parameters to control index creation time and quality.  For this
+reason, an explicit index directive is required (somewhat similar to
+what we do for [<b>text search indexes</b>](#text-search-functions)).
+
+Let's run this query again but this time create an ANNS index for it
+controlled by the `--idx` option on the embedding input.  The relevant
+new options controlling ANNS index creation start at `/nn/` (for
+nearest neighbor index).  Since it is such a small file, we only
+create 8 quantizer cells for it (the value of `nlist`).  We run the
+query with the `--debug` option, so we can see what the system is doing
+behind the scenes:
+
+```
+kgtk --debug query \
+     -i $EMBED --idx vector:node2/nn/nlist=8 mode:valuegraph \
+     -i $LABELS \
+     --match 'emb:     (x:Q913)-[]->(xv), \
+                       (xv)-[r:kvec_topk_cos_sim {k: 10}]->(y), \
+              labels:  (x)-[]->(xl), \
+                       (y)-[]->(yl)' \
+     --return 'x as x, xl as xlabel, y as y, yl as ylabel, r.similarity as sim' \
+     --limit 5
+[2022-11-08 19:15:14 sqlstore]: DROP VECTOR INDEX sdict['type': 'vector', 'columns': sdict['node2': sdict['fmt': 'auto', 'dtype': 'float32', 'norm': None, 'store': 'inline', 'ext': None, 'nn': False, 'ram': None, 'nlist': None, 'niter': None, 'nprobe': None]], 'options': {}]...
+[2022-11-08 19:15:14 sqlstore]: CREATE VECTOR INDEX sdict['type': 'vector', 'columns': sdict['node2': sdict['nn': 'faiss', 'nlist': 8, 'fmt': 'auto', 'dtype': 'float32', 'norm': None, 'store': 'inline', 'ext': None, 'ram': None, 'niter': None, 'nprobe': None]], 'options': {}]...
+[2022-11-08 19:15:14 sqlstore]: Selecting random sample of 859 training vectors...
+[2022-11-08 19:15:14 sqlstore]: Training vector store quantizer:
+Clustering 859 points in 100D to 8 clusters, redo 1 times, 10 iterations
+  Preprocessing in 0.00 s
+  Iteration 9 (0.01 s, search 0.01 s): objective=4772.23 imbalance=1.626 nsplit=0       
+[2022-11-08 19:15:14 sqlstore]: 
+
+[2022-11-08 19:15:14 sqlstore]: Quantizing 859 vectors in batches of size 859...
+.
+[2022-11-08 19:15:14 sqlstore]: Adding quantization index to database...
+[2022-11-08 19:15:14 sqlstore]: SORT table 'graph_1' batch 1 of 2...
+[2022-11-08 19:15:14 sqlstore]: SORT table 'graph_1' batch 2 of 2...
+[2022-11-08 19:15:14 sqlstore]: CREATE INDEX "graph_1_node2;_kgtk_vec_qcell_idx" ON "graph_1" ("node2;_kgtk_vec_qcell")
+[2022-11-08 19:15:14 sqlstore]: ANALYZE "graph_1_node2;_kgtk_vec_qcell_idx"
+[2022-11-08 19:15:14 query]: SQL Translation:
+---------------------------------------------
+  SELECT graph_1_c1."node1" "_aLias.x", graph_2_c3."node2" "_aLias.xlabel", kvec_topk_cos_sim_0_c_1."node2" "_aLias.y", graph_2_c4."node2" "_aLias.ylabel", kvec_topk_cos_sim_0_c_1."similarity" "_aLias.sim"
+     FROM graph_1 AS graph_1_c1
+     CROSS JOIN kvec_topk_cos_sim_0 AS kvec_topk_cos_sim_0_c_1 CROSS JOIN graph_2 AS graph_2_c3 CROSS JOIN graph_2 AS graph_2_c4
+     ON graph_1_c1."node1" = graph_2_c3."node1"
+        AND graph_1_c1."node2" = kvec_topk_cos_sim_0_c_1."node1"
+        AND kvec_topk_cos_sim_0_c_1."node2" = graph_2_c4."node1"
+        AND graph_1_c1."node1" = ?
+        AND kvec_topk_cos_sim_0_c_1."k" = ?
+     LIMIT ?
+  PARAS: ['Q913', 10, 5]
+---------------------------------------------
+```
+Result:
+
+| x    | xlabel        | y       | ylabel                     | sim                |
+|------|---------------|---------|----------------------------|--------------------|
+| Q913 | 'Socrates'@en | Q913    | 'Socrates'@en              | 1.0                |
+| Q913 | 'Socrates'@en | Q179149 | 'Antisthenes'@en           | 0.8249946236610413 |
+| Q913 | 'Socrates'@en | Q409647 | 'Aeschines of Sphettus'@en | 0.8141517043113708 |
+| Q913 | 'Socrates'@en | Q666230 | 'Aristobulus of Paneas'@en | 0.8014461994171143 |
+| Q913 | 'Socrates'@en | Q380190 | 'Phaedo of Elis'@en        | 0.7857708930969238 |
+
+In subsequent queries the `--idx` option can be omitted (just as with other index
+types).  If the option is identical to previous queries, it will simply be ignored.
+If some of the option values changed, however, the index will be rebuilt.
+
+Except for datasets that are very large or very small like this one,
+ANNS index options can generally be left unspecified at their default
+values.  For a more exhaustive discussion of available indexing
+options and the tradeoffs involved see the section on [ANNS
+indexes](#anns-indexes).
+
+
+#### Indexed similarity search parameters
+
+The `kvec_topk_cos_sim` computed graph edge takes a number of required
+and optional input parameters to control processing and a number of
+output parameters to return results.  We further divide these parameters
+into those that control search, and a second experimental set that
+implements more efficient batched processing for large joins.
+
+We use Kypher's edge property syntax to attach and refer to these
+properties.  For example, if we have an edge identified by the
+variable `r`, then `r.node1` is that edge's `node1`, `r.node2` is that
+edge's `node2`, `r.nprobe` is its `nprobe` value, `r.similarity` the
+computed similarity, and so on.  The two tables below list search
+input and output parameters:
+
+| Input       | Description                                                                                                                          |
+|-------------|--------------------------------------------------------------------------------------------------------------------------------------|
+| node1       | input vector (bytes) for which we want to compute the top-`k` similar vectors                                                        |
+| k           | **optional**: top-`k` similar vectors will be computed, defaults to 10                                                               |
+| maxk        | **optional**: maximum `k` to try for vector joins with dynamic scaling, defaults to 0 which means no dynamic scaling should be used  |
+| nprobe      | **optional**: number of closest q-cells to search to find similar vectors, defaults to `nprobe` option in `--idx` spec or 1          |
+
+| Output      | Description                                                                                   |
+|-------------|-----------------------------------------------------------------------------------------------|
+| label       | canonical name of the virtual graph edge (constant)                                           |
+| node2       | `node1` from this similar vector's row in the vector table which will (typically) be its key  |
+| vid         | edge ID of this similar vector's row in the vector table                                      |
+| vrowid      | row ID of this similar vector's row in the vector table                                       |
+| vector      | bytes of this similar vector                                                                  |
+| similarity  | cosine similarity of this similar vector to the respective input vector provided in `node1`   |
+
+Let us look at a variant of our previous example that exercises more
+of those input and output options.  For example, below we leave `k`
+unspecified which will use its default value 10, we set `nprobe` to 8
+using property syntax on the edge (but this restriction could also be
+supplied in the `--where` clause with `r.nprobe = 8`), we exclude `x`
+as a result and constrain the minimum similarity required, and we
+return additional output fields `r.vid` and `r.vector` which all come
+from the row in the `EMBED` vector table where `y` and `yv` are
+defined:
+
+```
+kgtk query \
+     -i $EMBED --idx vector:node2/nn/nlist=8 mode:valuegraph \
+     -i $LABELS \
+     --match 'emb:     (x:Q913)-[]->(xv), \
+                       (xv)-[r:kvec_topk_cos_sim {nprobe: 8}]->(y), \
+              labels:  (x)-[]->(xl), \
+                       (y)-[]->(yl)' \
+     --where  'x != y and r.similarity >= 0.8' \
+     --return 'x as x, xl as xlabel, y as y, yl as ylabel, r.similarity as sim, r.vid as yvid, kvec_to_base64(r.vector) as yv'
+```
+Result:
+
+| x    | xlabel        | y       | ylabel                     | sim                | yvid       | yv               |
+|------|---------------|---------|----------------------------|--------------------|------------|------------------|
+| Q913 | 'Socrates'@en | Q179149 | 'Antisthenes'@en           | 0.8249946236610413 | e-ea594b00 | "LDeC....YNPw==" |
+| Q913 | 'Socrates'@en | Q409647 | 'Aeschines of Sphettus'@en | 0.8141517043113708 | e-0685ee35 | "5lOZ....BdPw==" |
+| Q913 | 'Socrates'@en | Q666230 | 'Aristobulus of Paneas'@en | 0.8014461994171143 | e-2906ba9a | "Ex++....oMPw==" |
+
+
+### Full vector similarity joins
+
+WRITE ME
+
+
+### Batched vector similarity joins
+
+WRITE ME - EXPERIMENTAL
+
+
+<A NAME="anns-indexes"></A>
+### ANNS indexes
+
+Kypher-V uses a custom disk-based ANNS index architecture based on
+[Faiss](https://ai.facebook.com/tools/faiss/).  Generic Faiss is
+main-memory oriented requiring lots of RAM, which has some disadvantages
+for our purposes:
+
+* Very limited support for disk-based indexes
+* High startup cost due to initial index-load time which would require
+  a server-based architecture to amortize the cost
+* To index 180GB of text embedding vectors requires at least that much
+  RAM (unless encoding / product quantization / compression is used
+  which is also expensive to compute)
+* Hosting and using multiple sets of embeddings simultaneously quickly
+  becomes very resource intensive and cost prohibitive
+
+Instead we use a database-centric index architecture for Kypher-V
+which can be loaded quickly and requires much less RAM and computing
+resources.
+
+The basic idea behind ANNS indexing is to partition or *quantize* a
+vector space into a set of quantization cells (or *q-cells*), and then
+assign each embedding vector to its closest q-cell.  At query time we
+then compare a vector only to vectors from its (and a few neighboring
+q-cells) instead of every vector in the dataset, which greatly reduces
+search time.  See this tutorial on [Faiss ANNS
+indexing](https://www.pinecone.io/learn/faiss-tutorial/) for a good
+introduction to the topic.  Two important parameters in this process
+are `nlist` (the number of q-cells or cluster centroids or inverted
+lists to use in the quantization), and `nprobe` (how many neighboring
+q-cells to search when looking for similar vectors).  These parameters
+are referenced in various places below.
+
+Kypher-V goes through the following steps when creating an ANNS index
+(compare to the debug output from the example query above):
+
+1. K-means clustering of vectors with the standard Faiss API which involves:
+    * Sampling the vector set to limit memory use (for example, 180GB of
+      text embedding vectors can be clustered with 25GB of RAM on a laptop)
+    * Clustering the sample, the resulting cluster centroids form the basis of
+      the quantization index
+    * Save cluster centroids via Faiss to a small file which can be loaded quickly,
+      for example, for our largest dataset so far with 16K 1024-D cluster centroids
+      this file is 67MB in size which loads in about 50ms
+2. Quantization assigns data vectors to their closest q-cell centroid
+    * Q-cell IDs are written as extra q-cell column to the vector database table
+    * DB indexing of the q-cell column allows quick access to all vectors
+      of a q-cell (this implements a DB version of Faiss inverted lists)
+3. Sorting of vectors by q-cell ID to improve disk locality
+    * Now all vectors of a q-cell can be retrieved via one or few disk accesses
+    * Batched sorting reduces temp disk usage (temp space < 50% of table size)
+
+Then at query time, we do the following to load and exploit an ANNS index:
+
+1. Load cluster centroids from saved Faiss file
+    * This is one-time only and fast (50ms or less) and can be amortized over multiple
+      queries when using the Kypher API
+    * Creates a `faiss.IndexFlat` quantizer index object from the centroid vectors
+2. Quantize an input vector identified by a query
+    * Find the `nprobe` q-cell centroids it is closest to (we usually search in
+    `nprobe > 1` q-cells to handle vectors close to a q-cell boundary)
+3. Dynamically and incrementally create a size-limited in-memory Faiss search index
+   for the vectors of the identified q-cells
+    * Create a `faiss.IndexIVFFlat` object using the flat quantizer loaded above
+    * Load in all relevant q-cell vectors from the database using a DB index and query
+    * Incrementally add the loaded vectors to this search index using Faiss' low-level API,
+      this is very fast since we already know the q-cell each vector belongs to
+    * Size-limited caching of this index reuses q-cells from prior vector inputs
+      in a vector join query or over multiple queries (without using too much RAM)
+4. Search top-`k` neighbors of each input vector in the dynamically
+   constructed Faiss search index
+    * Using the standard Faiss API which uses very fast parallel search
+
+
+<A NAME="anns-indexing-options"></A>
+### ANNS indexing options
+
+The following options control ANNS index creation:
+
+| Indexing option | Description                                                                                                      |
+|-----------------|------------------------------------------------------------------------------------------------------------------|
+| nn              | whether an ANNS index should be built and of what kind, one of `true`, `false` (the default) or `faiss` (only type currently supported) | 
+| ram             | the maximum amount of RAM (bytes) to use when training an NN index, supports standard memory units, default is 16G for `faiss`          |
+| nlist           | the number of q-cells (centroids, inverted lists) to use for the ANNS index, defaults to closest power of 2 for 4K q-cell size          |
+| niter           | how many iterations to use when training the ANNS index quantizer, default is 10 for `faiss`                                            |
+| nprobe          | how many quantizer cells to search *by default* during ANNS queries, default is 1 for `faiss` (can be overridden in a query)            |
+
+Except for very large datasets, all of these options can be left at
+their default values.  Once datasets do become large (say O(10M) 1K-D
+vectors and beyond), the `ram` value should be realistic to allow
+clustering on smaller memory machines such as a laptop, or to exploit
+available RAM on a large-scale compute server.  Note that this should
+not be the total memory available on a machine, but what can be safely
+dedicated to a clustering job that might run for several hours.  Below
+we discuss in more detail how various dataset characteristics and
+indexing options affect run time and quality of the generated ANNS
+index.
+
+
+### Rebuilding an ANNS index
+
+WRITE ME - we can change parameters which will keep the data but rebuild the index
+
+
+### ANNS indexing considerations
+
+K-means clustering of a large number of high-dimensional vectors is
+expensive.  The complexity is *O(ndki)* when *n* (or *ntotal*)
+*d*-dimensional (or *ndim*) vectors are clustered into *k* (or
+*nlist*) centroids in *i* (or *niter*) iterations (the parameters in
+parentheses are the names used by Faiss and Kypher-V).  To keep run
+time in check on large datasets, it is important to control these
+factors very deliberately and carefully.
+
+**Number of vectors** (*n* or *ntotal*): while this is generally
+predetermined by a dataset, it pays to consider whether it would be
+feasible to work with just a subset of vectors.  For example, datasets
+such as Wikidata have large portions of very sparse nodes for which
+graph or text embeddings might not be very informative, or it might be
+sufficient to only have embeddings for certain types of nodes.  For a
+given *n* Kypher-V will use sampling to cluster a dataset most
+efficiently and within the given memory bounds.
+
+**Vector dimension** (*d* or *ndim*): try to use the smallest number
+of dimensions possible that provides adequate separation.  For
+example, it might be possible to use 768-D instead of 1024-D text
+embeddings for 25% savings in run time.
+
+**Cluster centroids** (*k* or *nlist*): each cluster centroid defines
+a q-cell in the resulting ANNS quantization index.  The more clusters
+the longer it will take for clustering but the shorter search times
+will be during queries because of smaller q-cells.  If clusters are
+too small, larger `nprobe` values will be needed to consider enough
+candidates.  If clusters are too large, the benefits of indexing will
+be reduced.  A good value is an average cluster size of 4K which is
+what the system will try to approximate if no explicit `nlist` value
+is provided.  Moving that up or down a couple of powers of 2 can
+adjust for specific dataset conditions.  Note that cluster sizes will
+generally not be homogenous with some clusters much larger and others
+much smaller than this average size.  This can lead to unbalanced
+query times if a very large cluster needs to be searched during a query.
+
+**Iterations** (*i* or *niter*): this controls the quality of the
+resulting clusters with larger numbers producing higher quality
+for the cost of longer run time.  Improvements from one to the next
+iteration quickly diminish, and it is often not necessary to go
+for the best possible clustering, since the improvements in average
+query run time might be negligible.  For large datasets a single
+iteration might take hour(s), so starting with a lower number and
+possibly reclustering later if that is not good enough might be
+a winning strategy.
+
+
+### Controlling sampling and memory use
+
+Faiss' K-Means clustering uses a high-performance parallel
+implementation that exploits all available CPU cores and requires
+vectors to be loaded into memory.  One of our large Wikidata text
+embedding datasets has about 40 million 1024-D vectors.  With 32-bit
+floats one vector requires 4K bytes to store.  To load all those
+vectors into memory would require about 150GB of RAM (on top of any
+other memory needs).  To reduce memory consumption and also clustering
+run time both Faiss and Kypher-V use sampling (however, Faiss **will
+require** all vectors to be loaded into memory to build the final
+index, while Kypher-V does not).
+
+Faiss and Kypher-V require between 39 and 256 vectors per desired
+q-cell as training data to train the clusters.  Note that this is only
+between 1-6% of the total data for a final q-cell size of 4K.  Given
+available RAM (specified by the `ram` option), Kypher-V will pick the
+maximum training data size in the interval [39,256] that can
+comfortably fit into available RAM based on the number of desired
+q-cells (the value of `nlist`) and randomly sample the data
+accordingly.  If the data is so large that even at the lower end of
+the interval it would exceed available RAM, a multi-batch clustering
+strategy will be used that runs each clustering iteration in multiple
+batches that do fit into available memory.  However, for such very
+large datasets, using a large-scale compute server is recommended to
+cut down on clustering time.
+
+There is no indexing option available to explicitly control sampling.
+To force the system to use a smaller sample size than the maximum of
+256 samples per q-cell, a smaller than realistic `ram` value can be
+used.  For example: a dataset with 55M 100-D vectors will require
+about 6,700 q-cells of size 8K.  At 256 training vectors per q-cell,
+this requires `6700 * 256 * 100 * 4 * 1.2 = 785MB` (1.2 is a fudge
+factor).  Setting `ram=400M` will force the system to use only about
+half of the data points for training which will speed up clustering by
+a factor of two.
+
+
+### Vector data import and indexing times
+
+Here are some example vector data import and clustering times for
+several different datasets.  Entries marked with a `*` were imported
+from a network drive which added additional time.  All imports and
+clusterings were performed on a Lenovo W541 Thinkpad laptop with 8
+cores and 30GB of RAM.  DB size is the size of the resulting Kypher
+graph cache on disk. NN-Index time combines clustering with vector
+quantizing, sorting and DB indexing of the resulting database table.
+The last column shows the relevant indexing options used that were
+different from their default values.
+
+| Dataset         | Type     | N    | Dim     | DB size | Import     | NN-Index   | Total      | <div style="width:300px"> --idx Options </div>            |
+|-----------------|----------|------|---------|---------|------------|------------|------------|-----------------------------------------------------------|
+| Wikidata        | ComplEx  | 53M  |  100    |  26GB   | 1.4 hours* | 1.1 hours  | 2.5 hours  | vector:node2/nn/ram=25g/nlist=16k mode:valuegraph         |
+| Wikidata        | TransE   | 53M  |  100    |  26GB   | 25 min     | 2 hours    | 2.4 hours  | vector:node2/nn/ram=25g/nlist=16k mode:valuegraph         |
+| Wikidata        | Text     | 39M  | 1024    | 182GB   | 8 hours*   | 11.5 hours | 19.5 hours | vector:node2/nn/ram=25g/nlist=16k mode:valuegraph         |
+| Short abstracts | Text     | 5.9M |  768    | 24.5GB  | 16 min     | 28 min     | 44 min     | vector:node2/nn/ram=25g/nlist=2k/niter=20 mode:valuegraph |
+
+
+### Kypher-V tips and tricks
+
+* Start with default ANNS indexing options, then tweak some aspects
+  through index redefinition if there are any issues (e.g., increase
+  `nlist` and/or `niter`)
+* Check imbalanced sizes of q-cells with a query like this:
+  ```
+  kgtk query ... --match '()-[r]->()' --return 'r.`node2;_kgtk_vec_qcell` as qcell, count(r.`node2;_kgtk_vec_qcell`) as count' --order 'count desc'
+  ```
+  Some imbalance is expected, but q-cells that contain O(100,000) or
+  more vectors might cause performance problems.
+* Import large embedding datasets into their own dedicated graph
+  caches and then selectively use them in queries with the `--aux-cache`
+  (or `--ac`) option.  This makes it easy to manage and throw away
+  these very large files without affecting other imported data.
+* Once vectors are imported, export smaller dedicated subsets like this:
+  ```
+  kgtk query ... --match 'emb: (x)-[r]->(xv), claims: (x)-[:P31]->(:Q5)' --return 'r as id, x as node1, "emb" as label, kvec_to_base64(xv) as node2'
+  ```
+* MORE TO COME
