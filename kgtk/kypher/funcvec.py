@@ -61,6 +61,8 @@ import kgtk.kypher.parser as parser
 class VectorFunction(SqlFunction):
     """General function class supporting vector computations.
     """
+    DEFAULT_DTYPE = np.dtype(np.float32)
+    
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.uniquify = True
@@ -105,13 +107,15 @@ class VectorFunction(SqlFunction):
         argument is provided through another function call.
         """
         sql_store, xstore, ystore = self.store, self.xstore, self.ystore
-        xtable, xcolumn, xdtype = None, None, np.float32
+        # for now, if we have a vector argument that does not come from a vector store and,
+        # hence, we don't know its dtype, we assume and coerce everything to DEFAULT_DTYPE:
+        xtable, xcolumn, xdtype = None, None, self.DEFAULT_DTYPE
         xcache = [None, None]
         if xstore is not None:
             xtable = xstore.table
             xcolumn = xstore.column
             xdtype = xstore.get_vector_dtype()
-        ytable, ycolumn, ydtype = None, None, np.float32
+        ytable, ycolumn, ydtype = None, None, self.DEFAULT_DTYPE
         ycache = [None, None]
         if ystore is not None:
             ytable = ystore.table
@@ -119,10 +123,36 @@ class VectorFunction(SqlFunction):
             ydtype = ystore.get_vector_dtype()
         return sql_store, xtable, xcolumn, xdtype, xcache, ytable, ycolumn, ydtype, ycache
 
+    def translate_one_arg_call_to_optimized_sql(self, query, expr, state):
+        args = expr.args
+        if len(args) != 1:
+            raise KGTKException(f"Illegal number of arguments to '{self.get_name()}'")
+        self.xstore, xref = self.get_argument_vector_store(query, args[0], state)
+        self.optimize = self.xstore
+        if self.optimize:
+            # we produce an optimized call operating on vector references:
+            arg = xref
+        else:
+            # otherwise, arg is assumed to yield a byte-string encoding a vector:
+            arg = query.expression_to_sql(args[0], state)
+        self.load()
+        return f'{self.get_name()}({arg})'
+
+    def translate_one_arg_call_to_generic_sql(self, query, expr, state):
+        args = expr.args
+        if len(args) != 1:
+            raise KGTKException(f"Illegal number of arguments to '{self.get_name()}'")
+        self.xstore, xref = self.get_argument_vector_store(query, args[0], state)
+        self.optimize = False
+        # arg is assumed to yield a byte-string encoding a vector:
+        arg = query.expression_to_sql(args[0], state)
+        self.load()
+        return f'{self.get_name()}({arg})'
+    
     def translate_two_arg_call_to_optimized_sql(self, query, expr, state):
         args = expr.args
         if len(args) != 2:
-            raise KGTKException("Illegal number of arguments to '{self.get_name()}'")
+            raise KGTKException(f"Illegal number of arguments to '{self.get_name()}'")
         self.xstore, xref = self.get_argument_vector_store(query, args[0], state)
         self.ystore, yref = self.get_argument_vector_store(query, args[1], state)
         self.optimize = self.xstore and self.ystore and type(self.xstore) == type(self.ystore)
@@ -134,11 +164,11 @@ class VectorFunction(SqlFunction):
             args = [query.expression_to_sql(arg, state) for arg in args]
         self.load()
         return f'{self.get_name()}({", ".join(args)})'
-
+    
     def translate_two_arg_call_to_generic_sql(self, query, expr, state):
         args = expr.args
         if len(args) != 2:
-            raise KGTKException("Illegal number of arguments to '{self.get_name()}'")
+            raise KGTKException(f"Illegal number of arguments to '{self.get_name()}'")
         self.xstore, xref = self.get_argument_vector_store(query, args[0], state)
         self.ystore, yref = self.get_argument_vector_store(query, args[1], state)
         self.optimize = False
@@ -146,6 +176,31 @@ class VectorFunction(SqlFunction):
         args = [query.expression_to_sql(arg, state) for arg in args]
         self.load()
         return f'{self.get_name()}({", ".join(args)})'
+
+
+class GenericVectorFunction(VectorFunction):
+    """Function class for simple vector functions that only implement a generic computation.
+    """
+
+    def translate_call_to_sql(self, query, expr, state):
+        if self.num_params == 1:
+            return self.translate_one_arg_call_to_generic_sql(query, expr, state)
+        elif self.num_params == 2:
+            return self.translate_two_arg_call_to_generic_sql(query, expr, state)
+        else:
+            raise KGTKException(f"don't know how to translate '{self.get_name()}' with {self.num_params} parameters")
+
+    def get_generic_code(self):
+        """Generic calls assume byte strings as inputs which either come directly from the DB
+        or via '_kvec_get_vector' calls or as results from vector computations.
+        """
+        raise KGTKException('not implemented')
+        
+    def get_code(self):
+        if self.code is None:
+            self.code = self.get_generic_code()
+            self.name += '_generic'
+        return self.code
 
 
 class KvecGetVector(VectorFunction):
@@ -302,7 +357,7 @@ class CosineSimilarity(DotProduct):
 
     def translate_call_to_sql(self, query, expr, state):
         if len(expr.args) != 2:
-            raise KGTKException("Illegal number of arguments to '{self.get_name()}'")
+            raise KGTKException(f"Illegal number of arguments to '{self.get_name()}'")
         self.xstore, _ = self.get_argument_vector_store(query, expr.args[0], state)
         self.ystore, _ = self.get_argument_vector_store(query, expr.args[1], state)
         if self.have_l2_normalized_vectors():
@@ -374,7 +429,7 @@ class TopKCosineSimilarity(VirtualGraphFunction, VectorFunction):
 
     DEFAULT_K = 10
     DEFAULT_MAXK = 0
-    DEFAULT_NPROBE = 1 # TO DO: should we use the value from the nn index spec as the default?
+    DEFAULT_NPROBE = -1    # if <= 0, use the default from the NN-index
     DEFAULT_BATCH_SIZE = 1
 
     @staticmethod
@@ -467,12 +522,14 @@ class TopKCosineSimilarity(VirtualGraphFunction, VectorFunction):
         else:
             vectors = [vtfun.input_vector]
             keys = [vtfun.input_vector_key]
-        k = vtfun.current_k
-        nprobe = vtfun.input_nprobe
         vstore = vtfun.vector_store
         nnindex = vstore.get_nearest_neighbor_index() if vstore is not None else None
         if not nnindex or not nnindex.is_trained():
-            return iter([])
+            #return iter([])
+            # don't silently fail, since this is most likely an error or oversight:
+            raise KGTKException(f"no trained nearest neighbor index available for '{vtfun.name}'")
+        k = vtfun.current_k
+        nprobe = vtfun.input_nprobe if vtfun.input_nprobe > 0 else nnindex.nprobe
         ndim = vstore.get_vector_ndim()
         dtype = vstore.get_vector_dtype()
         vectors = [np.frombuffer(vector, dtype=dtype) for vector in vectors]
@@ -483,7 +540,8 @@ class TopKCosineSimilarity(VirtualGraphFunction, VectorFunction):
             # first time around, create the FAISS search index for the respective qcells;
             # we will reuse that if we do dynamic scaling towards maxk:
             vtfun.search_index = nnindex.get_search_index_for_vectors(vectors, nprobe=nprobe)
-        # TO DO: possibly increase 'k' here to account for different L2 vs. cosine distance ordering:
+        # TO DO: possibly increase 'k' here to account for different L2 vs. cosine distance ordering
+        # (e.g., in query manual data with '(x:Q913)...(xv)-[r:kvec_topk_cos_sim {k: 5}]->(y) vs. k=6):
         D, V = nnindex.search(vectors, k, nprobe=nprobe, index=vtfun.search_index)
         
         # for batched processing, we might get O(10000) input vectors with k neighbors for each of them;
@@ -551,10 +609,13 @@ class TopKCosineSimilarity(VirtualGraphFunction, VectorFunction):
         # to be working now, but leaving inputs unbound does affect the cost estimate
         # to the query optimizer which we can address in the new version of TableFunction;
         # we disable this for now, but we might have to reinstate it if problems occur:
-        #rel.properties = rel.properties or {}
+        rel.properties = rel.properties or {}
         #rel.properties.setdefault('k', parser.Literal(query.query, self.DEFAULT_K))
         #rel.properties.setdefault('maxk', parser.Literal(query.query, self.DEFAULT_MAXK))
         #rel.properties.setdefault('nprobe', parser.Literal(query.query, self.DEFAULT_NPROBE))
+        if 'batch_size' in rel.properties and not all(map(lambda k: k in rel.properties, ('ntotal', 'key', 'out_key'))):
+            # enforce this for now to avoid surprises:
+            raise KGTKException(f"{self.name}: 'batch_size' also requires 'ntotal', 'key' and 'out_key' parameters")
         
         # compute relevant vector store:
         self.xstore, _ = self.get_argument_vector_store(query, node1.variable, state, clause=clause)
@@ -585,37 +646,6 @@ Q40	'Austria'@en	Q865	'Taiwan'@en	0.7146331071853638
 Q40	'Austria'@en	Q928	'Philippines'@en	0.7101161479949951
 Q40	'Austria'@en	Q298	'Chile'@en	0.7095608711242676
 """
-
-
-class EuclidianDistance(VectorFunction):
-    """Compute the Euclidian distance between two vectors.
-    """
-    
-    def translate_call_to_sql(self, query, expr, state):
-        return self.translate_two_arg_call_to_generic_sql(query, expr, state)
-
-    def get_generic_code(self):
-        """Generic calls assume byte strings as inputs which either come directly from the DB
-        or via '_kvec_get_vector' calls.
-        """
-        sstore, xtab, xcol, xdtype, xcache, ytab, ycol, ydtype, ycache = self.get_call_context()
-        def _euclidian_distance(x, y):
-            # 'frombuffer' calls are very fast, O(1):
-            vx = np.frombuffer(x, dtype=xdtype)
-            vy = np.frombuffer(y, dtype=ydtype)
-            # make sure we don't return numpy floats:
-            return float(np.linalg.norm(vx - vy))
-        return _euclidian_distance
-        
-    def get_code(self):
-        if self.code is None:
-            self.code = self.get_generic_code()
-            self.name += '_generic'
-        return self.code
-
-EuclidianDistance('kvec_euclidian_distance', num_params=2, deterministic=True).define()
-EuclidianDistance('kvec_euclid_dist', num_params=2, deterministic=True).define()
-EuclidianDistance('kvec_l2_norm', num_params=2, deterministic=True).define()
 
 
 ### Join controllers to support full similarity joins:
@@ -815,3 +845,311 @@ class SimilarityJoinControllerFunction(VectorFunction):
         return self.code
 
 SimilarityJoinControllerFunction(name='kvec_sim_join_ctrl', deterministic=True).define()
+
+
+### Vector computations:
+
+class EuclideanDistance(GenericVectorFunction):
+    """Compute the Euclidean distance between two vectors.
+    """
+    
+    def get_generic_code(self):
+        """Generic calls assume byte strings as inputs which either come directly from the DB
+        or via '_kvec_get_vector' calls.
+        """
+        sstore, xtab, xcol, xdtype, xcache, ytab, ycol, ydtype, ycache = self.get_call_context()
+        def _euclidean_distance(x, y):
+            # 'frombuffer' calls are very fast, O(1):
+            vx = np.frombuffer(x, dtype=xdtype)
+            vy = np.frombuffer(y, dtype=ydtype)
+            # make sure we don't return numpy floats:
+            return float(np.linalg.norm(vx - vy))
+        return _euclidean_distance
+
+EuclideanDistance('kvec_euclidean_distance', num_params=2, deterministic=True).define()
+EuclideanDistance('kvec_euclid_dist', num_params=2, deterministic=True).define()
+
+
+class L0Norm(GenericVectorFunction):
+    """Compute the L0-Norm of a vector ('numpy.linalg.norm(x, ord=0)').
+    Counts the number of non-zero elements in a vector.
+    """
+    
+    def get_generic_code(self):
+        """Generic calls assume byte strings as inputs which either come directly from the DB
+        or via '_kvec_get_vector' calls.
+        """
+        sstore, xtab, xcol, xdtype, xcache, ytab, ycol, ydtype, ycache = self.get_call_context()
+        def _l0_norm(x):
+            # 'frombuffer' calls are very fast, O(1):
+            vx = np.frombuffer(x, dtype=xdtype)
+            # make sure we don't return numpy floats:
+            return float(np.linalg.norm(vx, ord=0))
+        return _l0_norm
+
+L0Norm('kvec_l0_norm', num_params=1, deterministic=True).define()
+
+
+class L1Norm(GenericVectorFunction):
+    """Compute the L1-Norm of a vector ('numpy.linalg.norm(x, ord=1)').
+    Counts the sum of dimensions of a vector (Manhattan distance).
+    """
+    
+    def get_generic_code(self):
+        """Generic calls assume byte strings as inputs which either come directly from the DB
+        or via '_kvec_get_vector' calls.
+        """
+        sstore, xtab, xcol, xdtype, xcache, ytab, ycol, ydtype, ycache = self.get_call_context()
+        def _l1_norm(x):
+            # 'frombuffer' calls are very fast, O(1):
+            vx = np.frombuffer(x, dtype=xdtype)
+            # make sure we don't return numpy floats:
+            return float(np.linalg.norm(vx, ord=1))
+        return _l1_norm
+
+L1Norm('kvec_l1_norm', num_params=1, deterministic=True).define()
+
+
+class L2Norm(GenericVectorFunction):
+    """Compute the L2-Norm or Euclidean norm or Euclidean length of a vector
+    ('numpy.linalg.norm(x, ord=2)').
+    """
+    
+    def get_generic_code(self):
+        """Generic calls assume byte strings as inputs which either come directly from the DB
+        or via '_kvec_get_vector' calls.
+        """
+        sstore, xtab, xcol, xdtype, xcache, ytab, ycol, ydtype, ycache = self.get_call_context()
+        def _l2_norm(x):
+            # 'frombuffer' calls are very fast, O(1):
+            vx = np.frombuffer(x, dtype=xdtype)
+            # make sure we don't return numpy floats:
+            return float(np.linalg.norm(vx, ord=2))
+        return _l2_norm
+
+L2Norm('kvec_l2_norm', num_params=1, deterministic=True).define()
+
+
+# TO DO:
+# The computations below can produce new vectors as their results.  For now - for simplicity -
+# we force those vectors to be of dtype VectorFunction.DEFAULT_DTYPE, since that is the vector
+# data type assumed for arguments that are not associated with any vector store.  In the future
+# we could compute the result type of such a function call statically at translation time, and
+# then pass that type to functions taking such an argument similar to what we do for vector args
+# associated with a vector store/table where we know the dtype.
+
+class VectorPlus(GenericVectorFunction):
+    """Compute elementwise addition 'x + y' between two vectors and/or numbers ('numpy.add').
+    If at least one argument is a vector, the result will also be a vector.
+    """
+    
+    def get_generic_code(self):
+        """Generic calls assume byte strings as inputs which either come directly from the DB
+        or via '_kvec_get_vector' calls.
+        """
+        sstore, xtab, xcol, xdtype, xcache, ytab, ycol, ydtype, ycache = self.get_call_context()
+        # type enforced for newly created vectors - see note above:
+        result_dtype = self.DEFAULT_DTYPE
+        def _vector_plus(x, y):
+            # 'frombuffer' calls are very fast, O(1):
+            x = np.frombuffer(x, dtype=xdtype) if isinstance(x, bytes) else x
+            y = np.frombuffer(y, dtype=ydtype) if isinstance(y, bytes) else y
+            result = x + y
+            return result.astype(result_dtype).tobytes() if isinstance(result, np.ndarray) else result
+        return _vector_plus
+
+VectorPlus('kvec_plus', num_params=2, deterministic=True).define()
+
+
+class VectorMinus(GenericVectorFunction):
+    """Compute elementwise subtraction 'x - y' between two vectors and/or numbers ('numpy.subtract').
+    If at least one argument is a vector, the result will also be a vector.
+    """
+    
+    def get_generic_code(self):
+        """Generic calls assume byte strings as inputs which either come directly from the DB
+        or via '_kvec_get_vector' calls.
+        """
+        sstore, xtab, xcol, xdtype, xcache, ytab, ycol, ydtype, ycache = self.get_call_context()
+        result_dtype = self.DEFAULT_DTYPE
+        def _vector_minus(x, y):
+            # 'frombuffer' calls are very fast, O(1):
+            x = np.frombuffer(x, dtype=xdtype) if isinstance(x, bytes) else x
+            y = np.frombuffer(y, dtype=ydtype) if isinstance(y, bytes) else y
+            result = x - y
+            return result.astype(result_dtype).tobytes() if isinstance(result, np.ndarray) else result
+        return _vector_minus
+
+VectorMinus('kvec_minus', num_params=2, deterministic=True).define()
+
+
+class VectorTimes(GenericVectorFunction):
+    """Compute elementwise multiplication 'x * y' between two vectors and/or numbers ('numpy.multiply').
+    If at least one argument is a vector, the result will also be a vector.
+    """
+    
+    def get_generic_code(self):
+        """Generic calls assume byte strings as inputs which either come directly from the DB
+        or via '_kvec_get_vector' calls.
+        """
+        sstore, xtab, xcol, xdtype, xcache, ytab, ycol, ydtype, ycache = self.get_call_context()
+        result_dtype = self.DEFAULT_DTYPE
+        def _vector_times(x, y):
+            # 'frombuffer' calls are very fast, O(1):
+            x = np.frombuffer(x, dtype=xdtype) if isinstance(x, bytes) else x
+            y = np.frombuffer(y, dtype=ydtype) if isinstance(y, bytes) else y
+            result = x * y
+            return result.astype(result_dtype).tobytes() if isinstance(result, np.ndarray) else result
+        return _vector_times
+
+VectorTimes('kvec_times', num_params=2, deterministic=True).define()
+
+
+class VectorDivide(GenericVectorFunction):
+    """Compute elementwise division 'x / y' between two vectors and/or numbers ('numpy.divide').
+    If at least one argument is a vector, the result will also be a vector.
+    """
+    
+    def get_generic_code(self):
+        """Generic calls assume byte strings as inputs which either come directly from the DB
+        or via '_kvec_get_vector' calls.
+        """
+        sstore, xtab, xcol, xdtype, xcache, ytab, ycol, ydtype, ycache = self.get_call_context()
+        result_dtype = self.DEFAULT_DTYPE
+        def _vector_divide(x, y):
+            # 'frombuffer' calls are very fast, O(1):
+            x = np.frombuffer(x, dtype=xdtype) if isinstance(x, bytes) else x
+            y = np.frombuffer(y, dtype=ydtype) if isinstance(y, bytes) else y
+            result = x / y
+            return result.astype(result_dtype).tobytes() if isinstance(result, np.ndarray) else result
+        return _vector_divide
+
+VectorDivide('kvec_divide', num_params=2, deterministic=True).define()
+
+
+### Input/output:
+
+# TO DO: implement more general and efficient 'kvec_to_text' and 'kvec_from_text' converters;
+#        in general, generating and parsing floats is slow, so byte-IO is always preferred
+
+class VectorStringify(GenericVectorFunction):
+    """Convert a vector into text format as a KGTK string.  Calls 'kgtk_stringify' for non-vectors.
+    """
+    
+    def get_generic_code(self):
+        sstore, xtab, xcol, xdtype, xcache, ytab, ycol, ydtype, ycache = self.get_call_context()
+        precision = xdtype.itemsize * 2 # 2 digits per byte
+        kgtk_stringify = self.get_function('kgtk_stringify').get_code()
+        
+        def _vector_stringify(x):
+            if isinstance(x, bytes):
+                x = np.frombuffer(x, dtype=xdtype)
+                # formatting floats to text seems to be slow in Python and NumPy, no matter what we try:
+                # this seems to be at the core of it all in NumPy with an insane number of options:
+                #xtext = np.array2string(x, separator=',', precision=precision, max_line_width=1000000000)
+                # 1.5 times the speed but produces larger files since we have no precision control:
+                #xtext = str(x.tolist())
+                # twice the speed of array2string - about 5.5 min for 1M 100-D vectors:
+                ffmt = f'.{precision}g'
+                xtext = ','.join(map(lambda x: format(x, ffmt), x))
+                # same as format:
+                #xtext = ','.join(map(lambda x: f'{x:.8g}', x))
+                return '"[' + xtext + ']"'
+            return kgtk_stringify(x)
+        return _vector_stringify
+
+VectorStringify('kvec_stringify', num_params=1, deterministic=True).define()
+
+
+class VectorUnstringify(GenericVectorFunction):
+    """Convert a vector from text format to vector bytes.  Return 'x' for non-vector strings.
+    """
+    
+    def get_generic_code(self):
+        sstore, xtab, xcol, xdtype, xcache, ytab, ycol, ydtype, ycache = self.get_call_context()
+        result_dtype = self.DEFAULT_DTYPE
+        separators = (',', ';', ':', '|', ' ')
+        
+        def _vector_unstringify(x):
+            if isinstance(x, str):
+                start = 0
+                if x.startswith('"'):
+                    start += 1
+                if x.startswith('[', start):
+                    start += 1
+                end = -start if start > 0 else None
+                x = x[start:end]
+                # auto-guess a separator:
+                for sep in separators:
+                    if sep in x:
+                        return np.fromstring(x, dtype=result_dtype, sep=sep).tobytes()
+                else:
+                    # try to handle vectors of length <= 1:
+                    return np.fromstring(x, dtype=result_dtype, sep=',').tobytes()
+            return x
+        return _vector_unstringify
+
+VectorUnstringify('kvec_unstringify', num_params=1, deterministic=True).define()
+
+
+class VectorToBase64(GenericVectorFunction):
+    """Convert a vector into base64 format wrapped as a KGTK string.  Returns null for non-vectors.
+    An optional 'dtype' argument specifies the target element dtype before base64 conversion.
+    """
+
+    def translate_call_to_sql(self, query, expr, state):
+        args = expr.args
+        if len(args) == 1:
+            # add a default value for dtype at translation time which is more efficient:
+            args.append(parser.Literal(query.query, self.DEFAULT_DTYPE.name))
+        return super().translate_call_to_sql(query, expr, state)
+            
+    def get_generic_code(self):
+        sstore, xtab, xcol, xdtype, xcache, ytab, ycol, ydtype, ycache = self.get_call_context()
+        from base64 import standard_b64encode as b64encode
+        
+        def _vector_to_base64(x, dtype):
+            if isinstance(x, bytes):
+                if xdtype.name == dtype:
+                    xbytes = x
+                else:
+                    # we need dtype conversion:
+                    xbytes = np.frombuffer(x, dtype=xdtype).astype(dtype).tobytes()
+                # this is about 8x faster than kvec_stringify:
+                code = b64encode(xbytes).decode()
+                return '"' + code + '"'
+        return _vector_to_base64
+
+VectorToBase64('kvec_to_base64', num_params=2, deterministic=True).define()
+
+
+class VectorFromBase64(GenericVectorFunction):
+    """Convert a vector from base64 format into vector bytes.  Returns null for non-vectors.
+    An optional 'dtype' argument specifies the element dtype of the source vector 'x'.
+    """
+    
+    def translate_call_to_sql(self, query, expr, state):
+        args = expr.args
+        if len(args) == 1:
+            # add a default value for dtype at translation time which is more efficient:
+            args.append(parser.Literal(query.query, self.DEFAULT_DTYPE.name))
+        return super().translate_call_to_sql(query, expr, state)
+    
+    def get_generic_code(self):
+        sstore, xtab, xcol, xdtype, xcache, ytab, ycol, ydtype, ycache = self.get_call_context()
+        result_dtype = self.DEFAULT_DTYPE
+        from base64 import standard_b64decode as b64decode
+        
+        def _vector_from_base64(x, dtype):
+            if isinstance(x, str):
+                if x.startswith('"'):
+                    xbytes = b64decode(x[1:-1])
+                else:
+                    xbytes = b64decode(x)
+                if result_dtype.name != dtype:
+                    # we need dtype conversion:
+                    xbytes = np.frombuffer(xbytes, dtype=dtype).astype(result_dtype).tobytes()
+                return xbytes
+        return _vector_from_base64
+
+VectorFromBase64('kvec_from_base64', num_params=2, deterministic=True).define()
