@@ -433,6 +433,8 @@ declare('kgtk.kypher.funcmath',
 
 declare('kgtk.kypher.funcvec',
         '_kvec_get_vector', 'kvec_dot', 'kvec_dot_product', 'kvec_cos_sim', 'kvec_cosine_similarity',
-        'kvec_topk_cosine_similarity', 'kvec_topk_cos_sim',
-        'kvec_euclidian_distance', 'kvec_euclid_dist', 'kvec_l2_norm',
+        'kvec_topk_cosine_similarity', 'kvec_topk_cos_sim', 'kvec_euclidean_distance', 'kvec_euclid_dist',
+        'kvec_l0_norm', 'kvec_l1_norm', 'kvec_l2_norm',
+        'kvec_plus', 'kvec_minus', 'kvec_times', 'kvec_divide',
+        'kvec_stringify', 'kvec_unstringify', 'kvec_to_base64', 'kvec_from_base64',
         'kvec_sim_join_controller', 'kvec_sim_join_ctrl',)
