@@ -214,8 +214,10 @@ class VectorStore(object):
 
     def get_sqlstore_dbfile(self):
         """Return the DB file in which the data for 'self.table' resides.
+        We return the real path so we will find associated index files even
+        if the main DB file is just a link.
         """
-        return self.store.get_table_dbfile(self.table)
+        return os.path.realpath(self.store.get_table_dbfile(self.table))
     
     def drop_store_data(self):
         """If a vector dataset object for 'table->column' exists, delete it, no-op otherwise.
@@ -270,7 +272,9 @@ class VectorStore(object):
         """
         raise KGTKException('not implemented')
 
-    def guess_vector_format(self, example_vector, seps=(',', ';', ':', '|', ' ')):
+    BASE64_REGEXP = re.compile(r'^[a-zA-Z0-9+/=]*$')
+    
+    def guess_vector_format(self, example_vector, seps=(',', ';', ':', '|', ' '), error=True):
         """Try to infer an encoding from an 'example_vector'.  For now we only handle
         text strings of numbers separated by one of 'seps' that can be parsed by numpy.
         NOTE: white space separators need to be listed AFTER any others so that
@@ -278,26 +282,75 @@ class VectorStore(object):
         """
         if not isinstance(example_vector, str):
             raise KGTKException(f"can only handle vectors in text format'")
-        example_vector = example_vector.strip()
+        start, end = 0, len(example_vector)
+        fmt = 'text'
+        if example_vector.startswith('"'):
+            start += 1
+            end -= 1
+            fmt += '-string'
+        if example_vector.startswith('[', start):
+            start += 1
+            end -= 1
+            fmt += '-vector'
+        # check for base64 format by trying to decode it (a single-element integer
+        # such as 1234 could wrongly pass as base64, but that is highly unlikely);
+        # we still have to use the regexp, since b64decode discards bad characters:
+        if 'vector' not in fmt and self.BASE64_REGEXP.match(example_vector[start:end]):
+            from base64 import standard_b64decode as b64decode
+            try:
+                value = b64decode(example_vector[start:end])
+                fmt = fmt.replace('text', 'base64')
+                return fmt, seps[0]
+            except:
+                pass
+        # check for empty vector:
+        if end - start == 0:
+            return fmt, seps[0]
         for sep in seps:
             if sep in example_vector:
-                return 'string', sep
-        raise KGTKException(f"unhandled vector format'")
+                return fmt, sep
+        # check for single-element vector:
+        try:
+            value = float(example_vector[start:end])
+            return fmt, seps[0]
+        except:
+            pass
+        if error:
+            raise KGTKException(f"unhandled vector format'")
+        else:
+            return fmt, seps[0]
 
     def parse_vectors(self, vectors, fmt=None, dtype=None):
         fmt = fmt or self.get_vector_format()
-        if fmt != ispec.VectorIndex.FORMAT_AUTO:
-            raise KGTKException(f"cannot yet handle vector format '{fmt}'")
         dtype = dtype or self.get_vector_dtype()
         vectors = list(vectors)
         if len(vectors) == 0:
             return vectors
-        fmt, sep = self.guess_vector_format(vectors[0])
-        # parsing text vectors into arrays takes the most time of an import (about the same
-        # as uncompressing the data with the gzip library); we tried various other things
-        # np.loadtxt, parsing into list to array, json.loads, etc., but to no significant
-        # improvement, so we stick with this for now:
-        return [np.fromstring(vec, dtype=dtype, sep=sep) for vec in vectors]
+        # we could cache some of this format analysis done here, but since
+        # we import large blocks of vectors, the overhead is negligible:
+        if fmt == ispec.VectorIndex.FORMAT_AUTO:
+            fmt, sep = self.guess_vector_format(vectors[0])
+        else:
+            gfmt, sep = self.guess_vector_format(vectors[0], error=False)
+            if fmt == ispec.VectorIndex.FORMAT_BASE64 and 'base64' not in gfmt:
+                raise KGTKException(f"vector format doesn't look like base64")
+            if fmt == ispec.VectorIndex.FORMAT_TEXT:
+                # some rare text format vectors could look like base64:
+                gfmt = gfmt.replace('base64', 'text')
+            fmt = gfmt
+        start, end = fmt.count('-'), None
+        if start > 0:
+            end = -start
+        if 'base64' in fmt:
+            from base64 import standard_b64decode as b64decode
+            # vec[0:None] does not create a copy, so we do this restriction always:
+            return [np.frombuffer(b64decode(vec[start:end]), dtype=dtype) for vec in vectors]
+        else:
+            # parsing text vectors into arrays takes the most time of an import (about the same
+            # as uncompressing the data with the gzip library); we tried various other things
+            # np.loadtxt, parsing into list to array, json.loads, etc., but to no significant
+            # improvement, so we stick with this for now:
+            return [np.fromstring(vec[start:end], dtype=dtype, sep=sep) for vec in vectors]
 
     def normalize_vectors(self, vectors):
         """Normalize 'vectors' according to the specified norm and return the normalized
@@ -492,6 +545,54 @@ class InlineVectorStore(VectorStore):
             buffer[i] = np.frombuffer(vec, dtype=dtype)
         return buffer, nvecs
 
+    # TO DO: implement methods on super and siblings
+    def get_vector_sample_as_array(self, n, low=0, high=None, buffer=None, seed=None, bsize=1000):
+        """Return a random sample of 'n' different vectors of this store taken between 0-based
+        rowids 'low' and 'high' (defaults to ntotal).  Assumes all rowids <= 'ntotal'.  If 'n'
+        covers more than 80% of [low:high] simply generate a sequence from 'low' of length 'n'.
+        Vectors will be retrieved in blocks of 'bsize' of which 'n' should be a multiple, if
+        it isn't, it will be truncated to the closest multiple.  Two calls with the same defined
+        integer 'seed' will result in the same set of vectors.  If 'buffer is supplied, copy the
+        vectors into it (assuming it is big enough and of the right type).  Return the array of
+        vectors and the actual number of vectors that were retrieved.
+        """
+        # NOTE: if a buffer is supplied, float type conversions will happen automatically
+        bsize = min(bsize, n)
+        n = (n // bsize) * bsize
+        ntotal = self.get_store_ntotal()
+        dtype = self.get_vector_dtype()
+        if buffer is None:
+            ndim = self.get_vector_ndim()
+            buffer = np.zeros(n * ndim, dtype=dtype)
+            buffer.shape = (n, ndim)
+            
+        # generate random sample of size 'n' 1-based rowids without duplicates:
+        low = low + 1
+        high = (high or ntotal) + 1
+        if n > (high - low) * 0.8:
+            # we are sampling 80% or more of the range, simply use the prefix:
+            rowids = np.array(range(low, low + n))
+        else:
+            rng = np.random.default_rng(seed)
+            rowids = np.unique(rng.integers(low, high, n))
+            # this loop should generally run just one or two times:
+            while len(rowids) < n:
+                rowids = np.unique(np.concatenate((rowids, rng.integers(low, high, n))))
+            rng.shuffle(rowids)
+            rowids = rowids[0:n]
+            rowids.sort()
+        
+        # most of the time of the query is spent skipping across the vector graph cache,
+        # however, this simple blocking scheme can save about 40% or so in runtime:
+        query = f"""SELECT {sql_quote_ident(self.column)} FROM {self.table}
+                    WHERE {self.table}.rowid in ({','.join(['?']*bsize)})"""
+        for i in range(0, n, bsize):
+            # TRICKY: the .tolist() call also converts the np.int64's to Python int's which we need for sqlite:
+            vecs = [np.frombuffer(row[0], dtype=dtype) for row in self.store.execute(query, rowids[i:i+bsize].tolist())]
+            buffer[i:i+bsize] = vecs
+        return buffer, n
+
+    
     # NOTE: 50 qcells with 16K 1K-D vectors each take up about 3GB of RAM;
     # this seems obsolete given that we now know how to properly reuse the search index:
     #@lru_cache(maxsize=50)
@@ -1130,12 +1231,12 @@ class FaissIndex(NearestNeighborIndex):
 
     FAISS_FLOAT_TYPE = np.float32    # uniform float type used by FAISS C++ API
     FAISS_VECTOR_ID_TYPE = np.int64  # type for numeric vector IDs
-    DEFAULT_CENTROID_SIZE = 8192
+    DEFAULT_CENTROID_SIZE = 4096
     DEFAULT_MIN_POINTS_PER_CENTROID = 39
     DEFAULT_MAX_POINTS_PER_CENTROID = 256
-    DEFAULT_MAX_ALLOWED_RAM = 16 * 1024 * 1024 * 1024
+    DEFAULT_MAX_ALLOWED_RAM= 2 ** 34 # 16GB
     DEFAULT_NITER = 10
-    DEFAULT_NPROBE = 8
+    DEFAULT_NPROBE = 1
     MIN_TEMP_TABLE_SIZE = 2 ** 31    # 2GB, assume temp tables can be at least this big
     
     # if true, incrementally grow the search index for more and more qcells up to a limit;
@@ -1181,8 +1282,8 @@ class FaissIndex(NearestNeighborIndex):
         if self.nlist is None:
             self.nlist = self.index_options.get('nlist')
             if self.nlist is None:
-                # pick closest power of 2 based on default centroid size:
-                self.nlist = 1 << round(math.log2(self.ntotal / self.DEFAULT_CENTROID_SIZE))
+                # pick closest power of 2 based on default centroid size, but >= 2 for small data:
+                self.nlist = 1 << round(math.log2(max(self.ntotal / self.DEFAULT_CENTROID_SIZE, 2)))
         if self.niter is None:
             self.niter = self.index_options.get('niter') or self.DEFAULT_NITER
         if self.nprobe is None:
@@ -1273,6 +1374,10 @@ class FaissIndex(NearestNeighborIndex):
         # more advantageous to do all iterations at once, we implement this separately:
         clus = faiss.Clustering(self.vector_ndim, self.nlist)
         clus.niter = self.niter
+        # making this another index option likely doesn't help us much, since it just improves
+        # the clustering of the sample; what we really should measure is how imbalanced the
+        # full set of quantized vectors is, and either redo or try to fix up the large clusters:
+        #clus.nredo = 5
         clus.verbose = self.sql_store.loglevel > 0
         if self.vector_norm == ispec.VectorIndex.NORM_L2:
             clus.index = faiss.IndexFlatIP(self.vector_ndim)
@@ -1282,8 +1387,13 @@ class FaissIndex(NearestNeighborIndex):
         self.quantizer = clus.index
         vstore = self.vector_store
         buffer = self.get_data_buffer()
-        # TO DO: support random sampling of batches
-        buffer, nvec = vstore.get_vectors_as_array(self.batch_size, offset=0, buffer=buffer)
+        if hasattr(vstore, 'get_vector_sample_as_array'):
+            self.sql_store.log(1, f'Selecting random sample of {self.batch_size} training vectors...')
+            bsize = max(int(min(self.batch_size * 0.001, 1000)), 1)
+            buffer, nvec = vstore.get_vector_sample_as_array(self.batch_size, buffer=buffer, bsize=bsize)
+        else:
+            self.sql_store.log(1, f'Selecting {self.batch_size} training vectors...')
+            buffer, nvec = vstore.get_vectors_as_array(self.batch_size, offset=0, buffer=buffer)
         self.sql_store.log(1, f'Training vector store quantizer:')
         clus.train(buffer[0:nvec], clus.index)
         self.sql_store.log(1, '\n') # kludge: ensure newline after clustering log output
@@ -1292,6 +1402,7 @@ class FaissIndex(NearestNeighborIndex):
     def train_quantizer_multi_batch(self):
         clus = faiss.Clustering(self.vector_ndim, self.nlist)
         clus.niter = 1
+        #clus.nredo = 5  # see above
         clus.verbose = self.sql_store.loglevel > 0
         if self.vector_norm == ispec.VectorIndex.NORM_L2:
             clus.index = faiss.IndexFlatIP(self.vector_ndim)
@@ -1301,14 +1412,23 @@ class FaissIndex(NearestNeighborIndex):
         self.quantizer = clus.index
         vstore = self.vector_store
         buffer = self.get_data_buffer()
-        # TO DO: figure out whether we should use the 'nredo' parameter for this instead:
+        rng = np.random.default_rng(None)
+        seeds = rng.integers(0, 2 ** 32, self.nbatches) 
         for i in range(self.niter):
             cursor = 0
-            self.sql_store.log(1, f'Training vector store quantizer iteration {i+1}:')
+            self.sql_store.log(1, f'Training vector store quantizer multi-batch iteration {i+1}:')
             for b in range(self.nbatches):
-                # TO DO: support random sampling of batches, for the multi-batch case we also
-                #        need to ensure that we get the same sampled batches in each iteration
-                buffer, nvec = vstore.get_vectors_as_array(self.batch_size, offset=cursor, buffer=buffer)
+                if hasattr(vstore, 'get_vector_sample_as_array'):
+                    # use a consistent random seed for the same sampled subbatch in each slice iteration:
+                    self.sql_store.log(1, f'Selecting random sample of {self.batch_size} training vectors...')
+                    slice_size = int(self.ntotal / self.nbatches)
+                    low = b * slice_size
+                    high = low + slice_size
+                    bsize = int(min(self.batch_size * 0.001, 1000))
+                    buffer, nvec = vstore.get_vector_sample_as_array(self.batch_size, low=low, high=high, seed=seeds[b], buffer=buffer, bsize=bsize)
+                else:
+                    self.sql_store.log(1, f'Selecting {self.batch_size} training vectors...')
+                    buffer, nvec = vstore.get_vectors_as_array(self.batch_size, offset=cursor, buffer=buffer)
                 clus.train(buffer[0:nvec], clus.index)
                 cursor += nvec
         return clus
