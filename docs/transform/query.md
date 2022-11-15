@@ -11,8 +11,9 @@ also be optionally compressed.  Output goes to stdout or the specified
 output file which will be transparently compressed according to its file extension.
 
 !!! note
-    <b>Important restriction:</b> Command pipes must contain **at most** one query command
-    due to database locking considerations.  Future versions will relax this restriction.
+    **Important restriction:** Command pipes must contain **at most** one query command
+    per graph cache due to database locking considerations.  Future versions might relax
+    this restriction.
 
 
 ## Usage
@@ -354,7 +355,7 @@ kgtk query -i $GRAPH \
 Note that constants such as `Otto` need to be quoted when used in the `--where`
 clause very similar to SQL.  This needs to be handled carefully, since we have
 to make sure that the quotes will not be ignored by the Unix shell (see
-[<b>Quoting</b>](#quoting) for more details).
+[**Quoting**](#quoting) for more details).
 
 Next is an example using a regular expression to filter on the names attached to
 nodes.  The Kypher `=~` operator matches a value against a regular expression.
@@ -402,7 +403,7 @@ function `substr` to extract the first letter of each name following
 the quote character.  `substr` is one of [SQLite3 built-in scalar
 functions](https://sqlite.org/lang_corefunc.html), all of which can be
 used in `--where` and other Kypher clauses that accept expressions
-(see [<b>Built-in functions</b>](#built-in-functions) for more details):
+(see [**Built-in functions**](#built-in-functions) for more details):
 
 ```
 kgtk query -i $GRAPH \
@@ -504,7 +505,7 @@ represent the unique identities of edges.  All other elements of an
 edge such as its `node1`, `node2`, `label` and extra columns can then
 be referenced using Kypher's property syntax.  For example, `r.label`
 references an edge's label, `r.node1` its starting node, or `r.time`
-an extra column named `time`.  See [<b>Edges and properties</b>](#properties)
+an extra column named `time`.  See [**Edges and properties**](#properties)
 for more details.  Below is the query which now does produce
 valid KGTK as output (the order of columns does not matter):
 
@@ -585,7 +586,7 @@ Here is another more complex example that uses the built-in function
 `kgtk_unstringify` to convert KGTK string literals to regular symbols,
 and `kgtk_stringify` to convert regular symbols into strings.
 KGTK-specific built-in functions all start with a `kgtk_` prefix and
-are documented in more detail here: [<b>Built-in functions</b>](#built-in-functions).
+are documented in more detail here: [**Built-in functions**](#built-in-functions).
 Note below how the language-qualified string `'Otto'@de` stays
 unchanged, since `kgtk_unstringify` only modifies values that are in
 fact string literals.  Again we use aliases to produce valid KGTK
@@ -612,7 +613,7 @@ example, in this query we first select edges with language-qualified
 names and then use `n.kgtk_lqstring_lang` to retrieve the language
 field into a separate column named as `node2;lang` in the return
 (which is a path column name that needs to be quoted with backticks in
-Kypher - see [<b>Quoting</b>](#quoting) for more details).
+Kypher - see [**Quoting**](#quoting) for more details).
 
 ```
 kgtk query -i $GRAPH \
@@ -747,7 +748,7 @@ More comprehensive `union` processing to combine the results of multiple queries
 might become available in future versions.  Some kind of that can already
 be achieved through pipelines of KGTK commands combining `query` and `cat`, for
 example.  Certain cases can also be handled by introducing additional graphs
-such as the `$PROPS` graph used in [this example](#time-machine-use-case).
+such as the `$PROPS` graph used in [**this example**](#time-machine-use-case).
 
 
 ### Querying connected edges across multiple graphs
@@ -807,7 +808,7 @@ provided input files.  Kypher does this by greedily looking for these
 graph names in the file names and paths of the input files specified in
 order.  Once a match is found that file is removed from the match pool
 and any remaining graph variables are matched against the remaining files.
-See [<b>Input and output specifications</b>](#input-output) on more details of this
+See [**Input and output specifications**](#input-output) on more details of this
 process.  A simple way of referring to files as graphs is by the initial
 character of their file name (as long as they differ), which is what we
 do here.  `g` matches the `graphs.tsv` file and `w` matches `works.tsv`.
@@ -927,7 +928,7 @@ Result:
 
 Similar to SQL and Cypher, Kypher supports aggregation functions such
 as `count`, `min`, `max`, `avg`, etc.
-(see [<b>Built-in functions</b>](#built-in-functions)).  The simplest
+(see [**Built-in functions**](#built-in-functions)).  The simplest
 aggregation operation involves counting rows or values via the `count`
 function.  For example, we might want to know how many edges have Joe
 as the starting node:
@@ -1179,8 +1180,8 @@ specification, since optionals do not inherit the current graph of the
 previous match clause.  `kgtk_lqstring_lang` is undefined for values
 that aren't language-qualified strings.  For that reason we wrap it
 with `kgtk_null_to_empty`, otherwise the condition will always be
-false if one of its arguments is NULL (see [<b>Null
-values</b>](#null-values) for more details):
+false if one of its arguments is NULL (see [**Null
+values**](#null-values) for more details):
 
 ```
 kgtk query -i $GRAPH -i $WORKS \
@@ -1522,7 +1523,7 @@ which needs to be specified via `-`, even if only a single input is used.
     `query` command will not perform any validation and may fail when given invalid KGTK files.
 
 !!! note
-    <b>Important restriction:</b> if an input is specified to be coming from standard input
+    **Important restriction:** if an input is specified to be coming from standard input
     none of the commands feeding the query must themselves be query commands due to
     database locking considerations.  Future versions will relax this restriction.
 
@@ -1911,7 +1912,7 @@ Result:
 | w15 | Susi  | works | Cakes  |
 
 !!! note
-    <b>Important:</b> when one or more auxiliary caches are used in a query
+    **Important:** when one or more auxiliary caches are used in a query
     all graph caches are queries in read-only mode (see below).  This means
     graph caches need to be fully constructed and indexed before they can
     be used in such a query (this restriction might be relaxed in the future).
@@ -1963,8 +1964,12 @@ of different data files are being queried over time.  Cache size is
 generally around 1-2.5 times the uncompressed size of all imported
 KGTK files depending on indexing requirements.  For large datasets it
 is often useful to specify dedicated graph caches via the
-`--graph-cache` option to keep file sizes manageable.  Note that all
-graphs queried in a single query must reside in the same graph cache.
+`--graph-cache` option to keep file sizes manageable.  It is also
+possible to spread data files over several graph caches and then
+attach them via the `--aux-cache` directive (see [**Auxiliary Graph
+Caches**](#auxiliary-graph-caches) for more details).  Note that all
+graphs queried in a single query must reside in either the main graph
+cache or one of the auxiliary caches.
 
 For best performance, cache files should reside on a local, internal
 SSD drive and not be accessed via a USB connection or network share
@@ -2075,7 +2080,7 @@ necessarily be somewhat incomplete.  For a more complete description
 of the Cypher language it is based on please refer to
 [Cypher](https://neo4j.com/developer/cypher/) and
 [openCypher](https://www.opencypher.org/resources), but keep in mind
-the important differences described [here](#differences-to-cypher).
+the important differences described [**here**](#differences-to-cypher).
 Also both Cypher and the implementation of Kypher are closely related
 to SQL which is always another good query language reference to
 consider.  Finally, while Kypher has a fairly comprehensive parser of
@@ -2091,7 +2096,6 @@ TO DO: Needs to describe edge as well as node properties and how they
 relate to extra columns.
 
 
-<A NAME="quoting"></A>
 ### Quoting
 
 #### Quoting of literals
@@ -2173,7 +2177,6 @@ TO DO: describe backtick quoting for graph variables, column names, etc.
 TO DO
 
 
-<A NAME="null-values"></A>
 ### Null values
 
 The KGTK file format cannot distinguish empty and `NULL` values, so when
@@ -2236,7 +2239,6 @@ Result:
 TO DO
 
 
-<A NAME="built-in-functions"></A>
 ### Built-in functions
 
 Kypher supports a number of built-in functions that can be used in conditions,
@@ -2820,7 +2822,7 @@ Besides high-level modes, a concise more fine-grained language of
 index specs is also available to allow highly custom-tailored
 specification of graph indexes.  This is particularly useful for text
 search indexing which provides a number of different indexing options
-(see [<b>Full text search functions</b>](#text-search-functions) for
+(see [**Full text search functions**](#text-search-functions) for
 more details).
 
 Index specs are indicated with the `index:` prefix for graph indexes
@@ -3168,7 +3170,7 @@ Result:
 | e-ecf67b59 |  Q10061      | emb     |  "[-0.10639298,...,0.59102327]" |
 
 !!! note
-    <b>Important:</b> A vector file needs to be homogenous, which
+    **Important:** A vector file needs to be homogenous, which
     means that each row has to contain a vector, each vector has to
     have the same element type and number of dimensions, and each
     vector literal uses the same format and separator.  Vector tables
@@ -3199,7 +3201,7 @@ vector column.  Vectors where transformed into byte arrays stored as
 SQLite BLOB values, displayed here in a Python byte string format.
 
 !!! note
-    <b>Important:</b> The byte strings shown here are not a valid KGTK
+    **Important:** The byte strings shown here are not a valid KGTK
     vector format, they are usually not output and only used internally.
     One of the vector output functions described below needs to be used
     to convert them into valid KGTK vector literals.
@@ -3216,7 +3218,6 @@ kgtk query -i $EMBED --idx vector: mode:valuegraph --limit 2
 ```
 
 
-<A NAME="vector-storage options"></A>
 ### Vector storage options
 
 Kypher-V implements scalable and efficient disk-based vector storage
@@ -3289,7 +3290,6 @@ which generally can only produce good results for a single vector
 column (unless the different vector columns cluster very similarly).
 
 
-<A NAME="vector-functions"></A>
 ### Vector functions
 
 Vector functions take one or more vectors accessed in a query and
@@ -3385,7 +3385,6 @@ Result:
 | 'Aristotle'@en  | 'Socrates'@en  | 0.6926079392433167 |
 
 
-<A NAME="similarity-search"></A>
 ### Similarity search
 
 A core functionality provided by Kypher-V is similarity search, which
@@ -3431,7 +3430,6 @@ minutes on a laptop) and we will use nearest neighbor indexing
 described below to speed things up.
 
 
-<A NAME="indexed-search"></A>
 ### Indexed similarity search
 
 For much faster similarity search over large datasets, we use an
@@ -3468,7 +3466,7 @@ Kypher automatically behind the scenes, ANNS indexes can be quite
 expensive to generate and might require a number of user-specified
 parameters to control index creation time and quality.  For this
 reason, an explicit index directive is required (somewhat similar to
-what we do for [<b>text search indexes</b>](#text-search-functions)).
+what we do for [**text search indexes**](#text-search-functions)).
 
 Let's run this query again but this time create an ANNS index for it
 controlled by the `--idx` option on the embedding input.  The relevant
@@ -3535,8 +3533,8 @@ If some of the option values changed, however, the index will be rebuilt.
 Except for datasets that are very large or very small like this one,
 ANNS index options can generally be left unspecified at their default
 values.  For a more exhaustive discussion of available indexing
-options and the tradeoffs involved see the section on [ANNS
-indexes](#anns-indexes).
+options and the tradeoffs involved see the section on [**ANNS
+indexes**](#anns-indexes).
 
 
 #### Indexed similarity search parameters
@@ -3610,7 +3608,6 @@ WRITE ME
 WRITE ME - EXPERIMENTAL
 
 
-<A NAME="anns-indexes"></A>
 ### ANNS indexes
 
 Kypher-V uses a custom disk-based ANNS index architecture based on
@@ -3685,7 +3682,6 @@ Then at query time, we do the following to load and exploit an ANNS index:
     * Using the standard Faiss API which uses very fast parallel search
 
 
-<A NAME="anns-indexing-options"></A>
 ### ANNS indexing options
 
 The following options control ANNS index creation:
