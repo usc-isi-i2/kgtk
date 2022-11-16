@@ -336,7 +336,7 @@ class ComputeGraphEmbeddings(object):
             tmp_output_folder = Path(processed_config['entity_path'])
 
             # before moving, need to check whether the tmp folder is not empty in case of bug
-            try:  # if temporry output folder is alrady existing then delete it
+            try:  # if temporary output folder is alrady existing then delete it
                 shutil.rmtree(tmp_output_folder)
             except Exception:
                 pass  # didn't find, then let it go
@@ -392,7 +392,7 @@ class ComputeGraphEmbeddings(object):
             # ************************************************
             # 5. Garbage collection
             # ************************************************
-            if self.retain_temporary_data:
+            if not self.retain_temporary_data:
                 shutil.rmtree(self.temporary_directory)
                 # tmp_tsv_path.unlink() # delete temporay tsv file
                 # shutil.rmtree(tmp_output_folder) # deleter temporay output folder
