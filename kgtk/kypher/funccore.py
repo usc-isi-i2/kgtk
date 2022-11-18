@@ -32,6 +32,13 @@ def kgtk_regex(x, regex):
     m = isinstance(x, str) and _get_regex(regex).match(x) or None
     return m is not None and m.end() == len(x)
 
+@sqlfun(num_params=3, deterministic=True)
+def kgtk_regex_replace(x, regex, repl):
+    """Regex matcher that implements the Cypher '=~' semantics which must match the whole string.
+    """
+    # TO DO: using the new API, we could create query-translation-time compilations of the regex
+    return _get_regex(regex).sub(repl, str(x))
+
 
 # NULL value utilities:
 
