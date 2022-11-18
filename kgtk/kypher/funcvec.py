@@ -593,6 +593,45 @@ class TopKCosineSimilarity(VirtualGraphFunction, VectorFunction):
             self.code.vector_store = self.xstore
         return self.code
 
+    def has_join_controller(self, query, clause, state):
+        """Return True if a similarity join controller linked to this 'clause'
+        has already been added to 'query'.
+        """
+        rel = clause[1]
+        vrel = rel.variable
+        for mclause in query.get_match_clauses():
+            for pclause in mclause.get_pattern_clauses():
+                prel = pclause[1]
+                # test if we have a join controller clause that matches on the variable:
+                if prel.variable.name == vrel.name and prel.labels == ('kvec_sim_join_controller',):
+                    return True
+        return False
+
+    def add_join_controller(self, query, clause, state):
+        """Add a similarity join controller linked to this 'clause'
+        so we can do dynamic scaling for this similarity query.
+        """
+        # this is a little low level, we need some better abstractions if we do this more often:
+        node1, rel, node2 = clause
+        vrel = rel.variable
+        vnode2 = node2.variable
+        # getting a usable graph handle is a little crufty - it would be nice to have
+        # a syntax that would let us reference a graph table such as 'graph_4' directly:
+        graph = node1.graph.name if node1.graph else query.default_graph
+        # we start with the optional join controller match clause in surface syntax:
+        cont_clause = f'`{graph}`: (`{vnode2.name}`)-[`{vrel.name}`:kvec_sim_join_controller]->()'
+        parser_query = query.query
+        # we need to wrap it into a dummy top-level query that is valid Kypher to parse it:
+        qtree = parser.parse(f'MATCH ()-[]->() OPTIONAL MATCH {cont_clause} RETURN *')
+        # now we excise the parsed optional clause tree we want:
+        opt_clause = qtree[1][2]
+        # intern and simplify it into the parsed query of this query:
+        opt_clause = parser.intern_ast(parser_query, opt_clause).simplify()
+        # add the new optional clause to the end:
+        parser_query.get_optional_match_clauses().append(opt_clause)
+        # also update optional clauses of the top-level query object:
+        query.optional_clauses = parser_query.get_optional_match_clauses()
+
     def translate_call_to_sql(self, query, clause, state):
         """Called by query.pattern_clause_to_sql() to translate a clause
         with a virtual graph pattern.  This primarily computes the associated
@@ -602,8 +641,6 @@ class TopKCosineSimilarity(VirtualGraphFunction, VectorFunction):
         rel = clause[1]
         if rel.labels is None:
             return
-        # we force dont_optimize for match clauses containing this virtual graph:
-        query.get_pattern_clause_match_clause(clause).dont_optimize = True
 
         # supply default arguments - this isn't strictly necessary anymore and seems
         # to be working now, but leaving inputs unbound does affect the cost estimate
@@ -613,9 +650,22 @@ class TopKCosineSimilarity(VirtualGraphFunction, VectorFunction):
         #rel.properties.setdefault('k', parser.Literal(query.query, self.DEFAULT_K))
         #rel.properties.setdefault('maxk', parser.Literal(query.query, self.DEFAULT_MAXK))
         #rel.properties.setdefault('nprobe', parser.Literal(query.query, self.DEFAULT_NPROBE))
+
+        # maxk != 0 means dynamic scaling which needs a join controller which we add here on demand.
+        # NOTE: if maxk points to a variable for some reason, we'll add a controller regardless:
+        maxk = rel.properties.get('maxk')
+        maxk = maxk.value if isinstance(maxk, parser.Literal) else maxk
+        if maxk is not None and maxk != self.DEFAULT_MAXK and not self.has_join_controller(query, clause, state):
+            self.add_join_controller(query, clause, state)
+            # abort current translation to top level and restart:
+            query.retranslate()
+            
         if 'batch_size' in rel.properties and not all(map(lambda k: k in rel.properties, ('ntotal', 'key', 'out_key'))):
             # enforce this for now to avoid surprises:
             raise KGTKException(f"{self.name}: 'batch_size' also requires 'ntotal', 'key' and 'out_key' parameters")
+        
+        # we force dont_optimize for match clauses containing this virtual graph:
+        query.get_pattern_clause_match_clause(clause).dont_optimize = True
         
         # compute relevant vector store:
         self.xstore, _ = self.get_argument_vector_store(query, node1.variable, state, clause=clause)
