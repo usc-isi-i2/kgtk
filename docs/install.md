@@ -91,7 +91,7 @@ In your `kgtk-notebooks` folder, start the first KGTK Tutorial notebook using th
 following command:
 
 ```bash
-jupyter lab part1-kgtk-intro.ipynb
+jupyter lab tutorial/01-kgtk-introduction.ipynb
 ```
 
 This will start a Jupyter Lab notebook server in your current terminal
