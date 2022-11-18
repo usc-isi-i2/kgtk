@@ -2269,6 +2269,7 @@ to their full documentation.
 | lower(x)                  | Convert `x` to lower case                         ([full doc](https://sqlite.org/lang_corefunc.html#lower)).   |
 | printf(format, ...)       | Build a formatted string from some arguments      ([full doc](https://sqlite.org/lang_corefunc.html#printf)).  |
 | replace(x, from, to)      | Replace `from` with `to` in `x`                   ([full doc](https://sqlite.org/lang_corefunc.html#replace)). |
+| rowid(x)                  | Implements `rowid` lookup for Kypher query variable `x`, which is the 1-based row ID in the graph table from which the current value of `x` is retrieved.  If `x` is a join variable, the table is ambiguous and the result will be arbitrary, so an unjoined relation variable is generally a good choice. |
 | substr(x, start, length)  | Substring of `x` of `length` starting at `start`  ([full doc](https://sqlite.org/lang_corefunc.html#substr)).  |
 | substr(x, start)          | Substring of `x` starting at `start` to the end   ([full doc](https://sqlite.org/lang_corefunc.html#substr)).  |
 | typeof(x)                 | Return the type of expression `x`                 ([full doc](https://sqlite.org/lang_corefunc.html#typeof)).  |
@@ -2294,7 +2295,8 @@ function registration API cannot support optional arguments.
 
 #### SQLite built-in aggregation functions
 
-TO DO
+All of [**SQLite3's built-in aggregate
+functions**](https://www.sqlite.org/lang_aggfunc.html) can be used.
 
 
 #### General KGTK functions
