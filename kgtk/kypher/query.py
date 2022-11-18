@@ -231,6 +231,17 @@ class KgtkQuery(object):
         self.default_graph = self.files[0]
         self.graph_handle_map = {}
         self.result_header = None
+        self.translation_iter = None
+
+    def reset(self):
+        """Reset all slots that are computed during translation back to their original values.
+        """
+        # TO DO: it is assumed that any caller that needs retranslation massages the initial
+        # state created by __init__() into something that can then be used appropriately for
+        # a re-run, but we might need more fine-grained reset/reinit methods down the line
+        self.graph_handle_map = {}
+        self.result_header = None
+        self.translation_iter = None
 
     def get_input_option(self, file, option, dflt=None):
         for input, opts in self.options.items():
@@ -783,7 +794,7 @@ class KgtkQuery(object):
         where = self.where_clause_to_sql(with_clause.where, state)
         return where
     
-    def translate_to_sql(self):
+    def translate_to_sql_iter(self):
         """Translate this query into an equivalent SQL expression.
         Return the SQL as part of the accumulated final translation state.
         """
@@ -868,7 +879,35 @@ class KgtkQuery(object):
 
         state.set_sql(query)
         state.set_parameters(parameters)
-        return state
+        
+        # implement this as a generator, so we can retranslate from scratch if necessary:
+        yield state
+
+    def translate_to_sql(self):
+        """Translate this query into an equivalent SQL expression.
+        Return the SQL as part of the accumulated final translation state.
+        This is the top-level controller that handles possible retranslation
+        restarts in case the query was rewritten or augmented somewhere.
+        """
+        while True:
+            self.translation_iter = self.translate_to_sql_iter()
+            try:
+                for state in self.translation_iter:
+                    return state
+            except GeneratorExit as e:
+                if e.args == ('_retranslate',):
+                    #print('retranslating...')
+                    continue
+                else:
+                    raise e
+
+    def retranslate(self):
+        """Abort the current translation to the top level and restart from scratch.
+        This is needed by certain translation specialists that need to
+        rewrite or augment the initial query.
+        """
+        self.reset()
+        raise GeneratorExit('_retranslate')
 
     
     def compute_auto_indexes(self, state):
