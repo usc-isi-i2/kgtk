@@ -7,7 +7,6 @@ import os.path
 import io
 import re
 import time
-import pprint
 import itertools
 
 import sh
@@ -15,9 +14,9 @@ from   odictliteral import odict
 
 import kgtk.kypher.parser as parser
 import kgtk.kypher.sqlstore as ss
-from   kgtk.value.kgtkvalue import KgtkValue
-
-pp = pprint.PrettyPrinter(indent=4)
+from   kgtk.kypher.utils import *
+import kgtk.kypher.indexspec as ispec
+from   kgtk.kypher.functions import SqlFunction
 
 
 ### TO DO:
@@ -55,12 +54,10 @@ pp = pprint.PrettyPrinter(indent=4)
 
 ### Utilities
 
-def listify(x):
-    return (hasattr(x, '__iter__') and not isinstance(x, str) and list(x)) or (x and [x]) or []
-
 def dwim_to_string_para(x):
     """Try to coerce 'x' to a KGTK string value that can be passed as a query parameter.
     """
+    from kgtk.value.kgtkvalue import KgtkValue # expensive: 120ms
     x = str(x)
     m = KgtkValue.strict_string_re.match(x)
     if m is not None:
@@ -74,6 +71,7 @@ def dwim_to_string_para(x):
 def dwim_to_lqstring_para(x):
     """Try to coerce 'x' to a KGTK LQ-string value that can be passed as a query parameter.
     """
+    from kgtk.value.kgtkvalue import KgtkValue # expensive: 120ms
     x = str(x)
     m = KgtkValue.strict_language_qualified_string_re.match(x)
     if m is not None:
@@ -164,7 +162,8 @@ class KgtkQuery(object):
     def __init__(self, files, store, options=None, query=None,
                  match='()', where=None, optionals=None, with_=None,
                  ret='*', order=None, skip=None, limit=None, multi=None,
-                 parameters={}, index='auto', force=False, loglevel=0):
+                 parameters={}, index='auto', force=False, dont_optimize=False,
+                 loglevel=0):
         self.options = options or {}
         self.store = store
         self.loglevel = loglevel
@@ -211,6 +210,7 @@ class KgtkQuery(object):
         if multi is not None and multi < 1:
             raise Exception(f'Illegal multi-edge value: {multi}')
         self.multi_edge = multi
+        self.dont_optimize = dont_optimize
         
         # process/import files after we parsed the query, so we get syntax errors right away:
         self.files = []
@@ -218,7 +218,9 @@ class KgtkQuery(object):
             file = str(file) # in case we get a path object
             alias = self.get_input_option(file, 'alias')
             comment = self.get_input_option(file, 'comment')
-            store.add_graph(file, alias=alias)
+            index_specs = self.get_input_option(file, 'index_specs')
+            append_files = self.get_input_option(file, 'append')
+            store.add_graph(file, alias=alias, index_specs=index_specs, append=append_files)
             # use aliases for handle matching, otherwise unnormalized files except for stdin:
             norm_file = store.get_normalized_file(file, alias=alias)
             if store.is_standard_input(file):
@@ -229,6 +231,17 @@ class KgtkQuery(object):
         self.default_graph = self.files[0]
         self.graph_handle_map = {}
         self.result_header = None
+        self.translation_iter = None
+
+    def reset(self):
+        """Reset all slots that are computed during translation back to their original values.
+        """
+        # TO DO: it is assumed that any caller that needs retranslation massages the initial
+        # state created by __init__() into something that can then be used appropriately for
+        # a re-run, but we might need more fine-grained reset/reinit methods down the line
+        self.graph_handle_map = {}
+        self.result_header = None
+        self.translation_iter = None
 
     def get_input_option(self, file, option, dflt=None):
         for input, opts in self.options.items():
@@ -289,6 +302,8 @@ class KgtkQuery(object):
             return node1._graph_table
         graph = node1.graph
         if graph is not None:
+            # TO DO: register these graph variables so we can use them later to disambiguate
+            # graph-table-specific property expressions or rowid() calls on join variables:
             graph = graph.name
         else:
             graph = self.default_graph
@@ -301,6 +316,21 @@ class KgtkQuery(object):
         # assumes self.init_match_clauses() has been called:
         node1 = clause[0]
         return node1._graph_alias
+    
+    def get_pattern_clause_match_clause(self, clause):
+        """Return the match clause this pattern 'clause' belongs to,
+        raise an error if it cannot be found.
+        """
+        node1 = clause[0]
+        if hasattr(node1, '_match_clause'):
+            return node1._match_clause
+        for mclause in self.get_match_clauses():
+            for pclause in mclause.get_pattern_clauses():
+                # currently we rely on object identity to make the connection:
+                if pclause is clause:
+                    node1._match_clause = mclause
+                    return mclause
+        raise KGTKException('failed to link pattern clause to match clause')
     
     # in case we have aliases which could be different in every graph, stubs for now:
     def get_node1_column(self, graph):
@@ -318,6 +348,17 @@ class KgtkQuery(object):
         node1 = clause[0]
         rel = clause[1]
         node2 = clause[2]
+
+        if rel.labels is not None and SqlFunction.is_virtual_graph(rel.labels[0]):
+            # special-case translation of virtual graph pattern clauses:
+            vgraph = rel.labels[0]
+            vgraphfn = SqlFunction.get_function(vgraph, store=self.store)
+            vgraphfn.translate_call_to_sql(self, clause, state)
+            # in case the translator already called 'load':
+            state.register_vtable(vgraphfn.get_name(), vgraphfn)
+            vgraphfn.load()
+            state.register_vtable(vgraphfn.get_name(), vgraphfn)
+            return
         
         node1col = self.get_node1_column(graph)
         if node1.labels is not None:
@@ -400,11 +441,14 @@ class KgtkQuery(object):
             if graph == self.ALIAS_GRAPH:
                 # variable names a return column alias, rename it apart to avoid name conflicts:
                 column = self.alias_column_name(col)
-                return None, column, ss.sql_quote_ident(column)
+                return None, column, sql_quote_ident(column)
         # otherwise, pick the representative from the set of equiv-joined column vars,
         # which corresponds to the graph alias and column name used by the first reference:
         graph, column = sql_vars[0]
-        return graph, column, f'{graph}.{ss.sql_quote_ident(column)}'
+        table = state.get_alias_table(graph)
+        if self.store.is_vector_column(table, column):
+            return graph, column, self.store.vector_column_to_sql(table, column, table_alias=graph)
+        return graph, column, f'{graph}.{sql_quote_ident(column)}'
 
     def property_to_sql(self, expr, state):
         """Translate the property lookup expression 'expr' into the corresponding
@@ -419,9 +463,10 @@ class KgtkQuery(object):
                 if not isinstance(proplook, parser.PropertyLookup):
                     break # error
                 prop = proplook.property
-                if self.is_kgtk_operator(prop) and self.store.is_user_function(prop):
-                    self.store.load_user_function(prop)
-                    sql = f'{prop}({sql})'
+                if self.is_kgtk_operator(prop) and SqlFunction.is_defined(prop):
+                    sqlfn = SqlFunction.get_function(prop, store=self.store)
+                    sqlfn.load()
+                    sql = f'{sqlfn.get_name()}({sql})'
                 elif column == self.get_id_column(graph):
                     # we are referring to the relation ID, subsitute it with the prop column:
                     sql = sql[:-(len(column)+1)] + prop + '"'
@@ -437,33 +482,18 @@ class KgtkQuery(object):
 
     def function_call_to_sql(self, expr, state):
         function = expr.function
-        normfun = function.upper()
-        if normfun == 'CAST':
-            # special-case SQLite CAST which isn't directly supported by Cypher:
-            if len(expr.args) == 2 and isinstance(expr.args[1], parser.Variable):
-                arg = self.expression_to_sql(expr.args[0], state)
-                typ = expr.args[1].name
-                return f'{function}({arg} AS {typ})'
-            else:
-                raise Exception("Illegal CAST expression")
-        elif normfun == 'LIKELIHOOD':
-            # special-case SQLite LIKELIHOOD which needs a compile-time constant for its probability argument:
-            if len(expr.args) == 2 and isinstance(expr.args[1], parser.Literal) and isinstance(expr.args[1].value, (int, float)):
-                arg = self.expression_to_sql(expr.args[0], state)
-                prob = expr.args[1].value
-                return f'{function}({arg}, {prob})'
-            else:
-                raise Exception("Illegal LIKELIHOOD expression")
-        elif is_text_match_operator(function):
+        if is_text_match_operator(function):
+            # TO DO: consider moving this into the function API as well:
             return translate_text_match_op_to_sql(self, expr, state)
+        elif SqlFunction.is_defined(function):
+            # use generalized SQL function API:
+            sqlfn = SqlFunction.get_function(function, store=self.store)
+            return sqlfn.translate_call_to_sql(self, expr, state)
+        # otherwise, assume it is some non-special SQL built-in function,
+        # if it isn't, the database will complain later during execution:
         args = [self.expression_to_sql(arg, state) for arg in expr.args]
         distinct = expr.distinct and 'DISTINCT ' or ''
-        self.store.load_user_function(function, error=False)
-        if normfun == 'CONCAT':
-            # special-case Cypher's CONCAT function which is handled by SQLite's ||-operator:
-            return f'({" || ".join(args)})'
-        else:
-            return f'{function}({distinct}{", ".join(args)})'
+        return f'{function}({distinct}{", ".join(args)})'
 
     def expression_to_sql(self, expr, state):
         """Translate a Kypher expression 'expr' into its SQL equivalent.
@@ -534,8 +564,9 @@ class KgtkQuery(object):
             if op in ('IN'):
                 return '(%s %s %s)' % (arg1, op, arg2)
             elif op in ('REGEX'):
-                self.store.load_user_function('KGTK_REGEX')
-                return 'KGTK_REGEX(%s, %s)' % (arg1, arg2)
+                sqlfn = SqlFunction.get_function('KGTK_REGEX', store=self.store)
+                sqlfn.load()
+                return f'{sqlfn.get_name()}({arg1}, {arg2})'
             else:
                 raise Exception('Unhandled operator: %s' % str(op))
         else:
@@ -575,7 +606,7 @@ class KgtkQuery(object):
             # check if this item calls an aggregation function or not: if it does then preceding columns
             # that aren't aggregates are used for grouping, if it doesn't this column might be used for grouping:
             is_agg = parser.has_element(
-                item.expression, lambda x: isinstance(x, parser.Call) and self.store.is_aggregate_function(x.function))
+                item.expression, lambda x: isinstance(x, parser.Call) and SqlFunction.is_aggregate(x.function))
             if item.name is not None:
                 # we create an alias variable object here, so we can evaluate it for proper renaming:
                 alias_var = parser.Variable(item._query, item.name)
@@ -640,28 +671,33 @@ class KgtkQuery(object):
         """
         i = 1
         for match_clause in self.get_match_clauses():
+            # we initialize this here for now; conceivably we could also invent
+            # some per-clause syntax for it, for example, --match! and --opt!:
+            match_clause.dont_optimize = self.dont_optimize
             for clause in match_clause.get_pattern_clauses():
                 graph = self.get_pattern_clause_graph(clause)
-                graph_alias = '%s_c%d' % (graph, i) # per-clause graph table alias for self-joins
+                # create per-clause graph table alias for self-joins (keep the DB qualifier
+                # if we have it to avoid name clashes but change the separator char):
+                graph_alias = f'{self.store.get_qualified_table_name(graph, sep="_")}_c{i}'
                 clause[0]._graph_alias = graph_alias
                 state.register_table_alias(graph, graph_alias)
                 i += 1
-
-    def graph_alias_to_graph(self, graph_alias):
-        """Map a graph table 'graph_alias' back onto the graph table from which it was derived.
-        This simply keys in on the naming scheme we use above, but we could also store this somewhere.
-        """
-        return graph_alias[0:graph_alias.rfind('_')]
 
     def get_match_clause_graphs(self, match_clause):
         """Return the set of graph table names with aliases referenced by this 'match_clause'.
         """
         graphs = set()
+        graphs_list = []
         for clause in match_clause.get_pattern_clauses():
             graph_table = self.get_pattern_clause_graph(clause)
             graph_alias = self.get_pattern_clause_graph_alias(clause)
-            graphs.add((graph_table, graph_alias))
-        return graphs
+            graph = (graph_table, graph_alias)
+            if graph not in graphs:
+                graphs.add(graph)
+                graphs_list.append(graph)
+        # extra logic so we preserve the original graph order in the standard case
+        # to not upset the optimization of any existing queries in the wild:
+        return graphs_list if match_clause.dont_optimize else graphs
 
     def get_all_match_clause_graphs(self):
         """Return the set of graph table names with aliases referenced by this query.
@@ -674,10 +710,19 @@ class KgtkQuery(object):
                 graphs.add((graph_table, graph_alias))
         return graphs
 
-    def graph_names_to_sql(self, graphs):
+    def graph_names_to_sql_join(self, graphs, dont_optimize=False, append=False):
         """Translate a list of (graph, alias) pairs into an SQL table list with aliases.
+        Choose the appropriate INNER or CROSS join operator based on 'dont_optimize'
+        (note that this is an SQLite-specific idiom to disable the query optimizer).
+        If 'append', append to an existing join starting with the respective join operator.
         """
-        return ', '.join([g + ' AS ' + a for g, a in sorted(listify(graphs))])
+        if not dont_optimize:
+            # preserve the original graph order in the standard case to not
+            # upset the optimization of any existing queries in the wild:
+            graphs = sorted(listify(graphs))
+        appendop = (dont_optimize  and 'CROSS JOIN ' or 'INNER JOIN ') if append else ''
+        joinop = (dont_optimize  and ' CROSS JOIN ' or ', ')
+        return appendop + joinop.join([g + ' AS ' + a for g, a in graphs])
 
     def match_clause_to_sql(self, match_clause, state):
         """Translate a strict or optional 'match_clause' into a set of source tables,
@@ -687,7 +732,11 @@ class KgtkQuery(object):
         a bit wild and wooly and will likely need further refinement down the road.
         """
         state.set_match_clause(match_clause)
-        clause_sources = sorted(list(self.get_match_clause_graphs(match_clause)))
+        clause_sources = list(self.get_match_clause_graphs(match_clause))
+        if not match_clause.dont_optimize:
+            # preserve the original graph order in the standard case to not
+            # upset the optimization of any existing queries in the wild:
+            clause_sources = sorted(clause_sources)
         primary_source = clause_sources[0]
         sources = clause_sources.copy()
 
@@ -696,9 +745,9 @@ class KgtkQuery(object):
         external_condition = []
         
         for (g1, c1), (g2, c2) in sorted(list(state.get_match_clause_joins(match_clause))):
-            condition = '%s.%s = %s.%s' % (g1, ss.sql_quote_ident(c1), g2, ss.sql_quote_ident(c2))
-            graph1 = (self.graph_alias_to_graph(g1), g1)
-            graph2 = (self.graph_alias_to_graph(g2), g2)
+            condition = '%s.%s = %s.%s' % (g1, sql_quote_ident(c1), g2, sql_quote_ident(c2))
+            graph1 = (state.get_alias_table(g1), g1)
+            graph2 = (state.get_alias_table(g2), g2)
             internal = graph1 in clause_sources and graph2 in clause_sources
             if graph1 != primary_source:
                 if graph1 in clause_sources:
@@ -714,13 +763,19 @@ class KgtkQuery(object):
                 external_condition.append(condition)
 
         for (g, c), val in sorted(list(state.get_match_clause_restrictions(match_clause))):
-            internal_condition.append('%s.%s = %s' % (g, ss.sql_quote_ident(c), val))
+            internal_condition.append('%s.%s = %s' % (g, sql_quote_ident(c), val))
 
         where = self.where_clause_to_sql(match_clause.get_where_clause(), state)
         if where:
             internal_condition.append(where)
         internal_condition = '\n   AND '.join(internal_condition)
         external_condition = '\n   AND '.join(external_condition)
+
+        if match_clause.dont_optimize:
+            # order joined tables in the order they appear in clause_sources:
+            joined = [(graph, clause_sources.index(graph)) for graph in joined]
+            joined.sort(key=lambda x: x[1])
+            joined = [x[0] for x in joined]
         
         return sources, joined, internal_condition, external_condition
 
@@ -739,7 +794,7 @@ class KgtkQuery(object):
         where = self.where_clause_to_sql(with_clause.where, state)
         return where
     
-    def translate_to_sql(self):
+    def translate_to_sql_iter(self):
         """Translate this query into an equivalent SQL expression.
         Return the SQL as part of the accumulated final translation state.
         """
@@ -775,9 +830,9 @@ class KgtkQuery(object):
         assert not ext_condition, 'INTERNAL ERROR: unexpected match clause'
 
         where = []
-        query.write('\nFROM %s' % self.graph_names_to_sql(sources + aux_tables))
+        query.write(f'\nFROM {self.graph_names_to_sql_join(sources + aux_tables)}')
         if joined:
-            query.write('\nINNER JOIN %s' % self.graph_names_to_sql(joined))
+                query.write(f'\n{self.graph_names_to_sql_join(joined, dont_optimize=self.match_clause.dont_optimize, append=True)}')
         if int_condition:
             if joined:
                 query.write('\nON %s' % int_condition)
@@ -791,12 +846,13 @@ class KgtkQuery(object):
             aux_tables = list(state.get_match_clause_aux_tables(opt_clause))
             if len(sources) > 1 and not self.force:
                 raise Exception('optional clause generates a cross-product which can be very expensive, use --force to override')
+            # FIXME: nested optionals are broken, for one, the aliases becomes shielded and inaccessible in the ext_condition:
             nested = len(joined) > 0
-            query.write('\nLEFT JOIN %s%s' % (nested and '(' or '', self.graph_names_to_sql(sources + aux_tables)))
+            query.write(f'\nLEFT JOIN {"(" if nested else ""}{self.graph_names_to_sql_join(sources + aux_tables)}')
             if nested:
-                query.write('\n    INNER JOIN %s' % self.graph_names_to_sql(joined))
+                query.write(f'\n    {self.graph_names_to_sql_join(joined, dont_optimize=opt_clause.dont_optimize, append=True)}')
                 query.write('\n    ON %s)' % int_condition.replace('\n', '\n    '))
-                query.write('\nON %s' % ext_condition)
+                query.write(f'\nON {ext_condition}')
             else:
                 query.write('\nON %s' % '\n   AND '.join(listify(ext_condition) + listify(int_condition)))
 
@@ -823,7 +879,35 @@ class KgtkQuery(object):
 
         state.set_sql(query)
         state.set_parameters(parameters)
-        return state
+        
+        # implement this as a generator, so we can retranslate from scratch if necessary:
+        yield state
+
+    def translate_to_sql(self):
+        """Translate this query into an equivalent SQL expression.
+        Return the SQL as part of the accumulated final translation state.
+        This is the top-level controller that handles possible retranslation
+        restarts in case the query was rewritten or augmented somewhere.
+        """
+        while True:
+            self.translation_iter = self.translate_to_sql_iter()
+            try:
+                for state in self.translation_iter:
+                    return state
+            except GeneratorExit as e:
+                if e.args == ('_retranslate',):
+                    #print('retranslating...')
+                    continue
+                else:
+                    raise e
+
+    def retranslate(self):
+        """Abort the current translation to the top level and restart from scratch.
+        This is needed by certain translation specialists that need to
+        rewrite or augment the initial query.
+        """
+        self.reset()
+        raise GeneratorExit('_retranslate')
 
     
     def compute_auto_indexes(self, state):
@@ -836,12 +920,20 @@ class KgtkQuery(object):
             restrictions = state.get_match_clause_restrictions(match_clause)
             if len(joins) > 0:
                 for (g1, c1), (g2, c2) in joins:
-                    indexes.add((self.graph_alias_to_graph(g1), c1))
-                    indexes.add((self.graph_alias_to_graph(g2), c2))
+                    g1 = state.get_alias_table(g1)
+                    g2 = state.get_alias_table(g2)
+                    # do not create any indexes on virtual tables:
+                    if state.lookup_vtable(g1) is None:
+                        indexes.add((g1, c1))
+                    if state.lookup_vtable(g2) is None:
+                        indexes.add((g2, c2))
             if len(restrictions) > 0:
                 # even if we have joins, we might need additional indexes on restricted columns:
                 for (g, c), val in restrictions:
-                    indexes.add((self.graph_alias_to_graph(g), c))
+                    g = state.get_alias_table(g)
+                    # do not create any indexes on virtual tables:
+                    if state.lookup_vtable(g) is None:
+                        indexes.add((g, c))
         return indexes
 
     def get_explicit_graph_index_specs(self):
@@ -869,18 +961,18 @@ class KgtkQuery(object):
         return default_index_specs
 
     def ensure_indexes(self, graphs, index_specs, state, explain=False):
-        """Ensure that for each graph in 'graphs' all indexes according to 'index_specs' are avaible.
+        """Ensure that for each graph in 'graphs' all indexes according to 'index_specs' are available.
         'state' is the final translation state of the query.
         """
         graphs = listify(graphs)
         for index_spec in listify(index_specs):
-            index_spec = ss.get_normalized_index_mode(index_spec)
+            index_spec = ispec.get_normalized_index_mode(index_spec)
             if isinstance(index_spec, list):
                 for spec in index_spec:
                     for graph in graphs:
-                        self.store.ensure_graph_index(graph, ss.TableIndex(graph, spec), explain=explain)
+                        self.store.ensure_graph_index(graph, ispec.TableIndex(graph, spec), explain=explain)
                     
-            elif index_spec == ss.INDEX_MODE_AUTO:
+            elif index_spec == ispec.INDEX_MODE_AUTO:
                 # build indexes as suggested by query joins and restrictions (restricted to 'graphs'):
                 for graph, column in self.compute_auto_indexes(state):
                     if graph in graphs:
@@ -891,7 +983,7 @@ class KgtkQuery(object):
                             unique = False
                             self.store.ensure_graph_index_for_columns(graph, column, unique=unique, explain=explain)
                             
-            elif index_spec == ss.INDEX_MODE_EXPERT:
+            elif index_spec == ispec.INDEX_MODE_EXPERT:
                 # build indexes as suggested by the database (restricted to 'graphs'):
                 for name, graph, columns in self.store.suggest_indexes(state.get_sql()):
                     if graph in graphs:
@@ -902,18 +994,18 @@ class KgtkQuery(object):
                         unique = False
                         self.store.ensure_graph_index_for_columns(graph, column, unique=unique, explain=explain)
 
-            elif index_spec == ss.INDEX_MODE_NONE:
+            elif index_spec == ispec.INDEX_MODE_NONE:
                 pass
 
-            elif index_spec == ss.INDEX_MODE_CLEAR:
+            elif index_spec == ispec.INDEX_MODE_CLEAR:
                 for graph in graphs:
                     self.store.drop_graph_indexes(graph)
 
-            elif index_spec == ss.INDEX_MODE_CLEAR_TEXT:
+            elif index_spec == ispec.INDEX_MODE_CLEAR_TEXT:
                 for graph in graphs:
-                    self.store.drop_graph_indexes(graph, index_type=ss.TextIndex)
+                    self.store.drop_graph_indexes(graph, index_type=ispec.TextIndex)
             
-            elif index_spec in (ss.INDEX_MODE_AUTO_TEXT):
+            elif index_spec in (ispec.INDEX_MODE_AUTO_TEXT):
                 print(f'WARN: {index_spec} not yet implemented')
 
     def ensure_relevant_indexes(self, state, explain=False):
@@ -993,6 +1085,7 @@ class TranslationState(object):
         self.literal_map = {}         # maps Kypher literals onto parameter placeholders
         self.variable_map = {}        # maps Kypher variables onto representative (graph, col) SQL columns
         self.alias_map = {}           # maps tables to their aliases and vice versa
+        self.vtable_map = {}          # maps referenced virtual table names to their SqlFunction object
         self.match_clause = None      # match clause we are currently processing
         self.match_clause_info = {}   # maps match clauses onto joins, restrictions, etc. encountered
         self.sql = None               # final SQL translation of 'query'
@@ -1030,7 +1123,6 @@ class TranslationState(object):
             raise Exception('Undefined variable: %s' % variable)
         return sql_vars
 
-    # TO DO: handle all graph alias management from here (e.g., graph_alias_to_graph)1
     def register_table_alias(self, table, alias):
         """Record 'alias' as an alias for 'table'.  Raise an error if the alias
         if already used as a table name or as an alias for a different table.
@@ -1043,6 +1135,15 @@ class TranslationState(object):
             raise Exception(f'Alias {alias} already used as table name')
         elif current != table:
             raise Exception(f'Alias {alias} already in use for {current}')
+
+    def get_alias_table(self, alias, error=True):
+        """Return the table for which 'alias' has been registered as an alias.
+        If 'alias' is not a registered table alias, raise an error if 'error' is True.
+        """
+        table = self.alias_map.get(alias)
+        if table is None and error:
+            raise Exception(f'Alias {alias} is not defined')
+        return table
 
     def get_table_aliases(self, table, create_prefix=None):
         """Get the currently defined aliases for 'table'.  If none are defined
@@ -1061,6 +1162,21 @@ class TranslationState(object):
             raise Exception('Internal error: alias map exhausted')
         else:
             raise Exception(f'No aliases defined for {table}')
+
+    def get_vtable_map(self):
+        return self.vtable_map
+
+    def register_vtable(self, vtable_name, sql_func):
+        """Register that the virtual table 'vtable_name' has been referenced and
+        is implemented by SqlFunction 'sql_func'.
+        """
+        self.vtable_map[vtable_name] = sql_func
+
+    def lookup_vtable(self, vtable_name):
+        """Lookup the SqlFunction implementing the virtual table 'vtable_name'.
+        Return None if 'vtable_name' is not a registered virtual table.
+        """
+        return self.vtable_map.get(vtable_name)
     
     def get_match_clause(self):
         """Return the current match clause."""
@@ -1205,6 +1321,7 @@ class TranslationState(object):
 ### Text match support
 
 # This is a bit messy and idiosyncratic, so we are keeping it outside the regular translator.
+# TO DO: see if we can refactor and package this better with the new SqlFunction API
 
 TEXTMATCH_OPERATORS = {'TEXTMATCH': 'match', 'TEXTLIKE': 'like', 'TEXTGLOB': 'glob',
                        'MATCHSCORE': 'score', 'BM25': 'score'}
@@ -1295,7 +1412,7 @@ def translate_text_match_op_to_sql(query, expr, state):
         raise Exception(f"First argument to {expr.function} needs to be variable or property")
 
     # find applicable indexes:
-    graph = query.graph_alias_to_graph(graph_alias)
+    graph = state.get_alias_table(graph_alias)
     if column_name == query.get_id_column(graph) and isinstance(arg1, parser.Variable):
         # we have an all-indexed-columns match:
         column = None
@@ -1312,13 +1429,14 @@ def translate_text_match_op_to_sql(query, expr, state):
     # generate the SQL translation:
     index = indexes[0]
     index_table = index.get_name()
-    index_alias = state.get_table_aliases(index_table, create_prefix='txtidx')[0]
+    qualified_index_table = query.store.get_qualified_table_name(index_table, db=index.db)
+    index_alias = state.get_table_aliases(qualified_index_table, create_prefix='txtidx')[0]
     index_column = index_table
     if not (column_name == query.get_id_column(graph) and isinstance(arg1, parser.Variable)):
         # we have a column-specific search:
         index_column = column_name
-    index_column = ss.sql_quote_ident(index_column)
-    state.add_match_clause_aux_table(index_table, index_alias)
+    index_column = sql_quote_ident(index_column)
+    state.add_match_clause_aux_table(qualified_index_table, index_alias)
 
     if normfun in ('match', 'like', 'glob'):
         if arity != 2:
@@ -1337,16 +1455,16 @@ def get_implied_text_indexes(query, graph):
     """
     index_specs = query.get_explicit_graph_index_specs().get(graph)
     index_specs = query.get_default_graph_index_specs().get(graph) if index_specs is None else index_specs
-    current_indexes = [idx for idx in query.store.get_graph_indexes(graph) if isinstance(idx, ss.TextIndex)]
+    current_indexes = [idx for idx in query.store.get_graph_indexes(graph) if isinstance(idx, ispec.TextIndex)]
     explicit_indexes = []
     for index_spec in index_specs:
-        index_spec = ss.get_normalized_index_mode(index_spec)
+        index_spec = ispec.get_normalized_index_mode(index_spec)
         if isinstance(index_spec, list):
                 for spec in index_spec:
-                    index = ss.TableIndex(graph, spec)
-                    if isinstance(index, ss.TextIndex):
+                    index = ispec.TableIndex(graph, spec)
+                    if isinstance(index, ispec.TextIndex):
                         explicit_indexes.append(index)
-        elif index_spec in (ss.INDEX_MODE_CLEAR, ss.INDEX_MODE_CLEAR_TEXT):
+        elif index_spec in (ispec.INDEX_MODE_CLEAR, ispec.INDEX_MODE_CLEAR_TEXT):
             explicit_indexes = []
             current_indexes = []
     for expidx in explicit_indexes[:]:
