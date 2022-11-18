@@ -408,7 +408,7 @@ CosineSimilarity('kvec_cos_sim', num_params=2, deterministic=True).define()
 # Forward-declarations:
 
 declare('kgtk.kypher.funccore',
-        'kgtk_regex', 'kgtk_null_to_empty', 'kgtk_empty_to_null', 'pyeval', 'pycall',
+        'kgtk_regex', 'kgtk_regex_replace', 'kgtk_null_to_empty', 'kgtk_empty_to_null', 'pyeval', 'pycall',
         'avg', 'count', 'group_concat', 'max', 'min', 'sum', 'total',
         'cast', 'likelihood', 'concat', 'rowid',
         'kgtk_values',
