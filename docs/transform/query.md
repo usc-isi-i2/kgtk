@@ -2304,7 +2304,8 @@ TO DO
 | kgtk_literal(x)       | Return True if `x` is any KGTK literal.  This assumes valid literals and only tests the first character (except for booleans). |
 | kgtk_symbol(x)        | Return True if `x` is a KGTK symbol.  This assumes valid literals and only tests the first character (except for booleans).    |
 | kgtk_type(x)          | Return a type for the KGTK literal or symbol `x`, which will be one of `string`, `lq_string`, `date_time`, `quantity`, `geo_coord`, `boolean`, `typed_literal` or `symbol`.  This assumes valid literals and only tests the first character (except for booleans). |
-| kgtk_regex(x, regex)  | Regex matcher that implements the Cypher `=~` semantics which must match the whole string. |
+| kgtk_regex(x, regex)  | Regex matcher that implements the Cypher `=~` semantics which must match the whole string ([Python regex syntax](https://docs.python.org/3/howto/regex.html)) |
+| kgtk_regex_replace(x, regex, repl) | Regex replacer that replaces all occurrances of `regex` in `x` with `repl` ([Python regex syntax](https://docs.python.org/3/howto/regex.html), see Python's `re.sub`) |
 | kgtk_null_to_empty(x) | If `x` is NULL map it onto the empty string, otherwise return `x` unmodified.              |
 | kgtk_empty_to_null(x) | If `x` is the empty string, map it onto NULL, otherwise return `x` unmodified.             |
 
@@ -3600,12 +3601,152 @@ Result:
 
 ### Full vector similarity joins
 
-WRITE ME
+Suppose we want to ask the following question: Given a set of
+philosophers (Plato, Aristotle and Socrates), find the top-5 similar
+humans for each of them who are also writers.  We use a small Wikidata
+`CLAIMS` graph that has additional information we need for this query.
+In Wikidata humans are entities that are instances (`P31`) of human
+(`Q5`), and writers are nodes with occupation (`P106`) writer
+(`Q36180`).  See [**Wikidata**](https://www.wikidata.org/) for more
+information on this data model.  A first attempt to answer this
+question might look like this:
+
+```
+CLAIMS=examples/docs/query-embed-claims.tsv.gz 
+
+kgtk query \
+     -i $EMBED --idx vector:node2/nn/nlist=8 mode:valuegraph \
+     -i $LABELS \
+     -i $CLAIMS \
+     --match 'emb:     (x)-[]->(xv), \
+                       (xv)-[r:kvec_topk_cos_sim {k: 5}]->(y), \
+              claims:  (y)-[:P31]->(:Q5), \
+                       (y)-[:P106]->(:Q36180), \
+              labels:  (x)-[]->(xl), \
+                       (y)-[]->(yl)' \
+     --where  'x in ["Q859", "Q868", "Q913"]' \
+     --return 'x as x, xl as xlabel, y as y, yl as ylabel, r.similarity as sim'
+```
+Result:
+
+| x    | xlabel         | y      | ylabel           | sim                |
+|------|----------------|--------|------------------|--------------------|
+| Q859 | 'Plato'@en     | Q41155 | 'Heraclitus'@en  | 0.7475227117538452 |
+| Q859 | 'Plato'@en     | Q83375 | 'Empedocles'@en  | 0.7423468232154846 |
+| Q868 | 'Aristotle'@en | Q868   | 'Aristotle'@en   | 1.0                |
+| Q868 | 'Aristotle'@en | Q10261 | 'Pythagoras'@en  | 0.769469141960144  |
+| Q868 | 'Aristotle'@en | Q5264  | 'Hippocrates'@en | 0.7553266286849976 |
+
+Surprisingly, the result seems somewhat incomplete.  We only get matches
+for two of the three seeds, and for both of them we get less than what we
+asked for.  What is going on here?
+
+The answer to the mystery is that `kvec_topk_cos_sim` found the top-5 similar
+vectors relative to the *whole universe* of vectors *U* in the `EMBED` dataset.
+Once those 5 matches were computed for each seed, they were further filtered
+by the additional `P31` and `P106` leaving us with the results we saw above.
+
+What we really want for this query is a true similarity join between
+the set *P* of philosophers (Plato, Aristotle and Socrates), and
+the set *W* of human writers.  For each node *p* in *P* a similar node *s*
+should be in the join result if it is one of the top-5 similar nodes
+of *p* in *W*, but not in *U* which is a much larger set.
+
+To find those additional matches we use a process called *dynamic scaling*
+which progressively increases *k* until enough results matching the join
+condition have been found.  We use the `maxk` property to tell Kypher-V
+to use dynamic scaling and also where to stop which is important, since
+we might never find enough qualifying matches.  Here we ask the query again
+with `maxk: 100` and now we get the results we expect.  Note how the similarities
+for Socrates' matches are significantly lower than what we computed in
+previous queries, since we now have to go farther down the list to find
+matches that also satisfy the additional restrictions:
+
+```
+kgtk query \
+     -i $EMBED --idx vector:node2/nn/nlist=8 mode:valuegraph \
+     -i $LABELS \
+     -i $CLAIMS \
+     --match 'emb:     (x)-[]->(xv), \
+                       (xv)-[r:kvec_topk_cos_sim {k: 5, maxk: 100}]->(y), \
+              claims:  (y)-[:P31]->(:Q5), \
+                       (y)-[:P106]->(:Q36180), \
+              labels:  (x)-[]->(xl), \
+                       (y)-[]->(yl)' \
+     --where  'x in ["Q859", "Q868", "Q913"]' \
+     --return 'x as x, xl as xlabel, y as y, yl as ylabel, r.similarity as sim'
+```
+Result:
+
+| x    | xlabel         | y       | ylabel               | sim                |
+|------|----------------|---------|----------------------|--------------------|
+| Q859 | 'Plato'@en     | Q41155  | 'Heraclitus'@en      | 0.7475227117538452 |
+| Q859 | 'Plato'@en     | Q83375  | 'Empedocles'@en      | 0.7423468232154846 |
+| Q859 | 'Plato'@en     | Q5264   | 'Hippocrates'@en     | 0.7279533743858337 |
+| Q859 | 'Plato'@en     | Q868    | 'Aristotle'@en       | 0.7331432104110718 |
+| Q859 | 'Plato'@en     | Q1430   | 'Marcus Aurelius'@en | 0.7032168507575989 |
+| Q868 | 'Aristotle'@en | Q868    | 'Aristotle'@en       | 1.0                |
+| Q868 | 'Aristotle'@en | Q10261  | 'Pythagoras'@en      | 0.769469141960144  |
+| Q868 | 'Aristotle'@en | Q5264   | 'Hippocrates'@en     | 0.7553266286849976 |
+| Q868 | 'Aristotle'@en | Q41155  | 'Heraclitus'@en      | 0.7392288446426392 |
+| Q868 | 'Aristotle'@en | Q271809 | 'Proclus'@en         | 0.7256468534469604 |
+| Q913 | 'Socrates'@en  | Q271809 | 'Proclus'@en         | 0.7659962773323059 |
+| Q913 | 'Socrates'@en  | Q5264   | 'Hippocrates'@en     | 0.7673165798187256 |
+| Q913 | 'Socrates'@en  | Q1430   | 'Marcus Aurelius'@en | 0.7595204710960388 |
+| Q913 | 'Socrates'@en  | Q10261  | 'Pythagoras'@en      | 0.751109778881073  |
+| Q913 | 'Socrates'@en  | Q83375  | 'Empedocles'@en      | 0.7441204190254211 |
+
+Of course, we could have simply used a much larger `k` to find all
+these matches.  But that would have led to very unbalanced result sets
+and possibly a lot of unnecessary processing.  We also can't really use
+a limit to effectively give us what we want as can be seen in this
+query, where Plato's matches dominate and block out others:
+
+```
+kgtk query \
+     -i $EMBED --idx vector:node2/nn/nlist=8 mode:valuegraph \
+     -i $LABELS \
+     -i $CLAIMS \
+     --match 'emb:     (x)-[]->(xv), \
+                       (xv)-[r:kvec_topk_cos_sim {k: 50}]->(y), \
+              claims:  (y)-[:P31]->(:Q5), \
+                       (y)-[:P106]->(:Q36180), \
+              labels:  (x)-[]->(xl), \
+                       (y)-[]->(yl)' \
+     --where  'x in ["Q859", "Q868", "Q913"]' \
+     --return 'x as x, xl as xlabel, y as y, yl as ylabel, r.similarity as sim' \
+     --limit 15
+```
+Result:
+
+| x    | xlabel         | y       | ylabel                               | sim                |
+|------|----------------|---------|--------------------------------------|--------------------|
+| Q859 | 'Plato'@en     | Q41155  | 'Heraclitus'@en                      | 0.7475227117538452 |
+| Q859 | 'Plato'@en     | Q83375  | 'Empedocles'@en                      | 0.7423468232154846 |
+| Q859 | 'Plato'@en     | Q868    | 'Aristotle'@en                       | 0.7331432104110718 |
+| Q859 | 'Plato'@en     | Q5264   | 'Hippocrates'@en                     | 0.7279533743858337 |
+| Q859 | 'Plato'@en     | Q1430   | 'Marcus Aurelius'@en                 | 0.7032168507575989 |
+| Q859 | 'Plato'@en     | Q10261  | 'Pythagoras'@en                      | 0.6969254612922668 |
+| Q859 | 'Plato'@en     | Q125551 | 'Parmenides'@en                      | 0.6939566135406494 |
+| Q859 | 'Plato'@en     | Q47154  | 'Lucretius'@en                       | 0.6934449076652527 |
+| Q859 | 'Plato'@en     | Q271809 | 'Proclus'@en                         | 0.6883948445320129 |
+| Q859 | 'Plato'@en     | Q59138  | 'Diogenes Laërtius'@en               | 0.6805305480957031 |
+| Q859 | 'Plato'@en     | Q313924 | 'Nicolaus of Damascus'@en            | 0.6774346232414246 |
+| Q859 | 'Plato'@en     | Q175042 | 'Nigidius Figulus'@en                | 0.6490164995193481 |
+| Q859 | 'Plato'@en     | Q561367 | 'Lucius Aelius Stilo Praeconinus'@en | 0.6464878916740417 |
+| Q868 | 'Aristotle'@en | Q868    | 'Aristotle'@en                       | 1.0                |
+| Q868 | 'Aristotle'@en | Q10261  | 'Pythagoras'@en                      | 0.769469141960144  |
+
+A planned extension to the dynamic scaling mechanism is to allow the
+specification of a minimum similarity threshold to control the depth
+of the search (instead of `maxk`).  Note that this is different from
+using a where-clause restriction such as `r.similarity >= 0.8`.
 
 
 ### Batched vector similarity joins
 
-WRITE ME - EXPERIMENTAL
+WRITE ME - Experimental support to compute similar nodes in batches to
+better exploit Faiss parallel processing.
 
 
 ### ANNS indexes
