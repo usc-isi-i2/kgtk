@@ -15,6 +15,8 @@ class TestKGTKGraphStatistics(unittest.TestCase):
         self.directed_betweenness_path = 'data/graph_statistics_directed_betweenness_zacharys_karate_club.tsv'
         self.undirected_pagerank_path = 'data/graph_statistics_undirected_pagerank_zacharys_karate_club.tsv'
         self.directed_pagerank_path = 'data/graph_statistics_directed_pagerank_zacharys_karate_club.tsv'
+        self.undirected_local_clustering_path = 'data/graph_statistics_undirected_local_clustering.tsv'
+        self.undirected_extended_clustering_path = 'data/graph_statistics_undirected_extended_clustering.tsv'
 
         self.temp_dir = Path(tempfile.mkdtemp())
 
@@ -23,7 +25,8 @@ class TestKGTKGraphStatistics(unittest.TestCase):
 
         cli_entry(
             'kgtk', 'graph-statistics', '-i', f'{self.file_path}', '-o', f'{self.undirected_output_path}',
-            '--undirected', 'True', '--compute-betweenness')
+            '--undirected', 'True', '--compute-betweenness', '--compute-local-clustering',
+            '--compute-extended-clustering', '--max-depth', '3')
 
         cli_entry(
             'kgtk', 'graph-statistics', '-i', f'{self.file_path}', '-o', f'{self.directed_output_path}',
@@ -118,6 +121,37 @@ class TestKGTKGraphStatistics(unittest.TestCase):
             '/', 'remove-columns', '-c', 'id', '-o', f'{result_path}')
 
         f1 = open(self.directed_pagerank_path)
+        f2 = open(result_path)
+
+        self.assertEqual(f1.readlines(), f2.readlines())
+        f1.close()
+        f2.close()
+
+
+    def test_undirected_local_clustering(self):
+        result_path = self.temp_dir / 'test_undirected_local_clustering.tsv'
+        cli_entry(
+            'kgtk', 'filter', '-i', f'{self.undirected_output_path}', '-p', ';vertex_local_clustering;',
+            '/', 'calc', '--do', 'average', '--columns', 'node2', '--into', 'node2', '--format', '%.4f',
+            '/', 'sort', '-c', 'node1',
+            '/', 'remove-columns', '-c', 'id', '-o', f'{result_path}')
+
+        f1 = open(self.undirected_local_clustering_path)
+        f2 = open(result_path)
+
+        self.assertEqual(f1.readlines(), f2.readlines())
+        f1.close()
+        f2.close()
+
+    def test_undirected_extended_clustering(self):
+        result_path = self.temp_dir / 'test_undirected_extended_clustering.tsv'
+        cli_entry(
+            'kgtk', 'filter', '-i', f'{self.undirected_output_path}', '--regex', '-p', ';vertex_extended_clustering.*;',
+            '/', 'calc', '--do', 'average', '--columns', 'node2', '--into', 'node2', '--format', '%.4f',
+            '/', 'sort', '-c', 'node1', 'label',
+            '/', 'remove-columns', '-c', 'id', '-o', f'{result_path}')
+
+        f1 = open(self.undirected_extended_clustering_path)
         f2 = open(result_path)
 
         self.assertEqual(f1.readlines(), f2.readlines())

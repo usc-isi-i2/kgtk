@@ -64,9 +64,25 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         '\n(default=%(default)s)',
                         type=optional_bool, nargs='?', const=True, default=False, metavar='True|False')
 
+    parser.add_argument('--compute-local-clustering', dest='compute_local_clustering',
+                        help='Whether or not to compute the local clustering property. ' +
+                        '\nUse --edge-weight-property to specify optional edge weights.\n(default=%(default)s)',
+                        type=optional_bool, nargs='?', const=True, default=False, metavar='True|False')
+
+    parser.add_argument('--compute-extended-clustering', dest='compute_extended_clustering',
+                        help='Whether or not to compute the extended clustering property. ' +
+                        '\nUse --max-depth to specify maximum clustering ordering.\n(default=%(default)s)',
+                        type=optional_bool, nargs='?', const=True, default=False, metavar='True|False')
+
+    parser.add_argument('--edge-weight-property', action='store', dest='edge_weight_property',
+                        help='Input edge weight property name for compute-local-clustering option.')
+
+    parser.add_argument('--max-depth', action='store', dest='max_depth', type=int,
+                        help='Maximum clustering ordering for compute-extended-clustering option.  (default=%(default)s)')
+
     parser.add_argument('--output-statistics-only', dest='output_statistics_only',
                         help='If this option is set, write only the statistics edges to the primary output file. ' +
-                        'Else, write both the statistics and the original graph. (default=%(default)s',
+                        'Else, write both the statistics and the original graph. (default=%(default)s)',
                         type=optional_bool, nargs='?', const=True, default=False, metavar='True|False')
 
     parser.add_argument('--output-degrees', dest='output_degrees',
@@ -83,6 +99,14 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     parser.add_argument('--output-betweenness', dest='output_betweenness',
                         help='Whether or not to write betweenness to the primary output file. (default=%(default)s)',
+                        type=optional_bool, nargs='?', const=True, default=True, metavar='True|False')
+
+    parser.add_argument('--output-local-clustering', dest='output_local_clustering',
+                        help='Whether or not to write local clustering to the primary output file. (default=%(default)s)',
+                        type=optional_bool, nargs='?', const=True, default=True, metavar='True|False')
+
+    parser.add_argument('--output-extended-clustering', dest='output_extended_clustering',
+                        help='Whether or not to write extended clustering to the primary output file. (default=%(default)s)',
                         type=optional_bool, nargs='?', const=True, default=True, metavar='True|False')
 
     parser.add_argument('--log-file', action='store', type=str, dest='log_file',
@@ -139,6 +163,14 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                         default='vertex_betweenness',
                         help='Label for betweenness property. (default=%(default)s)')
 
+    parser.add_argument('--local-clustering-property', action='store', dest='vertex_local_clustering',
+                        default='vertex_local_clustering',
+                        help='Label for vertex_local_clustering property. (default=%(default)s)')
+
+    parser.add_argument('--extended-clustering-property', action='store', dest='vertex_extended_clustering_prefix',
+                        default='vertex_extended_clustering_',
+                        help='Label for vertex_local_clustering property. (default=%(default)s)')
+
     KgtkReader.add_debug_arguments(parser, expert=_expert)
     KgtkReaderOptions.add_arguments(parser,
                                     mode_options=True,
@@ -153,12 +185,18 @@ def run(input_file: KGTKFiles,
         compute_pagerank: bool,
         compute_hits: bool,
         compute_betweenness: bool,
+        compute_local_clustering: bool,
+        compute_extended_clustering: bool,
+        edge_weight_property: str,
+        max_depth: int,
 
         output_statistics_only: bool,
         output_degrees: bool,
         output_pagerank: bool,
         output_hits: bool,
         output_betweenness: bool,
+        output_local_clustering: bool,
+        output_extended_clustering: bool,
 
         log_file: str,
         log_degrees_histogram: bool,
@@ -173,6 +211,8 @@ def run(input_file: KGTKFiles,
         vertex_betweenness: str,
         vertex_auth: str,
         vertex_hubs: str,
+        vertex_extended_clustering_prefix: str,
+        vertex_local_clustering: str,
 
         errors_to_stdout: bool,
         errors_to_stderr: bool,
@@ -187,6 +227,7 @@ def run(input_file: KGTKFiles,
     import sys
 
     from graph_tool import centrality # type: ignore
+    from graph_tool import clustering # type: ignore
     from kgtk.exceptions import KGTKException
     import kgtk.gt.analysis_utils as gtanalysis
     from kgtk.gt.gt_load import load_graph_from_kgtk
@@ -254,6 +295,30 @@ def run(input_file: KGTKFiles,
             centrality.betweenness(G2, vprop=v_betweenness)
             G2.properties[('v', vertex_betweenness)] = v_betweenness
 
+        if compute_local_clustering:
+            if verbose:
+                print(f'Computing local clustering using edge weight={edge_weight_property}.',
+                      file=error_file, flush=True)
+            v_local_clustering = G2.new_vertex_property('float')
+            weight = None
+            if edge_weight_property:
+                weight = G2.copy_property(G2.edge_properties[edge_weight_property], value_type='float')
+            clustering.local_clustering(G2, weight=weight, prop=v_local_clustering)
+            G2.properties[('v', vertex_local_clustering)] = v_local_clustering
+
+        if compute_extended_clustering:
+            if verbose:
+                print(f'Computing extended clustering with max depth={max_depth}.',
+                      file=error_file, flush=True)
+            # v_local_clustering = G2.new_vertex_property('float')
+            if max_depth:
+                clusters = clustering.extended_clustering(G2, max_depth=max_depth)
+            else:
+                clusters = clustering.extended_clustering(G2)
+            max_depth = len(clusters)
+            for i in range(len(clusters)):
+                G2.properties[('v', f'{vertex_extended_clustering_prefix}{i+1}')] = clusters[i]
+
         if compute_hits and not undirected:
             if verbose:
                 print('Computing HITS.', file=error_file, flush=True)
@@ -280,7 +345,7 @@ def run(input_file: KGTKFiles,
                 kw.write([G2.vp[id_col][sid], lbl, G2.vp[id_col][oid], '{}-{}-{}'.format(G2.vp[id_col][sid], lbl, id_count)])
                 id_count += 1
 
-        if output_degrees or output_pagerank or output_hits or output_betweenness:
+        if output_degrees or output_pagerank or output_hits or output_betweenness or output_local_clustering or output_extended_clustering:
             if verbose:
                 print('Outputting vertex degrees and/or properties.', file=error_file, flush=True)
             id_count = 0
@@ -311,8 +376,19 @@ def run(input_file: KGTKFiles,
                                   '{}-{}-{}'.format(v_id, vertex_betweenness, id_count)])
                         id_count += 1
 
+                if output_local_clustering:
+                    if vertex_local_clustering in G2.vp:
+                        kw.write([v_id, vertex_local_clustering, str(G2.vp[vertex_local_clustering][v]),
+                                  '{}-{}-{}'.format(v_id, vertex_local_clustering, id_count)])
+                        id_count += 1
 
-
+                if output_extended_clustering and max_depth:
+                    for i in range(max_depth):
+                        vertex_name = f'{vertex_extended_clustering_prefix}{i+1}'
+                        if vertex_name in G2.vp:
+                            kw.write([v_id, vertex_name, str(G2.vp[vertex_name][v]),
+                                      '{}-{}-{}'.format(v_id, vertex_name, id_count)])
+                            id_count += 1
 
         kw.close()
 
