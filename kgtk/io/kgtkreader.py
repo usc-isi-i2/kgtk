@@ -53,7 +53,6 @@ class KgtkReaderOptions():
     GRAPH_CACHE_FETCHMANY_SIZE_DEFAULT: int = 1000
     GRAPH_CACHE_FILTER_BATCH_SIZE_DEFAULT: int = 1000
     UNQUOTE_CSV_COLUMN_NAMES_DEFAULT: bool = True
-    COLUMN_NAME_PREFIX_DEFAULT: str = 'col'
     DATA_FRAME_CAPTION_DEFAULT: str = 'DataFrame'
 
     # TODO: use an enum
@@ -645,6 +644,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
     COMPRESSED_FILE_EXTENSIONS: typing.List[str] =  [ ".bz2", ".gz", ".lz4", ".xz" ]
     CSV_FILE_EXTENSION: str = ".csv"
+    COLUMN_NAME_PREFIX_DEFAULT: str = 'col'
 
     @classmethod
     def _default_options(
