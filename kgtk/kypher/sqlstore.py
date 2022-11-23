@@ -1003,11 +1003,13 @@ class SqliteStore(SqlStore):
 
         if graph_action != 'reuse':
             # import main data:
-            self.add_graph_data(table, file, alias=alias, index_specs=index_specs, append=False)
+            self.add_graph_data(table, file, index_specs=index_specs, append=False)
         if graph_action == 'replace':
             # delete any old graph data *after* we replaced with new version to not lose anything in case of error:
             # TRICKY: we already pointed the new file_info.graph to the new table, so it won't be deleted here:
             self.drop_graph(file_info.graph)
+        if graph_action != 'reuse' and alias is not None:
+            self.set_file_alias(file, alias)
 
         if vector_spec:
             # handle step 2 of vector index creation:
@@ -1036,7 +1038,7 @@ class SqliteStore(SqlStore):
                     # top-level OP, commit successful DB and info updates:
                     self.commit()
 
-    def add_graph_data(self, table, file, alias=None, index_specs=None, append=False):
+    def add_graph_data(self, table, file, index_specs=None, append=False):
         """Low-level implementation of 'add_graph'.  Import data for graph 'table' from 'file'
         or add it to an existing graph if 'append' is True.  Uses a fast direct import
         if possible, otherwise falls back on a 2x slower csv.reader-based import of the data.
@@ -1090,8 +1092,6 @@ class SqliteStore(SqlStore):
             self.set_graph_info(table, size=int(ginfo.size)+graphsize, acctime=time.time())
         else:
             self.set_graph_info(table, header=header, size=graphsize, acctime=time.time())
-        if alias is not None:
-            self.set_file_alias(file, alias)
             
     def drop_graph(self, table_name):
         """Delete the graph 'table_name' and all its associated info records.
