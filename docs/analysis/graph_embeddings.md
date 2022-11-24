@@ -274,7 +274,7 @@ The output_file.tsv may look like:
 ### Example 2
 Running with more specific parameters (TransE algorithm and 200-dimensional vectors):
 ```
-kgtk graph-embeddings 
+kgtk graph-embeddings \
     --input-file input_file.tsv \
     --output-file output_file.tsv \
     --dimension 200 \
@@ -296,7 +296,7 @@ The `output_file.tsv` may look like:
 ### Example 3
 Using glove format to generate graph embeddings
 ```
-kgtk graph-embeddings 
+kgtk graph-embeddings \
     --input-file input_file.tsv \
     --output-file output_file.tsv \
     --output_format glove
@@ -313,7 +313,7 @@ The `output_file.tsv` may look like:
 ### Example 4
 Using kgtk format to generate graph embeddings
 ```
-kgtk graph-embeddings 
+kgtk graph-embeddings \
     --input-file input_file.tsv \
     --output-file output_file.tsv \
     --output_format kgtk --no-output-headers
