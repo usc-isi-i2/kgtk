@@ -439,7 +439,7 @@ class DocUpdater():
 
                 if self.summary:
                     total_errors: int = missed_table_count + missed_stdout_block_count + missed_error_count + unexpected_stdout_count + unexpected_error_count
-                    print("%s: %d errors in the examples" % (md_file, total_errors), file=self.error_file, flush=True)
+                    print("%d errors in the examples for %s" % (total_errors, repr(md_file)), file=self.error_file, flush=True)
 
                 return
 
