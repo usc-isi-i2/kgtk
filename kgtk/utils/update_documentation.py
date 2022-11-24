@@ -80,6 +80,7 @@ class DocUpdater():
     update_examples: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
 
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
+    summary: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     very_verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
         
@@ -399,7 +400,7 @@ class DocUpdater():
             # Replace the old usage with the new usage:
             lines[usage_block_begin:usage_block_end] = new_usage
 
-    def do_examples(self, subcommand: str, lines: typing.List[str]):
+    def do_examples(self, md_file: str, subcommand: str, lines: typing.List[str]):
         examples_section_idx: int = self.find_section("Examples", lines)
         if examples_section_idx < 0:
             if self.verbose:
@@ -435,7 +436,13 @@ class DocUpdater():
                     print ("%d missed errors processed" % missed_error_count, file=self.error_file, flush=True)
                     print ("%d unexpected stdout outputs processed" % unexpected_stdout_count, file=self.error_file, flush=True)
                     print ("%d unexpected error outputs processed" % unexpected_error_count, file=self.error_file, flush=True)
+
+                if self.summary:
+                    total_errors: int = missed_table_count + missed_stdout_block_count + missed_error_count + unexpected_stdout_count + unexpected_error_count
+                    print("%s: %d errors in the examples" % (md_file, total_errors), file=self.error_file, flush=True)
+
                 return
+
             if self.very_verbose:
                 print("Example command:\n----------\n%s----------" % "".join(lines[command_block_begin:command_block_end]), file=self.error_file, flush=True)
             current_idx = command_block_end + 1
@@ -543,7 +550,7 @@ class DocUpdater():
             self.do_usage(subcommand, lines, expert_usage=True)
 
         if self.process_examples:
-            self.do_examples(subcommand, lines)
+            self.do_examples(md_file, subcommand, lines)
 
         if self.verbose:
             print("Writing %d lines" % len(lines), file=self.error_file, flush=True)
@@ -575,6 +582,10 @@ def main():
                         help="Update the ## Examples section (default=%(default)s).",
                         type=optional_bool, nargs='?', const=True, default=True)
     
+    parser.add_argument("--summary", dest="summary", metavar="optional True|False",
+                        help="Pring an error summary line (default=%(default)s).",
+                        type=optional_bool, nargs='?', const=True, default=False)
+    
     KgtkReader.add_debug_arguments(parser)
 
     args: Namespace = parser.parse_args()
@@ -598,6 +609,7 @@ def main():
                                 process_examples=args.process_examples,
                                 update_examples=args.update_examples,
                                 error_file=error_file,
+                                summary=args.summary,
                                 verbose=args.verbose,
                                 very_verbose=args.very_verbose)
 
