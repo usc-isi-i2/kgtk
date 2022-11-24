@@ -377,7 +377,9 @@ class KypherApi(object):
                  loglevel=None,
                  config=None,
                  readonly=False,
-                 aux_dbfiles=None):
+                 aux_dbfiles=None,
+                 single_user=False,
+                 piped=False):
         """Create a new API object and initialize a number of configuration values.
         'graphcache' should be a filename for a Kypher graph cache to create or reuse.
         It uses the same default as the --graph-cache option of the 'query' command.
@@ -413,6 +415,12 @@ class KypherApi(object):
 
         'aux_dbfiles' can be one or more auxiliary DB files which will be attached to the main
         DB and can be queried in combination with tables in the main DB in read-only mode.
+
+        'single_user' mode blocks concurrent database readers for faster data import.
+
+        'piped' means we are invoked in a pipe, in which case 'self.get_conn()' will
+        block until at least one line of input has been generated on stdin.
+        The purpose of this is to ensure proper sequencing of DB updates.
         """
         self.config = config or {}
         self.graph_cache = graphcache
@@ -420,6 +428,8 @@ class KypherApi(object):
             self.graph_cache = self.get_config('GRAPH_CACHE')
         self.aux_dbfiles = aux_dbfiles
         self.readonly = readonly
+        self.single_user = single_user
+        self.piped = piped
         self.index_mode = index
         if index is None:
             self.index_mode = self.get_config('INDEX_MODE')
@@ -523,7 +533,8 @@ class KypherApi(object):
             #conn.row_factory = sqlite3.Row
             self.sql_store = sqlstore.SqliteStore(dbfile=self.graph_cache, conn=conn,
                                                   loglevel=self.loglevel, readonly=self.readonly,
-                                                  aux_dbfiles=self.aux_dbfiles)
+                                                  aux_dbfiles=self.aux_dbfiles,
+                                                  single_user=self.single_user, piped=self.piped)
         return self.sql_store
 
     def get_lock(self):
