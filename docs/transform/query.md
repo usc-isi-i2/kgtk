@@ -1521,7 +1521,7 @@ simply adds an `id` column.  Next we use the output of `add-id` as the
 input of the second query with `-i -`.  The dash indicates that this
 input comes from standard input of the query command (the output of
 `add-id`).  Within the match clause we can refer to this input as
-`stdin` (or we could have simply omitted a name since, it is the first
+`stdin` (or we could have simply omitted a name, since it is the first
 input in the list).  We then select edges from `GRAPH` that have one
 of the properties in the list where the count matches the
 where-constraint:
@@ -1564,7 +1564,7 @@ kgtk query -i $GRAPH \
 
 Any number of queries can be chained into complex pipelines.  If
 intermediate data such as the counts above are not explicitly named
-and preserved, they will simply be replaced by the input imported by
+and preserved, it will simply be replaced by the input imported by
 the next query in the chain.  This is generally the expected behavior
 and avoids accumulation of useless intermediate results.
 
