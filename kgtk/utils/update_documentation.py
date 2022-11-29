@@ -72,6 +72,7 @@ class DocUpdater():
 
     kgtk_command: str = attr.ib(validator=attr.validators.instance_of(str), default="kgtk")
     format_command: str = attr.ib(validator=attr.validators.instance_of(str), default="md")
+    table_command: str = attr.ib(validator=attr.validators.instance_of(str), default="table")
 
     process_usage: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
     update_usage: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
@@ -462,9 +463,9 @@ class DocUpdater():
                 if command.startswith('kgtk '):
                     command = self.kgtk_command + command[len('kgtk'):]
 
-                    # In case the example already ends with the formatting
+                    # In case the example already ends with a formatting
                     # command (e.g., in md.md):
-                    if not command.endswith(self.format_command):
+                    if not command.endswith((self.format_command, self.table_command)):
                         command += " / " + self.format_command
                 else:
                     # OK, this is something wierd, such as a cat of a KGTK file with a header error.
