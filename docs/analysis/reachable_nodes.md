@@ -219,20 +219,19 @@ Note: `--undirected` and `--undirected-props-file` may not be used together.
 ## Usage
 ```
 usage: kgtk reachable-nodes [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
-                            [--root [ROOT [ROOT ...]]] [--root-file ROOTFILE]
+                            [--root [ROOT ...]] [--root-file ROOTFILE]
                             [--rootfilecolumn ROOTFILECOLUMN]
                             [--subj SUBJECT_COLUMN_NAME]
                             [--obj OBJECT_COLUMN_NAME]
                             [--pred PREDICATE_COLUMN_NAME]
-                            [--prop [PROPS [PROPS ...]]]
-                            [--props-file PROPS_FILE]
+                            [--prop [PROPS ...]] [--props-file PROPS_FILE]
                             [--propsfilecolumn PROPSFILECOLUMN]
                             [--inverted [True|False]]
-                            [--inverted-prop [INVERTED_PROPS [INVERTED_PROPS ...]]]
+                            [--inverted-prop [INVERTED_PROPS ...]]
                             [--inverted-props-file INVERTED_PROPS_FILE]
                             [--invertedpropsfilecolumn INVERTEDPROPSFILECOLUMN]
                             [--undirected [True|False]]
-                            [--undirected-prop [UNDIRECTED_PROPS [UNDIRECTED_PROPS ...]]]
+                            [--undirected-prop [UNDIRECTED_PROPS ...]]
                             [--undirected-props-file UNDIRECTED_PROPS_FILE]
                             [--undirectedpropsfilecolumn UNDIRECTEDPROPSFILECOLUMN]
                             [--label LABEL] [--selflink [True|False]]
@@ -251,8 +250,7 @@ optional arguments:
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
                         The KGTK output file. (May be omitted or '-' for
                         stdout.)
-  --root [ROOT [ROOT ...]]
-                        Set of root nodes to use, space- or comma-separated
+  --root [ROOT ...]     Set of root nodes to use, space- or comma-separated
                         strings. (default=None)
   --root-file ROOTFILE, --rootfile ROOTFILE
                         Option to specify a file containing the set of root
@@ -270,7 +268,7 @@ optional arguments:
   --pred PREDICATE_COLUMN_NAME
                         Name of the predicate column. (default: node2 or its
                         alias)
-  --prop [PROPS [PROPS ...]], --props [PROPS [PROPS ...]]
+  --prop [PROPS ...], --props [PROPS ...]
                         Properties to consider while finding reachable nodes,
                         space- or comma-separated string. (default: all
                         properties)
@@ -284,7 +282,7 @@ optional arguments:
   --inverted [True|False]
                         When True, and when --undirected is False, invert the
                         source and target nodes in the graph. (default=False)
-  --inverted-prop [INVERTED_PROPS [INVERTED_PROPS ...]], --inverted-props [INVERTED_PROPS [INVERTED_PROPS ...]]
+  --inverted-prop [INVERTED_PROPS ...], --inverted-props [INVERTED_PROPS ...]
                         Properties to invert, space- or comma-separated
                         string. (default: no properties)
   --inverted-props-file INVERTED_PROPS_FILE
@@ -297,7 +295,7 @@ optional arguments:
   --undirected [True|False]
                         When True, specify graph as undirected.
                         (default=False)
-  --undirected-prop [UNDIRECTED_PROPS [UNDIRECTED_PROPS ...]], --undirected-props [UNDIRECTED_PROPS [UNDIRECTED_PROPS ...]]
+  --undirected-prop [UNDIRECTED_PROPS ...], --undirected-props [UNDIRECTED_PROPS ...]
                         Properties to treat as undirected, space- or comma-
                         separated string. (default: no properties)
   --undirected-props-file UNDIRECTED_PROPS_FILE
@@ -320,16 +318,15 @@ optional arguments:
   --depth-limit DEPTH_LIMIT
                         An optional depth limit for breadth-first searches.
                         (default=None)
-
-  -v [optional True|False], --verbose [optional True|False]
-                        Print additional progress messages (default=False).
-                        
   --show-distance [True|False]
                         When True, also given breadth first true, append
                         another column showing the shortest distance, default
                         col name is distance
   --dist-col-name DIST_COL_NAME
                         The column name for distance, default is distance
+
+  -v [optional True|False], --verbose [optional True|False]
+                        Print additional progress messages (default=False).
 ```
 
 ## Examples
@@ -814,10 +811,10 @@ kgtk reachable-nodes -i examples/docs/reachable-nodes-blocks.tsv \
 
 Here is the additional graph properties output:
 
-    Graph name=<VertexPropertyMap object with value type 'string', for Graph 0x7f6b6c8ec760, at 0x7f6b6c8ecac0>
+    Graph name=<VertexPropertyMap object with value type 'string', for Graph 0x7f20c32f4fd0, at 0x7f20c3301340>
     Graph properties:
-        ('v', 'name'): <VertexPropertyMap object with value type 'string', for Graph 0x7f6b6c8ec760, at 0x7f6b6c8ecac0>
-        ('e', 'label'): <EdgePropertyMap object with value type 'string', for Graph 0x7f6b6c8ec760, at 0x7f6b6c8eca30>
+        ('v', 'name'): <VertexPropertyMap object with value type 'string', for Graph 0x7f20c32f4fd0, at 0x7f20c3301340>
+        ('e', 'label'): <EdgePropertyMap object with value type 'string', for Graph 0x7f20c32f4fd0, at 0x7f20c33012b0>
 
 ### Expert Example: Breadth-first Search
 
@@ -865,11 +862,6 @@ kgtk reachable-nodes -i examples/docs/reachable-nodes-depth-limit.tsv \
 
 | node1 | label | node2 |
 | -- | -- | -- |
-| red_top | reachable | red_one |
-| red_top | reachable | red_two |
-| red_top | reachable | red_three |
-| red_top | reachable | red_four |
-| red_top | reachable | red_five |
 
 ```bash
 kgtk reachable-nodes -i examples/docs/reachable-nodes-depth-limit.tsv \
@@ -879,9 +871,6 @@ kgtk reachable-nodes -i examples/docs/reachable-nodes-depth-limit.tsv \
 
 | node1 | label | node2 |
 | -- | -- | -- |
-| red_top | reachable | red_one |
-| red_top | reachable | red_two |
-| red_top | reachable | red_three |
 
 ```bash
 kgtk reachable-nodes -i examples/docs/reachable-nodes-depth-limit.tsv \
@@ -891,7 +880,6 @@ kgtk reachable-nodes -i examples/docs/reachable-nodes-depth-limit.tsv \
 
 | node1 | label | node2 |
 | -- | -- | -- |
-| red_top | reachable | red_one |
 
 
 ```bash

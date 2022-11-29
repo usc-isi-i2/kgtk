@@ -79,12 +79,18 @@ usage: kgtk clean-data [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                        [--gzip-queue-size GZIP_QUEUE_SIZE]
                        [--implied-label IMPLIED_LABEL]
                        [--use-graph-cache-envar [optional True|False]]
+                       [--ignore-stale-graph-cache [optional True|False]]
                        [--graph-cache GRAPH_CACHE]
                        [--graph-cache-fetchmany-size GRAPH_CACHE_FETCHMANY_SIZE]
                        [--graph-cache-filter-batch-size GRAPH_CACHE_FILTER_BATCH_SIZE]
                        [--mode {NONE,EDGE,NODE,AUTO}]
                        [--input-column-names FORCE_COLUMN_NAMES [FORCE_COLUMN_NAMES ...]]
                        [--no-input-header [optional True|False]]
+                       [--supply-missing-column-names [optional True|False]]
+                       [--number-of-columns COUNT]
+                       [--require-column-names REQUIRE_COLUMN_NAMES [REQUIRE_COLUMN_NAMES ...]]
+                       [--no-additional-columns [optional True|False]]
+                       [--unquote-csv-column-names [optional True|False]]
                        [--header-error-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
                        [--unsafe-column-name-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
                        [--prohibit-whitespace-in-column-names [optional True|False]]
@@ -103,7 +109,7 @@ usage: kgtk clean-data [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                        [--short-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
                        [--truncate-long-lines [TRUNCATE_LONG_LINES]]
                        [--whitespace-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                       [--additional-language-codes [ADDITIONAL_LANGUAGE_CODES [ADDITIONAL_LANGUAGE_CODES ...]]]
+                       [--additional-language-codes [ADDITIONAL_LANGUAGE_CODES ...]]
                        [--allow-lax-qnodes [ALLOW_LAX_QNODES]]
                        [--allow-language-suffixes [ALLOW_LANGUAGE_SUFFIXES]]
                        [--allow-lax-strings [ALLOW_LAX_STRINGS]]
@@ -193,6 +199,9 @@ File options:
   --use-graph-cache-envar [optional True|False]
                         use KGTK_GRAPH_CACHE if --graph-cache is not
                         specified. (default=True).
+  --ignore-stale-graph-cache [optional True|False]
+                        Ignore the graph cache if the file exists with a
+                        differen size or modificatin time. (default=True).
   --graph-cache GRAPH_CACHE
                         When specified, look for input files in a graph cache.
                         (default=None).
@@ -220,6 +229,23 @@ Header parsing:
                         column-names and --no-input-header=False. --no-input-
                         header has no effect when --input-column-names has not
                         been specified. (default=False).
+  --supply-missing-column-names [optional True|False]
+                        Supply column names that are missing. (default=False).
+  --number-of-columns COUNT
+                        The expected number of columns in the header.
+                        (default=None).
+  --require-column-names REQUIRE_COLUMN_NAMES [REQUIRE_COLUMN_NAMES ...]
+                        The list of column names required in the input file.
+                        (default=None).
+  --no-additional-columns [optional True|False]
+                        When True, do not allow any column names other than
+                        the required column names. When --require-column-names
+                        is not specified, then disallow columns other than
+                        [node1, label, node2, id] (or aliases) for an edge
+                        file, and [id] for a node file. (default=False).
+  --unquote-csv-column-names [optional True|False]
+                        Remove double quotes from the outside of column names.
+                        (default=True).
   --header-error-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
                         The action to take when a header error is detected.
                         Only ERROR or EXIT are supported
@@ -286,7 +312,7 @@ Line parsing:
 Data value parsing:
   Options controlling the parsing and processing of KGTK data values.
 
-  --additional-language-codes [ADDITIONAL_LANGUAGE_CODES [ADDITIONAL_LANGUAGE_CODES ...]]
+  --additional-language-codes [ADDITIONAL_LANGUAGE_CODES ...]
                         Additional language codes. (default=use internal
                         list).
   --allow-lax-qnodes [ALLOW_LAX_QNODES]

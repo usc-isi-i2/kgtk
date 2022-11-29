@@ -378,7 +378,7 @@ class KgtkValueOptions:
 
 DEFAULT_KGTK_VALUE_OPTIONS: KgtkValueOptions = KgtkValueOptions()
 
-def main():
+def main()->None:
     """
     Test the KGTK value options.
     """

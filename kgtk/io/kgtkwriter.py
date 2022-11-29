@@ -9,6 +9,7 @@ from enum import Enum
 import errno
 import html
 import json
+import pandas
 from pathlib import Path
 from multiprocessing import Queue
 import sys

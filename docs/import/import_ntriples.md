@@ -1073,3 +1073,4 @@ The following summary is produced:
     Ignored 0 comments.
     Rejected 1 records with langString IRIs.
     Imported 0 records with unknown datatype IRIs.
+    KgtkWriter: closing the output file

@@ -17,6 +17,7 @@ from kgtk.cli_entry import progress_startup
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.join.kgtkmergecolumns import KgtkMergeColumns
+from kgtk.utils.validationaction import ValidationAction
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 @attr.s(slots=True, frozen=True)
@@ -72,6 +73,11 @@ class KgtkCat():
     value_options: typing.Optional[KgtkValueOptions] = attr.ib(default=None)
 
     output_format: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None) # TODO: use an enum
+
+    # In order to allow `kgtk md` to process the widest set of files possible,
+    # we we will ignore certain error checks by overriding these parameters:
+    output_header_error_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.ERROR)
+    output_prohibit_extra_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
 
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -225,11 +231,10 @@ class KgtkCat():
             if self.verbose:
                 print("Opening the output file: %s" % str(self.output_path), file=self.error_file, flush=True)
 
-
         ew: KgtkWriter = KgtkWriter.open(kmc.column_names,
                                          self.output_path,
                                          require_all_columns=False,
-                                         prohibit_extra_columns=True,
+                                         prohibit_extra_columns=self.output_prohibit_extra_columns,
                                          fill_missing_columns=True,
                                          use_mgzip=self.reader_options.use_mgzip, # Hack!
                                          mgzip_threads=self.reader_options.mgzip_threads, # Hack!
@@ -241,6 +246,7 @@ class KgtkCat():
                                          new_column_names=self.new_column_names,
                                          no_header=self.no_output_header,
                                          error_file=self.error_file,
+                                         header_error_action = self.output_header_error_action,
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)
 
