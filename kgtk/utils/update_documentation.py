@@ -459,7 +459,11 @@ class DocUpdater():
                 stdout_block_begin, stdout_block_end = self.find_stdout_block(lines, current_idx)
 
             if table_begin >= 0:
-                command += " / " + self.format_command
+                if command.startswith('kgtk '):
+                    command = self.kgtk_command + command[len('kgtk'):] + " / " + self.format_command
+                else:
+                    # OK, this is something wierd, such as a cat of a KGTK file with a header error.
+                    command += " | " + self.kgtk_command + " " + self.format_command + " --header-error-action PASS" + " --unsafe-column-name-action PASS"
                 if self.verbose:
                     print("\nGetting new table lines for:\n%s" % command, file=self.error_file, flush=True)
             else:
