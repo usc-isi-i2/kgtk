@@ -460,7 +460,12 @@ class DocUpdater():
 
             if table_begin >= 0:
                 if command.startswith('kgtk '):
-                    command = self.kgtk_command + command[len('kgtk'):] + " / " + self.format_command
+                    command = self.kgtk_command + command[len('kgtk'):]
+
+                    # In case the example already ends with the formatting
+                    # command (e.g., in md.md):
+                    if not command.endswith(self.format_command):
+                        command += " / " + self.format_command
                 else:
                     # OK, this is something wierd, such as a cat of a KGTK file with a header error.
                     command += " | " + self.kgtk_command + " " + self.format_command + " --header-error-action PASS" + " --unsafe-column-name-action PASS"
