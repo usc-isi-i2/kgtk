@@ -1,20 +1,34 @@
 This command creates a html visualization of a KGTK edge file
 ## Usage
 ```
-usage: kgtk visualize-graph [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [--node-file NODE_FILE] [--direction DIRECTION]
-                            [--show-edge-label] [--edge-color-column EDGE_COLOR_COLUMN]
-                            [--edge-color-numbers EDGE_COLOR_NUMBERS] [--edge-color-hex]
-                            [--edge-color-style EDGE_COLOR_STYLE] [--edge-color-default EDGE_COLOR_DEFAULT]
-                            [--edge-width-column EDGE_WIDTH_COLUMN] [--edge-width-minimum EDGE_WIDTH_MINIMUM]
-                            [--edge-width-maximum EDGE_WIDTH_MAXIMUM] [--edge-width-default EDGE_WIDTH_DEFAULT]
-                            [--edge-width-scale EDGE_WIDTH_SCALE] [--node-color-column NODE_COLOR_COLUMN]
-                            [--node-color-style NODE_COLOR_STYLE] [--node-color-default NODE_COLOR_DEFAULT]
-                            [--node-color-numbers NODE_COLOR_NUMBERS] [--node-color-hex]
-                            [--node-size-column NODE_SIZE_COLUMN] [--node-size-minimum NODE_SIZE_MINIMUM]
-                            [--node-size-maximum NODE_SIZE_MAXIMUM] [--node-size-default NODE_SIZE_DEFAULT]
-                            [--node-size-scale NODE_SIZE_SCALE] [--node-file-id NODE_FILE_ID]
-                            [--show-text-limit SHOW_TEXT_LIMIT] [--node-border-color NODE_BORDER_COLOR]
-                            [--tooltip-column TOOLTIP_COLUMN] [--show-text SHOW_TEXT] [--show-blank-labels]
+usage: kgtk visualize-graph [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
+                            [--node-file NODE_FILE] [--direction DIRECTION]
+                            [--show-edge-label]
+                            [--edge-color-column EDGE_COLOR_COLUMN]
+                            [--edge-color-numbers EDGE_COLOR_NUMBERS]
+                            [--edge-color-hex]
+                            [--edge-color-style EDGE_COLOR_STYLE]
+                            [--edge-color-default EDGE_COLOR_DEFAULT]
+                            [--edge-width-column EDGE_WIDTH_COLUMN]
+                            [--edge-width-minimum EDGE_WIDTH_MINIMUM]
+                            [--edge-width-maximum EDGE_WIDTH_MAXIMUM]
+                            [--edge-width-default EDGE_WIDTH_DEFAULT]
+                            [--edge-width-scale EDGE_WIDTH_SCALE]
+                            [--node-color-column NODE_COLOR_COLUMN]
+                            [--node-color-style NODE_COLOR_STYLE]
+                            [--node-color-default NODE_COLOR_DEFAULT]
+                            [--node-color-numbers NODE_COLOR_NUMBERS]
+                            [--node-color-hex]
+                            [--node-size-column NODE_SIZE_COLUMN]
+                            [--node-size-minimum NODE_SIZE_MINIMUM]
+                            [--node-size-maximum NODE_SIZE_MAXIMUM]
+                            [--node-size-default NODE_SIZE_DEFAULT]
+                            [--node-size-scale NODE_SIZE_SCALE]
+                            [--node-file-id NODE_FILE_ID]
+                            [--show-text-limit SHOW_TEXT_LIMIT]
+                            [--node-border-color NODE_BORDER_COLOR]
+                            [--tooltip-column TOOLTIP_COLUMN]
+                            [--show-text SHOW_TEXT] [--show-blank-labels]
                             [-v [optional True|False]]
 
 Convert edge file (optional node file) to html graph visualization file
@@ -22,40 +36,63 @@ Convert edge file (optional node file) to html graph visualization file
 optional arguments:
   -h, --help            show this help message and exit
   -i INPUT_FILE, --input-file INPUT_FILE
-                        The KGTK input file. (May be omitted or '-' for stdin.)
+                        The KGTK input file. (May be omitted or '-' for
+                        stdin.)
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
-                        The KGTK output file. (May be omitted or '-' for stdout.)
+                        The KGTK output file. (May be omitted or '-' for
+                        stdout.)
   --node-file NODE_FILE
                         Path of the node file.
   --direction DIRECTION
                         The edge direction: arrow|particle|None. Default: None
-  --show-edge-label     Add this option to show labels on edges. Default: False
+  --show-edge-label     Add this option to show labels on edges. Default:
+                        False
   --edge-color-column EDGE_COLOR_COLUMN
-                        Column for edge colors in the edge file. The values can be numbers, hex codes or any strings
+                        Column for edge colors in the edge file. The values
+                        can be numbers, hex codes or any strings
   --edge-color-numbers EDGE_COLOR_NUMBERS
-                        Indicate if the values in the --edge-color-column are numbers and specify how to scale the numbers.
-                        The valid choices are:linear|log|as-is. Default: None. The numbers will be scaled linearly,
-                        logarithmically, left as is respectively.
-  --edge-color-hex      Add this option if the values in the --edge-color-column are valid hexadecimal colors.Valid
-                        hexadecimal colors start with # and are of 3 or 6 length (without the #)
+                        Indicate if the values in the --edge-color-column are
+                        numbers and specify how to scale the numbers. The
+                        valid choices are:linear|log|as-is. Default: None. The
+                        numbers will be scaled linearly, logarithmically, left
+                        as is respectively.
+  --edge-color-hex      Add this option if the values in the --edge-color-
+                        column are valid hexadecimal colors.Valid hexadecimal
+                        colors start with # and are of 3 or 6 length (without
+                        the #)
   --edge-color-style EDGE_COLOR_STYLE
-                        Pick one of the following CATEGORICAL styles: d3.schemeCategory10, d3.schemeAccent, d3.schemeDark2,
-                        d3.schemePaired, d3.schemePastel1, d3.schemePastel2, d3.schemeSet1, d3.schemeSet2, d3.schemeSet3,
-                        d3.schemeTableau10 OR one of the following GRADIENT styles: d3.interpolateBrBG, d3.interpolatePRGn,
-                        d3.interpolatePiYG, d3.interpolatePuOr, d3.interpolateRdBu, d3.interpolateRdGy,
-                        d3.interpolateRdYlBu, d3.interpolateRdYlGn, d3.interpolateSpectral, d3.interpolateBlues,
-                        d3.interpolateGreens, d3.interpolateOranges, d3.interpolatePurples, d3.interpolateReds,
-                        d3.interpolateGreys, d3.interpolateTurbo, d3.interpolateViridis, d3.interpolateInferno,
-                        d3.interpolateMagma, d3.interpolatePlasma, d3.interpolateCividis, d3.interpolateWarm,
-                        d3.interpolateCool, d3.interpolateCubehelixDefault, d3.interpolateBuGn, d3.interpolateBuPu,
-                        d3.interpolateGnBu, d3.interpolateOrRd, d3.interpolatePuBuGn, d3.interpolatePuBu,
-                        d3.interpolatePuRd, d3.interpolateRdPu, d3.interpolateYlGnBu, d3.interpolateYlGn,
-                        d3.interpolateYlOrBr, d3.interpolateYlOrRd, d3.interpolateRainbow Default:
-                        d3.interpolateRainbow.See https://github.com/d3/d3-scale-chromatic for more details.
+                        Pick one of the following CATEGORICAL styles:
+                        d3.schemeCategory10, d3.schemeAccent, d3.schemeDark2,
+                        d3.schemePaired, d3.schemePastel1, d3.schemePastel2,
+                        d3.schemeSet1, d3.schemeSet2, d3.schemeSet3,
+                        d3.schemeTableau10 OR one of the following GRADIENT
+                        styles: d3.interpolateBrBG, d3.interpolatePRGn,
+                        d3.interpolatePiYG, d3.interpolatePuOr,
+                        d3.interpolateRdBu, d3.interpolateRdGy,
+                        d3.interpolateRdYlBu, d3.interpolateRdYlGn,
+                        d3.interpolateSpectral, d3.interpolateBlues,
+                        d3.interpolateGreens, d3.interpolateOranges,
+                        d3.interpolatePurples, d3.interpolateReds,
+                        d3.interpolateGreys, d3.interpolateTurbo,
+                        d3.interpolateViridis, d3.interpolateInferno,
+                        d3.interpolateMagma, d3.interpolatePlasma,
+                        d3.interpolateCividis, d3.interpolateWarm,
+                        d3.interpolateCool, d3.interpolateCubehelixDefault,
+                        d3.interpolateBuGn, d3.interpolateBuPu,
+                        d3.interpolateGnBu, d3.interpolateOrRd,
+                        d3.interpolatePuBuGn, d3.interpolatePuBu,
+                        d3.interpolatePuRd, d3.interpolateRdPu,
+                        d3.interpolateYlGnBu, d3.interpolateYlGn,
+                        d3.interpolateYlOrBr, d3.interpolateYlOrRd,
+                        d3.interpolateRainbow Default:
+                        d3.interpolateRainbow.See
+                        https://github.com/d3/d3-scale-chromatic for more
+                        details.
   --edge-color-default EDGE_COLOR_DEFAULT
                         Default color for edges. Default: '#000000'
   --edge-width-column EDGE_WIDTH_COLUMN
-                        Column for edge widths in the edge file. The values should be numbers.
+                        Column for edge widths in the edge file. The values
+                        should be numbers.
   --edge-width-minimum EDGE_WIDTH_MINIMUM
                         Minimum edge width. Default: 1.0
   --edge-width-maximum EDGE_WIDTH_MAXIMUM
@@ -65,32 +102,51 @@ optional arguments:
   --edge-width-scale EDGE_WIDTH_SCALE
                         Edge width scale: linear|log. Default: None
   --node-color-column NODE_COLOR_COLUMN
-                        Column for node colors in the --node-file. The values can be numbers, valid hex codes or any
-                        strings.
+                        Column for node colors in the --node-file. The values
+                        can be numbers, valid hex codes or any strings.
   --node-color-style NODE_COLOR_STYLE
-                        Pick one of the following CATEGORICAL styles: d3.schemeCategory10, d3.schemeAccent, d3.schemeDark2,
-                        d3.schemePaired, d3.schemePastel1, d3.schemePastel2, d3.schemeSet1, d3.schemeSet2, d3.schemeSet3,
-                        d3.schemeTableau10 OR one of the following GRADIENT styles: d3.interpolateBrBG, d3.interpolatePRGn,
-                        d3.interpolatePiYG, d3.interpolatePuOr, d3.interpolateRdBu, d3.interpolateRdGy,
-                        d3.interpolateRdYlBu, d3.interpolateRdYlGn, d3.interpolateSpectral, d3.interpolateBlues,
-                        d3.interpolateGreens, d3.interpolateOranges, d3.interpolatePurples, d3.interpolateReds,
-                        d3.interpolateGreys, d3.interpolateTurbo, d3.interpolateViridis, d3.interpolateInferno,
-                        d3.interpolateMagma, d3.interpolatePlasma, d3.interpolateCividis, d3.interpolateWarm,
-                        d3.interpolateCool, d3.interpolateCubehelixDefault, d3.interpolateBuGn, d3.interpolateBuPu,
-                        d3.interpolateGnBu, d3.interpolateOrRd, d3.interpolatePuBuGn, d3.interpolatePuBu,
-                        d3.interpolatePuRd, d3.interpolateRdPu, d3.interpolateYlGnBu, d3.interpolateYlGn,
-                        d3.interpolateYlOrBr, d3.interpolateYlOrRd, d3.interpolateRainbow Default:
-                        d3.interpolateRainbow.See https://github.com/d3/d3-scale-chromatic for more details.
+                        Pick one of the following CATEGORICAL styles:
+                        d3.schemeCategory10, d3.schemeAccent, d3.schemeDark2,
+                        d3.schemePaired, d3.schemePastel1, d3.schemePastel2,
+                        d3.schemeSet1, d3.schemeSet2, d3.schemeSet3,
+                        d3.schemeTableau10 OR one of the following GRADIENT
+                        styles: d3.interpolateBrBG, d3.interpolatePRGn,
+                        d3.interpolatePiYG, d3.interpolatePuOr,
+                        d3.interpolateRdBu, d3.interpolateRdGy,
+                        d3.interpolateRdYlBu, d3.interpolateRdYlGn,
+                        d3.interpolateSpectral, d3.interpolateBlues,
+                        d3.interpolateGreens, d3.interpolateOranges,
+                        d3.interpolatePurples, d3.interpolateReds,
+                        d3.interpolateGreys, d3.interpolateTurbo,
+                        d3.interpolateViridis, d3.interpolateInferno,
+                        d3.interpolateMagma, d3.interpolatePlasma,
+                        d3.interpolateCividis, d3.interpolateWarm,
+                        d3.interpolateCool, d3.interpolateCubehelixDefault,
+                        d3.interpolateBuGn, d3.interpolateBuPu,
+                        d3.interpolateGnBu, d3.interpolateOrRd,
+                        d3.interpolatePuBuGn, d3.interpolatePuBu,
+                        d3.interpolatePuRd, d3.interpolateRdPu,
+                        d3.interpolateYlGnBu, d3.interpolateYlGn,
+                        d3.interpolateYlOrBr, d3.interpolateYlOrRd,
+                        d3.interpolateRainbow Default:
+                        d3.interpolateRainbow.See
+                        https://github.com/d3/d3-scale-chromatic for more
+                        details.
   --node-color-default NODE_COLOR_DEFAULT
                         Default node color. Default: '#000000'
   --node-color-numbers NODE_COLOR_NUMBERS
-                        Indicate if the values in the --node-color-column are numbers and specify how to scale the numbers.
-                        The valid choices are:linear|log|as-is. Default: None. The numbers will be scaled linearly,
-                        logarithmically, left as is respectively.
-  --node-color-hex      Add this option if the values in the --node-color-column are valid hexadecimal colors.Valid
-                        hexadecimal colors start with # and are of 3 or 6 length (without the #)
+                        Indicate if the values in the --node-color-column are
+                        numbers and specify how to scale the numbers. The
+                        valid choices are:linear|log|as-is. Default: None. The
+                        numbers will be scaled linearly, logarithmically, left
+                        as is respectively.
+  --node-color-hex      Add this option if the values in the --node-color-
+                        column are valid hexadecimal colors.Valid hexadecimal
+                        colors start with # and are of 3 or 6 length (without
+                        the #)
   --node-size-column NODE_SIZE_COLUMN
-                        Column for node sizes in the --node-file. Default: None
+                        Column for node sizes in the --node-file. Default:
+                        None
   --node-size-minimum NODE_SIZE_MINIMUM
                         Minimum node size. Default: 1.0
   --node-size-maximum NODE_SIZE_MAXIMUM
@@ -102,18 +158,22 @@ optional arguments:
   --node-file-id NODE_FILE_ID
                         ID column name in the --node-file. Default: 'id'
   --show-text-limit SHOW_TEXT_LIMIT
-                        When number of nodes is greater than --show-text-limit, node labels will not be visible.Default:
-                        500
+                        When number of nodes is greater than --show-text-
+                        limit, node labels will not be visible.Default: 500
   --node-border-color NODE_BORDER_COLOR
                         Node border color. Default: None
   --tooltip-column TOOLTIP_COLUMN
-                        Column for node tooltips in the --node-file. Default: None
+                        Column for node tooltips in the --node-file. Default:
+                        None
   --show-text SHOW_TEXT
-                        Show node labels at the position relative to node: center|above. Default: None. If the number of
-                        nodes in the graph is greater than specified by --show-text-limit option, which is 500 by default,
-                        then the text will not be shown in the visualization.
-  --show-blank-labels   if --show-text is specified, show the label of a Qnode as emptry string, and not the Qnode, if the
-                        label is an empty string.
+                        Show node labels at the position relative to node:
+                        center|above. Default: None. If the number of nodes in
+                        the graph is greater than specified by --show-text-
+                        limit option, which is 500 by default, then the text
+                        will not be shown in the visualization.
+  --show-blank-labels   if --show-text is specified, show the label of a Qnode
+                        as emptry string, and not the Qnode, if the label is
+                        an empty string.
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).
@@ -204,26 +264,26 @@ kgtk cat -i examples/docs/visualize_force_graph_example2.tsv
 
 Edge File
 
-|node1|label |node2|weight|hex_color|ordinal|
-|-----|------|-----|------|---------|-------|
-|Q1   |friend|Q2   |0.9   |#FF69B4  |0      |
-|Q2   |friend|Q3   |0.3   |#FF69B4  |1      |
-|Q3   |friend|Q4   |      |#FF69B4  |2      |
-|Q5   |friend|Q3   |      |#FF69B4  |3      |
-|Q6   |friend|Q5   |      |#FF69B4  |4      |
-|Q6   |friend|Q1   |      |#FF69B4  |5      |
-|Q1   |born  |Q7   |      |#FFF68F  |6      |
-|Q2   |born  |Q7   |      |#FFF68F  |7      |
-|Q3   |born  |Q7   |      |#FFF68F  |8      |
-|Q4   |born  |Q8   |      |#FFF68F  |9      |
-|Q5   |born  |Q8   |      |#FFF68F  |10     |
-|Q6   |born  |Q8   |      |#FFF68F  |11     |
-|Q1   |lives |Q8   |      |#32CD32  |12     |
-|Q2   |lives |Q7   |      |#32CD32  |13     |
-|Q3   |lives |Q9   |      |#32CD32  |14     |
-|Q4   |lives |Q8   |      |#32CD32  |15     |
-|Q5   |lives |Q9   |      |#32CD32  |16     |
-|Q6   |lives |Q8   |      |#32CD32  |17     |
+| node1 | label | node2 | weight | hex_color | ordinal |
+| -- | -- | -- | -- | -- | -- |
+| Q1 | "friend" | Q2 | 0.9 | #FF69B4 | 0 |
+| Q2 | "friend" | Q3 | 0.3 | #FF69B4 | 1 |
+| Q3 | "friend" | Q4 | "" | #FF69B4 | 2 |
+| Q5 | "friend" | Q3 | "" | #FF69B4 | 3 |
+| Q6 | "friend" | Q5 | "" | #FF69B4 | 4 |
+| Q6 | "friend" | Q1 | "" | #FF69B4 | 5 |
+| Q1 | "born" | Q7 | "" | #FFF68F | 6 |
+| Q2 | "born" | Q7 | "" | #FFF68F | 7 |
+| Q3 | "born" | Q7 | "" | #FFF68F | 8 |
+| Q4 | "born" | Q8 | "" | #FFF68F | 9 |
+| Q5 | "born" | Q8 | "" | #FFF68F | 10 |
+| Q6 | "born" | Q8 | "" | #FFF68F | 11 |
+| Q1 | "lives" | Q8 | "" | #32CD32 | 12 |
+| Q2 | "lives" | Q7 | "" | #32CD32 | 13 |
+| Q3 | "lives" | Q9 | "" | #32CD32 | 14 |
+| Q4 | "lives" | Q8 | "" | #32CD32 | 15 |
+| Q5 | "lives" | Q9 | "" | #32CD32 | 16 |
+| Q6 | "lives" | Q8 | "" | #32CD32 | 17 |
 
 
 ```bash
@@ -232,17 +292,17 @@ kgtk cat -i examples/docs/visualize_force_graph_example2_node.tsv
 
 Node File
 
-|id |label |is_country|type|degree |type_missing|population|hex_color|ordinal|
-|---|------|----------|----|-------|------------|----------|---------|-------|
-|Q1 |'Alice'@en|0         |human|40     |            |          |#00FFFF  |0      |
-|Q2 |'Susan'@en|0         |human|14     |            |          |#8A2BE2  |1      |
-|Q3 |'John'@en|0         |human|4      |            |          |#FF4040  |2      |
-|Q4 |'Claudia'@en|0         |human|32     |            |          |#7FFF00  |3      |
-|Q5 |'Ulrich'@en|0         |human|422    |            |          |#FFB90F  |4      |
-|Q6 |'Fritz'@en|0         |human|4      |            |          |#C1FFC1  |5      |
-|Q7 |'USA'@en|1         |country|50     |country     |300       |#FF1493  |6      |
-|Q8 |'Germany'@en|1         |country|500    |country     |50        |#FFD700  |7      |
-|Q9 |'Brazil'@en|1         |country|222    |country     |200       |#FF69B4  |8      |
+| id | label | is_country | type | degree | type_missing | population | hex_color | ordinal |
+| -- | -- | -- | -- | -- | -- | -- | -- | -- |
+| Q1 | 'Alice'@en | 0 | human | 40 | "" | "" | #00FFFF | 0 |
+| Q2 | 'Susan'@en | 0 | human | 14 | "" | "" | #8A2BE2 | 1 |
+| Q3 | 'John'@en | 0 | human | 4 | "" | "" | #FF4040 | 2 |
+| Q4 | 'Claudia'@en | 0 | human | 32 | "" | "" | #7FFF00 | 3 |
+| Q5 | 'Ulrich'@en | 0 | human | 422 | "" | "" | #FFB90F | 4 |
+| Q6 | 'Fritz'@en | 0 | human | 4 | "" | "" | #C1FFC1 | 5 |
+| Q7 | 'USA'@en | 1 | country | 50 | country | 300 | #FF1493 | 6 |
+| Q8 | 'Germany'@en | 1 | country | 500 | country | 50 | #FFD700 | 7 |
+| Q9 | 'Brazil'@en | 1 | country | 222 | country | 200 | #FF69B4 | 8 |
 
 
 ## 1. Default

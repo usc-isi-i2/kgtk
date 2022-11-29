@@ -122,11 +122,12 @@ the sentence generation template.
 usage: kgtk lexicalize [-h] [-i INPUT_FILE]
                        [--entity-label-file ENTITY_LABEL_FILE]
                        [-o OUTPUT_FILE]
-                       [--label-properties [LABEL_PROPERTIES [LABEL_PROPERTIES ...]]]
-                       [--description-properties [DESCRIPTION_PROPERTIES [DESCRIPTION_PROPERTIES ...]]]
-                       [--isa-properties [ISA_PROPERTIES [ISA_PROPERTIES ...]]]
-                       [--has-properties [HAS_PROPERTIES [HAS_PROPERTIES ...]]]
-                       [--property-values [PROPERTY_VALUES [PROPERTY_VALUES ...]]]
+                       [--label-properties [LABEL_PROPERTIES ...]]
+                       [--description-properties [DESCRIPTION_PROPERTIES ...]]
+                       [--language [LANGUAGE ...]]
+                       [--isa-properties [ISA_PROPERTIES ...]]
+                       [--has-properties [HAS_PROPERTIES ...]]
+                       [--property-values [PROPERTY_VALUES ...]]
                        [--sentence-label SENTENCE_LABEL]
                        [--explain [True|False]] [--presorted [True|False]]
                        [--add-entity-labels-from-input [True|False]]
@@ -143,16 +144,18 @@ optional arguments:
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
                         The KGTK output file. (May be omitted or '-' for
                         stdout.)
-  --label-properties [LABEL_PROPERTIES [LABEL_PROPERTIES ...]]
+  --label-properties [LABEL_PROPERTIES ...]
                         The label properties. (default=['label'])
-  --description-properties [DESCRIPTION_PROPERTIES [DESCRIPTION_PROPERTIES ...]]
+  --description-properties [DESCRIPTION_PROPERTIES ...]
                         The description properties. (default=['description'])
-  --isa-properties [ISA_PROPERTIES [ISA_PROPERTIES ...]]
+  --language [LANGUAGE ...]
+                        The label and description language. (default='en')
+  --isa-properties [ISA_PROPERTIES ...]
                         The isa properties. (default=['P21', 'P31', 'P39',
                         'P106', 'P279'])
-  --has-properties [HAS_PROPERTIES [HAS_PROPERTIES ...]]
+  --has-properties [HAS_PROPERTIES ...]
                         The has properties. (default=[])
-  --property-values [PROPERTY_VALUES [PROPERTY_VALUES ...]]
+  --property-values [PROPERTY_VALUES ...]
                         The property values. (default=['P17'])
   --sentence-label SENTENCE_LABEL
                         The relationship to write in the output file.
@@ -559,4 +562,4 @@ kgtk lexicalize --input-file examples/docs/lexicalize-Q75992564.tsv \
 
 | node1 | label | node2 |
 | -- | -- | -- |
-| Q75992564 | sentence | "Because of You is a music track with vocals, and has cover version and duet and studio recording." |
+| Q75992564 | sentence | "Because of You is a music track with vocals, and has duet and studio recording and cover version." |

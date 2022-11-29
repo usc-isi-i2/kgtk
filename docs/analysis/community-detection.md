@@ -36,7 +36,7 @@ usage: kgtk community-detection [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                                 [--new-id-column-name COLUMN_NAME]
                                 [--overwrite-id [optional true|false]]
                                 [--verify-id-unique [optional true|false]]
-                                [--id-style {node1-label-node2,node1-label-num,node1-label-node2-num,node1-label-node2-id,empty,prefix###,wikidata,wikidata-with-claim-id}]
+                                [--id-style {compact-prefix,empty,node1-label-node2,node1-label-num,node1-label-node2-num,node1-label-node2-id,prefix###,wikidata,wikidata-with-claim-id}]
                                 [--id-prefix PREFIX] [--initial-id INTEGER]
                                 [--id-prefix-num-width INTEGER]
                                 [--id-concat-num-width INTEGER]
@@ -71,7 +71,7 @@ optional arguments:
                         of IDs. When --verify-id-unique is omitted, it
                         defaults to False. When --verify-id-unique is supplied
                         without an argument, it is True.
-  --id-style {node1-label-node2,node1-label-num,node1-label-node2-num,node1-label-node2-id,empty,prefix###,wikidata,wikidata-with-claim-id}
+  --id-style {compact-prefix,empty,node1-label-node2,node1-label-num,node1-label-node2-num,node1-label-node2-id,prefix###,wikidata,wikidata-with-claim-id}
                         The ID generation style. (default=prefix###).
   --id-prefix PREFIX    The prefix for a prefix### ID. (default=E).
   --initial-id INTEGER  The initial numeric value for a prefix### ID.
@@ -108,28 +108,17 @@ The following file will be used to illustrate some of the capabilities of `kgtk 
 head examples/docs/community-detection-arnold.tsv
 ```
 
-| node1 | label | node2 |
-| -- | -- | -- | 
-| 'Joseph P. Kennedy Jr.'@en     | P3373 | 'Rosemary Kennedy'@en                              | 
-| 'Joseph P. Kennedy Jr.'@en     | P3373 | 'Kathleen Cavendish, Marchioness of Hartington'@en | 
-| 'Joseph P. Kennedy Jr.'@en     | P3373 | 'Jean Kennedy Smith'@en                            | 
-| 'Joseph P. Kennedy Jr.'@en     | P3373 | 'Eunice Kennedy Shriver'@en                        | 
-| 'Joseph P. Kennedy Jr.'@en     | P3373 | 'Patricia Kennedy Lawford'@en                      | 
-| 'Joseph P. Kennedy Jr.'@en     | P3373 | 'John F. Kennedy'@en                               | 
-| 'Christopher G. Kennedy'@en    | P22   | 'Robert F. Kennedy'@en                             | 
-| 'Christopher G. Kennedy'@en    | P25   | 'Ethel Skakel Kennedy'@en                          | 
-| 'Christopher G. Kennedy'@en    | P3373 | 'Robert F. Kennedy Jr.'@en                         | 
-| 'Christopher G. Kennedy'@en    | P3373 | 'Joseph P. Kennedy II'@en                          | 
-| 'Christopher G. Kennedy'@en    | P3373 | 'Michael LeMoyne Kennedy'@en                       | 
-| 'Christopher G. Kennedy'@en    | P3373 | 'David A. Kennedy'@en                              | 
-| 'Christopher G. Kennedy'@en    | P3373 | 'Rory Kennedy'@en                                  | 
-| 'Christopher G. Kennedy'@en    | P3373 | 'Kathleen Kennedy Townsend'@en                     | 
-| 'Christopher G. Kennedy'@en    | P3373 | 'Kerry Kennedy'@en                                 | 
-| 'Christopher G. Kennedy'@en    | P3373 | 'Courtney Kennedy Hill'@en                         | 
-| 'Christopher G. Kennedy'@en    | P3373 | 'Douglas Harriman Kennedy'@en                      | 
-| 'Christopher G. Kennedy'@en    | P3373 | 'Max Kennedy'@en                                   | 
-| 'Courtney Kennedy Hill'@en     | P22   | 'Robert F. Kennedy'@en                             | 
-| 'Courtney Kennedy Hill'@en     | P25   | 'Ethel Skakel Kennedy'@en                          | 
+| node1 | label | node2 | node1;label | label;label | node2;label |
+| -- | -- | -- | -- | -- | -- |
+| Q1086823 | P22 | Q345517 | 'Christopher Lawford'@en | 'father'@en | 'Peter Lawford'@en |
+| Q1086823 | P25 | Q432694 | 'Christopher Lawford'@en | 'mother'@en | 'Patricia Kennedy Lawford'@en |
+| Q1086823 | P26 | Q75326809 | 'Christopher Lawford'@en | 'spouse'@en | 'Jean Edith Olssen'@en |
+| Q1086823 | P3373 | Q75326777 | 'Christopher Lawford'@en | 'sibling'@en | 'Victoria Lawford'@en |
+| Q1086823 | P3373 | Q75326779 | 'Christopher Lawford'@en | 'sibling'@en | 'Sydney Lawford'@en |
+| Q1086823 | P3373 | Q75326780 | 'Christopher Lawford'@en | 'sibling'@en | 'Robin Lawford'@en |
+| Q1086823 | P3448 | Q96079835 | 'Christopher Lawford'@en | 'stepparent'@en | 'Mary Rowan'@en |
+| Q1086823 | P3448 | Q96079836 | 'Christopher Lawford'@en | 'stepparent'@en | 'Deborah Gould'@en |
+| Q1086823 | P3448 | Q96079838 | 'Christopher Lawford'@en | 'stepparent'@en | 'Patricia Seaton'@en |
 
 
 Find the communities using blockmodel.
@@ -138,81 +127,81 @@ Find the communities using blockmodel.
 kgtk community-detection -i examples/docs/community-detection-arnold.tsv --method blockmodel
 ```
 
-|node1                                        |label|node2    |
-|---------------------------------------------|-----|---------|
-|Christopher Lawford                          |in   |cluster_6|
-|Peter Lawford                                |in   |cluster_2|
-|Patricia Kennedy Lawford                     |in   |cluster_7|
-|Jean Edith Olssen                            |in   |cluster_13|
-|Victoria Lawford                             |in   |cluster_2|
-|Sydney Lawford                               |in   |cluster_2|
-|Robin Lawford                                |in   |cluster_6|
-|Mary Rowan                                   |in   |cluster_6|
-|Deborah Gould                                |in   |cluster_6|
-|Patricia Seaton                              |in   |cluster_6|
-|David Christopher Lawford                    |in   |cluster_13|
-|Savannah Rose Lawford                        |in   |cluster_13|
-|Matthew Valentine Lawford                    |in   |cluster_13|
-|Andrew Cuomo                                 |in   |cluster_31|
-|Kerry Kennedy                                |in   |cluster_31|
-|Ted Kennedy                                  |in   |cluster_19|
-|John F. Kennedy                              |in   |cluster_23|
-|Joseph P. Kennedy Sr.                        |in   |cluster_24|
-|Rose Kennedy                                 |in   |cluster_24|
-|Joan Bennett Kennedy                         |in   |cluster_20|
-|Victoria Reggie Kennedy                      |in   |cluster_20|
-|Robert F. Kennedy                            |in   |cluster_22|
-|Rosemary Kennedy                             |in   |cluster_24|
-|Kathleen Cavendish, Marchioness of Hartington|in   |cluster_24|
-|Jean Kennedy Smith                           |in   |cluster_24|
-|Eunice Kennedy Shriver                       |in   |cluster_23|
-|Joseph P. Kennedy Jr.                        |in   |cluster_24|
-|Kara Kennedy                                 |in   |cluster_20|
-|Edward M. Kennedy Jr.                        |in   |cluster_20|
-|Patrick J. Kennedy                           |in   |cluster_20|
-|Robert F. Kennedy Jr.                        |in   |cluster_31|
-|Ethel Skakel Kennedy                         |in   |cluster_31|
-|Joseph P. Kennedy II                         |in   |cluster_31|
-|Michael LeMoyne Kennedy                      |in   |cluster_31|
-|David A. Kennedy                             |in   |cluster_31|
-|Rory Kennedy                                 |in   |cluster_31|
-|Kathleen Kennedy Townsend                    |in   |cluster_31|
-|Christopher G. Kennedy                       |in   |cluster_31|
-|Courtney Kennedy Hill                        |in   |cluster_31|
-|Douglas Harriman Kennedy                     |in   |cluster_31|
-|Max Kennedy                                  |in   |cluster_31|
-|Jacqueline Kennedy Onassis                   |in   |cluster_42|
-|Caroline Kennedy                             |in   |cluster_42|
-|John F. Kennedy Jr.                          |in   |cluster_42|
-|Patrick Bouvier Kennedy                      |in   |cluster_42|
-|Arabelle Kennedy                             |in   |cluster_42|
-|Maria Shriver                                |in   |cluster_57|
-|Sargent Shriver                              |in   |cluster_52|
-|Arnold Schwarzenegger                        |in   |cluster_63|
-|Bobby Shriver                                |in   |cluster_52|
-|Timothy Shriver                              |in   |cluster_48|
-|Anthony Shriver                              |in   |cluster_52|
-|Mark Shriver                                 |in   |cluster_48|
-|Christina Schwarzenegger                     |in   |cluster_58|
-|Christopher Schwarzenegger                   |in   |cluster_58|
-|Katherine Schwarzenegger                     |in   |cluster_58|
-|Patrick Schwarzenegger                       |in   |cluster_63|
-|Joseph Baena                                 |in   |cluster_58|
-|Mildred Patricia Baena                       |in   |cluster_57|
-|Aurelia Schwarzenegger                       |in   |cluster_60|
-|Gustav Schwarzenegger                        |in   |cluster_60|
-|Jadrny                                       |in   |cluster_60|
-|Meinhard Schwarzenegger                      |in   |cluster_60|
-|Patrick M. Knapp Schwarzenegger              |in   |cluster_60|
-|Robert Sargent Shriver                       |in   |cluster_48|
-|Hilda Shriver                                |in   |cluster_48|
-|Malissa Feruzzi                              |in   |cluster_48|
-|Jack Pratt                                   |in   |cluster_69|
-|Chris Pratt                                  |in   |cluster_69|
-|Anna Faris                                   |in   |cluster_69|
-|Alina Shriver                                |in   |cluster_48|
-|Rogelio Baena                                |in   |cluster_48|
-|Marilyn Monroe                               |in   |cluster_42|
+| node1 | label | node2 |
+| -- | -- | -- |
+| Q1086823 | in | cluster_10 |
+| Q345517 | in | cluster_10 |
+| Q432694 | in | cluster_26 |
+| Q75326809 | in | cluster_10 |
+| Q75326777 | in | cluster_10 |
+| Q75326779 | in | cluster_10 |
+| Q75326780 | in | cluster_10 |
+| Q96079835 | in | cluster_10 |
+| Q96079836 | in | cluster_10 |
+| Q96079838 | in | cluster_10 |
+| Q76363382 | in | cluster_10 |
+| Q76363384 | in | cluster_10 |
+| Q76363386 | in | cluster_10 |
+| Q11673 | in | cluster_32 |
+| Q467912 | in | cluster_32 |
+| Q134549 | in | cluster_27 |
+| Q9696 | in | cluster_27 |
+| Q313696 | in | cluster_18 |
+| Q236540 | in | cluster_18 |
+| Q441424 | in | cluster_46 |
+| Q7926996 | in | cluster_46 |
+| Q25310 | in | cluster_22 |
+| Q265595 | in | cluster_18 |
+| Q268799 | in | cluster_18 |
+| Q272401 | in | cluster_18 |
+| Q272908 | in | cluster_26 |
+| Q505178 | in | cluster_18 |
+| Q2383370 | in | cluster_46 |
+| Q3048622 | in | cluster_46 |
+| Q948920 | in | cluster_46 |
+| Q1352872 | in | cluster_32 |
+| Q258661 | in | cluster_32 |
+| Q1386420 | in | cluster_32 |
+| Q1804720 | in | cluster_32 |
+| Q1975383 | in | cluster_32 |
+| Q273833 | in | cluster_32 |
+| Q467861 | in | cluster_32 |
+| Q5112377 | in | cluster_32 |
+| Q5178632 | in | cluster_32 |
+| Q5301573 | in | cluster_32 |
+| Q6794923 | in | cluster_32 |
+| Q165421 | in | cluster_46 |
+| Q230303 | in | cluster_46 |
+| Q316064 | in | cluster_46 |
+| Q3290402 | in | cluster_46 |
+| Q75326753 | in | cluster_46 |
+| Q230654 | in | cluster_53 |
+| Q317248 | in | cluster_53 |
+| Q2685 | in | cluster_63 |
+| Q3436301 | in | cluster_53 |
+| Q3529079 | in | cluster_53 |
+| Q4773467 | in | cluster_53 |
+| Q6769708 | in | cluster_53 |
+| Q28109921 | in | cluster_63 |
+| Q28109928 | in | cluster_63 |
+| Q4521676 | in | cluster_63 |
+| Q901541 | in | cluster_63 |
+| Q23800185 | in | cluster_63 |
+| Q75494768 | in | cluster_63 |
+| Q23800370 | in | cluster_63 |
+| Q3288486 | in | cluster_63 |
+| Q96076900 | in | cluster_63 |
+| Q38196234 | in | cluster_63 |
+| Q24004771 | in | cluster_63 |
+| Q96077739 | in | cluster_53 |
+| Q96077740 | in | cluster_53 |
+| Q65589427 | in | cluster_53 |
+| Q43100988 | in | cluster_63 |
+| Q503706 | in | cluster_63 |
+| Q4491 | in | cluster_63 |
+| Q65589450 | in | cluster_53 |
+| Q75496774 | in | cluster_63 |
+| Q4616 | in | cluster_46 |
 
 
 ### nested model
@@ -221,81 +210,81 @@ kgtk community-detection -i examples/docs/community-detection-arnold.tsv --metho
 kgtk community-detection -i examples/docs/community-detection-arnold.tsv --method nested
 ```
 
-|node1                                        |label|node2    |
-|---------------------------------------------|-----|---------|
-|Christopher Lawford                          |in   |cluster_0_10_43|
-|Peter Lawford                                |in   |cluster_0_2_43|
-|Patricia Kennedy Lawford                     |in   |cluster_0_10_0|
-|Jean Edith Olssen                            |in   |cluster_0_2_43|
-|Victoria Lawford                             |in   |cluster_0_10_43|
-|Sydney Lawford                               |in   |cluster_0_2_43|
-|Robin Lawford                                |in   |cluster_0_2_43|
-|Mary Rowan                                   |in   |cluster_0_2_43|
-|Deborah Gould                                |in   |cluster_0_10_43|
-|Patricia Seaton                              |in   |cluster_0_7_43|
-|David Christopher Lawford                    |in   |cluster_0_2_43|
-|Savannah Rose Lawford                        |in   |cluster_0_10_43|
-|Matthew Valentine Lawford                    |in   |cluster_0_2_43|
-|Andrew Cuomo                                 |in   |cluster_0_7_14|
-|Kerry Kennedy                                |in   |cluster_0_7_14|
-|Ted Kennedy                                  |in   |cluster_0_10_34|
-|John F. Kennedy                              |in   |cluster_0_2_38|
-|Joseph P. Kennedy Sr.                        |in   |cluster_0_10_65|
-|Rose Kennedy                                 |in   |cluster_0_10_65|
-|Joan Bennett Kennedy                         |in   |cluster_0_2_40|
-|Victoria Reggie Kennedy                      |in   |cluster_0_7_40|
-|Robert F. Kennedy                            |in   |cluster_0_10_35|
-|Rosemary Kennedy                             |in   |cluster_0_10_65|
-|Kathleen Cavendish, Marchioness of Hartington|in   |cluster_0_7_65|
-|Jean Kennedy Smith                           |in   |cluster_0_7_65|
-|Eunice Kennedy Shriver                       |in   |cluster_0_10_38|
-|Joseph P. Kennedy Jr.                        |in   |cluster_0_2_65|
-|Kara Kennedy                                 |in   |cluster_0_2_40|
-|Edward M. Kennedy Jr.                        |in   |cluster_0_7_40|
-|Patrick J. Kennedy                           |in   |cluster_0_7_40|
-|Robert F. Kennedy Jr.                        |in   |cluster_0_10_14|
-|Ethel Skakel Kennedy                         |in   |cluster_0_2_14|
-|Joseph P. Kennedy II                         |in   |cluster_0_2_14|
-|Michael LeMoyne Kennedy                      |in   |cluster_0_2_14|
-|David A. Kennedy                             |in   |cluster_0_10_14|
-|Rory Kennedy                                 |in   |cluster_0_7_14|
-|Kathleen Kennedy Townsend                    |in   |cluster_0_10_14|
-|Christopher G. Kennedy                       |in   |cluster_0_2_14|
-|Courtney Kennedy Hill                        |in   |cluster_0_4_14|
-|Douglas Harriman Kennedy                     |in   |cluster_0_10_14|
-|Max Kennedy                                  |in   |cluster_0_10_14|
-|Jacqueline Kennedy Onassis                   |in   |cluster_0_10_57|
-|Caroline Kennedy                             |in   |cluster_0_2_57|
-|John F. Kennedy Jr.                          |in   |cluster_0_10_57|
-|Patrick Bouvier Kennedy                      |in   |cluster_0_2_57|
-|Arabelle Kennedy                             |in   |cluster_0_7_57|
-|Maria Shriver                                |in   |cluster_0_2_51|
-|Sargent Shriver                              |in   |cluster_0_10_33|
-|Arnold Schwarzenegger                        |in   |cluster_0_10_69|
-|Bobby Shriver                                |in   |cluster_0_2_33|
-|Timothy Shriver                              |in   |cluster_0_10_33|
-|Anthony Shriver                              |in   |cluster_0_2_33|
-|Mark Shriver                                 |in   |cluster_0_10_33|
-|Christina Schwarzenegger                     |in   |cluster_0_2_69|
-|Christopher Schwarzenegger                   |in   |cluster_0_10_69|
-|Katherine Schwarzenegger                     |in   |cluster_0_7_69|
-|Patrick Schwarzenegger                       |in   |cluster_0_7_69|
-|Joseph Baena                                 |in   |cluster_0_2_69|
-|Mildred Patricia Baena                       |in   |cluster_0_2_69|
-|Aurelia Schwarzenegger                       |in   |cluster_0_4_69|
-|Gustav Schwarzenegger                        |in   |cluster_0_10_69|
-|Jadrny                                       |in   |cluster_0_2_69|
-|Meinhard Schwarzenegger                      |in   |cluster_0_10_69|
-|Patrick M. Knapp Schwarzenegger              |in   |cluster_0_2_69|
-|Robert Sargent Shriver                       |in   |cluster_0_2_33|
-|Hilda Shriver                                |in   |cluster_0_10_33|
-|Malissa Feruzzi                              |in   |cluster_0_2_33|
-|Jack Pratt                                   |in   |cluster_0_7_69|
-|Chris Pratt                                  |in   |cluster_0_7_69|
-|Anna Faris                                   |in   |cluster_0_2_69|
-|Alina Shriver                                |in   |cluster_0_2_33|
-|Rogelio Baena                                |in   |cluster_0_2_69|
-|Marilyn Monroe                               |in   |cluster_0_2_65|
+| node1 | label | node2 |
+| -- | -- | -- |
+| Q1086823 | in | cluster_0_4_41 |
+| Q345517 | in | cluster_0_0_41 |
+| Q432694 | in | cluster_0_4_22 |
+| Q75326809 | in | cluster_0_4_41 |
+| Q75326777 | in | cluster_0_4_41 |
+| Q75326779 | in | cluster_0_4_41 |
+| Q75326780 | in | cluster_0_4_41 |
+| Q96079835 | in | cluster_0_0_41 |
+| Q96079836 | in | cluster_0_4_41 |
+| Q96079838 | in | cluster_0_0_41 |
+| Q76363382 | in | cluster_0_0_41 |
+| Q76363384 | in | cluster_0_4_41 |
+| Q76363386 | in | cluster_0_0_41 |
+| Q11673 | in | cluster_0_4_20 |
+| Q467912 | in | cluster_0_0_20 |
+| Q134549 | in | cluster_0_4_24 |
+| Q9696 | in | cluster_0_0_24 |
+| Q313696 | in | cluster_0_0_37 |
+| Q236540 | in | cluster_0_0_37 |
+| Q441424 | in | cluster_0_0_13 |
+| Q7926996 | in | cluster_0_4_13 |
+| Q25310 | in | cluster_0_6_65 |
+| Q265595 | in | cluster_0_6_37 |
+| Q268799 | in | cluster_0_4_37 |
+| Q272401 | in | cluster_0_4_37 |
+| Q272908 | in | cluster_0_4_22 |
+| Q505178 | in | cluster_0_0_37 |
+| Q2383370 | in | cluster_0_4_13 |
+| Q3048622 | in | cluster_0_4_13 |
+| Q948920 | in | cluster_0_4_13 |
+| Q1352872 | in | cluster_0_0_20 |
+| Q258661 | in | cluster_0_4_20 |
+| Q1386420 | in | cluster_0_4_20 |
+| Q1804720 | in | cluster_0_0_20 |
+| Q1975383 | in | cluster_0_0_20 |
+| Q273833 | in | cluster_0_0_20 |
+| Q467861 | in | cluster_0_4_20 |
+| Q5112377 | in | cluster_0_4_20 |
+| Q5178632 | in | cluster_0_0_20 |
+| Q5301573 | in | cluster_0_0_20 |
+| Q6794923 | in | cluster_0_4_20 |
+| Q165421 | in | cluster_0_0_3 |
+| Q230303 | in | cluster_0_0_3 |
+| Q316064 | in | cluster_0_0_3 |
+| Q3290402 | in | cluster_0_4_3 |
+| Q75326753 | in | cluster_0_0_3 |
+| Q230654 | in | cluster_0_4_66 |
+| Q317248 | in | cluster_0_0_35 |
+| Q2685 | in | cluster_0_0_70 |
+| Q3436301 | in | cluster_0_0_35 |
+| Q3529079 | in | cluster_0_0_35 |
+| Q4773467 | in | cluster_0_4_35 |
+| Q6769708 | in | cluster_0_0_35 |
+| Q28109921 | in | cluster_0_0_70 |
+| Q28109928 | in | cluster_0_4_70 |
+| Q4521676 | in | cluster_0_4_70 |
+| Q901541 | in | cluster_0_0_70 |
+| Q23800185 | in | cluster_0_4_70 |
+| Q75494768 | in | cluster_0_4_70 |
+| Q23800370 | in | cluster_0_0_70 |
+| Q3288486 | in | cluster_0_4_70 |
+| Q96076900 | in | cluster_0_0_70 |
+| Q38196234 | in | cluster_0_0_70 |
+| Q24004771 | in | cluster_0_0_70 |
+| Q96077739 | in | cluster_0_0_35 |
+| Q96077740 | in | cluster_0_4_35 |
+| Q65589427 | in | cluster_0_0_35 |
+| Q43100988 | in | cluster_0_0_70 |
+| Q503706 | in | cluster_0_4_70 |
+| Q4491 | in | cluster_0_0_70 |
+| Q65589450 | in | cluster_0_0_35 |
+| Q75496774 | in | cluster_0_4_70 |
+| Q4616 | in | cluster_0_0_13 |
 
 
 ### MCMC model
@@ -304,78 +293,78 @@ kgtk community-detection -i examples/docs/community-detection-arnold.tsv --metho
 kgtk community-detection -i examples/docs/community-detection-arnold.tsv --method mcmc
 ```
 
-|node1                                        |label|node2    |node2;prob         |
-|---------------------------------------------|-----|---------|-------------------|
-|Christopher Lawford                          |in   |cluster_0|1.0                |
-|Peter Lawford                                |in   |cluster_0|1.0                |
-|Patricia Kennedy Lawford                     |in   |cluster_1|0.806980698069807  |
-|Jean Edith Olssen                            |in   |cluster_0|1.0                |
-|Victoria Lawford                             |in   |cluster_0|1.0                |
-|Sydney Lawford                               |in   |cluster_0|1.0                |
-|Robin Lawford                                |in   |cluster_0|1.0                |
-|Mary Rowan                                   |in   |cluster_0|0.9998999899989999 |
-|Deborah Gould                                |in   |cluster_0|0.9998999899989999 |
-|Patricia Seaton                              |in   |cluster_0|1.0                |
-|David Christopher Lawford                    |in   |cluster_0|0.9998999899989999 |
-|Savannah Rose Lawford                        |in   |cluster_0|0.9998999899989999 |
-|Matthew Valentine Lawford                    |in   |cluster_0|0.9997999799979999 |
-|Andrew Cuomo                                 |in   |cluster_2|0.9457945794579458 |
-|Kerry Kennedy                                |in   |cluster_2|1.0                |
-|Ted Kennedy                                  |in   |cluster_3|0.8140814081408141 |
-|John F. Kennedy                              |in   |cluster_3|0.9794979497949795 |
-|Joseph P. Kennedy Sr.                        |in   |cluster_4|0.9993999399939995 |
-|Rose Kennedy                                 |in   |cluster_4|0.9992999299929993 |
-|Joan Bennett Kennedy                         |in   |cluster_5|0.7872787278727873 |
-|Victoria Reggie Kennedy                      |in   |cluster_5|0.48514851485148514|
-|Robert F. Kennedy                            |in   |cluster_6|1.0                |
-|Rosemary Kennedy                             |in   |cluster_4|0.9994999499949995 |
-|Kathleen Cavendish, Marchioness of Hartington|in   |cluster_4|0.9991999199919992 |
-|Jean Kennedy Smith                           |in   |cluster_4|0.9995999599959996 |
-|Eunice Kennedy Shriver                       |in   |cluster_1|0.866986698669867  |
-|Joseph P. Kennedy Jr.                        |in   |cluster_4|0.9990999099909991 |
-|Kara Kennedy                                 |in   |cluster_5|0.7872787278727873 |
-|Edward M. Kennedy Jr.                        |in   |cluster_5|0.7872787278727873 |
-|Patrick J. Kennedy                           |in   |cluster_5|0.787078707870787  |
-|Robert F. Kennedy Jr.                        |in   |cluster_2|1.0                |
-|Ethel Skakel Kennedy                         |in   |cluster_2|1.0                |
-|Joseph P. Kennedy II                         |in   |cluster_2|1.0                |
-|Michael LeMoyne Kennedy                      |in   |cluster_2|1.0                |
-|David A. Kennedy                             |in   |cluster_2|1.0                |
-|Rory Kennedy                                 |in   |cluster_2|1.0                |
-|Kathleen Kennedy Townsend                    |in   |cluster_2|1.0                |
-|Christopher G. Kennedy                       |in   |cluster_2|1.0                |
-|Courtney Kennedy Hill                        |in   |cluster_2|1.0                |
-|Douglas Harriman Kennedy                     |in   |cluster_2|1.0                |
-|Max Kennedy                                  |in   |cluster_2|1.0                |
-|Jacqueline Kennedy Onassis                   |in   |cluster_5|1.0                |
-|Caroline Kennedy                             |in   |cluster_5|1.0                |
-|John F. Kennedy Jr.                          |in   |cluster_5|1.0                |
-|Patrick Bouvier Kennedy                      |in   |cluster_5|0.9998999899989999 |
-|Arabelle Kennedy                             |in   |cluster_5|1.0                |
-|Maria Shriver                                |in   |cluster_7|0.9790979097909791 |
-|Sargent Shriver                              |in   |cluster_7|0.9998999899989999 |
-|Arnold Schwarzenegger                        |in   |cluster_8|1.0                |
-|Bobby Shriver                                |in   |cluster_7|0.9998999899989999 |
-|Timothy Shriver                              |in   |cluster_7|0.9998999899989999 |
-|Anthony Shriver                              |in   |cluster_7|1.0                |
-|Mark Shriver                                 |in   |cluster_7|0.9998999899989999 |
-|Christina Schwarzenegger                     |in   |cluster_8|0.9998999899989999 |
-|Christopher Schwarzenegger                   |in   |cluster_8|1.0                |
-|Katherine Schwarzenegger                     |in   |cluster_8|1.0                |
-|Patrick Schwarzenegger                       |in   |cluster_8|1.0                |
-|Joseph Baena                                 |in   |cluster_8|1.0                |
-|Mildred Patricia Baena                       |in   |cluster_8|0.9997999799979999 |
-|Aurelia Schwarzenegger                       |in   |cluster_8|0.9998999899989999 |
-|Gustav Schwarzenegger                        |in   |cluster_8|0.9997999799979999 |
-|Jadrny                                       |in   |cluster_8|0.987998799879988  |
-|Meinhard Schwarzenegger                      |in   |cluster_8|1.0                |
-|Patrick M. Knapp Schwarzenegger              |in   |cluster_8|0.98999899989999   |
-|Robert Sargent Shriver                       |in   |cluster_7|0.9921992199219922 |
-|Hilda Shriver                                |in   |cluster_7|0.9938993899389938 |
-|Malissa Feruzzi                              |in   |cluster_7|0.9416941694169417 |
-|Jack Pratt                                   |in   |cluster_8|0.9837983798379838 |
-|Chris Pratt                                  |in   |cluster_8|0.9858985898589859 |
-|Anna Faris                                   |in   |cluster_8|0.9840984098409841 |
-|Alina Shriver                                |in   |cluster_7|0.9413941394139413 |
-|Rogelio Baena                                |in   |cluster_8|0.9873987398739874 |
-|Marilyn Monroe                               |in   |cluster_5|0.49194919491949196|
+| node1 | label | node2 | node2;prob |
+| -- | -- | -- | -- |
+| Q1086823 | in | cluster_0 | 1.0 |
+| Q345517 | in | cluster_0 | 1.0 |
+| Q432694 | in | cluster_1 | 0.8363836383638363 |
+| Q75326809 | in | cluster_0 | 1.0 |
+| Q75326777 | in | cluster_0 | 1.0 |
+| Q75326779 | in | cluster_0 | 1.0 |
+| Q75326780 | in | cluster_0 | 1.0 |
+| Q96079835 | in | cluster_0 | 0.9998999899989999 |
+| Q96079836 | in | cluster_0 | 0.9998999899989999 |
+| Q96079838 | in | cluster_0 | 1.0 |
+| Q76363382 | in | cluster_0 | 1.0 |
+| Q76363384 | in | cluster_0 | 0.9997999799979999 |
+| Q76363386 | in | cluster_0 | 1.0 |
+| Q11673 | in | cluster_2 | 0.946894689468947 |
+| Q467912 | in | cluster_2 | 1.0 |
+| Q134549 | in | cluster_3 | 0.9642964296429642 |
+| Q9696 | in | cluster_3 | 0.8863886388638864 |
+| Q313696 | in | cluster_4 | 0.9994999499949995 |
+| Q236540 | in | cluster_4 | 0.9992999299929993 |
+| Q441424 | in | cluster_5 | 0.8487848784878488 |
+| Q7926996 | in | cluster_5 | 0.5307530753075308 |
+| Q25310 | in | cluster_6 | 1.0 |
+| Q265595 | in | cluster_4 | 0.9991999199919992 |
+| Q268799 | in | cluster_4 | 0.9992999299929993 |
+| Q272401 | in | cluster_4 | 0.9995999599959996 |
+| Q272908 | in | cluster_1 | 0.9113911391139113 |
+| Q505178 | in | cluster_4 | 0.9994999499949995 |
+| Q2383370 | in | cluster_5 | 0.8485848584858486 |
+| Q3048622 | in | cluster_5 | 0.8487848784878488 |
+| Q948920 | in | cluster_5 | 0.8486848684868487 |
+| Q1352872 | in | cluster_2 | 1.0 |
+| Q258661 | in | cluster_2 | 1.0 |
+| Q1386420 | in | cluster_2 | 1.0 |
+| Q1804720 | in | cluster_2 | 1.0 |
+| Q1975383 | in | cluster_2 | 1.0 |
+| Q273833 | in | cluster_2 | 1.0 |
+| Q467861 | in | cluster_2 | 1.0 |
+| Q5112377 | in | cluster_2 | 1.0 |
+| Q5178632 | in | cluster_2 | 1.0 |
+| Q5301573 | in | cluster_2 | 1.0 |
+| Q6794923 | in | cluster_2 | 1.0 |
+| Q165421 | in | cluster_5 | 0.9998999899989999 |
+| Q230303 | in | cluster_5 | 1.0 |
+| Q316064 | in | cluster_5 | 1.0 |
+| Q3290402 | in | cluster_5 | 1.0 |
+| Q75326753 | in | cluster_5 | 1.0 |
+| Q230654 | in | cluster_8 | 0.9810981098109811 |
+| Q317248 | in | cluster_8 | 0.9998999899989999 |
+| Q2685 | in | cluster_9 | 1.0 |
+| Q3436301 | in | cluster_8 | 1.0 |
+| Q3529079 | in | cluster_8 | 0.9998999899989999 |
+| Q4773467 | in | cluster_8 | 1.0 |
+| Q6769708 | in | cluster_8 | 1.0 |
+| Q28109921 | in | cluster_9 | 1.0 |
+| Q28109928 | in | cluster_9 | 1.0 |
+| Q4521676 | in | cluster_9 | 1.0 |
+| Q901541 | in | cluster_9 | 1.0 |
+| Q23800185 | in | cluster_9 | 0.9998999899989999 |
+| Q75494768 | in | cluster_9 | 1.0 |
+| Q23800370 | in | cluster_9 | 1.0 |
+| Q3288486 | in | cluster_9 | 1.0 |
+| Q96076900 | in | cluster_9 | 0.9860986098609861 |
+| Q38196234 | in | cluster_9 | 0.9998999899989999 |
+| Q24004771 | in | cluster_9 | 0.9872987298729873 |
+| Q96077739 | in | cluster_8 | 0.9916991699169917 |
+| Q96077740 | in | cluster_8 | 0.9916991699169917 |
+| Q65589427 | in | cluster_8 | 0.9397939793979398 |
+| Q43100988 | in | cluster_9 | 0.9841984198419842 |
+| Q503706 | in | cluster_9 | 0.9858985898589859 |
+| Q4491 | in | cluster_9 | 0.9845984598459846 |
+| Q65589450 | in | cluster_8 | 0.9442944294429443 |
+| Q75496774 | in | cluster_9 | 0.9880988098809881 |
+| Q4616 | in | cluster_5 | 0.5091509150915091 |

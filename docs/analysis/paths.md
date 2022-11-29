@@ -11,29 +11,44 @@ The output, printed to stdout by default, is an edge file with the following col
 
 ## Usage
 ```
-usage: kgtk paths [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [--path-file PATH_FILE] [--statistics-only [True|False]] [--undirected [True|False]] [--max_hops MAX_HOPS]
-                  [--path-source SOURCE_COLUMN_NAME] [--path-target TARGET_COLUMN_NAME] [-v]
+usage: kgtk paths [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
+                  [--path-file PATH_FILE] [--statistics-only [True|False]]
+                  [--undirected [True|False]] [--max-hops MAX_HOPS]
+                  [--path-source SOURCE_COLUMN_NAME]
+                  [--path-target TARGET_COLUMN_NAME]
+                  [--shortest-path [True|False]] [-v [optional True|False]]
 
 optional arguments:
   -h, --help            show this help message and exit
   -i INPUT_FILE, --input-file INPUT_FILE
-                        The KGTK input file. (May be omitted or '-' for stdin.)
+                        The KGTK input file. (May be omitted or '-' for
+                        stdin.)
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
-                        The KGTK output file. (May be omitted or '-' for stdout.)
+                        The KGTK output file. (May be omitted or '-' for
+                        stdout.)
   --path-file PATH_FILE, --path_file PATH_FILE
-                        KGTK file with path start and end nodes. (May be omitted or '-' for stdin.)
+                        KGTK file with path start and end nodes. (May be
+                        omitted or '-' for stdin.)
   --statistics-only [True|False]
-                        If this flag is set, output only the statistics edges. Else, append the statistics to the original graph. (default=False)
+                        If this flag is set, output only the statistics edges.
+                        Else, append the statistics to the original graph.
+                        (default=False)
   --undirected [True|False]
                         Is the graph undirected or not? (default=False)
-  --max_hops MAX_HOPS   Maximum number of hops allowed.
+  --max-hops MAX_HOPS, --max_hops MAX_HOPS
+                        Maximum number of hops allowed.
   --path-source SOURCE_COLUMN_NAME
-                        Name of the source column in the path file. (default: node1 or its alias)
+                        Name of the source column in the path file. (default:
+                        node1 or its alias)
   --path-target TARGET_COLUMN_NAME
-                        Name of the source column in the path file. (default: node2 or its alias)
+                        Name of the source column in the path file. (default:
+                        node2 or its alias)
+  --shortest-path [True|False]
+                        When true, shortest paths are returned.
+                        (default=False).
 
-  -v, --verbose         Print additional progress messages (default=False).
-
+  -v [optional True|False], --verbose [optional True|False]
+                        Print additional progress messages (default=False).
 ```
 
 ## Examples
@@ -67,13 +82,13 @@ kgtk paths --max_hops 2 --path-file examples/sample_data/paths/pairs.tsv --path-
 The output (printed to stdout) is as follows:
 
 | node1 | label | node2 | id |
-| -- | -- | -- | -- | 
-| p0 |  0 |	e1 | p0-0-0 |
-| p0 |	1 |	e5 | p0-1-1 |
-| p1 |	0 |	e2 | p1-0-2 |
-| p1 |	1 |	e4 | p1-1-3 |
-| p2 |	0 |	e3 | p2-0-4 |
-| p2 |	1 |	e5 | p2-1-5 |
+| -- | -- | -- | -- |
+| p0 | 0 | e1 | p0-0-0 |
+| p0 | 1 | e5 | p0-1-1 |
+| p1 | 0 | e2 | p1-0-2 |
+| p1 | 1 | e4 | p1-1-3 |
+| p2 | 0 | e3 | p2-0-4 |
+| p2 | 1 | e5 | p2-1-5 |
 
 Essentially, this tells us that there are three paths that connect 'a' and 'e', all of them two hops away:
 
