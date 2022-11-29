@@ -644,7 +644,6 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
     COMPRESSED_FILE_EXTENSIONS: typing.List[str] =  [ ".bz2", ".gz", ".lz4", ".xz" ]
     CSV_FILE_EXTENSION: str = ".csv"
-    COLUMN_NAME_PREFIX_DEFAULT: str = 'col'
 
     @classmethod
     def _default_options(
