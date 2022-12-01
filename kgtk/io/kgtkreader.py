@@ -17,6 +17,7 @@ TODO: Add support for alternative envelope formats, such as JSON.
 
 from argparse import ArgumentParser, _ArgumentGroup, Namespace, SUPPRESS
 import attr
+import csv
 from enum import Enum
 import io
 from multiprocessing import Process, Queue
@@ -29,7 +30,7 @@ import typing
 from kgtk.kgtkformat import KgtkFormat
 from kgtk.io.kgtkbase import KgtkBase
 from kgtk.utils.argparsehelpers import optional_bool
-from kgtk.utils.closableiter import ClosableIter, ClosableIterTextIOWrapper, ClosableIterTextStr
+from kgtk.utils.closableiter import ClosableIter, ClosableIterTextIOWrapper, ClosableIterDataFrame
 from kgtk.utils.enumnameaction import EnumNameAction
 from kgtk.utils.gzipprocess import GunzipProcess
 from kgtk.utils.validationaction import ValidationAction
@@ -53,7 +54,6 @@ class KgtkReaderOptions():
     GRAPH_CACHE_FETCHMANY_SIZE_DEFAULT: int = 1000
     GRAPH_CACHE_FILTER_BATCH_SIZE_DEFAULT: int = 1000
     UNQUOTE_CSV_COLUMN_NAMES_DEFAULT: bool = True
-    DATA_FRAME_CAPTION_DEFAULT: str = 'DataFrame'
 
     # TODO: use an enum
     INPUT_FORMAT_CSV: str = "csv"
@@ -644,6 +644,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
     COMPRESSED_FILE_EXTENSIONS: typing.List[str] =  [ ".bz2", ".gz", ".lz4", ".xz" ]
     CSV_FILE_EXTENSION: str = ".csv"
+    DATA_FRAME_CAPTION_DEFAULT: str = 'DataFrame'
 
     @classmethod
     def _default_options(
@@ -730,23 +731,8 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                 print("Using KGTK_GRAPH_CACHE=%s" % repr(graph_cache), file=error_file, flush=True)
 
         if file_path is not None and isinstance(file_path, pandas.DataFrame):
-            # Convert the DataFrame to CSV.
-            #
-            # TODO: This step might consume a lot more memory than necessary
-            # and might be slower than optimal.  An alternative approach is to
-            # use an efficient iterator (df.values() or df.to_dict('records'))
-            # as the basis for the closable iterator.  However, that may
-            # require converting numeric elements into strings and possibly
-            # performing other datatype transformations on cell values.  The
-            # CSV conversion path represents a tried-and-true approach.
-            in_tsv: str = file_path.to_csv(sep='\t',
-                                           index=False,
-                                           quoting=csv.QUOTE_NONNUMERIC,
-                                           quotechar='"',
-                                           doublequote=False,
-                                           escapechar='\\',
-                                           )
-            source = ClosableIterTextStr(in_tsv)
+            # Iterate over the dataframe.
+            source = ClosableIterDataFrame(file_path, options.column_separator)
 
             if file_path.style is not None and file_path.style.caption is not None and len(file_path.style.caption) > 0:
                 # If a caption exists (and is not empty), treat it as
@@ -757,11 +743,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             else:
                 file_path = Path(cls.DATA_FRAME_CAPTION_DEFAULT)
             
-            # Extract the column names from the CSV representation of the
-            # DataFrame.  Forcibly remove the double quotes that Pandas will
-            # have supplied, on the convention that KGTK column names are
-            # expected to be symbols.
-            input_format = KgtkReaderOptions.INPUT_FORMAT_CSV
+            input_format = KgtkReaderOptions.INPUT_FORMAT_KGTK
             (header, column_names) = cls._build_column_names(source,
                                                              options,
                                                              input_format,
@@ -865,6 +847,8 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
 
         # Build a map from column name to column index.
+        if verbose:
+            print("column names: %s" % repr(column_names), file=error_file, flush=True)
         column_name_map: typing.Mapping[str, int] = cls.build_column_name_map(column_names,
                                                                               header_line=header,
                                                                               who=who,
@@ -898,6 +882,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                                                 error_action=options.header_error_action,
                                                 error_file=error_file,
                                                 is_optional=True)
+
             if node1_idx >= 0:
                 is_edge_file = True
                 is_node_file = False
@@ -1212,17 +1197,10 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             if input_format == KgtkReaderOptions.INPUT_FORMAT_CSV:
                 column_names = cls.csvsplit(header)
                 if options.unquote_csv_column_names:
-                    # Pandas will have treated the column names as strings and
-                    # quoted them.  By convention, KGTK column names are
-                    # symbols.  So, we will remove double quotes from the
-                    # outside of each column name.  For generality, we make
-                    # this transformation available under an option that
-                    # applies to all CSV files.
-                    #
                     # TODO: Handle the troublesome case of a double quote inside a column
                     # name.
                     column_names = [x[1:-1] if x.startswith('"') else x for x in column_names ]
-                    header = "\t".join(column_names)
+                    header = options.column_separator.join(column_names)
 
             else:
                 column_names = header.split(options.column_separator)
@@ -1270,7 +1248,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             sys.exit(1)
             
         # print("In input data line %d, %s: %s" % (self.data_lines_read, msg, line), file=self.error_file, flush=True)
-        print("Data line %d:\n%s\n%s" % (self.data_lines_read, line, msg), file=self.error_file, flush=True)
+        # print("Data line %d:\n%s\n%s" % (self.data_lines_read, line, msg), file=self.error_file, flush=True)
         self.data_errors_reported += 1
         if self.options.error_limit > 0 and self.data_errors_reported >= self.options.error_limit:
             raise ValueError("Too many data errors, exiting.")
@@ -2082,10 +2060,15 @@ def main():
     parser.add_argument(dest="kgtk_file", help="The KGTK file to read", type=Path, nargs="?")
     KgtkReader.add_debug_arguments(parser, expert=True)
     parser.add_argument(       "--test", dest="test_method", help="The test to perform (default=%(default)s).",
-                               choices=["rows", "concise-rows",
-                                        "kgtk-values", "concise-kgtk-values",
-                                        "dicts", "concise-dicts",
-                                        "kgtk-value-dicts", "concise-kgtk-value-dicts"],
+                               choices=["rows",
+                                        "concise-rows",
+                                        "kgtk-values",
+                                        "concise-kgtk-values",
+                                        "dicts",
+                                        "concise-dicts",
+                                        "kgtk-value-dicts",
+                                        "concise-kgtk-value-dicts",
+                                        "dataframe"],
                                default="rows")
     parser.add_argument(       "--test-validate", dest="test_validate", help="Validate KgtkValue objects in test (default=%(default)s).",
                                type=optional_bool, nargs='?', const=True, default=False)
@@ -2107,6 +2090,50 @@ def main():
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
 
+    line_count: int = 0
+    row: typing.List[str]
+
+    if args.test_method == "dataframe":
+        if args.verbose:
+            print("Testing reading a DataFrame.", file=error_file, flush=True)
+
+        df_column_names: typing.List[str] = ["node1", "label", "node2"]
+        df_data: typing.List[typing.List[typing.Union[str, int]]] = [
+            ["P10", "p585-count", '73'],
+            ["P1000", "p585-count", '16'],
+            ["P101", "p585-count", '5'],
+            ["P202", "p323", 'xx"yy'],
+            ["P203", "p323", '"xxyy"'],
+        ]
+        df: pandas.DataFrame = pandas.DataFrame(
+            data=df_data,
+            columns=df_column_names,
+            )
+
+        df_kr: KgtkReader = KgtkReader.open(df,
+                                            error_file = error_file,
+                                            options=reader_options,
+                                            value_options=value_options,
+                                            verbose=args.verbose,
+                                            very_verbose=args.very_verbose)
+
+        for row in df_kr:
+            df_error_count: int = 0
+            idx: int
+            for idx in range(len(row)):
+                if df_data[line_count][idx] != row[idx]:
+                    df_error_count += 1
+                    if args.verbose:
+                        print("Line %d: column %d: expected %s got %s" % (line_count +1, idx+1, repr(df_data[line_count][idx]), repr( row[idx])),
+                              file=error_file, flush=True)
+
+            line_count += 1
+            if df_error_count > 0:
+                print("%d DataFrame errors in line %d" % (df_error_count, line_count), file=error_file, flush=True)
+
+        print("Read %d lines" % line_count, file=error_file, flush=True)
+        return
+
     kr: KgtkReader = KgtkReader.open(args.kgtk_file,
                                      error_file = error_file,
                                      options=reader_options,
@@ -2114,8 +2141,6 @@ def main():
                                      verbose=args.verbose,
                                      very_verbose=args.very_verbose)
 
-    line_count: int = 0
-    row: typing.List[str]
     kgtk_values: typing.List[KgtkValue]
     concise_kgtk_values: typing.List[typing.Optional[KgtkValue]]
     dict_row: typing.Mapping[str, str]
@@ -2167,6 +2192,10 @@ def main():
             print("Testing iterating over concise KgtkValue dicts.", file=error_file, flush=True)
         for kgtk_value_dict in kr.kgtk_value_dicts(concise=True, validate=args.test_validate):
             line_count += 1
+
+    else:
+        print("Unexpected test method %s" % repr(args.test_method), file=error_file, flush=True)
+        return            
             
     print("Read %d lines" % line_count, file=error_file, flush=True)
 
