@@ -526,12 +526,6 @@ kgtk validate -i examples/docs/validate-date-with-day-zero.tsv
 The following complaint and summary will be issued:
 
 ~~~
-Data line 1:
-john	woke	^2020-05-00T00:00
-col 2 (node2) value '^2020-05-00T00:00' is an Invalid Date and Times
-Data line 2:
-john	woke	^2020-00-00T00:00
-col 2 (node2) value '^2020-00-00T00:00' is an Invalid Date and Times
 
 ====================================================
 Data lines read: 2
@@ -567,18 +561,11 @@ input format: kgtk
 KgtkReader: File_path.suffix: .tsv
 KgtkReader: reading file examples/docs/validate-date-with-day-zero.tsv
 header: node1	label	node2
+column names: ['node1', 'label', 'node2']
 node1 column found, this is a KGTK edge file
 KgtkReader: is_edge_file=True is_node_file=False
 KgtkReader: Special columns: node1=0 label=1 node2=2 id=-1
 KgtkReader: Reading an edge file.
-Data line 1:
-john	woke	^2020-05-00T00:00
-col 2 (node2) value '^2020-05-00T00:00': KgtkValue.is_date_and_times: day 0 disallowed in '^2020-05-00T00:00'.
-col 2 (node2) value '^2020-05-00T00:00' is an Invalid Date and Times
-Data line 2:
-john	woke	^2020-00-00T00:00
-col 2 (node2) value '^2020-00-00T00:00': KgtkValue.is_date_and_times: month 0 disallowed in '^2020-00-00T00:00'.
-col 2 (node2) value '^2020-00-00T00:00' is an Invalid Date and Times
 Validated 0 data lines
 
 ====================================================
@@ -1314,9 +1301,6 @@ kgtk validate -i examples/docs/validate-short-lines.tsv
 The following is reported on standard output:
 
 ~~~
-Data line 2:
-line2	isashortline
-Required 3 columns, saw 2: 'line2	isashortline'
 
 ====================================================
 Data lines read: 3
@@ -1383,9 +1367,6 @@ kgtk validate -i examples/docs/validate-long-lines.tsv
 ```
 
 ~~~
-Data line 2:
-line2	isa	long	line
-Required 3 columns, saw 4 (1 extra): 'line2	isa	long	line'
 
 ====================================================
 Data lines read: 3
@@ -1451,9 +1432,6 @@ kgtk validate -i examples/docs/validate-node1-list.tsv
 ```
 
 ~~~
-Data line 1:
-line1|line3	isa	line	id1
-col 0 (node1) value 'line1|line3'is a prohibited list
 
 ====================================================
 Data lines read: 1
@@ -1493,9 +1471,6 @@ kgtk validate -i examples/docs/validate-label-list.tsv
 ```
 
 ~~~
-Data line 1:
-line1	isa|equals	line	id1
-col 1 (label) value 'isa|equals'is a prohibited list
 
 ====================================================
 Data lines read: 1
@@ -1535,9 +1510,6 @@ kgtk validate -i examples/docs/validate-node2-list.tsv
 ```
 
 ~~~
-Data line 1:
-line1	isa	line|record	id1
-col 2 (node2) value 'line|record'is a prohibited list
 
 ====================================================
 Data lines read: 1
@@ -1595,9 +1567,6 @@ kgtk validate -i examples/docs/validate-node2-list.tsv \
 ```
 
 ~~~
-Data line 1:
-line1	isa	line|record	id1
-col 2 (node2) value 'line|record'is a prohibited list
 
 ====================================================
 Data lines read: 1
@@ -1854,30 +1823,6 @@ kgtk validate -i examples/docs/validate-numbers-and-quantities.tsv
 ```
 
 ~~~
-Data line 1:
-line1	invalid	9x
-col 2 (node2) value '9x' is an Invalid Quantity
-Data line 2:
-line2	invalid	9[8,10j]
-col 2 (node2) value '9[8,10j]' is an Invalid Quantity
-Data line 3:
-line3	invalid	--9
-col 2 (node2) value '--9' is an Invalid Quantity
-Data line 7:
-line7	invalid	9Q012345
-col 2 (node2) value '9Q012345' is an Invalid Quantity
-Data line 8:
-line8	invalid	9Q123_45
-col 2 (node2) value '9Q123_45' is an Invalid Quantity
-Data line 9:
-line9	invalid	9Q123-45
-col 2 (node2) value '9Q123-45' is an Invalid Quantity
-Data line 10:
-line10	invalid	9Q123az
-col 2 (node2) value '9Q123az' is an Invalid Quantity
-Data line 11:
-line11	invalid	9Q123AZ
-col 2 (node2) value '9Q123AZ' is an Invalid Quantity
 
 ====================================================
 Data lines read: 11
@@ -1960,12 +1905,6 @@ kgtk validate -i examples/docs/validate-strings.tsv
 ```
 
 ~~~
-Data line 1:
-line1	invalid	"xxx
-col 2 (node2) value '"xxx' is an Invalid String
-Data line 3:
-line3	invalid	"xxx"yyy"
-col 2 (node2) value '"xxx"yyy"' is an Invalid String
 
 ====================================================
 Data lines read: 5
@@ -2003,9 +1942,6 @@ kgtk validate -i examples/docs/validate-lax-strings.tsv \
 ```
 
 ~~~
-Data line 1:
-line1	invalid	"xxx
-col 2 (node2) value '"xxx' is an Invalid String
 
 ====================================================
 Data lines read: 5
@@ -2065,15 +2001,6 @@ kgtk validate -i examples/docs/validate-language-qualified-strings.tsv
 ```
 
 ~~~
-Data line 3:
-line3	invalid	'a'bc'@en
-col 2 (node2) value "'a'bc'@en" is an Invalid Language Qualified String
-Data line 4:
-line4	invalid	'abc'@en-gb
-col 2 (node2) value "'abc'@en-gb" is an Invalid Language Qualified String
-Data line 5:
-line5	invalid	'abc'@xxx
-col 2 (node2) value "'abc'@xxx" is an Invalid Language Qualified String
 
 ====================================================
 Data lines read: 5
@@ -2252,21 +2179,6 @@ kgtk validate -i examples/docs/validate-location-coordinates.tsv
 ```
 
 ~~~
-Data line 3:
-line3	invalid	@33.9803/118.4517e1
-col 2 (node2) value '@33.9803/118.4517e1' is an Invalid Location Coordinates
-Data line 4:
-line4	invalid	@100/118
-col 2 (node2) value '@100/118' is an Invalid Location Coordinates
-Data line 5:
-line5	invalid	@-100/118
-col 2 (node2) value '@-100/118' is an Invalid Location Coordinates
-Data line 6:
-line6	invalid	@34/200
-col 2 (node2) value '@34/200' is an Invalid Location Coordinates
-Data line 7:
-line7	invalid	@34/-200
-col 2 (node2) value '@34/-200' is an Invalid Location Coordinates
 
 ====================================================
 Data lines read: 7
@@ -2300,21 +2212,6 @@ kgtk validate -i examples/docs/validate-location-coordinates.tsv \
 ```
 
 ~~~
-Data line 3:
-line3	invalid	@33.9803/118.4517e1
-col 2 (node2) value '@33.9803/118.4517e1' is an Invalid Location Coordinates
-Data line 4:
-line4	invalid	@100/118
-col 2 (node2) value '@100/118' is an Invalid Location Coordinates
-Data line 5:
-line5	invalid	@-100/118
-col 2 (node2) value '@-100/118' is an Invalid Location Coordinates
-Data line 6:
-line6	invalid	@34/200
-col 2 (node2) value '@34/200' is an Invalid Location Coordinates
-Data line 7:
-line7	invalid	@34/-200
-col 2 (node2) value '@34/-200' is an Invalid Location Coordinates
 
 ====================================================
 Data lines read: 7
@@ -2348,9 +2245,6 @@ kgtk validate -i examples/docs/validate-location-coordinates.tsv \
 ```
 
 ~~~
-Data line 3:
-line3	invalid	@33.9803/118.4517e1
-col 2 (node2) value '@33.9803/118.4517e1' is an Invalid Location Coordinates
 
 ====================================================
 Data lines read: 7
@@ -2385,9 +2279,6 @@ kgtk validate -i examples/docs/validate-location-coordinates.tsv \
 ```
 
 ~~~
-Data line 3:
-line3	invalid	@33.9803/118.4517e1
-col 2 (node2) value '@33.9803/118.4517e1' is an Invalid Location Coordinates
 
 ====================================================
 Data lines read: 7
@@ -2422,12 +2313,6 @@ kgtk validate -i examples/docs/validate-date-with-day-zero.tsv
 This results in the following summary:
 
 ~~~
-Data line 1:
-john	woke	^2020-05-00T00:00
-col 2 (node2) value '^2020-05-00T00:00' is an Invalid Date and Times
-Data line 2:
-john	woke	^2020-00-00T00:00
-col 2 (node2) value '^2020-00-00T00:00' is an Invalid Date and Times
 
 ====================================================
 Data lines read: 2
@@ -2521,9 +2406,6 @@ kgtk validate -i examples/docs/validate-date-with-end-of-day.tsv \
 This results in the following summary:
 
 ~~~
-Data line 1:
-john	woke	^2020-05-01T24:00
-col 2 (node2) value '^2020-05-01T24:00' is an Invalid Date and Times
 
 ====================================================
 Data lines read: 1
@@ -2580,24 +2462,6 @@ kgtk validate -i examples/docs/validate-date-with-minimum-year.tsv
 This results in the following summary:
 
 ~~~
-Data line 2:
-jack	born	^1582-01-01T00:00
-col 2 (node2) value '^1582-01-01T00:00' is an Invalid Date and Times
-Data line 3:
-jorge	born	^0922-01-01T00:00
-col 2 (node2) value '^0922-01-01T00:00' is an Invalid Date and Times
-Data line 4:
-jerry	born	^0000-01-01T00:00
-col 2 (node2) value '^0000-01-01T00:00' is an Invalid Date and Times
-Data line 5:
-jon	born	^+0000-01-01T00:00
-col 2 (node2) value '^+0000-01-01T00:00' is an Invalid Date and Times
-Data line 6:
-jared	born	^-0001-01-01T00:00
-col 2 (node2) value '^-0001-01-01T00:00' is an Invalid Date and Times
-Data line 7:
-jimmy	born	^-10001-01-01T00:00
-col 2 (node2) value '^-10001-01-01T00:00' is an Invalid Date and Times
 
 ====================================================
 Data lines read: 7
@@ -2637,21 +2501,6 @@ kgtk validate -i examples/docs/validate-date-with-minimum-year.tsv \
 This results in the following summary:
 
 ~~~
-Data line 3:
-jorge	born	^0922-01-01T00:00
-col 2 (node2) value '^0922-01-01T00:00' is an Invalid Date and Times
-Data line 4:
-jerry	born	^0000-01-01T00:00
-col 2 (node2) value '^0000-01-01T00:00' is an Invalid Date and Times
-Data line 5:
-jon	born	^+0000-01-01T00:00
-col 2 (node2) value '^+0000-01-01T00:00' is an Invalid Date and Times
-Data line 6:
-jared	born	^-0001-01-01T00:00
-col 2 (node2) value '^-0001-01-01T00:00' is an Invalid Date and Times
-Data line 7:
-jimmy	born	^-10001-01-01T00:00
-col 2 (node2) value '^-10001-01-01T00:00' is an Invalid Date and Times
 
 ====================================================
 Data lines read: 7
@@ -2763,21 +2612,6 @@ kgtk validate -i examples/docs/validate-date-with-maximum-year.tsv
 This results in the following summary:
 
 ~~~
-Data line 3:
-jack	date	^2101-01-01T00:00
-col 2 (node2) value '^2101-01-01T00:00' is an Invalid Date and Times
-Data line 4:
-jorge	born	^9999-01-01T00:00
-col 2 (node2) value '^9999-01-01T00:00' is an Invalid Date and Times
-Data line 5:
-jon	born	^+9999-01-01T00:00
-col 2 (node2) value '^+9999-01-01T00:00' is an Invalid Date and Times
-Data line 6:
-jared	born	^10000-01-01T00:00
-col 2 (node2) value '^10000-01-01T00:00' is an Invalid Date and Times
-Data line 7:
-jared	born	^+10000-01-01T00:00
-col 2 (node2) value '^+10000-01-01T00:00' is an Invalid Date and Times
 
 ====================================================
 Data lines read: 7
@@ -2816,12 +2650,6 @@ kgtk validate -i examples/docs/validate-date-with-maximum-year.tsv \
 This results in the following summary:
 
 ~~~
-Data line 6:
-jared	born	^10000-01-01T00:00
-col 2 (node2) value '^10000-01-01T00:00' is an Invalid Date and Times
-Data line 7:
-jared	born	^+10000-01-01T00:00
-col 2 (node2) value '^+10000-01-01T00:00' is an Invalid Date and Times
 
 ====================================================
 Data lines read: 7

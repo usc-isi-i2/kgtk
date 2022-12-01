@@ -129,79 +129,79 @@ kgtk community-detection -i examples/docs/community-detection-arnold.tsv --metho
 
 | node1 | label | node2 |
 | -- | -- | -- |
-| Q1086823 | in | cluster_10 |
-| Q345517 | in | cluster_10 |
-| Q432694 | in | cluster_26 |
-| Q75326809 | in | cluster_10 |
-| Q75326777 | in | cluster_10 |
-| Q75326779 | in | cluster_10 |
-| Q75326780 | in | cluster_10 |
-| Q96079835 | in | cluster_10 |
-| Q96079836 | in | cluster_10 |
-| Q96079838 | in | cluster_10 |
-| Q76363382 | in | cluster_10 |
-| Q76363384 | in | cluster_10 |
-| Q76363386 | in | cluster_10 |
-| Q11673 | in | cluster_32 |
-| Q467912 | in | cluster_32 |
-| Q134549 | in | cluster_27 |
-| Q9696 | in | cluster_27 |
-| Q313696 | in | cluster_18 |
-| Q236540 | in | cluster_18 |
-| Q441424 | in | cluster_46 |
-| Q7926996 | in | cluster_46 |
+| Q1086823 | in | cluster_4 |
+| Q345517 | in | cluster_4 |
+| Q432694 | in | cluster_18 |
+| Q75326809 | in | cluster_4 |
+| Q75326777 | in | cluster_4 |
+| Q75326779 | in | cluster_4 |
+| Q75326780 | in | cluster_4 |
+| Q96079835 | in | cluster_4 |
+| Q96079836 | in | cluster_4 |
+| Q96079838 | in | cluster_4 |
+| Q76363382 | in | cluster_4 |
+| Q76363384 | in | cluster_4 |
+| Q76363386 | in | cluster_4 |
+| Q11673 | in | cluster_31 |
+| Q467912 | in | cluster_31 |
+| Q134549 | in | cluster_18 |
+| Q9696 | in | cluster_26 |
+| Q313696 | in | cluster_27 |
+| Q236540 | in | cluster_27 |
+| Q441424 | in | cluster_20 |
+| Q7926996 | in | cluster_20 |
 | Q25310 | in | cluster_22 |
-| Q265595 | in | cluster_18 |
-| Q268799 | in | cluster_18 |
-| Q272401 | in | cluster_18 |
+| Q265595 | in | cluster_27 |
+| Q268799 | in | cluster_27 |
+| Q272401 | in | cluster_27 |
 | Q272908 | in | cluster_26 |
-| Q505178 | in | cluster_18 |
-| Q2383370 | in | cluster_46 |
-| Q3048622 | in | cluster_46 |
-| Q948920 | in | cluster_46 |
-| Q1352872 | in | cluster_32 |
-| Q258661 | in | cluster_32 |
-| Q1386420 | in | cluster_32 |
-| Q1804720 | in | cluster_32 |
-| Q1975383 | in | cluster_32 |
-| Q273833 | in | cluster_32 |
-| Q467861 | in | cluster_32 |
-| Q5112377 | in | cluster_32 |
-| Q5178632 | in | cluster_32 |
-| Q5301573 | in | cluster_32 |
-| Q6794923 | in | cluster_32 |
-| Q165421 | in | cluster_46 |
-| Q230303 | in | cluster_46 |
-| Q316064 | in | cluster_46 |
-| Q3290402 | in | cluster_46 |
-| Q75326753 | in | cluster_46 |
-| Q230654 | in | cluster_53 |
-| Q317248 | in | cluster_53 |
-| Q2685 | in | cluster_63 |
-| Q3436301 | in | cluster_53 |
-| Q3529079 | in | cluster_53 |
-| Q4773467 | in | cluster_53 |
-| Q6769708 | in | cluster_53 |
-| Q28109921 | in | cluster_63 |
-| Q28109928 | in | cluster_63 |
-| Q4521676 | in | cluster_63 |
-| Q901541 | in | cluster_63 |
-| Q23800185 | in | cluster_63 |
-| Q75494768 | in | cluster_63 |
-| Q23800370 | in | cluster_63 |
-| Q3288486 | in | cluster_63 |
-| Q96076900 | in | cluster_63 |
-| Q38196234 | in | cluster_63 |
-| Q24004771 | in | cluster_63 |
-| Q96077739 | in | cluster_53 |
-| Q96077740 | in | cluster_53 |
-| Q65589427 | in | cluster_53 |
-| Q43100988 | in | cluster_63 |
-| Q503706 | in | cluster_63 |
-| Q4491 | in | cluster_63 |
-| Q65589450 | in | cluster_53 |
-| Q75496774 | in | cluster_63 |
-| Q4616 | in | cluster_46 |
+| Q505178 | in | cluster_27 |
+| Q2383370 | in | cluster_20 |
+| Q3048622 | in | cluster_20 |
+| Q948920 | in | cluster_20 |
+| Q1352872 | in | cluster_31 |
+| Q258661 | in | cluster_31 |
+| Q1386420 | in | cluster_31 |
+| Q1804720 | in | cluster_31 |
+| Q1975383 | in | cluster_31 |
+| Q273833 | in | cluster_31 |
+| Q467861 | in | cluster_31 |
+| Q5112377 | in | cluster_31 |
+| Q5178632 | in | cluster_31 |
+| Q5301573 | in | cluster_31 |
+| Q6794923 | in | cluster_31 |
+| Q165421 | in | cluster_42 |
+| Q230303 | in | cluster_42 |
+| Q316064 | in | cluster_42 |
+| Q3290402 | in | cluster_42 |
+| Q75326753 | in | cluster_42 |
+| Q230654 | in | cluster_50 |
+| Q317248 | in | cluster_50 |
+| Q2685 | in | cluster_56 |
+| Q3436301 | in | cluster_50 |
+| Q3529079 | in | cluster_50 |
+| Q4773467 | in | cluster_50 |
+| Q6769708 | in | cluster_50 |
+| Q28109921 | in | cluster_56 |
+| Q28109928 | in | cluster_56 |
+| Q4521676 | in | cluster_56 |
+| Q901541 | in | cluster_56 |
+| Q23800185 | in | cluster_56 |
+| Q75494768 | in | cluster_56 |
+| Q23800370 | in | cluster_56 |
+| Q3288486 | in | cluster_56 |
+| Q96076900 | in | cluster_56 |
+| Q38196234 | in | cluster_56 |
+| Q24004771 | in | cluster_56 |
+| Q96077739 | in | cluster_50 |
+| Q96077740 | in | cluster_50 |
+| Q65589427 | in | cluster_50 |
+| Q43100988 | in | cluster_56 |
+| Q503706 | in | cluster_56 |
+| Q4491 | in | cluster_56 |
+| Q65589450 | in | cluster_50 |
+| Q75496774 | in | cluster_56 |
+| Q4616 | in | cluster_42 |
 
 
 ### nested model
@@ -212,79 +212,79 @@ kgtk community-detection -i examples/docs/community-detection-arnold.tsv --metho
 
 | node1 | label | node2 |
 | -- | -- | -- |
-| Q1086823 | in | cluster_0_4_41 |
-| Q345517 | in | cluster_0_0_41 |
-| Q432694 | in | cluster_0_4_22 |
-| Q75326809 | in | cluster_0_4_41 |
-| Q75326777 | in | cluster_0_4_41 |
-| Q75326779 | in | cluster_0_4_41 |
-| Q75326780 | in | cluster_0_4_41 |
-| Q96079835 | in | cluster_0_0_41 |
-| Q96079836 | in | cluster_0_4_41 |
-| Q96079838 | in | cluster_0_0_41 |
-| Q76363382 | in | cluster_0_0_41 |
-| Q76363384 | in | cluster_0_4_41 |
-| Q76363386 | in | cluster_0_0_41 |
-| Q11673 | in | cluster_0_4_20 |
-| Q467912 | in | cluster_0_0_20 |
-| Q134549 | in | cluster_0_4_24 |
-| Q9696 | in | cluster_0_0_24 |
-| Q313696 | in | cluster_0_0_37 |
-| Q236540 | in | cluster_0_0_37 |
-| Q441424 | in | cluster_0_0_13 |
-| Q7926996 | in | cluster_0_4_13 |
-| Q25310 | in | cluster_0_6_65 |
-| Q265595 | in | cluster_0_6_37 |
-| Q268799 | in | cluster_0_4_37 |
-| Q272401 | in | cluster_0_4_37 |
-| Q272908 | in | cluster_0_4_22 |
-| Q505178 | in | cluster_0_0_37 |
-| Q2383370 | in | cluster_0_4_13 |
-| Q3048622 | in | cluster_0_4_13 |
-| Q948920 | in | cluster_0_4_13 |
-| Q1352872 | in | cluster_0_0_20 |
-| Q258661 | in | cluster_0_4_20 |
-| Q1386420 | in | cluster_0_4_20 |
-| Q1804720 | in | cluster_0_0_20 |
-| Q1975383 | in | cluster_0_0_20 |
-| Q273833 | in | cluster_0_0_20 |
-| Q467861 | in | cluster_0_4_20 |
-| Q5112377 | in | cluster_0_4_20 |
-| Q5178632 | in | cluster_0_0_20 |
-| Q5301573 | in | cluster_0_0_20 |
-| Q6794923 | in | cluster_0_4_20 |
-| Q165421 | in | cluster_0_0_3 |
-| Q230303 | in | cluster_0_0_3 |
-| Q316064 | in | cluster_0_0_3 |
-| Q3290402 | in | cluster_0_4_3 |
-| Q75326753 | in | cluster_0_0_3 |
-| Q230654 | in | cluster_0_4_66 |
-| Q317248 | in | cluster_0_0_35 |
-| Q2685 | in | cluster_0_0_70 |
-| Q3436301 | in | cluster_0_0_35 |
-| Q3529079 | in | cluster_0_0_35 |
-| Q4773467 | in | cluster_0_4_35 |
-| Q6769708 | in | cluster_0_0_35 |
-| Q28109921 | in | cluster_0_0_70 |
-| Q28109928 | in | cluster_0_4_70 |
-| Q4521676 | in | cluster_0_4_70 |
-| Q901541 | in | cluster_0_0_70 |
-| Q23800185 | in | cluster_0_4_70 |
-| Q75494768 | in | cluster_0_4_70 |
-| Q23800370 | in | cluster_0_0_70 |
-| Q3288486 | in | cluster_0_4_70 |
-| Q96076900 | in | cluster_0_0_70 |
-| Q38196234 | in | cluster_0_0_70 |
-| Q24004771 | in | cluster_0_0_70 |
-| Q96077739 | in | cluster_0_0_35 |
-| Q96077740 | in | cluster_0_4_35 |
-| Q65589427 | in | cluster_0_0_35 |
-| Q43100988 | in | cluster_0_0_70 |
-| Q503706 | in | cluster_0_4_70 |
-| Q4491 | in | cluster_0_0_70 |
-| Q65589450 | in | cluster_0_0_35 |
-| Q75496774 | in | cluster_0_4_70 |
-| Q4616 | in | cluster_0_0_13 |
+| Q1086823 | in | cluster_0_7_8 |
+| Q345517 | in | cluster_0_9_8 |
+| Q432694 | in | cluster_0_7_49 |
+| Q75326809 | in | cluster_0_2_8 |
+| Q75326777 | in | cluster_0_9_8 |
+| Q75326779 | in | cluster_0_2_8 |
+| Q75326780 | in | cluster_0_9_8 |
+| Q96079835 | in | cluster_0_2_8 |
+| Q96079836 | in | cluster_0_2_8 |
+| Q96079838 | in | cluster_0_9_8 |
+| Q76363382 | in | cluster_0_9_8 |
+| Q76363384 | in | cluster_0_2_8 |
+| Q76363386 | in | cluster_0_9_8 |
+| Q11673 | in | cluster_0_7_32 |
+| Q467912 | in | cluster_0_7_32 |
+| Q134549 | in | cluster_0_9_66 |
+| Q9696 | in | cluster_0_2_11 |
+| Q313696 | in | cluster_0_7_3 |
+| Q236540 | in | cluster_0_2_3 |
+| Q441424 | in | cluster_0_2_30 |
+| Q7926996 | in | cluster_0_9_30 |
+| Q25310 | in | cluster_0_7_22 |
+| Q265595 | in | cluster_0_5_3 |
+| Q268799 | in | cluster_0_2_3 |
+| Q272401 | in | cluster_0_2_3 |
+| Q272908 | in | cluster_0_2_26 |
+| Q505178 | in | cluster_0_5_3 |
+| Q2383370 | in | cluster_0_9_30 |
+| Q3048622 | in | cluster_0_9_30 |
+| Q948920 | in | cluster_0_9_30 |
+| Q1352872 | in | cluster_0_7_32 |
+| Q258661 | in | cluster_0_2_32 |
+| Q1386420 | in | cluster_0_7_32 |
+| Q1804720 | in | cluster_0_7_32 |
+| Q1975383 | in | cluster_0_9_32 |
+| Q273833 | in | cluster_0_7_32 |
+| Q467861 | in | cluster_0_7_32 |
+| Q5112377 | in | cluster_0_9_32 |
+| Q5178632 | in | cluster_0_9_32 |
+| Q5301573 | in | cluster_0_7_32 |
+| Q6794923 | in | cluster_0_9_32 |
+| Q165421 | in | cluster_0_2_61 |
+| Q230303 | in | cluster_0_2_61 |
+| Q316064 | in | cluster_0_2_61 |
+| Q3290402 | in | cluster_0_9_61 |
+| Q75326753 | in | cluster_0_2_61 |
+| Q230654 | in | cluster_0_9_27 |
+| Q317248 | in | cluster_0_7_63 |
+| Q2685 | in | cluster_0_2_60 |
+| Q3436301 | in | cluster_0_2_63 |
+| Q3529079 | in | cluster_0_2_63 |
+| Q4773467 | in | cluster_0_9_63 |
+| Q6769708 | in | cluster_0_9_63 |
+| Q28109921 | in | cluster_0_2_60 |
+| Q28109928 | in | cluster_0_2_60 |
+| Q4521676 | in | cluster_0_7_60 |
+| Q901541 | in | cluster_0_9_60 |
+| Q23800185 | in | cluster_0_2_60 |
+| Q75494768 | in | cluster_0_7_60 |
+| Q23800370 | in | cluster_0_9_60 |
+| Q3288486 | in | cluster_0_9_60 |
+| Q96076900 | in | cluster_0_2_60 |
+| Q38196234 | in | cluster_0_9_60 |
+| Q24004771 | in | cluster_0_9_60 |
+| Q96077739 | in | cluster_0_7_63 |
+| Q96077740 | in | cluster_0_2_63 |
+| Q65589427 | in | cluster_0_5_63 |
+| Q43100988 | in | cluster_0_2_60 |
+| Q503706 | in | cluster_0_9_60 |
+| Q4491 | in | cluster_0_7_60 |
+| Q65589450 | in | cluster_0_9_63 |
+| Q75496774 | in | cluster_0_2_60 |
+| Q4616 | in | cluster_0_7_61 |
 
 
 ### MCMC model
@@ -297,34 +297,34 @@ kgtk community-detection -i examples/docs/community-detection-arnold.tsv --metho
 | -- | -- | -- | -- |
 | Q1086823 | in | cluster_0 | 1.0 |
 | Q345517 | in | cluster_0 | 1.0 |
-| Q432694 | in | cluster_1 | 0.8363836383638363 |
+| Q432694 | in | cluster_1 | 0.8642864286428643 |
 | Q75326809 | in | cluster_0 | 1.0 |
 | Q75326777 | in | cluster_0 | 1.0 |
 | Q75326779 | in | cluster_0 | 1.0 |
 | Q75326780 | in | cluster_0 | 1.0 |
-| Q96079835 | in | cluster_0 | 0.9998999899989999 |
+| Q96079835 | in | cluster_0 | 1.0 |
 | Q96079836 | in | cluster_0 | 0.9998999899989999 |
-| Q96079838 | in | cluster_0 | 1.0 |
+| Q96079838 | in | cluster_0 | 0.9998999899989999 |
 | Q76363382 | in | cluster_0 | 1.0 |
-| Q76363384 | in | cluster_0 | 0.9997999799979999 |
-| Q76363386 | in | cluster_0 | 1.0 |
-| Q11673 | in | cluster_2 | 0.946894689468947 |
+| Q76363384 | in | cluster_0 | 1.0 |
+| Q76363386 | in | cluster_0 | 0.9998999899989999 |
+| Q11673 | in | cluster_2 | 0.9495949594959496 |
 | Q467912 | in | cluster_2 | 1.0 |
-| Q134549 | in | cluster_3 | 0.9642964296429642 |
-| Q9696 | in | cluster_3 | 0.8863886388638864 |
-| Q313696 | in | cluster_4 | 0.9994999499949995 |
-| Q236540 | in | cluster_4 | 0.9992999299929993 |
-| Q441424 | in | cluster_5 | 0.8487848784878488 |
-| Q7926996 | in | cluster_5 | 0.5307530753075308 |
+| Q134549 | in | cluster_3 | 0.9217921792179218 |
+| Q9696 | in | cluster_3 | 0.9794979497949795 |
+| Q313696 | in | cluster_4 | 0.9996999699969997 |
+| Q236540 | in | cluster_4 | 0.9997999799979999 |
+| Q441424 | in | cluster_7 | 0.9043904390439044 |
+| Q7926996 | in | cluster_7 | 0.5604560456045604 |
 | Q25310 | in | cluster_6 | 1.0 |
-| Q265595 | in | cluster_4 | 0.9991999199919992 |
-| Q268799 | in | cluster_4 | 0.9992999299929993 |
-| Q272401 | in | cluster_4 | 0.9995999599959996 |
-| Q272908 | in | cluster_1 | 0.9113911391139113 |
-| Q505178 | in | cluster_4 | 0.9994999499949995 |
-| Q2383370 | in | cluster_5 | 0.8485848584858486 |
-| Q3048622 | in | cluster_5 | 0.8487848784878488 |
-| Q948920 | in | cluster_5 | 0.8486848684868487 |
+| Q265595 | in | cluster_4 | 0.9993999399939995 |
+| Q268799 | in | cluster_4 | 0.9993999399939995 |
+| Q272401 | in | cluster_4 | 0.9992999299929993 |
+| Q272908 | in | cluster_1 | 0.916991699169917 |
+| Q505178 | in | cluster_4 | 0.9995999599959996 |
+| Q2383370 | in | cluster_7 | 0.9043904390439044 |
+| Q3048622 | in | cluster_7 | 0.9044904490449045 |
+| Q948920 | in | cluster_7 | 0.9045904590459046 |
 | Q1352872 | in | cluster_2 | 1.0 |
 | Q258661 | in | cluster_2 | 1.0 |
 | Q1386420 | in | cluster_2 | 1.0 |
@@ -336,35 +336,35 @@ kgtk community-detection -i examples/docs/community-detection-arnold.tsv --metho
 | Q5178632 | in | cluster_2 | 1.0 |
 | Q5301573 | in | cluster_2 | 1.0 |
 | Q6794923 | in | cluster_2 | 1.0 |
-| Q165421 | in | cluster_5 | 0.9998999899989999 |
-| Q230303 | in | cluster_5 | 1.0 |
-| Q316064 | in | cluster_5 | 1.0 |
-| Q3290402 | in | cluster_5 | 1.0 |
-| Q75326753 | in | cluster_5 | 1.0 |
-| Q230654 | in | cluster_8 | 0.9810981098109811 |
-| Q317248 | in | cluster_8 | 0.9998999899989999 |
+| Q165421 | in | cluster_7 | 1.0 |
+| Q230303 | in | cluster_7 | 1.0 |
+| Q316064 | in | cluster_7 | 1.0 |
+| Q3290402 | in | cluster_7 | 1.0 |
+| Q75326753 | in | cluster_7 | 1.0 |
+| Q230654 | in | cluster_8 | 0.9793979397939794 |
+| Q317248 | in | cluster_8 | 1.0 |
 | Q2685 | in | cluster_9 | 1.0 |
 | Q3436301 | in | cluster_8 | 1.0 |
-| Q3529079 | in | cluster_8 | 0.9998999899989999 |
+| Q3529079 | in | cluster_8 | 1.0 |
 | Q4773467 | in | cluster_8 | 1.0 |
-| Q6769708 | in | cluster_8 | 1.0 |
+| Q6769708 | in | cluster_8 | 0.9998999899989999 |
 | Q28109921 | in | cluster_9 | 1.0 |
-| Q28109928 | in | cluster_9 | 1.0 |
+| Q28109928 | in | cluster_9 | 0.9998999899989999 |
 | Q4521676 | in | cluster_9 | 1.0 |
 | Q901541 | in | cluster_9 | 1.0 |
-| Q23800185 | in | cluster_9 | 0.9998999899989999 |
-| Q75494768 | in | cluster_9 | 1.0 |
-| Q23800370 | in | cluster_9 | 1.0 |
-| Q3288486 | in | cluster_9 | 1.0 |
-| Q96076900 | in | cluster_9 | 0.9860986098609861 |
-| Q38196234 | in | cluster_9 | 0.9998999899989999 |
-| Q24004771 | in | cluster_9 | 0.9872987298729873 |
-| Q96077739 | in | cluster_8 | 0.9916991699169917 |
-| Q96077740 | in | cluster_8 | 0.9916991699169917 |
-| Q65589427 | in | cluster_8 | 0.9397939793979398 |
-| Q43100988 | in | cluster_9 | 0.9841984198419842 |
-| Q503706 | in | cluster_9 | 0.9858985898589859 |
-| Q4491 | in | cluster_9 | 0.9845984598459846 |
-| Q65589450 | in | cluster_8 | 0.9442944294429443 |
-| Q75496774 | in | cluster_9 | 0.9880988098809881 |
-| Q4616 | in | cluster_5 | 0.5091509150915091 |
+| Q23800185 | in | cluster_9 | 1.0 |
+| Q75494768 | in | cluster_9 | 0.9998999899989999 |
+| Q23800370 | in | cluster_9 | 0.9997999799979999 |
+| Q3288486 | in | cluster_9 | 0.9998999899989999 |
+| Q96076900 | in | cluster_9 | 0.9878987898789879 |
+| Q38196234 | in | cluster_9 | 1.0 |
+| Q24004771 | in | cluster_9 | 0.987998799879988 |
+| Q96077739 | in | cluster_8 | 0.9914991499149916 |
+| Q96077740 | in | cluster_8 | 0.9910991099109911 |
+| Q65589427 | in | cluster_8 | 0.9376937693769377 |
+| Q43100988 | in | cluster_9 | 0.9781978197819782 |
+| Q503706 | in | cluster_9 | 0.9797979797979798 |
+| Q4491 | in | cluster_9 | 0.978097809780978 |
+| Q65589450 | in | cluster_8 | 0.9415941594159416 |
+| Q75496774 | in | cluster_9 | 0.9863986398639863 |
+| Q4616 | in | cluster_7 | 0.5262526252625263 |
