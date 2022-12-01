@@ -149,4 +149,3 @@ class ClosableIterDataFrame(ClosableIter[str]):
 
         # Release a potentially large amount of memory:
         self.contents = None
-
