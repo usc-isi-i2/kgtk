@@ -104,10 +104,18 @@ class ClosableIterDataFrame(ClosableIter[str]):
     import pandas
     def __init__(self, df: pandas.DataFrame, column_separator: str):
         super().__init__()
-        self.df = df
+
+        # Convert the DataFrame contents to a list of lists.
+        # This outght to be efficient, except that all the data is copied,
+        # which may consume a lot of memory.
+        #
+        # TODO: Provide an alternative implementation that converts
+        # DataFrame rows as needed.
+        self.contents = df.values.tolist() #
+
+        self.column_names = df.columns
         self.column_separator: str = column_separator
         self.quoted_column_separator: str = '\\' + column_separator
-        self.contents = df.values.tolist()
         self.idx: int = -1
         self.lineslen: int = len(self.contents)
 
@@ -118,14 +126,17 @@ class ClosableIterDataFrame(ClosableIter[str]):
         if self.idx < self.lineslen:
             # TODO: row needs a type.
             if self.idx < 0:
-                row = self.df.columns
+                row = self.column_names
             else:
                 row = self.contents[self.idx]
             self.idx += 1
 
             results: typing.List[str] = []
             for item in row:
-                # The str(item) converts ints and floats to strings for us.
+                # The str(item) converts ints and floats to strings for KGTK.
+                # The replace calls attempt to deal with embedded column separators.
+                #
+                # TODO: How should we treat lists?
                 results.append(str(item).replace('\\', '\\\\').replace(self.column_separator, self.quoted_column_separator))
             
             return self.column_separator.join(results)
@@ -133,5 +144,9 @@ class ClosableIterDataFrame(ClosableIter[str]):
             raise StopIteration
 
     def close(self):
-        pass
+        # Ensure that future next() calls raise StopIteration:
+        self.idx = self.lineslen
+
+        # Release a potentially large amount of memory:
+        self.contents = None
 
