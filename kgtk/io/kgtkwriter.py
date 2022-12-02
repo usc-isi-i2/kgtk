@@ -50,8 +50,18 @@ class KgtkWriter(KgtkBase):
     # The following two formats are for intended for use
     # in iPython environments, such as Jupyter notebooks.
     # They will be omitted from the command line choices.
-    OUTPUT_FORMAT_DATAFRAME_STRING: str = "dataframe-string" # A DataFrame of KGTK value strings.
-    OUTPUT_FORMAT_DATAFRAME_NATIVE: str = "dataframe-native" # A DataFrame of native Python values when possible.
+
+    # A DataFrame of KGTK value strings. This conversion is fast and does not
+    # lose information.
+    OUTPUT_FORMAT_DATAFRAME_STRING: str = "dataframe-string"
+    
+    # A DataFrame of native Python values. The conversion is slower than
+    # OUTPUT_FORMAT_DATAFRAME_STRING and may lose information.  KGTK strings,
+    # numbers, booleans, and symbols are converted, while other KGTK datatypes
+    # retain their KGTK string representation.  KGTK dates and times could be
+    # converted to a native Python value, but this is not implemented at
+    # present.
+    OUTPUT_FORMAT_DATAFRAME_NATIVE: str = "dataframe-native"
 
     # The output formats that may be used by command line programs.
     OUTPUT_FORMAT_CHOICES: typing.List[str] = [
