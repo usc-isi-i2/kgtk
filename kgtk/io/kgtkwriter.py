@@ -44,6 +44,7 @@ class KgtkWriter(KgtkBase):
     OUTPUT_FORMAT_TSV_CSVLIKE: str = "tsv-csvlike"
     OUTPUT_FORMAT_TSV_UNQUOTED: str = "tsv-unquoted"
     OUTPUT_FORMAT_TSV_UNQUOTED_EP: str = "tsv-unquoted-ep"
+    OUTPUT_FORMAT_DATAFRAME: str = "dataframe" # for internal use, omit from the choices.
 
     OUTPUT_FORMAT_CHOICES: typing.List[str] = [
         OUTPUT_FORMAT_CSV,
@@ -91,6 +92,9 @@ class KgtkWriter(KgtkBase):
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
     header_error_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.EXIT)
 
+    # Special DataFrame hack:
+    df: typing.Optional[pandas.DataFrame] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(pandas.DataFrame)), default=None)
+
     # Other implementation options?
     use_mgzip: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     used_mgzip: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -133,13 +137,14 @@ class KgtkWriter(KgtkBase):
             self.OUTPUT_FORMAT_JSONL: self.write_jsonl,
             self.OUTPUT_FORMAT_JSONL_MAP: self.write_jsonl_map,
             self.OUTPUT_FORMAT_JSONL_MAP_COMPACT: self.write_jsonl_map_compact,
+            self.OUTPUT_FORMAT_DATAFRAME: self.write_dataframe,
         }
         
 
     @classmethod
     def open(cls,
              column_names: typing.List[str],
-             file_path: typing.Optional[typing.Union[Path, str]],
+             file_path: typing.Optional[typing.Union[Path, str, pandas.DataFrame]],
              who: str = "output",
              require_all_columns: bool = True,
              prohibit_extra_columns: bool = True,
@@ -159,6 +164,38 @@ class KgtkWriter(KgtkBase):
              no_header: bool = False,
              verbose: bool = False,
              very_verbose: bool = False)->"KgtkWriter":
+
+        if file_path is not None and isinstance(file_path, pandas.DataFrame):
+            if verbose:
+                print("KgtkWriter: writing a dataframe", file=error_file, flush=True)
+            output_format = cls.OUTPUT_FORMAT_DATAFRAME
+            return cls._setup(column_names=column_names,
+                              file_path=None,
+                              who=who,
+                              file_out=sys.stdout,
+                              require_all_columns=require_all_columns,
+                              prohibit_extra_columns=prohibit_extra_columns,
+                              fill_missing_columns=fill_missing_columns,
+                              error_file=error_file,
+                              header_error_action=header_error_action,
+                              use_mgzip=use_mgzip,
+                              used_mgzip=False,
+                              mgzip_threads=mgzip_threads,
+                              gzip_in_parallel=gzip_in_parallel,
+                              gzip_queue_size=gzip_queue_size,
+                              column_separator=column_separator,
+                              mode=mode,
+                              output_format=output_format,
+                              output_column_names=output_column_names,
+                              old_column_names=old_column_names,
+                              new_column_names=new_column_names,
+                              no_header=no_header,
+                              df=file_path,
+                              verbose=verbose,
+                              very_verbose=very_verbose,
+            )
+        
+            
 
         if file_path is not None and isinstance(file_path, str):
             file_path = Path(file_path)
@@ -382,6 +419,7 @@ class KgtkWriter(KgtkBase):
                old_column_names: typing.Optional[typing.List[str]] = None,
                new_column_names: typing.Optional[typing.List[str]] = None,
                no_header: bool = False,
+               df: typing.Optional[pandas.DataFrame] = None,
                verbose: bool = False,
                very_verbose: bool = False,
     )->"KgtkWriter":
@@ -484,6 +522,7 @@ class KgtkWriter(KgtkBase):
                              prohibit_extra_columns=prohibit_extra_columns,
                              fill_missing_columns=fill_missing_columns,
                              error_file=error_file,
+                             df=df,
                              header_error_action=header_error_action,
                              use_mgzip=use_mgzip,
                              used_mgzip=used_mgzip,
@@ -704,18 +743,24 @@ class KgtkWriter(KgtkBase):
             self.writeline("[")
             header = json.dumps(column_names, indent=None, separators=(',', ':'))
             noeol = True
+
         elif self.output_format == self.OUTPUT_FORMAT_JSON_MAP:
             self.writeline_noeol("[")
             return
+
         elif self.output_format == self.OUTPUT_FORMAT_JSON_MAP_COMPACT:
             self.writeline_noeol("[")
             return
+
         elif self.output_format == self.OUTPUT_FORMAT_JSONL:
             header = json.dumps(column_names, indent=None, separators=(',', ':'))
+
         elif self.output_format == self.OUTPUT_FORMAT_JSONL_MAP:
             return
+
         elif self.output_format == self.OUTPUT_FORMAT_JSONL_MAP_COMPACT:
             return
+
         elif self.output_format == self.OUTPUT_FORMAT_MD:
             header = "|"
             header2 = "|"
@@ -736,6 +781,12 @@ class KgtkWriter(KgtkBase):
                                     self.OUTPUT_FORMAT_TSV_UNQUOTED_EP,
                                     ]:
             header = self.column_separator.join(column_names)
+
+        elif self.output_format == self.OUTPUT_FORMAT_DATAFRAME:
+            self.df.drop(df.index, inplace=True) # Clear the dataframe.
+            self.df.columns = self.column_names # Set the column names.
+            return
+
         else:
             raise ValueError("KgtkWriter: File %s: header: Unrecognized output format '%s'." % (repr(self.file_path), self.output_format))
 
@@ -1147,6 +1198,9 @@ class KgtkWriter(KgtkBase):
     def write_jsonl_map_compact(self, values: typing.List[str]):
         self.writeline(json.dumps(self.json_map(values, compact=True), indent=None, separators=(',', ':')))
 
+    def write_dataframe(self, values: typing.List[str]):
+        self.df.loc[0 if math.isnan(df.index.max()) else df.index.max() + 1] = values
+
     table_buffer: typing.List[typing.List[str]] = [ ]
     def write_table(self, values: typing.List[str]):
         self.table_buffer.append(values.copy())
@@ -1222,6 +1276,7 @@ class KgtkWriter(KgtkBase):
                 print("Closing the JSON list.", file=self.error_file, flush=True)
             self.writeline("")
             self.writeline("]")
+
         elif self.output_format == self.OUTPUT_FORMAT_TABLE:
             if self.verbose:
                 print("Writing the table buffer: %d rows." % len(self.table_buffer), file=self.error_file, flush=True)
@@ -1236,6 +1291,9 @@ class KgtkWriter(KgtkBase):
             if self.verbose:
                 print("Writing the compact HTML trailer.", file=self.error_file, flush=True)
             self.write_html_trailer(compact=True)
+
+        elif self.output_format == self.OUTPUT_FORMAT_DATAFRAME:
+            return # Don't touch self.file_out
 
         if self.gzip_thread is not None:
             if self.verbose:
