@@ -19,6 +19,7 @@ import typing
 from kgtk.kgtkformat import KgtkFormat
 from kgtk.io.kgtkbase import KgtkBase
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderMode
+from kgtk.value.kgtkvalue import KgtkValue
 from kgtk.utils.enumnameaction import EnumNameAction
 from kgtk.utils.gzipprocess import GzipProcess
 from kgtk.utils.validationaction import ValidationAction
@@ -45,8 +46,14 @@ class KgtkWriter(KgtkBase):
     OUTPUT_FORMAT_TSV_CSVLIKE: str = "tsv-csvlike"
     OUTPUT_FORMAT_TSV_UNQUOTED: str = "tsv-unquoted"
     OUTPUT_FORMAT_TSV_UNQUOTED_EP: str = "tsv-unquoted-ep"
-    OUTPUT_FORMAT_DATAFRAME: str = "dataframe" # for internal use, omit from the choices.
 
+    # The following two formats are for intended for use
+    # in iPython environments, such as Jupyter notebooks.
+    # They will be omitted from the command line choices.
+    OUTPUT_FORMAT_DATAFRAME_STRING: str = "dataframe-string" # A DataFrame of KGTK value strings.
+    OUTPUT_FORMAT_DATAFRAME_NATIVE: str = "dataframe-native" # A DataFrame of native Python values when possible.
+
+    # The output formats that may be used by command line programs.
     OUTPUT_FORMAT_CHOICES: typing.List[str] = [
         OUTPUT_FORMAT_CSV,
         OUTPUT_FORMAT_HTML,
@@ -66,6 +73,15 @@ class KgtkWriter(KgtkBase):
         OUTPUT_FORMAT_TSV_UNQUOTED_EP,
     ]
     OUTPUT_FORMAT_DEFAULT: str = OUTPUT_FORMAT_KGTK
+
+
+    # Additional output formats that may be used with Pandas DataFrame
+    # outputs.
+    OUTPUT_FORMAT_DATAFRAME_CHOICES: typing.List[str] = [
+        OUTPUT_FORMAT_DATAFRAME_STRING,
+        OUTPUT_FORMAT_DATAFRAME_NATIVE,
+    ]
+    OUTPUT_FORMAT_DATAFRAME_DEFAULT: str = OUTPUT_FORMAT_DATAFRAME_NATIVE
 
     file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
     file_out: typing.TextIO = attr.ib() # Todo: validate TextIO
@@ -138,7 +154,8 @@ class KgtkWriter(KgtkBase):
             self.OUTPUT_FORMAT_JSONL: self.write_jsonl,
             self.OUTPUT_FORMAT_JSONL_MAP: self.write_jsonl_map,
             self.OUTPUT_FORMAT_JSONL_MAP_COMPACT: self.write_jsonl_map_compact,
-            self.OUTPUT_FORMAT_DATAFRAME: self.write_dataframe,
+            self.OUTPUT_FORMAT_DATAFRAME_STRING: self.write_dataframe_string,
+            self.OUTPUT_FORMAT_DATAFRAME_NATIVE: self.write_dataframe_native,
         }
         
 
@@ -169,7 +186,13 @@ class KgtkWriter(KgtkBase):
         if file_path is not None and isinstance(file_path, pandas.DataFrame):
             if verbose:
                 print("KgtkWriter: writing a dataframe", file=error_file, flush=True)
-            output_format = cls.OUTPUT_FORMAT_DATAFRAME
+
+            if output_format is not None:
+                if output_format not in cls.OUTPUT_FORMAT_DATAFRAME_CHOICES:
+                    raise ValueError("Output format %s may not be used with a Pandas DataFrame." % output_format)
+            else:
+                output_format = cls.OUTPUT_FORMAT_DATAFRAME_DEFAULT
+
             return cls._setup(column_names=column_names,
                               file_path=None,
                               who=who,
@@ -195,8 +218,9 @@ class KgtkWriter(KgtkBase):
                               verbose=verbose,
                               very_verbose=very_verbose,
             )
-        
-            
+        else:
+            if output_format is not None and output_format in cls.OUTPUT_FORMAT_DATAFRAME_CHOICES:
+                raise ValueError("Output format %s may not be used without a Pandas DataFrame." % output_format)
 
         if file_path is not None and isinstance(file_path, str):
             file_path = Path(file_path)
@@ -783,11 +807,12 @@ class KgtkWriter(KgtkBase):
                                     ]:
             header = self.column_separator.join(column_names)
 
-        elif self.output_format == self.OUTPUT_FORMAT_DATAFRAME:
+        elif self.output_format in self.OUTPUT_FORMAT_DATAFRAME_CHOICES:
             self.df.drop(self.df.index, inplace=True) # Clear the dataframe.
             idx: int
             name: str
             for idx, name in enumerate(self.column_names):
+                # TODO: encode internal vertical bars and tabs.
                 self.df.insert(idx, name, [])
             return
 
@@ -1202,8 +1227,39 @@ class KgtkWriter(KgtkBase):
     def write_jsonl_map_compact(self, values: typing.List[str]):
         self.writeline(json.dumps(self.json_map(values, compact=True), indent=None, separators=(',', ':')))
 
-    def write_dataframe(self, values: typing.List[str]):
+    def write_dataframe_string(self, values: typing.List[str]):
+        # Append the KGTK-encoded string values to the output dataframe.
+        # No information is lost.
         self.df.loc[0 if math.isnan(self.df.index.max()) else self.df.index.max() + 1] = values
+
+    def write_dataframe_native(self, values: typing.List[str]):
+        # Append the values to the output dataframe, converting strings, numbers, and booleans
+        # to native types. Information may be lost, including:
+        #
+        # * the difference between a KGTK symbol and a KGTK string
+        # * the language for a KGTK string
+        # * the difference between other KGTK types and a KGTK string.
+        native_values: typing.List[typing.Union[str, int, float, bool]] = list()
+        native_value: typing.Union[str, int, float, bool]
+        value: str
+        for value in values:
+            kv: KgtkValue = KgtkValue(value, parse_fields=True, verbose=self.verbose)
+            if kv.is_valid():
+                if kv.is_string() and kv.fields is not None and kv.fields.text is not None:
+                    native_value = kv.fields.text
+                elif kv.is_number() and kv.fields is not None and kv.fields.number is not None:
+                    native_value = kv.fields.number
+                elif kv.is_boolean() and kv.fields is not None and kv.fields.truth is not None:
+                    native_value = kv.fields.truth
+                elif kv.is_symbol() and kv.fields is not None and kv.fields.symbol is not None:
+                    native_value = kv.fields.symbol
+                else:
+                    native_value = value
+            else:
+                native_value = value
+            native_values.append(native_value)
+        
+        self.df.loc[0 if math.isnan(self.df.index.max()) else self.df.index.max() + 1] = native_values
 
     table_buffer: typing.List[typing.List[str]] = [ ]
     def write_table(self, values: typing.List[str]):
@@ -1296,7 +1352,7 @@ class KgtkWriter(KgtkBase):
                 print("Writing the compact HTML trailer.", file=self.error_file, flush=True)
             self.write_html_trailer(compact=True)
 
-        elif self.output_format == self.OUTPUT_FORMAT_DATAFRAME:
+        elif self.output_format in self.OUTPUT_FORMAT_DATAFRAME_CHOICES:
             return # Don't touch self.file_out
 
         if self.gzip_thread is not None:
@@ -1424,7 +1480,12 @@ def main():
                                             very_verbose=args.very_verbose)
         df_row: typing.List[typing.Any]
         for df_row in test_data:
-            df_kw.write(df_row)
+            # Convert the dataframe row to string values. 
+            row: typing.List[str] = list()
+            item: typing.Any
+            for item in df_row:
+                row.append(str(item))
+            df_kw.write(row)
 
         if len(df) != len(test_data):
             print("%d rows of test data, but %d rows of DataFrame." % (len(test_data), len(df)),
@@ -1441,7 +1502,7 @@ def main():
                 for colidx, item in enumerate(df_row):
                     if colidx < len(test_data[rowidx]):
                         if item != test_data[rowidx][colidx]:
-                            print("Row %d: col %d: test data %s does not match DataFrame %s" % (
+                            print("Row %d: col %d: test data value %s does not match DataFrame value %s" % (
                                 rowidx + 1,
                                 colidx + 1,
                                 repr(str(test_data[rowidx][colidx])),
