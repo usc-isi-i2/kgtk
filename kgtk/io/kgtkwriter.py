@@ -9,6 +9,7 @@ from enum import Enum
 import errno
 import html
 import json
+import math
 import pandas
 from pathlib import Path
 from multiprocessing import Queue
@@ -17,7 +18,7 @@ import typing
 
 from kgtk.kgtkformat import KgtkFormat
 from kgtk.io.kgtkbase import KgtkBase
-from kgtk.io.kgtkreader import KgtkReader
+from kgtk.io.kgtkreader import KgtkReader, KgtkReaderMode
 from kgtk.utils.enumnameaction import EnumNameAction
 from kgtk.utils.gzipprocess import GzipProcess
 from kgtk.utils.validationaction import ValidationAction
@@ -783,8 +784,11 @@ class KgtkWriter(KgtkBase):
             header = self.column_separator.join(column_names)
 
         elif self.output_format == self.OUTPUT_FORMAT_DATAFRAME:
-            self.df.drop(df.index, inplace=True) # Clear the dataframe.
-            self.df.columns = self.column_names # Set the column names.
+            self.df.drop(self.df.index, inplace=True) # Clear the dataframe.
+            idx: int
+            name: str
+            for idx, name in enumerate(self.column_names):
+                self.df.insert(idx, name, [])
             return
 
         else:
@@ -1199,7 +1203,7 @@ class KgtkWriter(KgtkBase):
         self.writeline(json.dumps(self.json_map(values, compact=True), indent=None, separators=(',', ':')))
 
     def write_dataframe(self, values: typing.List[str]):
-        self.df.loc[0 if math.isnan(df.index.max()) else df.index.max() + 1] = values
+        self.df.loc[0 if math.isnan(self.df.index.max()) else self.df.index.max() + 1] = values
 
     table_buffer: typing.List[typing.List[str]] = [ ]
     def write_table(self, values: typing.List[str]):
@@ -1391,18 +1395,62 @@ def main():
                               type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXIT)
     parser.add_argument(      "--gzip-in-parallel", dest="gzip_in_parallel", help="Execute gzip in a subthread.", action='store_true')
     parser.add_argument(      "--input-mode", dest="input_mode",
-                              help="Determine the input KGTK file mode.", type=KgtkReader.Mode, action=EnumNameAction, default=KgtkReader.Mode.AUTO)
+                              help="Determine the input KGTK file mode.", type=KgtkReaderMode, action=EnumNameAction, default=KgtkReaderMode.AUTO)
     parser.add_argument(      "--output-mode", dest="output_mode",
                               help="Determine the output KGTK file mode.", type=KgtkWriter.Mode, action=EnumNameAction, default=KgtkWriter.Mode.AUTO)
     parser.add_argument(      "--output-format", dest="output_format", help="The file format (default=kgtk)", type=str)
     parser.add_argument(      "--output-columns", dest="output_column_names", help="Rename all output columns. (default=%(default)s)", type=str, nargs='+')
     parser.add_argument(      "--old-columns", dest="old_column_names", help="Rename seleted output columns: old names. (default=%(default)s)", type=str, nargs='+')
     parser.add_argument(      "--new-columns", dest="new_column_names", help="Rename seleted output columns: new names. (default=%(default)s)", type=str, nargs='+')
+    parser.add_argument(      "--dataframe", dest="do_dataframe", help="Test writing a DataFrame.", action='store_true')
     parser.add_argument("-v", "--verbose", dest="verbose", help="Print additional progress messages.", action='store_true')
     parser.add_argument(      "--very-verbose", dest="very_verbose", help="Print additional progress messages.", action='store_true')
     args = parser.parse_args()
 
-    error_file: typing.TextIO = sys.stdout if args.errors_to_stdout else sys.stderr
+    error_file: typing.TextIO = sys.stdout
+
+    if args.do_dataframe:
+        df_column_names: typing.List[str] = ["node1", "label", "node2"]
+        test_data: typing.List[typing.List[str]] = [
+            ["P10", "color", "red"],
+            ["P11", "size", 10],
+        ]
+
+        df: pandas.DataFrame = pandas.DataFrame()
+        df_kw: KgtkWriter = KgtkWriter.open(df_column_names,
+                                            df,
+                                            error_file=error_file,
+                                            verbose=args.verbose,
+                                            very_verbose=args.very_verbose)
+        df_row: typing.List[typing.Any]
+        for df_row in test_data:
+            df_kw.write(df_row)
+
+        if len(df) != len(test_data):
+            print("%d rows of test data, but %d rows of DataFrame." % (len(test_data), len(df)),
+                  file=error_file, flush=True)
+
+        for rowidx, df_row in enumerate(df.values.tolist()):
+            if rowidx < len(test_data):
+                if len(test_data[rowidx]) != len(df_row):
+                    print("Row %d: %d columns of test data, but %d columns of DataFrame" % (rowidx + 1,
+                                                                                            len(test_data[rowidx]),
+                                                                                            len(df_row)),
+                          file=error_file, flush=True)
+
+                for colidx, item in enumerate(df_row):
+                    if colidx < len(test_data[rowidx]):
+                        if item != test_data[rowidx][colidx]:
+                            print("Row %d: col %d: test data %s does not match DataFrame %s" % (
+                                rowidx + 1,
+                                colidx + 1,
+                                repr(str(test_data[rowidx][colidx])),
+                                repr(item)))
+        df_kw.close()
+        if args.verbose:
+            print("Copied %d lines" % len(df), file=error_file, flush=True)
+        return
+
 
     kr: KgtkReader = KgtkReader.open(args.input_kgtk_file,
                                      error_file=error_file,
