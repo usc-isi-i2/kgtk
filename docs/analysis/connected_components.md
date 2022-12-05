@@ -6,10 +6,15 @@ This command will find the connected components in a KGTK edge file. The output 
 
 ## Usage
 ```
-Usage: kgtk connected-components [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [--properties PROPERTIES] [--undirected] [--strong]
+usage: kgtk connected-components [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
+                                 [--properties PROPERTIES] [--undirected]
+                                 [--strong]
                                  [--cluster-name-method {cat,hash,first,last,shortest,longest,numbered,prefixed,lowest,highest}]
-                                 [--cluster-name-separator CLUSTER_NAME_SEPARATOR] [--cluster-name-prefix CLUSTER_NAME_PREFIX]
-                                 [--cluster-name-zfill CLUSTER_NAME_ZFILL] [--minimum-cluster-size MINIMUM_CLUSTER_SIZE] [-v]
+                                 [--cluster-name-separator CLUSTER_NAME_SEPARATOR]
+                                 [--cluster-name-prefix CLUSTER_NAME_PREFIX]
+                                 [--cluster-name-zfill CLUSTER_NAME_ZFILL]
+                                 [--minimum-cluster-size MINIMUM_CLUSTER_SIZE]
+                                 [-v [optional True|False]]
 
 Find all the connected components in an undirected or directed Graph.
 
@@ -19,25 +24,36 @@ kgtk --expert connected-components --help
 optional arguments:
   -h, --help            show this help message and exit
   -i INPUT_FILE, --input-file INPUT_FILE
-                        The KGTK file to find connected components in. (May be omitted or '-' for stdin.)
+                        The KGTK file to find connected components in. (May be
+                        omitted or '-' for stdin.)
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
-                        The KGTK output file. (May be omitted or '-' for stdout.)
+                        The KGTK output file. (May be omitted or '-' for
+                        stdout.)
   --properties PROPERTIES
-                        A comma separated list of properties to traverse while finding connected components, by default all properties will be considered
-  --undirected          Specify if the input graph is undirected, default FALSE
-  --strong              Treat graph as directed or not, independent of its actual directionality.
+                        A comma separated list of properties to traverse while
+                        finding connected components, by default all
+                        properties will be considered
+  --undirected          Specify if the input graph is undirected, default
+                        FALSE
+  --strong              Treat graph as directed or not, independent of its
+                        actual directionality.
   --cluster-name-method {cat,hash,first,last,shortest,longest,numbered,prefixed,lowest,highest}
-                        Determine the naming method for clusters. (default=Method.HASH)
+                        Determine the naming method for clusters.
+                        (default=Method.HASH)
   --cluster-name-separator CLUSTER_NAME_SEPARATOR
-                        Specify the separator to be used in cat and hash cluster name methods. (default=+)
+                        Specify the separator to be used in cat and hash
+                        cluster name methods. (default=+)
   --cluster-name-prefix CLUSTER_NAME_PREFIX
-                        Specify the prefix to be used in the prefixed and hash cluster name methods. (default=CLUS)
+                        Specify the prefix to be used in the prefixed and hash
+                        cluster name methods. (default=CLUS)
   --cluster-name-zfill CLUSTER_NAME_ZFILL
-                        Specify the zfill to be used in the numbered and prefixed cluster name methods. (default=4)
+                        Specify the zfill to be used in the numbered and
+                        prefixed cluster name methods. (default=4)
   --minimum-cluster-size MINIMUM_CLUSTER_SIZE
                         Specify the minimum cluster size. (default=2)
 
-  -v, --verbose         Print additional progress messages (default=False).
+  -v [optional True|False], --verbose [optional True|False]
+                        Print additional progress messages (default=False).
 ```
 ***OPTIONS***:
 

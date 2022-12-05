@@ -6,7 +6,7 @@ from typing import List
 from pathlib import Path
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.exceptions import KGTKException
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer # type: ignore
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 

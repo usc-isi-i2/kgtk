@@ -50,6 +50,33 @@ you encounter problems with your installation, or are interested in a detailed
 explanation of these commands, [read more about the installation procedure
 here](docs/KGTK-Installation-Procedure-Details.md).
 
+### Installation issues on Macbooks with M1 chip
+Running `pip install -e .` (development mode) throws an error about 3 libraries,
+1. thinc
+2. blis
+3. tokenizers
+
+Fixed the `thinc` issue by ,
+
+    a. commenting out [this line in requirements.txt](https://github.com/usc-isi-i2/kgtk/blob/dev/requirements.txt#L11)
+
+    b. running `pip install thinc-apple-ops`
+
+Fixed the tokenizers issue by running the following commands in the conda environment
+```
+# download and install Rust. Follow the on screen instructions
+
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source "$HOME/.cargo/env"
+
+git clone https://github.com/huggingface/tokenizers
+cd tokenizers/bindings/python/
+pip install setuptools_rust
+python setup.py install
+
+```
+continue installing `kgtk`, `pip install -e .`
+
 ### Installing KGTK with Docker
 
 Please refer to [this document](docs/install-with-docker.md) for installing KGTK with Docker

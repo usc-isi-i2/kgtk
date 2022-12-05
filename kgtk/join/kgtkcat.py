@@ -17,16 +17,19 @@ from kgtk.cli_entry import progress_startup
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions
 from kgtk.io.kgtkwriter import KgtkWriter
 from kgtk.join.kgtkmergecolumns import KgtkMergeColumns
+from kgtk.utils.validationaction import ValidationAction
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
 @attr.s(slots=True, frozen=True)
 class KgtkCat():
     DEFAULT_PURE_PYTHON: bool = False
     DEFAULT_FAST_COPY_MIN_SIZE: int = 10000
+    DEFAULT_WAIT_TIMEOUT: int = 1 # second, presumably
     DEFAULT_BASH_COMMAND: str = "bash"
     DEFAULT_BZIP2_COMMAND: str = "bzip2"
     DEFAULT_CAT_COMMAND: str = "cat"
     DEFAULT_GZIP_COMMAND: str = "gzip"
+    DEFAULT_PGREP_COMMAND: str = "pgrep"
     DEFAULT_TAIL_COMMAND: str = "tail"
     DEFAULT_XZ_COMMAND: str = "xz"
 
@@ -54,11 +57,13 @@ class KgtkCat():
     no_output_header: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
     pure_python: bool = attr.ib(validator=attr.validators.instance_of(bool), default=DEFAULT_PURE_PYTHON)
     fast_copy_min_size: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_FAST_COPY_MIN_SIZE)
+    wait_timeout: int = attr.ib(validator=attr.validators.instance_of(int), default=DEFAULT_WAIT_TIMEOUT)
 
     bash_command: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_BASH_COMMAND)
     bzip2_command: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_BZIP2_COMMAND)
     cat_command: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_CAT_COMMAND)
     gzip_command: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_GZIP_COMMAND)
+    pgrep_command: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_PGREP_COMMAND)
     tail_command: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_TAIL_COMMAND)
     xz_command: str = attr.ib(validator=attr.validators.instance_of(str), default=DEFAULT_XZ_COMMAND)
 
@@ -68,6 +73,11 @@ class KgtkCat():
     value_options: typing.Optional[KgtkValueOptions] = attr.ib(default=None)
 
     output_format: typing.Optional[str] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(str)), default=None) # TODO: use an enum
+
+    # In order to allow `kgtk md` to process the widest set of files possible,
+    # we we will ignore certain error checks by overriding these parameters:
+    output_header_error_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.ERROR)
+    output_prohibit_extra_columns: bool = attr.ib(validator=attr.validators.instance_of(bool), default=True)
 
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
     verbose: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -221,11 +231,10 @@ class KgtkCat():
             if self.verbose:
                 print("Opening the output file: %s" % str(self.output_path), file=self.error_file, flush=True)
 
-
         ew: KgtkWriter = KgtkWriter.open(kmc.column_names,
                                          self.output_path,
                                          require_all_columns=False,
-                                         prohibit_extra_columns=True,
+                                         prohibit_extra_columns=self.output_prohibit_extra_columns,
                                          fill_missing_columns=True,
                                          use_mgzip=self.reader_options.use_mgzip, # Hack!
                                          mgzip_threads=self.reader_options.mgzip_threads, # Hack!
@@ -237,6 +246,7 @@ class KgtkCat():
                                          new_column_names=self.new_column_names,
                                          no_header=self.no_output_header,
                                          error_file=self.error_file,
+                                         header_error_action = self.output_header_error_action,
                                          verbose=self.verbose,
                                          very_verbose=self.very_verbose)
 
@@ -286,6 +296,8 @@ class KgtkCat():
     def do_system_copy(self,
                        krs: typing.List[KgtkReader],
                        column_names: typing.List[str]) -> bool:
+
+        import subprocess
 
         # TODO: Support numbered FDs as input files.
         input_file_path: str
@@ -371,20 +383,39 @@ class KgtkCat():
                 cmd += '>' + self.safe_filename(self.output_path)
 
         if self.verbose:
-            print("system command: %s" % repr(cmd), file=self.error_file, flush=True)
+            print("system copy command: %s" % repr(cmd), file=self.error_file, flush=True)
 
         sh_bash = sh.Command(self.bash_command)
-        cmd_proc = sh_bash("-c", cmd, _out=sys.stdout, _err=sys.stderr,
-                           bg=True, _bg_exc=False, _internal_bufsize=1)
+        cmd_proc = sh_bash("-c", cmd, _out=sys.stdout, _err=sys.stderr, _bg=True, _bg_exc=False, _internal_bufsize=1)
+        if self.verbose:
+            print("\nRunning the system copy command (pid=%d)." % cmd_proc.pid, file=self.error_file, flush=True)
+
+        first_wait: bool = True
+        prior_subproc: typing.Optional[int] = None
+        while cmd_proc.is_alive():
+            pgrep_result = subprocess.run([self.pgrep_command, '-P', str(cmd_proc.pid)], stdout=subprocess.PIPE).stdout.decode('utf-8').splitlines()
+            if len(pgrep_result) > 0:
+                subproc_str = pgrep_result[0].strip()
+                if subproc_str.isdigit():
+                    subproc = int(subproc_str)
+                    if prior_subproc is None or prior_subproc != subproc:
+                        if self.verbose:
+                            print("\nStarting progress monitoring for pid %d.\n" % subproc, file=self.error_file, flush=True)
+                        progress_startup(pid=subproc)
+                        prior_subproc = subproc
+
+            
+            if first_wait:
+                if self.verbose:
+                    print("\nWaiting for the system copy command to complete.\n", file=self.error_file, flush=True)
+                first_wait = False
+            try:
+                cmd_proc.wait(timeout=self.wait_timeout)
+            except sh.TimeoutException as e:
+                pass
 
         if self.verbose:
-            print("\nRunning the cat script (pid=%d)." % cmd_proc.pid, file=self.error_file, flush=True)
-        progress_startup(pid=cmd_proc.pid)
-
-        if self.verbose:
-            print("\nWaiting for the cat command to complete.\n", file=self.error_file, flush=True)
-        cmd_proc.wait()
-
+            print("\nThe system copy command is complete.\n", file=self.error_file, flush=True)
         return True
 
         

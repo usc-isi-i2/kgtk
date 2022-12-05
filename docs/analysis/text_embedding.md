@@ -5,7 +5,45 @@ The input is a KGTK edge file.
 
 ## Usage
 ```
-kgtk text-embedding OPTIONS
+usage: kgtk text-embedding [-h] [-i INPUT_FILE]
+                           [-m {bert-base-nli-cls-token,bert-base-nli-max-tokens,bert-base-nli-mean-tokens,bert-base-nli-stsb-mean-tokens,bert-base-wikipedia-sections-mean-tokens,bert-large-nli-cls-token,bert-large-nli-max-tokens,bert-large-nli-mean-tokens,bert-large-nli-stsb-mean-tokens,distilbert-base-nli-mean-tokens,distilbert-base-nli-stsb-mean-tokens,distiluse-base-multilingual-cased,roberta-base-nli-mean-tokens,roberta-base-nli-stsb-mean-tokens,roberta-large-nli-mean-tokens,roberta-large-nli-stsb-mean-tokens,sentence-transformers/all-distilroberta-v1} [{bert-base-nli-cls-token,bert-base-nli-max-tokens,bert-base-nli-mean-tokens,bert-base-nli-stsb-mean-tokens,bert-base-wikipedia-sections-mean-tokens,bert-large-nli-cls-token,bert-large-nli-max-tokens,bert-large-nli-mean-tokens,bert-large-nli-stsb-mean-tokens,distilbert-base-nli-mean-tokens,distilbert-base-nli-stsb-mean-tokens,distiluse-base-multilingual-cased,roberta-base-nli-mean-tokens,roberta-base-nli-stsb-mean-tokens,roberta-large-nli-mean-tokens,roberta-large-nli-stsb-mean-tokens,sentence-transformers/all-distilroberta-v1} ...]]
+                           [--sentence-property SENTENCE_PROPERTY]
+                           [--output-property OUTPUT_PROPERTIES]
+                           [--batch-size BATCH_SIZE] [-o OUTPUT_FILE]
+                           [--output-data-format {w2v,kgtk}]
+                           [-v [optional True|False]]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -i INPUT_FILE, --input-file INPUT_FILE
+                        The KGTK input file. (May be omitted or '-' for
+                        stdin.)
+  -m {bert-base-nli-cls-token,bert-base-nli-max-tokens,bert-base-nli-mean-tokens,bert-base-nli-stsb-mean-tokens,bert-base-wikipedia-sections-mean-tokens,bert-large-nli-cls-token,bert-large-nli-max-tokens,bert-large-nli-mean-tokens,bert-large-nli-stsb-mean-tokens,distilbert-base-nli-mean-tokens,distilbert-base-nli-stsb-mean-tokens,distiluse-base-multilingual-cased,roberta-base-nli-mean-tokens,roberta-base-nli-stsb-mean-tokens,roberta-large-nli-mean-tokens,roberta-large-nli-stsb-mean-tokens,sentence-transformers/all-distilroberta-v1} [{bert-base-nli-cls-token,bert-base-nli-max-tokens,bert-base-nli-mean-tokens,bert-base-nli-stsb-mean-tokens,bert-base-wikipedia-sections-mean-tokens,bert-large-nli-cls-token,bert-large-nli-max-tokens,bert-large-nli-mean-tokens,bert-large-nli-stsb-mean-tokens,distilbert-base-nli-mean-tokens,distilbert-base-nli-stsb-mean-tokens,distiluse-base-multilingual-cased,roberta-base-nli-mean-tokens,roberta-base-nli-stsb-mean-tokens,roberta-large-nli-mean-tokens,roberta-large-nli-stsb-mean-tokens,sentence-transformers/all-distilroberta-v1} ...], --model {bert-base-nli-cls-token,bert-base-nli-max-tokens,bert-base-nli-mean-tokens,bert-base-nli-stsb-mean-tokens,bert-base-wikipedia-sections-mean-tokens,bert-large-nli-cls-token,bert-large-nli-max-tokens,bert-large-nli-mean-tokens,bert-large-nli-stsb-mean-tokens,distilbert-base-nli-mean-tokens,distilbert-base-nli-stsb-mean-tokens,distiluse-base-multilingual-cased,roberta-base-nli-mean-tokens,roberta-base-nli-stsb-mean-tokens,roberta-large-nli-mean-tokens,roberta-large-nli-stsb-mean-tokens,sentence-transformers/all-distilroberta-v1} [{bert-base-nli-cls-token,bert-base-nli-max-tokens,bert-base-nli-mean-tokens,bert-base-nli-stsb-mean-tokens,bert-base-wikipedia-sections-mean-tokens,bert-large-nli-cls-token,bert-large-nli-max-tokens,bert-large-nli-mean-tokens,bert-large-nli-stsb-mean-tokens,distilbert-base-nli-mean-tokens,distilbert-base-nli-stsb-mean-tokens,distiluse-base-multilingual-cased,roberta-base-nli-mean-tokens,roberta-base-nli-stsb-mean-tokens,roberta-large-nli-mean-tokens,roberta-large-nli-stsb-mean-tokens,sentence-transformers/all-distilroberta-v1} ...]
+                        the model to used for embedding
+  --sentence-property SENTENCE_PROPERTY
+                        The name of the property with sentence for each Qnode.
+                        Default is 'sentence'
+  --output-property OUTPUT_PROPERTIES
+                        The output property name used to record the embedding.
+                        Default is `output_properties`. This argument is only
+                        valid for output in kgtk format.
+  --batch-size BATCH_SIZE
+                        The number of sentences to be processed at a time.
+                        Default is 100000. Set this value to '-1' to process
+                        the whole file as one batch
+  -o OUTPUT_FILE, --out-file OUTPUT_FILE
+                        output path for the text embedding file, by default it
+                        will be printed in console
+  --output-data-format {w2v,kgtk}
+                        output format, can either be `w2v` or `kgtk`. If
+                        choose `w2v`, the output will be a text file, with
+                        each row contains the qnode and the vector
+                        representation, separated by a space. The first line
+                        is the number of qnodes and dimension of vectors,
+                        separated by space
+
+  -v [optional True|False], --verbose [optional True|False]
+                        Print additional progress messages (default=False).
 ```
 Computes embeddings of nodes using properties of nodes using a pre-trained language model.
 

@@ -14,7 +14,7 @@ from IPython.core.display import display, HTML, JSON, Markdown
 import json
 import os
 import pandas
-import sh
+import sh # type: ignore
 import sys
 import typing
 
@@ -79,7 +79,10 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
     name of the `kgtk` command.
 
         One use for this feature is to redefine the `kgtk` command to include
-    `time` as a prefix, and/or to include common options.
+    `time` as a prefix, and/or to include common options, such as:
+
+    kgtk_command='time kgtk'
+    kgtk_command='kgtk --debug --timing'
 
     Standard Output Processing
     ======== ====== =========
@@ -277,7 +280,7 @@ def kgtk(arg1: typing.Union[str, pandas.DataFrame],
         # Assume that anything else is KGTK formatted output.  Convert it to a
         # pandas DataFrame and return it.
         #
-        # TODO: Test this conversion with all KTK datatypes.  Language-qualified
+        # TODO: Test this conversion with all KGTK datatypes.  Language-qualified
         # strings are problematic.  Check what happens to quantites, date/times,
         # and locations.
         #

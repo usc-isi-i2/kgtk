@@ -56,7 +56,7 @@ def sh_cat(infiles: typing.List[str],
     files producing output.
 
     """
-    import sh
+    import sh # type: ignore
     start_time: float = 0
     if verbose:
         print('Using sh_cat.', file=error_file, flush=True)

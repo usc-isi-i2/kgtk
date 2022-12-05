@@ -17,15 +17,14 @@ DEFAULT_GRAPH_CACHE_FILE = os.path.join(
     tempfile.gettempdir(), 'kgtk-graph-cache-%s.sqlite3.db' % os.environ.get('USER', ''))
 
 def parser():
-    desc = ('Query one or more KGTK files with Kypher.\n' +
-            'IMPORTANT: input can come from stdin but chaining queries is not yet supported.')
+    desc = ('Query one or more KGTK files with Kypher.\n')
     return {
         'help': desc,
         'description': desc,
     }
 
 EXPLAIN_MODES = ('plan', 'full', 'expert')
-INDEX_MODES = ('auto', 'expert', 'quad', 'triple', 'node1+label', 'node1', 'label', 'node2', 'none')
+DEFAULT_INDEX_MODE = 'auto'
 
 class InputOptionAction(argparse.Action):
     """Special-purpose argparse action that associates an input-specific option
@@ -89,6 +88,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args):
     # future extension:
     #parser.add_argument('--in-memory', default=False, type=bool, nargs=0, action=InputOptionAction, dest='in_memory',
     #                    help="load the preceding input into a temporary in-memory table only")
+    parser.add_argument('-a', '--append', metavar='FILE', nargs='+', default=None,
+                        action=InputOptionAction, dest='append',
+                        help="additional data file(s) to append to the specified input")
     parser.add_argument('--query', default=None, action='store', dest='query',
                         help="complete Kypher query combining all clauses," +
                         " if supplied, all other specialized clause arguments will be ignored")
@@ -122,10 +124,12 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args):
                         help="do not generate a header row with column names")
     parser.add_argument('--force', action='store_true', dest='force',
                         help="force problematic queries to run against advice")
+    parser.add_argument('--dont-optimize', action='store_true', dest='dont_optimize',
+                        help="disable query optimizer and process match clause joins in the order listed")
     parser.add_argument('--index', '--index-mode', metavar='MODE', nargs='+', action='store',
-                        dest='index_mode', default=[INDEX_MODES[0]], 
+                        dest='index_mode', default=[DEFAULT_INDEX_MODE], 
                         help="default index creation MODE for all inputs"
-                        + f" (default: {INDEX_MODES[0]});"
+                        + f" (default: {DEFAULT_INDEX_MODE});"
                         + " can be overridden with --idx for specific inputs")
     parser.add_argument('--idx', '--input-index', metavar='SPEC', nargs='+', default=None,
                         action=InputOptionAction, dest='index_specs',
@@ -135,15 +139,20 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args):
                         help="explain the query execution and indexing plan according to MODE"
                         + " (%(choices)s, default: %(const)s)."
                         + " This will not actually run or create anything.")
-    parser.add_argument('--graph-cache', '--gc', action='store', dest='graph_cache_file',
+    parser.add_argument('--graph-cache', '--gc', metavar='DBFILE', action='store', dest='graph_cache_file',
                         help="database cache where graphs will be imported before they are queried"
                         + " (defaults to per-user temporary file)")
     parser.add_argument('--show-cache', '--sc', action='store_true', dest='show_cache',
                         help="describe the current content of the graph cache and exit"
                         + " (does not actually run a query or import data)")
+    parser.add_argument('--aux-cache', '--ac', metavar='DBFILE', nargs='+', action='extend', dest='aux_graph_cache_file',
+                        help="auxiliary read-only database file(s) to use for cross-graph-cache queries")
     parser.add_argument('--read-only', '--ro', action='store_true', dest='readonly',
                         help="do not create or update the graph cache in any way"
                         + ", only run queries against already imported and indexed data")
+    parser.add_argument('--single-user', action='store_true', dest='single_user',
+                        help="single-user mode blocks concurrent database access"
+                        + " from parallel processes for faster data import")
     parser.add_argument('--import', metavar='MODULE_LIST', default=None, action='store', dest='import',
                         help="Python modules needed to define user extensions to built-in functions")
     parser.add_argument('-o', '--out', default='-', action='store', dest='output',
@@ -154,7 +163,7 @@ def import_modules():
     """Import command-specific modules that are only needed when we actually run.
     """
     mod = sys.modules[__name__]
-    import sh
+    import sh # type: ignore
     setattr(mod, "sh", sh)
     import csv
     setattr(mod, "csv", csv)
@@ -251,8 +260,13 @@ def run(input_files: KGTKFiles, **options):
         store = None
         try:
             graph_cache = options.get('graph_cache_file')
+            # TRICKY: if one of our inputs is stdin, we must be invoked in a pipe;
+            # this requires special handling by SqliteStore to avoid DB locking issues:
+            piped = any(map(sqlstore.SqliteStore.is_standard_input, inputs))
             store = sqlstore.SqliteStore(graph_cache, create=not os.path.exists(graph_cache),
-                                         loglevel=loglevel, readonly=options.get('readonly'))
+                                         loglevel=loglevel, readonly=options.get('readonly'),
+                                         aux_dbfiles=options.get('aux_graph_cache_file'),
+                                         single_user=options.get('single_user'), piped=piped)
 
             if show_cache:
                 store.describe_meta_tables(out=sys.stdout)
@@ -275,7 +289,8 @@ def run(input_files: KGTKFiles, **options):
                                       multi=options.get('multi_edge'),
                                       parameters=options.get('parameters'),
                                       index=options.get('index_mode'),
-                                      force=options.get('force'))
+                                      force=options.get('force'),
+                                      dont_optimize=options.get('dont_optimize'))
             
             explain = options.get('explain')
             if explain is not None:

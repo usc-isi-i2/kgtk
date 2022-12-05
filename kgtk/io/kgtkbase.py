@@ -1,8 +1,6 @@
 """
 Constants and helpers for the KGTK file format.
 
-TODO: _yelp and its callers need a who parameter.
-
 """
 
 from enum import Enum
@@ -14,6 +12,8 @@ from kgtk.utils.validationaction import ValidationAction
 from kgtk.value.kgtkvalue import KgtkValue
 
 class KgtkBase(KgtkFormat):
+    COLUMN_NAME_PREFIX_DEFAULT: str = 'COL'
+
     @classmethod
     def _yelp(cls,
               msg: str,
@@ -121,7 +121,7 @@ class KgtkBase(KgtkFormat):
         column_name: str
         for column_idx, column_name in enumerate(column_names):
             if supply_missing_column_names and (column_name is None or len(column_name) == 0):
-                column_name = 'COL' + str(column_idx + 1)
+                column_name = cls.COLUMN_NAME_PREFIX_DEFAULT + str(column_idx + 1)
                 column_names[column_idx] = column_name
             gripes: typing.List[str] = cls.check_column_name(column_name, header_line, error_action, error_file,
                                                              prohibit_whitespace_in_column_names=prohibit_whitespace_in_column_names)
@@ -134,6 +134,7 @@ class KgtkBase(KgtkFormat):
         return False
 
     @classmethod
+
     def build_column_name_map(cls,
                               column_names: typing.List[str],
                               header_line: str,

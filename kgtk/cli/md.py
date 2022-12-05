@@ -76,6 +76,7 @@ def run(input_file: KGTKFiles,
     from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
     from kgtk.io.kgtkwriter import KgtkWriter
     from kgtk.join.kgtkcat import KgtkCat
+    from kgtk.utils.validationaction import ValidationAction
     from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
     input_file_path: Path = KGTKArgumentParser.get_input_file(input_file)
@@ -99,11 +100,16 @@ def run(input_file: KGTKFiles,
         print("=======", file=error_file, flush=True)
 
     try:
+        # In order to allow `kgtk md` to process the widest set of files
+        # possible, we we will ignore certain error checks by overriding
+        # output_header_error_action and output_prohibit_extra_columns.
         kc: KgtkCat = KgtkCat(input_file_paths=[input_file_path],
                               output_path=output_file_path,
                               output_format=output_format,
                               reader_options=reader_options,
                               value_options=value_options,
+                              output_header_error_action=ValidationAction.PASS,
+                              output_prohibit_extra_columns=False,
                               error_file=error_file,
                               verbose=verbose,
                               very_verbose=very_verbose

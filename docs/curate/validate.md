@@ -185,12 +185,18 @@ usage: kgtk validate [-h] [-i INPUT_FILE [INPUT_FILE ...]]
                      [--gzip-queue-size GZIP_QUEUE_SIZE]
                      [--implied-label IMPLIED_LABEL]
                      [--use-graph-cache-envar [optional True|False]]
+                     [--ignore-stale-graph-cache [optional True|False]]
                      [--graph-cache GRAPH_CACHE]
                      [--graph-cache-fetchmany-size GRAPH_CACHE_FETCHMANY_SIZE]
                      [--graph-cache-filter-batch-size GRAPH_CACHE_FILTER_BATCH_SIZE]
                      [--mode {NONE,EDGE,NODE,AUTO}]
                      [--input-column-names FORCE_COLUMN_NAMES [FORCE_COLUMN_NAMES ...]]
                      [--no-input-header [optional True|False]]
+                     [--supply-missing-column-names [optional True|False]]
+                     [--number-of-columns COUNT]
+                     [--require-column-names REQUIRE_COLUMN_NAMES [REQUIRE_COLUMN_NAMES ...]]
+                     [--no-additional-columns [optional True|False]]
+                     [--unquote-csv-column-names [optional True|False]]
                      [--header-error-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
                      [--unsafe-column-name-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
                      [--prohibit-whitespace-in-column-names [optional True|False]]
@@ -209,7 +215,7 @@ usage: kgtk validate [-h] [-i INPUT_FILE [INPUT_FILE ...]]
                      [--short-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
                      [--truncate-long-lines [TRUNCATE_LONG_LINES]]
                      [--whitespace-line-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}]
-                     [--additional-language-codes [ADDITIONAL_LANGUAGE_CODES [ADDITIONAL_LANGUAGE_CODES ...]]]
+                     [--additional-language-codes [ADDITIONAL_LANGUAGE_CODES ...]]
                      [--allow-lax-qnodes [ALLOW_LAX_QNODES]]
                      [--allow-language-suffixes [ALLOW_LANGUAGE_SUFFIXES]]
                      [--allow-lax-strings [ALLOW_LAX_STRINGS]]
@@ -302,6 +308,9 @@ File options:
   --use-graph-cache-envar [optional True|False]
                         use KGTK_GRAPH_CACHE if --graph-cache is not
                         specified. (default=True).
+  --ignore-stale-graph-cache [optional True|False]
+                        Ignore the graph cache if the file exists with a
+                        differen size or modificatin time. (default=True).
   --graph-cache GRAPH_CACHE
                         When specified, look for input files in a graph cache.
                         (default=None).
@@ -329,6 +338,23 @@ Header parsing:
                         column-names and --no-input-header=False. --no-input-
                         header has no effect when --input-column-names has not
                         been specified. (default=False).
+  --supply-missing-column-names [optional True|False]
+                        Supply column names that are missing. (default=False).
+  --number-of-columns COUNT
+                        The expected number of columns in the header.
+                        (default=None).
+  --require-column-names REQUIRE_COLUMN_NAMES [REQUIRE_COLUMN_NAMES ...]
+                        The list of column names required in the input file.
+                        (default=None).
+  --no-additional-columns [optional True|False]
+                        When True, do not allow any column names other than
+                        the required column names. When --require-column-names
+                        is not specified, then disallow columns other than
+                        [node1, label, node2, id] (or aliases) for an edge
+                        file, and [id] for a node file. (default=False).
+  --unquote-csv-column-names [optional True|False]
+                        Remove double quotes from the outside of column names.
+                        (default=True).
   --header-error-action {PASS,REPORT,EXCLUDE,COMPLAIN,ERROR,EXIT}
                         The action to take when a header error is detected.
                         Only ERROR or EXIT are supported
@@ -395,7 +421,7 @@ Line parsing:
 Data value parsing:
   Options controlling the parsing and processing of KGTK data values.
 
-  --additional-language-codes [ADDITIONAL_LANGUAGE_CODES [ADDITIONAL_LANGUAGE_CODES ...]]
+  --additional-language-codes [ADDITIONAL_LANGUAGE_CODES ...]
                         Additional language codes. (default=use internal
                         list).
   --allow-lax-qnodes [ALLOW_LAX_QNODES]
@@ -500,12 +526,6 @@ kgtk validate -i examples/docs/validate-date-with-day-zero.tsv
 The following complaint and summary will be issued:
 
 ~~~
-Data line 1:
-john	woke	^2020-05-00T00:00
-col 2 (node2) value '^2020-05-00T00:00' is an Invalid Date and Times
-Data line 2:
-john	woke	^2020-00-00T00:00
-col 2 (node2) value '^2020-00-00T00:00' is an Invalid Date and Times
 
 ====================================================
 Data lines read: 2
@@ -541,17 +561,11 @@ input format: kgtk
 KgtkReader: File_path.suffix: .tsv
 KgtkReader: reading file examples/docs/validate-date-with-day-zero.tsv
 header: node1	label	node2
+column names: ['node1', 'label', 'node2']
 node1 column found, this is a KGTK edge file
+KgtkReader: is_edge_file=True is_node_file=False
 KgtkReader: Special columns: node1=0 label=1 node2=2 id=-1
 KgtkReader: Reading an edge file.
-Data line 1:
-john	woke	^2020-05-00T00:00
-col 2 (node2) value '^2020-05-00T00:00': KgtkValue.is_date_and_times: day 0 disallowed in '^2020-05-00T00:00'.
-col 2 (node2) value '^2020-05-00T00:00' is an Invalid Date and Times
-Data line 2:
-john	woke	^2020-00-00T00:00
-col 2 (node2) value '^2020-00-00T00:00': KgtkValue.is_date_and_times: month 0 disallowed in '^2020-00-00T00:00'.
-col 2 (node2) value '^2020-00-00T00:00' is an Invalid Date and Times
 Validated 0 data lines
 
 ====================================================
@@ -646,7 +660,7 @@ Validate an input file with an empty column name:
 cat examples/docs/validate-empty-column-name.tsv
 ```
 
-|    | label | node2 |
+|  | label | node2 |
 | -- | -- | -- |
 
 ```bash
@@ -673,7 +687,7 @@ messages, use `--header-error-action COMPLAIN` to continue processing.
 cat examples/docs/validate-empty-column-name.tsv
 ```
 
-|   | label | node2 |
+|  | label | node2 |
 | -- | -- | -- |
 
 
@@ -708,8 +722,8 @@ column names have initial whitespace.
 cat examples/docs/validate-column-names-initial-whitespace.tsv
 ```
 
-| id |  node1 |  label |  node2 | 
-|----|--------|--------|--------| 
+| id |  node1 |  label |  node2 |
+| -- | -- | -- | -- |
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-initial-whitespace.tsv
@@ -742,8 +756,8 @@ whitespace is detected.
 cat examples/docs/validate-column-names-initial-whitespace.tsv
 ```
 
-| id |  node1 |  label |  node2 | 
-|----|--------|--------|--------| 
+| id |  node1 |  label |  node2 |
+| -- | -- | -- | -- |
 
 
 ```bash
@@ -775,8 +789,8 @@ column names have trailing whitespace.
 cat examples/docs/validate-column-names-trailing-whitespace.tsv
 ```
 
-| id | node1  | label  | node2  | 
-|----|--------|--------|-------| 
+| id | node1  | label  | node2  |
+| -- | -- | -- | -- |
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-trailing-whitespace.tsv
@@ -808,8 +822,8 @@ whitespace is detected.
 cat examples/docs/validate-column-names-trailing-whitespace.tsv
 ```
 
-| id | node1  | label  | node2 | 
-|----|--------|--------|-------| 
+| id | node1  | label  | node2  |
+| -- | -- | -- | -- |
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-trailing-whitespace.tsv \
@@ -839,8 +853,8 @@ but it may be prohibited on request.
 cat examples/docs/validate-column-names-internal-whitespace.tsv
 ```
 
-| id | node 1 | label | node 2 | 
-|----|--------|-------|--------| 
+| id | node 1 | label | node 2 |
+| -- | -- | -- | -- |
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-internal-whitespace.tsv \
@@ -872,8 +886,8 @@ whitespace is detected.
 cat examples/docs/validate-column-names-internal-whitespace.tsv
 ```
 
-| id | node 1 | label | node 2 | 
-|----|--------|-------|--------| 
+| id | node 1 | label | node 2 |
+| -- | -- | -- | -- |
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-internal-whitespace.tsv \
@@ -902,8 +916,8 @@ column names have a comma (`,`) at the end.
 cat examples/docs/validate-column-names-with-comma.tsv
 ```
 
-| node1, | label, | node2, | id | 
-|--------|--------|--------|----| 
+| node1, | label, | node2, | id |
+| -- | -- | -- | -- |
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-with-comma.tsv
@@ -935,8 +949,8 @@ whitespace is detected.
 cat examples/docs/validate-column-names-with-comma.tsv
 ```
 
-| node1, | label, | node2, | id | 
-|--------|--------|--------|----| 
+| node1, | label, | node2, | id |
+| -- | -- | -- | -- |
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-with-comma.tsv \
@@ -1014,8 +1028,8 @@ Validate an input file with two `node1` columns instead of
 cat examples/docs/validate-column-names-with-duplicates.tsv
 ```
 
-| node1 | label | node1 | id | 
-|-------|-------|-------|----| 
+| node1 | label | id |
+| -- | -- | -- |
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-with-duplicates.tsv
@@ -1041,8 +1055,8 @@ the file to be treated as a Node file by specifying `--mode=NODE`.
 cat examples/docs/validate-column-names-without-required-columns.tsv
 ```
 
-| col1 | col2 | col3 | 
-|------|------|------| 
+| col1 | col2 | col3 |
+| -- | -- | -- |
 
 
 ```bash
@@ -1070,8 +1084,8 @@ the file to be treated as a Edge file by specifying `--mode=EDGE`.
 cat examples/docs/validate-column-names-without-required-columns.tsv
 ```
 
-| col1 | col2 | col3 | 
-|------|------|------| 
+| col1 | col2 | col3 |
+| -- | -- | -- |
 
 
 
@@ -1100,8 +1114,8 @@ and we force auto-mode sensing with `--mode=AUTO`.
 cat examples/docs/validate-column-names-without-required-columns.tsv
 ```
 
-| col1 | col2 | col3 | 
-|------|------|------| 
+| col1 | col2 | col3 |
+| -- | -- | -- |
 
 
 ```bash
@@ -1128,8 +1142,8 @@ disabled with `--mode=NONE`
 cat examples/docs/validate-column-names-without-required-columns.tsv
 ```
 
-| col1 | col2 | col3 | 
-|------|------|------| 
+| col1 | col2 | col3 |
+| -- | -- | -- |
 
 ```bash
 kgtk validate -i examples/docs/validate-column-names-without-required-columns.tsv \
@@ -1153,8 +1167,8 @@ Validate an input file with a `node1` column abd its alias `from`.
 cat examples/docs/validate-column-names-with-ambiguities.tsv
 ```
 
-| node1 | label | node2 | id | from | 
-|-------|-------|-------|----|------| 
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
 
 
 ```bash
@@ -1185,11 +1199,11 @@ when `--empty-line-action=EXCLUDE` (the default).
 cat examples/docs/validate-empty-lines.tsv
 ```
 
-| node1 | label | node2 | 
-|-------|-------|-------| 
-| line1 | isa   | line  | 
-|       |       |       | 
-| line3 | isa   | line  | 
+| node1 | label | node2 |
+| -- | -- | -- |
+| line1 | isa | line |
+|  |  |  |
+| line3 | isa | line |
 
 ```bash
 kgtk validate -i examples/docs/validate-empty-lines.tsv
@@ -1241,11 +1255,11 @@ Whitespace lines are silently ignored in input files during validation whe
 cat examples/docs/validate-whitespace-lines.tsv
 ```
 
-| node1 | label | node2 | 
-|-------|-------|-------| 
-| line1 | isa   | line  | 
-|       |       |       | 
-| line3 | isa   | line  | 
+| node1 | label | node2 |
+| -- | -- | -- |
+| line1 | isa | line |
+|  |  |  |
+| line3 | isa | line |
 
 ```bash
 kgtk validate -i examples/docs/validate-whitespace-lines.tsv
@@ -1273,11 +1287,11 @@ during validation if `fill-short-lines=False` (the default) and
 cat examples/docs/validate-short-lines.tsv
 ```
 
-| node1 | label        | node2 | 
-|-------|--------------|-------| 
-| line1 | isa          | line  | 
-| line2 | isashortline |       | 
-| line3 | isa          | line  | 
+| node1 | label | node2 |
+| -- | -- | -- |
+| line1 | isa | line |
+| line2 | isashortline |  |
+| line3 | isa | line |
 
 
 ```bash
@@ -1287,9 +1301,6 @@ kgtk validate -i examples/docs/validate-short-lines.tsv
 The following is reported on standard output:
 
 ~~~
-Data line 2:
-line2	isashortline
-Required 3 columns, saw 2: 'line2	isashortline'
 
 ====================================================
 Data lines read: 3
@@ -1315,11 +1326,11 @@ will not be triggered.
 cat examples/docs/validate-short-lines.tsv
 ```
 
-| node1 | label        | node2 | 
-|-------|--------------|-------| 
-| line1 | isa          | line  | 
-| line2 | isashortline |       | 
-| line3 | isa          | line  | 
+| node1 | label | node2 |
+| -- | -- | -- |
+| line1 | isa | line |
+| line2 | isashortline |  |
+| line3 | isa | line |
 
 ```bash
 kgtk validate -i examples/docs/validate-short-lines.tsv \
@@ -1345,20 +1356,17 @@ during validation if `truncate-long-lines=True` (the default) and
 cat examples/docs/validate-long-lines.tsv
 ```
 
-| node1 | label | node2 |      | 
-|-------|-------|-------|------| 
-| line1 | isa   | line  |      | 
-| line2 | isa   | long  | line | 
-| line3 | isa   | line  |      |
+| node1 | label | node2 |
+| -- | -- | -- |
+| line1 | isa | line |
+| line2 | isa | long | line |
+| line3 | isa | line |
 
 ```bash
 kgtk validate -i examples/docs/validate-long-lines.tsv
 ```
 
 ~~~
-Data line 2:
-line2	isa	long	line
-Required 3 columns, saw 4 (1 extra): 'line2	isa	long	line'
 
 ====================================================
 Data lines read: 3
@@ -1384,11 +1392,11 @@ will not be triggered.
 cat examples/docs/validate-long-lines.tsv
 ```
 
-| node1 | label | node2 |      | 
-|-------|-------|-------|------| 
-| line1 | isa   | line  |      | 
-| line2 | isa   | long  | line | 
-| line3 | isa   | line  |      |
+| node1 | label | node2 |
+| -- | -- | -- |
+| line1 | isa | line |
+| line2 | isa | long | line |
+| line3 | isa | line |
 
 
 ```bash
@@ -1414,9 +1422,9 @@ This constraint is applied when `--prohibited-list-action==COMPLAIN` (the defaul
 cat examples/docs/validate-node1-list.tsv
 ```
 
-| node1        | label | node2 | id  | 
-|--------------|-------|-------|-----| 
-| line1\|line3 | isa   | line  | id1 | 
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| line1\|line3 | isa | line | id1 |
 
 
 ```bash
@@ -1424,9 +1432,6 @@ kgtk validate -i examples/docs/validate-node1-list.tsv
 ```
 
 ~~~
-Data line 1:
-line1|line3	isa	line	id1
-col 0 (node1) value 'line1|line3'is a prohibited list
 
 ====================================================
 Data lines read: 1
@@ -1456,9 +1461,9 @@ This constraint is applied when `--prohibited-list-action==COMPLAIN` (the defaul
 cat examples/docs/validate-label-list.tsv
 ```
 
-| node1 | label       | node2 | id  | 
-|-------|-------------|-------|-----| 
-| line1 | isa\|equals | line  | id1 | 
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| line1 | isa\|equals | line | id1 |
 
 
 ```bash
@@ -1466,9 +1471,6 @@ kgtk validate -i examples/docs/validate-label-list.tsv
 ```
 
 ~~~
-Data line 1:
-line1	isa|equals	line	id1
-col 1 (label) value 'isa|equals'is a prohibited list
 
 ====================================================
 Data lines read: 1
@@ -1498,9 +1500,9 @@ This constraint is applied when `--prohibited-list-action==COMPLAIN` (the defaul
 cat examples/docs/validate-node2-list.tsv
 ```
 
-| node1 | label | node2        | id  | 
-|-------|-------|--------------|-----| 
-| line1 | isa   | line\|record | id1 |
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| line1 | isa | line\|record | id1 |
 
 
 ```bash
@@ -1508,9 +1510,6 @@ kgtk validate -i examples/docs/validate-node2-list.tsv
 ```
 
 ~~~
-Data line 1:
-line1	isa	line|record	id1
-col 2 (node2) value 'line|record'is a prohibited list
 
 ====================================================
 Data lines read: 1
@@ -1542,9 +1541,9 @@ removed by specifying `--prohibited-list-action=PASS` or
 cat examples/docs/validate-node2-list.tsv
 ```
 
-| node1 | label | node2        | id  | 
-|-------|-------|--------------|-----| 
-| line1 | isa   | line\|record | id1 |
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| line1 | isa | line\|record | id1 |
 
 ```bash
 kgtk validate -i examples/docs/validate-node2-list.tsv \
@@ -1568,9 +1567,6 @@ kgtk validate -i examples/docs/validate-node2-list.tsv \
 ```
 
 ~~~
-Data line 1:
-line1	isa	line|record	id1
-col 2 (node2) value 'line|record'is a prohibited list
 
 ====================================================
 Data lines read: 1
@@ -1595,9 +1591,9 @@ The `node1` field may not be blank in a KGTK edge file.
 cat examples/docs/validate-node1-blank-edge.tsv
 ```
 
-| node1 | label | node2 | id  | 
-|-------|-------|-------|-----| 
-|       | isa   | line  | id1 |
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+|  | isa | line | id1 |
 
 
 ```bash
@@ -1620,9 +1616,9 @@ The `node1` field may be blank in a KGTK node file.
 cat examples/docs/validate-node1-blank-node.tsv
 ```
 
-| id  | size  | color | node1 | 
-|-----|-------|-------|-------| 
-| id1 | large | red   |       |
+| id | size | color | node1 |
+| -- | -- | -- | -- |
+| id1 | large | red |  |
 
 
 ```bash
@@ -1649,9 +1645,9 @@ The `label` field may be blank in a KGTK edge file.
 cat examples/docs/validate-label-blank-edge.tsv
 ```
 
-| node1 | label | node2 | id  | 
-|-------|-------|-------|-----| 
-| line1 |       | line  | id1 |
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| line1 |  | line | id1 |
 
 ```bash
 kgtk validate -i examples/docs/validate-label-blank-edge.tsv
@@ -1672,9 +1668,9 @@ The `label` field may be blank in a KGTK node file.
 cat examples/docs/validate-label-blank-node.tsv
 ```
 
-| id  | size  | color | label | 
-|-----|-------|-------|-------| 
-| id1 | large | red   |       |
+| id | size | color | label |
+| -- | -- | -- | -- |
+| id1 | large | red |  |
 
 
 ```bash
@@ -1696,9 +1692,9 @@ The `node2` field may not be blank in a KGTK edge file.
 cat examples/docs/validate-node2-blank-edge.tsv
 ```
 
-| node1 | label | node2 | id  | 
-|-------|-------|-------|-----| 
-| line1 | isa   |       | id1 | 
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| line1 | isa |  | id1 |
 
 
 ```bash
@@ -1721,9 +1717,9 @@ The `node2` field may be blank in a KGTK node file.
 cat examples/docs/validate-node2-blank-node.tsv
 ```
 
-| id  | size  | color | node2 | 
-|-----|-------|-------|-------| 
-| id1 | large | red   |       | 
+| id | size | color | node2 |
+| -- | -- | -- | -- |
+| id1 | large | red |  |
 
 
 ```bash
@@ -1745,9 +1741,9 @@ The `id` field may be blank in a KGTK edge file.
 cat examples/docs/validate-id-blank-edge.tsv
 ```
 
-| node1 | label | node2 | id | 
-|-------|-------|-------|----| 
-| line1 | isa   | line  |    | 
+| node1 | label | node2 | id |
+| -- | -- | -- | -- |
+| line1 | isa | line |  |
 
 
 ```bash
@@ -1769,9 +1765,9 @@ The `id` field may not be blank in a KGTK node file.
 cat examples/docs/validate-id-blank-node.tsv
 ```
 
-| id | size  | color | 
-|----|-------|-------| 
-|    | large | red   | 
+| id | size | color |
+| -- | -- | -- |
+|  | large | red |
 
 
 ```bash
@@ -1827,30 +1823,6 @@ kgtk validate -i examples/docs/validate-numbers-and-quantities.tsv
 ```
 
 ~~~
-Data line 1:
-line1	invalid	9x
-col 2 (node2) value '9x' is an Invalid Quantity
-Data line 2:
-line2	invalid	9[8,10j]
-col 2 (node2) value '9[8,10j]' is an Invalid Quantity
-Data line 3:
-line3	invalid	--9
-col 2 (node2) value '--9' is an Invalid Quantity
-Data line 7:
-line7	invalid	9Q012345
-col 2 (node2) value '9Q012345' is an Invalid Quantity
-Data line 8:
-line8	invalid	9Q123_45
-col 2 (node2) value '9Q123_45' is an Invalid Quantity
-Data line 9:
-line9	invalid	9Q123-45
-col 2 (node2) value '9Q123-45' is an Invalid Quantity
-Data line 10:
-line10	invalid	9Q123az
-col 2 (node2) value '9Q123az' is an Invalid Quantity
-Data line 11:
-line11	invalid	9Q123AZ
-col 2 (node2) value '9Q123AZ' is an Invalid Quantity
 
 ====================================================
 Data lines read: 11
@@ -1933,12 +1905,6 @@ kgtk validate -i examples/docs/validate-strings.tsv
 ```
 
 ~~~
-Data line 1:
-line1	invalid	"xxx
-col 2 (node2) value '"xxx' is an Invalid String
-Data line 3:
-line3	invalid	"xxx"yyy"
-col 2 (node2) value '"xxx"yyy"' is an Invalid String
 
 ====================================================
 Data lines read: 5
@@ -1976,9 +1942,6 @@ kgtk validate -i examples/docs/validate-lax-strings.tsv \
 ```
 
 ~~~
-Data line 1:
-line1	invalid	"xxx
-col 2 (node2) value '"xxx' is an Invalid String
 
 ====================================================
 Data lines read: 5
@@ -2038,15 +2001,6 @@ kgtk validate -i examples/docs/validate-language-qualified-strings.tsv
 ```
 
 ~~~
-Data line 3:
-line3	invalid	'a'bc'@en
-col 2 (node2) value "'a'bc'@en" is an Invalid Language Qualified String
-Data line 4:
-line4	invalid	'abc'@en-gb
-col 2 (node2) value "'abc'@en-gb" is an Invalid Language Qualified String
-Data line 5:
-line5	invalid	'abc'@xxx
-col 2 (node2) value "'abc'@xxx" is an Invalid Language Qualified String
 
 ====================================================
 Data lines read: 5
@@ -2225,21 +2179,6 @@ kgtk validate -i examples/docs/validate-location-coordinates.tsv
 ```
 
 ~~~
-Data line 3:
-line3	invalid	@33.9803/118.4517e1
-col 2 (node2) value '@33.9803/118.4517e1' is an Invalid Location Coordinates
-Data line 4:
-line4	invalid	@100/118
-col 2 (node2) value '@100/118' is an Invalid Location Coordinates
-Data line 5:
-line5	invalid	@-100/118
-col 2 (node2) value '@-100/118' is an Invalid Location Coordinates
-Data line 6:
-line6	invalid	@34/200
-col 2 (node2) value '@34/200' is an Invalid Location Coordinates
-Data line 7:
-line7	invalid	@34/-200
-col 2 (node2) value '@34/-200' is an Invalid Location Coordinates
 
 ====================================================
 Data lines read: 7
@@ -2273,21 +2212,6 @@ kgtk validate -i examples/docs/validate-location-coordinates.tsv \
 ```
 
 ~~~
-Data line 3:
-line3	invalid	@33.9803/118.4517e1
-col 2 (node2) value '@33.9803/118.4517e1' is an Invalid Location Coordinates
-Data line 4:
-line4	invalid	@100/118
-col 2 (node2) value '@100/118' is an Invalid Location Coordinates
-Data line 5:
-line5	invalid	@-100/118
-col 2 (node2) value '@-100/118' is an Invalid Location Coordinates
-Data line 6:
-line6	invalid	@34/200
-col 2 (node2) value '@34/200' is an Invalid Location Coordinates
-Data line 7:
-line7	invalid	@34/-200
-col 2 (node2) value '@34/-200' is an Invalid Location Coordinates
 
 ====================================================
 Data lines read: 7
@@ -2321,9 +2245,6 @@ kgtk validate -i examples/docs/validate-location-coordinates.tsv \
 ```
 
 ~~~
-Data line 3:
-line3	invalid	@33.9803/118.4517e1
-col 2 (node2) value '@33.9803/118.4517e1' is an Invalid Location Coordinates
 
 ====================================================
 Data lines read: 7
@@ -2358,9 +2279,6 @@ kgtk validate -i examples/docs/validate-location-coordinates.tsv \
 ```
 
 ~~~
-Data line 3:
-line3	invalid	@33.9803/118.4517e1
-col 2 (node2) value '@33.9803/118.4517e1' is an Invalid Location Coordinates
 
 ====================================================
 Data lines read: 7
@@ -2395,12 +2313,6 @@ kgtk validate -i examples/docs/validate-date-with-day-zero.tsv
 This results in the following summary:
 
 ~~~
-Data line 1:
-john	woke	^2020-05-00T00:00
-col 2 (node2) value '^2020-05-00T00:00' is an Invalid Date and Times
-Data line 2:
-john	woke	^2020-00-00T00:00
-col 2 (node2) value '^2020-00-00T00:00' is an Invalid Date and Times
 
 ====================================================
 Data lines read: 2
@@ -2494,9 +2406,6 @@ kgtk validate -i examples/docs/validate-date-with-end-of-day.tsv \
 This results in the following summary:
 
 ~~~
-Data line 1:
-john	woke	^2020-05-01T24:00
-col 2 (node2) value '^2020-05-01T24:00' is an Invalid Date and Times
 
 ====================================================
 Data lines read: 1
@@ -2553,24 +2462,6 @@ kgtk validate -i examples/docs/validate-date-with-minimum-year.tsv
 This results in the following summary:
 
 ~~~
-Data line 2:
-jack	born	^1582-01-01T00:00
-col 2 (node2) value '^1582-01-01T00:00' is an Invalid Date and Times
-Data line 3:
-jorge	born	^0922-01-01T00:00
-col 2 (node2) value '^0922-01-01T00:00' is an Invalid Date and Times
-Data line 4:
-jerry	born	^0000-01-01T00:00
-col 2 (node2) value '^0000-01-01T00:00' is an Invalid Date and Times
-Data line 5:
-jon	born	^+0000-01-01T00:00
-col 2 (node2) value '^+0000-01-01T00:00' is an Invalid Date and Times
-Data line 6:
-jared	born	^-0001-01-01T00:00
-col 2 (node2) value '^-0001-01-01T00:00' is an Invalid Date and Times
-Data line 7:
-jimmy	born	^-10001-01-01T00:00
-col 2 (node2) value '^-10001-01-01T00:00' is an Invalid Date and Times
 
 ====================================================
 Data lines read: 7
@@ -2610,21 +2501,6 @@ kgtk validate -i examples/docs/validate-date-with-minimum-year.tsv \
 This results in the following summary:
 
 ~~~
-Data line 3:
-jorge	born	^0922-01-01T00:00
-col 2 (node2) value '^0922-01-01T00:00' is an Invalid Date and Times
-Data line 4:
-jerry	born	^0000-01-01T00:00
-col 2 (node2) value '^0000-01-01T00:00' is an Invalid Date and Times
-Data line 5:
-jon	born	^+0000-01-01T00:00
-col 2 (node2) value '^+0000-01-01T00:00' is an Invalid Date and Times
-Data line 6:
-jared	born	^-0001-01-01T00:00
-col 2 (node2) value '^-0001-01-01T00:00' is an Invalid Date and Times
-Data line 7:
-jimmy	born	^-10001-01-01T00:00
-col 2 (node2) value '^-10001-01-01T00:00' is an Invalid Date and Times
 
 ====================================================
 Data lines read: 7
@@ -2736,21 +2612,6 @@ kgtk validate -i examples/docs/validate-date-with-maximum-year.tsv
 This results in the following summary:
 
 ~~~
-Data line 3:
-jack	date	^2101-01-01T00:00
-col 2 (node2) value '^2101-01-01T00:00' is an Invalid Date and Times
-Data line 4:
-jorge	born	^9999-01-01T00:00
-col 2 (node2) value '^9999-01-01T00:00' is an Invalid Date and Times
-Data line 5:
-jon	born	^+9999-01-01T00:00
-col 2 (node2) value '^+9999-01-01T00:00' is an Invalid Date and Times
-Data line 6:
-jared	born	^10000-01-01T00:00
-col 2 (node2) value '^10000-01-01T00:00' is an Invalid Date and Times
-Data line 7:
-jared	born	^+10000-01-01T00:00
-col 2 (node2) value '^+10000-01-01T00:00' is an Invalid Date and Times
 
 ====================================================
 Data lines read: 7
@@ -2789,12 +2650,6 @@ kgtk validate -i examples/docs/validate-date-with-maximum-year.tsv \
 This results in the following summary:
 
 ~~~
-Data line 6:
-jared	born	^10000-01-01T00:00
-col 2 (node2) value '^10000-01-01T00:00' is an Invalid Date and Times
-Data line 7:
-jared	born	^+10000-01-01T00:00
-col 2 (node2) value '^+10000-01-01T00:00' is an Invalid Date and Times
 
 ====================================================
 Data lines read: 7

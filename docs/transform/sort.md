@@ -7,15 +7,15 @@ The command expects a KGTK file with a header line which will be included in the
 
 ## Usage
 ```
-usage: kgtk sort [-h] [-i INPUT] [-o OUTPUT_FILE] [-c [COLUMNS [COLUMNS ...]]]
+usage: kgtk sort [-h] [-i INPUT] [-o OUTPUT_FILE] [-c [COLUMNS ...]]
                  [--locale LOCALE] [-r [True|False]]
-                 [--reverse-columns [REVERSE_COLUMNS [REVERSE_COLUMNS ...]]]
+                 [--reverse-columns [REVERSE_COLUMNS ...]]
                  [--numeric [True|False]]
-                 [--numeric-columns [NUMERIC_COLUMNS [NUMERIC_COLUMNS ...]]]
+                 [--numeric-columns [NUMERIC_COLUMNS ...]]
                  [--pure-python [True|False]] [--parallel PARALLEL]
                  [--buffer-size BUFFER_SIZE] [--batch-size BATCH_SIZE]
-                 [-T [TEMPORARY_DIRECTORY [TEMPORARY_DIRECTORY ...]]]
-                 [-X EXTRA] [-v [optional True|False]]
+                 [-T [TEMPORARY_DIRECTORY ...]] [-X EXTRA]
+                 [-v [optional True|False]]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -24,7 +24,7 @@ optional arguments:
   -o OUTPUT_FILE, --out OUTPUT_FILE, --output-file OUTPUT_FILE
                         Output file to write to. (May be omitted or '-' for
                         stdout.)
-  -c [COLUMNS [COLUMNS ...]], --column [COLUMNS [COLUMNS ...]], --columns [COLUMNS [COLUMNS ...]]
+  -c [COLUMNS ...], --column [COLUMNS ...], --columns [COLUMNS ...]
                         space and/or comma-separated list of column names to
                         sort on (the key columns). (defaults to id for node
                         files, (node1, label, node2) for edge files without
@@ -34,14 +34,14 @@ optional arguments:
                         When True, generate output in reverse (descending)
                         sort order. All key columns are sorted in reverse
                         order. (default=False)
-  --reverse-columns [REVERSE_COLUMNS [REVERSE_COLUMNS ...]]
+  --reverse-columns [REVERSE_COLUMNS ...]
                         List specific key columns for reverse (descending)
                         sorting. Overidden by --reverse. (default=none)
   --numeric [True|False]
                         When True, generate output in numeric sort order. All
                         key columns are sorted in numeric order.
                         (default=False)
-  --numeric-columns [NUMERIC_COLUMNS [NUMERIC_COLUMNS ...]]
+  --numeric-columns [NUMERIC_COLUMNS ...]
                         List specific key columns for numeric sorting.
                         Overridden by --numeric. (default=none)
   --pure-python [True|False]
@@ -55,7 +55,7 @@ optional arguments:
   --batch-size BATCH_SIZE
                         Controls the number of concurrent merges when
                         implemented (GNU sort). (default=None)
-  -T [TEMPORARY_DIRECTORY [TEMPORARY_DIRECTORY ...]], --temporary-directory [TEMPORARY_DIRECTORY [TEMPORARY_DIRECTORY ...]]
+  -T [TEMPORARY_DIRECTORY ...], --temporary-directory [TEMPORARY_DIRECTORY ...]
                         Controls the temporary file folder(s) when implemented
                         (GNU sort). (default=[])
   -X EXTRA, --extra EXTRA

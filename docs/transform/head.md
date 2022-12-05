@@ -46,7 +46,7 @@ kgtk head -i file.tsv -o file.html
 This command defaults to --mode=NONE so it will work with TSV files that do not follow KGTK column naming conventions.
 
 Additional options are shown in expert help.
-kgtk --expert html --help
+kgtk --expert head --help
 
 optional arguments:
   -h, --help            show this help message and exit

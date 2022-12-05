@@ -1,6 +1,6 @@
-import graph_tool as gtmain
-import graph_tool.all as gtall
-import graph_tool.topology as gttop
+import graph_tool as gtmain # type: ignore
+import graph_tool.all as gtall # type: ignore
+import graph_tool.topology as gttop # type: ignore
 
 
 def get_nodes_with_degree(g, deg_from, deg_to):
