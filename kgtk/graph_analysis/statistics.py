@@ -1,7 +1,7 @@
 from pathlib import Path
 import sys
 
-from graph_tool import centrality
+from graph_tool import centrality, clustering
 from kgtk.exceptions import KGTKException
 import kgtk.gt.analysis_utils as gtanalysis
 from kgtk.gt.gt_load import load_graph_from_kgtk
@@ -19,11 +19,17 @@ class GraphStatistics(object):
                  compute_pagerank: bool = True,
                  compute_hits: bool = True,
                  compute_betweenness: bool = False,
+                 compute_local_clustering: bool = False,
+                 compute_extended_clustering: bool = False,
+                 edge_weight_property: str = None,
+                 max_depth: int = None,
                  output_statistics_only: bool = False,
                  output_degrees: bool = True,
                  output_pagerank: bool = True,
                  output_hits: bool = True,
                  output_betweenness: bool = True,
+                 output_local_clustering: bool = False,
+                 output_extended_clustering: bool = False,
                  log_file: str = './summary.txt',
                  log_degrees_histogram: bool = True,
                  log_top_relations: bool = True,
@@ -36,6 +42,8 @@ class GraphStatistics(object):
                  vertex_betweenness: str = 'vertex_betweenness',
                  vertex_auth: str = 'vertex_auth',
                  vertex_hubs: str = 'vertex_hubs',
+                 vertex_extended_clustering_prefix: str = 'vertex_local_clustering',
+                 vertex_local_clustering: str = 'vertex_extended_clustering_',
                  reader_options: KgtkReaderOptions = None,
                  value_options: KgtkValueOptions = None,
                  error_file: TextIO = sys.stderr,
@@ -53,11 +61,17 @@ class GraphStatistics(object):
         self.compute_pagerank = compute_pagerank
         self.compute_hits = compute_hits
         self.compute_betweenness = compute_betweenness
+        self.compute_local_clustering = compute_local_clustering
+        self.compute_extended_clustering = compute_extended_clustering
+        self.edge_weight_property = edge_weight_property
+        self.max_depth = max_depth
         self.output_statistics_only = output_statistics_only
         self.output_degrees = output_degrees
         self.output_pagerank = output_pagerank
         self.output_hits = output_hits
         self.output_betweenness = output_betweenness
+        self.output_local_clustering = output_local_clustering
+        self.output_extended_clustering = output_extended_clustering
         self.log_file = log_file
         self.log_degrees_histogram = log_degrees_histogram
         self.log_top_relations = log_top_relations
@@ -68,6 +82,8 @@ class GraphStatistics(object):
         self.vertex_out_degree = vertex_out_degree
         self.vertex_pagerank = vertex_pagerank
         self.vertex_betweenness = vertex_betweenness
+        self.vertex_extended_clustering_prefix = vertex_extended_clustering_prefix
+        self.vertex_local_clustering = vertex_local_clustering
         self.vertex_auth = vertex_auth
         self.vertex_hubs = vertex_hubs
 
@@ -127,6 +143,29 @@ class GraphStatistics(object):
                 centrality.betweenness(G2, vprop=v_betweenness)
                 G2.properties[('v', self.vertex_betweenness)] = v_betweenness
 
+            if self.compute_local_clustering:
+                if self.verbose:
+                    print(f'Computing local clustering using edge weight={self.edge_weight_property}.',
+                          file=self.error_file, flush=True)
+                v_local_clustering = G2.new_vertex_property('float')
+                weight = None
+                if self.edge_weight_property:
+                    weight = G2.copy_property(G2.edge_properties[self.edge_weight_property], value_type='float')
+                clustering.local_clustering(G2, weight=weight, prop=v_local_clustering)
+                G2.properties[('v', self.vertex_local_clustering)] = v_local_clustering
+
+            if self.compute_extended_clustering:
+                if self.verbose:
+                    print(f'Computing extended clustering with max depth={self.max_depth}.',
+                          file=self.error_file, flush=True)
+                if self.max_depth:
+                    clusters = clustering.extended_clustering(G2, max_depth=self.max_depth)
+                else:
+                    clusters = clustering.extended_clustering(G2)
+                max_depth = len(clusters)
+                for i in range(len(clusters)):
+                    G2.properties[('v', f'{self.vertex_extended_clustering_prefix}{i + 1}')] = clusters[i]
+
             if self.compute_hits and not self.undirected:
                 if self.verbose:
                     print('Computing HITS.', file=self.error_file, flush=True)
@@ -155,7 +194,12 @@ class GraphStatistics(object):
                               '{}-{}-{}'.format(G2.vp[id_col][sid], lbl, id_count)])
                     id_count += 1
 
-            if self.output_degrees or self.output_pagerank or self.output_hits or self.output_betweenness:
+            if self.output_degrees \
+                    or self.output_pagerank \
+                    or self.output_hits \
+                    or self.output_betweenness \
+                    or self.output_local_clustering \
+                    or self.output_extended_clustering:
                 if self.verbose:
                     print('Outputting vertex degrees and/or properties.', file=self.error_file, flush=True)
                 id_count = 0
@@ -190,6 +234,20 @@ class GraphStatistics(object):
                             kw.write([v_id, self.vertex_betweenness, str(G2.vp[self.vertex_betweenness][v]),
                                       '{}-{}-{}'.format(v_id, self.vertex_betweenness, id_count)])
                             id_count += 1
+
+                    if self.output_local_clustering:
+                        if self.vertex_local_clustering in G2.vp:
+                            kw.write([v_id, self.vertex_local_clustering, str(G2.vp[self.vertex_local_clustering][v]),
+                                      '{}-{}-{}'.format(v_id, self.vertex_local_clustering, id_count)])
+                            id_count += 1
+
+                    if self.output_extended_clustering and self.max_depth:
+                        for i in range(self.max_depth):
+                            vertex_name = f'{self.vertex_extended_clustering_prefix}{i + 1}'
+                            if vertex_name in G2.vp:
+                                kw.write([v_id, vertex_name, str(G2.vp[vertex_name][v]),
+                                          '{}-{}-{}'.format(v_id, vertex_name, id_count)])
+                                id_count += 1
 
             kw.close()
 
