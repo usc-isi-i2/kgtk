@@ -9,6 +9,8 @@ from enum import Enum
 import errno
 import html
 import json
+import math
+import pandas
 from pathlib import Path
 from multiprocessing import Queue
 import sys
@@ -16,7 +18,8 @@ import typing
 
 from kgtk.kgtkformat import KgtkFormat
 from kgtk.io.kgtkbase import KgtkBase
-from kgtk.io.kgtkreader import KgtkReader
+from kgtk.io.kgtkreader import KgtkReader, KgtkReaderMode
+from kgtk.value.kgtkvalue import KgtkValue
 from kgtk.utils.enumnameaction import EnumNameAction
 from kgtk.utils.gzipprocess import GzipProcess
 from kgtk.utils.validationaction import ValidationAction
@@ -44,6 +47,23 @@ class KgtkWriter(KgtkBase):
     OUTPUT_FORMAT_TSV_UNQUOTED: str = "tsv-unquoted"
     OUTPUT_FORMAT_TSV_UNQUOTED_EP: str = "tsv-unquoted-ep"
 
+    # The following two formats are for intended for use
+    # in iPython environments, such as Jupyter notebooks.
+    # They will be omitted from the command line choices.
+
+    # A DataFrame of KGTK value strings. This conversion is fast and does not
+    # lose information.
+    OUTPUT_FORMAT_DATAFRAME_STRING: str = "dataframe-string"
+    
+    # A DataFrame of native Python values. The conversion is slower than
+    # OUTPUT_FORMAT_DATAFRAME_STRING and may lose information.  KGTK strings,
+    # numbers, booleans, and symbols are converted, while other KGTK datatypes
+    # retain their KGTK string representation.  KGTK dates and times could be
+    # converted to a native Python value, but this is not implemented at
+    # present.
+    OUTPUT_FORMAT_DATAFRAME_NATIVE: str = "dataframe-native"
+
+    # The output formats that may be used by command line programs.
     OUTPUT_FORMAT_CHOICES: typing.List[str] = [
         OUTPUT_FORMAT_CSV,
         OUTPUT_FORMAT_HTML,
@@ -63,6 +83,15 @@ class KgtkWriter(KgtkBase):
         OUTPUT_FORMAT_TSV_UNQUOTED_EP,
     ]
     OUTPUT_FORMAT_DEFAULT: str = OUTPUT_FORMAT_KGTK
+
+
+    # Additional output formats that may be used with Pandas DataFrame
+    # outputs.
+    OUTPUT_FORMAT_DATAFRAME_CHOICES: typing.List[str] = [
+        OUTPUT_FORMAT_DATAFRAME_STRING,
+        OUTPUT_FORMAT_DATAFRAME_NATIVE,
+    ]
+    OUTPUT_FORMAT_DATAFRAME_DEFAULT: str = OUTPUT_FORMAT_DATAFRAME_NATIVE
 
     file_path: typing.Optional[Path] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(Path)))
     file_out: typing.TextIO = attr.ib() # Todo: validate TextIO
@@ -89,6 +118,9 @@ class KgtkWriter(KgtkBase):
     # How should header errors be processed?
     error_file: typing.TextIO = attr.ib(default=sys.stderr)
     header_error_action: ValidationAction = attr.ib(validator=attr.validators.instance_of(ValidationAction), default=ValidationAction.EXIT)
+
+    # Special DataFrame hack:
+    df: typing.Optional[pandas.DataFrame] = attr.ib(validator=attr.validators.optional(attr.validators.instance_of(pandas.DataFrame)), default=None)
 
     # Other implementation options?
     use_mgzip: bool = attr.ib(validator=attr.validators.instance_of(bool), default=False)
@@ -132,13 +164,15 @@ class KgtkWriter(KgtkBase):
             self.OUTPUT_FORMAT_JSONL: self.write_jsonl,
             self.OUTPUT_FORMAT_JSONL_MAP: self.write_jsonl_map,
             self.OUTPUT_FORMAT_JSONL_MAP_COMPACT: self.write_jsonl_map_compact,
+            self.OUTPUT_FORMAT_DATAFRAME_STRING: self.write_dataframe_string,
+            self.OUTPUT_FORMAT_DATAFRAME_NATIVE: self.write_dataframe_native,
         }
         
 
     @classmethod
     def open(cls,
              column_names: typing.List[str],
-             file_path: typing.Optional[typing.Union[Path, str]],
+             file_path: typing.Optional[typing.Union[Path, str, pandas.DataFrame]],
              who: str = "output",
              require_all_columns: bool = True,
              prohibit_extra_columns: bool = True,
@@ -158,6 +192,45 @@ class KgtkWriter(KgtkBase):
              no_header: bool = False,
              verbose: bool = False,
              very_verbose: bool = False)->"KgtkWriter":
+
+        if file_path is not None and isinstance(file_path, pandas.DataFrame):
+            if verbose:
+                print("KgtkWriter: writing a dataframe", file=error_file, flush=True)
+
+            if output_format is not None:
+                if output_format not in cls.OUTPUT_FORMAT_DATAFRAME_CHOICES:
+                    raise ValueError("Output format %s may not be used with a Pandas DataFrame." % output_format)
+            else:
+                output_format = cls.OUTPUT_FORMAT_DATAFRAME_DEFAULT
+
+            return cls._setup(column_names=column_names,
+                              file_path=None,
+                              who=who,
+                              file_out=sys.stdout,
+                              require_all_columns=require_all_columns,
+                              prohibit_extra_columns=prohibit_extra_columns,
+                              fill_missing_columns=fill_missing_columns,
+                              error_file=error_file,
+                              header_error_action=header_error_action,
+                              use_mgzip=use_mgzip,
+                              used_mgzip=False,
+                              mgzip_threads=mgzip_threads,
+                              gzip_in_parallel=gzip_in_parallel,
+                              gzip_queue_size=gzip_queue_size,
+                              column_separator=column_separator,
+                              mode=mode,
+                              output_format=output_format,
+                              output_column_names=output_column_names,
+                              old_column_names=old_column_names,
+                              new_column_names=new_column_names,
+                              no_header=no_header,
+                              df=file_path,
+                              verbose=verbose,
+                              very_verbose=very_verbose,
+            )
+        else:
+            if output_format is not None and output_format in cls.OUTPUT_FORMAT_DATAFRAME_CHOICES:
+                raise ValueError("Output format %s may not be used without a Pandas DataFrame." % output_format)
 
         if file_path is not None and isinstance(file_path, str):
             file_path = Path(file_path)
@@ -381,6 +454,7 @@ class KgtkWriter(KgtkBase):
                old_column_names: typing.Optional[typing.List[str]] = None,
                new_column_names: typing.Optional[typing.List[str]] = None,
                no_header: bool = False,
+               df: typing.Optional[pandas.DataFrame] = None,
                verbose: bool = False,
                very_verbose: bool = False,
     )->"KgtkWriter":
@@ -483,6 +557,7 @@ class KgtkWriter(KgtkBase):
                              prohibit_extra_columns=prohibit_extra_columns,
                              fill_missing_columns=fill_missing_columns,
                              error_file=error_file,
+                             df=df,
                              header_error_action=header_error_action,
                              use_mgzip=use_mgzip,
                              used_mgzip=used_mgzip,
@@ -703,18 +778,24 @@ class KgtkWriter(KgtkBase):
             self.writeline("[")
             header = json.dumps(column_names, indent=None, separators=(',', ':'))
             noeol = True
+
         elif self.output_format == self.OUTPUT_FORMAT_JSON_MAP:
             self.writeline_noeol("[")
             return
+
         elif self.output_format == self.OUTPUT_FORMAT_JSON_MAP_COMPACT:
             self.writeline_noeol("[")
             return
+
         elif self.output_format == self.OUTPUT_FORMAT_JSONL:
             header = json.dumps(column_names, indent=None, separators=(',', ':'))
+
         elif self.output_format == self.OUTPUT_FORMAT_JSONL_MAP:
             return
+
         elif self.output_format == self.OUTPUT_FORMAT_JSONL_MAP_COMPACT:
             return
+
         elif self.output_format == self.OUTPUT_FORMAT_MD:
             header = "|"
             header2 = "|"
@@ -735,6 +816,16 @@ class KgtkWriter(KgtkBase):
                                     self.OUTPUT_FORMAT_TSV_UNQUOTED_EP,
                                     ]:
             header = self.column_separator.join(column_names)
+
+        elif self.output_format in self.OUTPUT_FORMAT_DATAFRAME_CHOICES:
+            self.df.drop(self.df.index, inplace=True) # Clear the dataframe.
+            idx: int
+            name: str
+            for idx, name in enumerate(self.column_names):
+                # TODO: encode internal vertical bars and tabs.
+                self.df.insert(idx, name, [])
+            return
+
         else:
             raise ValueError("KgtkWriter: File %s: header: Unrecognized output format '%s'." % (repr(self.file_path), self.output_format))
 
@@ -1146,6 +1237,40 @@ class KgtkWriter(KgtkBase):
     def write_jsonl_map_compact(self, values: typing.List[str]):
         self.writeline(json.dumps(self.json_map(values, compact=True), indent=None, separators=(',', ':')))
 
+    def write_dataframe_string(self, values: typing.List[str]):
+        # Append the KGTK-encoded string values to the output dataframe.
+        # No information is lost.
+        self.df.loc[0 if math.isnan(self.df.index.max()) else self.df.index.max() + 1] = values
+
+    def write_dataframe_native(self, values: typing.List[str]):
+        # Append the values to the output dataframe, converting strings, numbers, and booleans
+        # to native types. Information may be lost, including:
+        #
+        # * the difference between a KGTK symbol and a KGTK string
+        # * the language for a KGTK string
+        # * the difference between other KGTK types and a KGTK string.
+        native_values: typing.List[typing.Union[str, int, float, bool]] = list()
+        native_value: typing.Union[str, int, float, bool]
+        value: str
+        for value in values:
+            kv: KgtkValue = KgtkValue(value, parse_fields=True, verbose=self.verbose)
+            if kv.is_valid():
+                if kv.is_string() and kv.fields is not None and kv.fields.text is not None:
+                    native_value = kv.fields.text
+                elif kv.is_number() and kv.fields is not None and kv.fields.number is not None:
+                    native_value = kv.fields.number
+                elif kv.is_boolean() and kv.fields is not None and kv.fields.truth is not None:
+                    native_value = kv.fields.truth
+                elif kv.is_symbol() and kv.fields is not None and kv.fields.symbol is not None:
+                    native_value = kv.fields.symbol
+                else:
+                    native_value = value
+            else:
+                native_value = value
+            native_values.append(native_value)
+        
+        self.df.loc[0 if math.isnan(self.df.index.max()) else self.df.index.max() + 1] = native_values
+
     table_buffer: typing.List[typing.List[str]] = [ ]
     def write_table(self, values: typing.List[str]):
         self.table_buffer.append(values.copy())
@@ -1221,6 +1346,7 @@ class KgtkWriter(KgtkBase):
                 print("Closing the JSON list.", file=self.error_file, flush=True)
             self.writeline("")
             self.writeline("]")
+
         elif self.output_format == self.OUTPUT_FORMAT_TABLE:
             if self.verbose:
                 print("Writing the table buffer: %d rows." % len(self.table_buffer), file=self.error_file, flush=True)
@@ -1235,6 +1361,9 @@ class KgtkWriter(KgtkBase):
             if self.verbose:
                 print("Writing the compact HTML trailer.", file=self.error_file, flush=True)
             self.write_html_trailer(compact=True)
+
+        elif self.output_format in self.OUTPUT_FORMAT_DATAFRAME_CHOICES:
+            return # Don't touch self.file_out
 
         if self.gzip_thread is not None:
             if self.verbose:
@@ -1332,18 +1461,67 @@ def main():
                               type=ValidationAction, action=EnumNameAction, default=ValidationAction.EXIT)
     parser.add_argument(      "--gzip-in-parallel", dest="gzip_in_parallel", help="Execute gzip in a subthread.", action='store_true')
     parser.add_argument(      "--input-mode", dest="input_mode",
-                              help="Determine the input KGTK file mode.", type=KgtkReader.Mode, action=EnumNameAction, default=KgtkReader.Mode.AUTO)
+                              help="Determine the input KGTK file mode.", type=KgtkReaderMode, action=EnumNameAction, default=KgtkReaderMode.AUTO)
     parser.add_argument(      "--output-mode", dest="output_mode",
                               help="Determine the output KGTK file mode.", type=KgtkWriter.Mode, action=EnumNameAction, default=KgtkWriter.Mode.AUTO)
     parser.add_argument(      "--output-format", dest="output_format", help="The file format (default=kgtk)", type=str)
     parser.add_argument(      "--output-columns", dest="output_column_names", help="Rename all output columns. (default=%(default)s)", type=str, nargs='+')
     parser.add_argument(      "--old-columns", dest="old_column_names", help="Rename seleted output columns: old names. (default=%(default)s)", type=str, nargs='+')
     parser.add_argument(      "--new-columns", dest="new_column_names", help="Rename seleted output columns: new names. (default=%(default)s)", type=str, nargs='+')
+    parser.add_argument(      "--dataframe", dest="do_dataframe", help="Test writing a DataFrame.", action='store_true')
     parser.add_argument("-v", "--verbose", dest="verbose", help="Print additional progress messages.", action='store_true')
     parser.add_argument(      "--very-verbose", dest="very_verbose", help="Print additional progress messages.", action='store_true')
     args = parser.parse_args()
 
-    error_file: typing.TextIO = sys.stdout if args.errors_to_stdout else sys.stderr
+    error_file: typing.TextIO = sys.stdout
+
+    if args.do_dataframe:
+        df_column_names: typing.List[str] = ["node1", "label", "node2"]
+        test_data: typing.List[typing.List[str]] = [
+            ["P10", "color", "red"],
+            ["P11", "size", 10],
+        ]
+
+        df: pandas.DataFrame = pandas.DataFrame()
+        df_kw: KgtkWriter = KgtkWriter.open(df_column_names,
+                                            df,
+                                            error_file=error_file,
+                                            verbose=args.verbose,
+                                            very_verbose=args.very_verbose)
+        df_row: typing.List[typing.Any]
+        for df_row in test_data:
+            # Convert the dataframe row to string values. 
+            row: typing.List[str] = list()
+            item: typing.Any
+            for item in df_row:
+                row.append(str(item))
+            df_kw.write(row)
+
+        if len(df) != len(test_data):
+            print("%d rows of test data, but %d rows of DataFrame." % (len(test_data), len(df)),
+                  file=error_file, flush=True)
+
+        for rowidx, df_row in enumerate(df.values.tolist()):
+            if rowidx < len(test_data):
+                if len(test_data[rowidx]) != len(df_row):
+                    print("Row %d: %d columns of test data, but %d columns of DataFrame" % (rowidx + 1,
+                                                                                            len(test_data[rowidx]),
+                                                                                            len(df_row)),
+                          file=error_file, flush=True)
+
+                for colidx, item in enumerate(df_row):
+                    if colidx < len(test_data[rowidx]):
+                        if item != test_data[rowidx][colidx]:
+                            print("Row %d: col %d: test data value %s does not match DataFrame value %s" % (
+                                rowidx + 1,
+                                colidx + 1,
+                                repr(str(test_data[rowidx][colidx])),
+                                repr(item)))
+        df_kw.close()
+        if args.verbose:
+            print("Copied %d lines" % len(df), file=error_file, flush=True)
+        return
+
 
     kr: KgtkReader = KgtkReader.open(args.input_kgtk_file,
                                      error_file=error_file,

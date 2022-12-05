@@ -17,10 +17,12 @@ TODO: Add support for alternative envelope formats, such as JSON.
 
 from argparse import ArgumentParser, _ArgumentGroup, Namespace, SUPPRESS
 import attr
+import csv
 from enum import Enum
 import io
 from multiprocessing import Process, Queue
 import os
+import pandas
 from pathlib import Path
 import sys
 import typing
@@ -28,7 +30,7 @@ import typing
 from kgtk.kgtkformat import KgtkFormat
 from kgtk.io.kgtkbase import KgtkBase
 from kgtk.utils.argparsehelpers import optional_bool
-from kgtk.utils.closableiter import ClosableIter, ClosableIterTextIOWrapper
+from kgtk.utils.closableiter import ClosableIter, ClosableIterTextIOWrapper, ClosableIterDataFrame
 from kgtk.utils.enumnameaction import EnumNameAction
 from kgtk.utils.gzipprocess import GunzipProcess
 from kgtk.utils.validationaction import ValidationAction
@@ -51,6 +53,7 @@ class KgtkReaderOptions():
     MGZIP_THREAD_COUNT_DEFAULT: int = 3
     GRAPH_CACHE_FETCHMANY_SIZE_DEFAULT: int = 1000
     GRAPH_CACHE_FILTER_BATCH_SIZE_DEFAULT: int = 1000
+    UNQUOTE_CSV_COLUMN_NAMES_DEFAULT: bool = True
 
     # TODO: use an enum
     INPUT_FORMAT_CSV: str = "csv"
@@ -78,6 +81,7 @@ class KgtkReaderOptions():
                                                                                                                                      iterable_validator=attr.validators.instance_of(list))),
                                                                     default=None)
     no_additional_columns: bool = attr.ib(validator=attr.validators.instance_of(int), default=False)
+    unquote_csv_column_names: bool = attr.ib(validator=attr.validators.instance_of(bool), default=UNQUOTE_CSV_COLUMN_NAMES_DEFAULT)
 
     # Data record sampling, pre-validation.
     #
@@ -307,6 +311,12 @@ class KgtkReaderOptions():
                                    "for an edge file, and [id] for a node file. (default=%(default)s)."),
                             type=optional_bool, nargs='?', const=True, **d(default=False))
 
+        hgroup.add_argument(prefix1 + "unquote-csv-column-names",
+                            dest=prefix2 + "unquote_csv_column_names",
+                            metavar="optional True|False",
+                            help=h(prefix3 + "Remove double quotes from the outside of column names. (default=%(default)s)."),
+                            type=optional_bool, nargs='?', const=True, **d(default=cls.UNQUOTE_CSV_COLUMN_NAMES_DEFAULT))
+
         hgroup.add_argument(prefix1 + "header-error-action",
                             dest=prefix2 + "header_error_action",
                             help=h(prefix3 + "The action to take when a header error is detected.  Only ERROR or EXIT are supported (default=%(default)s)."),
@@ -456,6 +466,7 @@ class KgtkReaderOptions():
             number_of_columns=lookup("number_of_columns", None),
             require_column_names=lookup("require_column_names", None),
             no_additional_columns=lookup("no_additional_columns", False),
+            unquote_csv_column_names=lookup("unquote_csv_column_names", cls.UNQUOTE_CSV_COLUMN_NAMES_DEFAULT),
             use_mgzip=lookup("use_mgzip", False),
             mgzip_threads=lookup("mgzip_threads", cls.MGZIP_THREAD_COUNT_DEFAULT),
             gzip_in_parallel=lookup("gzip_in_parallel", False),
@@ -506,6 +517,7 @@ class KgtkReaderOptions():
         if self.require_column_names is not None:
             print("%srequire-column-names=%s" % (prefix, " ".join(self.require_column_names)), file=out)
         print("%sno-additional-columns=%s" % (prefix, str(self.no_additional_columns)), file=out)
+        print("%sunquote-csv-column-names=%s" % (prefix, str(self.unquote_csv_column_names)), file=out)
         print("%serror-limit=%s" % (prefix, str(self.error_limit)), file=out)
         print("%srepair-and-validate-lines=%s" % (prefix, str(self.repair_and_validate_lines)), file=out)
         print("%srepair-and-validate-values=%s" % (prefix, str(self.repair_and_validate_values)), file=out)
@@ -632,6 +644,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
     COMPRESSED_FILE_EXTENSIONS: typing.List[str] =  [ ".bz2", ".gz", ".lz4", ".xz" ]
     CSV_FILE_EXTENSION: str = ".csv"
+    DATA_FRAME_CAPTION_DEFAULT: str = 'DataFrame'
 
     @classmethod
     def _default_options(
@@ -683,7 +696,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
     @classmethod
     def open(cls,
-             file_path: typing.Optional[typing.Union[Path, str]],
+             file_path: typing.Optional[typing.Union[Path, str, pandas.DataFrame]],
              who: str = "input",
              error_file: typing.TextIO = sys.stderr,
              reject_file: typing.Optional[typing.TextIO] = None,
@@ -697,26 +710,18 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         Opens a KGTK file, which may be an edge file or a node file.  The appropriate reader is returned.
         """
 
-        if file_path is not None and isinstance(file_path, str):
-            file_path = Path(file_path)
+        rewindable: bool = False
+        use_graph_cache: bool = False
+        use_fast_path: bool = False
+
+        input_format: str
+        source: ClosableIter[str]
+        header: str
+        column_name: str
+        column_names: typing.List[str]
 
         # Supply the default reader and value options:
         (options, value_options) = cls._default_options(options, value_options)
-
-        # Supply the default input_format:
-        input_format: tr = KgtkReaderOptions.INPUT_FORMAT_KGTK
-        if options.input_format is not None:
-            input_format = options.input_format
-        elif file_path is not None:
-            if len(file_path.suffixes) == 1:
-                if file_path.suffix == cls.CSV_FILE_EXTENSION:
-                    input_format = KgtkReaderOptions.INPUT_FORMAT_CSV
-            elif len(file_path.suffixes) > 1:
-                if file_path.suffixes[-1] in cls.COMPRESSED_FILE_EXTENSIONS and file_path.suffixes[-2] == cls.CSV_FILE_EXTENSION:
-                    input_format = KgtkReaderOptions.INPUT_FORMAT_CSV
-
-        if verbose:
-            print("input format: %s" % input_format, file=error_file, flush=True)
 
         # Get the graph cache from the options or an envar:
         graph_cache: typing.Optional[str] = options.graph_cache
@@ -725,65 +730,98 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             if verbose and graph_cache is not None:
                 print("Using KGTK_GRAPH_CACHE=%s" % repr(graph_cache), file=error_file, flush=True)
 
-        source: ClosableIter[str]
-        rewindable: bool
-        header: str
-        column_name: str
-        column_names: typing.List[str]
+        if file_path is not None and isinstance(file_path, pandas.DataFrame):
+            # Iterate over the dataframe.
+            source = ClosableIterDataFrame(file_path, options.column_separator)
 
-        # Decide whether or not to use the graph cache or the fast read path.
-        # This code assumes that the options will not change beyond this
-        # point.
-        need_record_slicing: bool = \
-            options.record_limit is not None or \
-            options.tail_count is not None or \
-            options.initial_skip_count != 0 or \
-                options.every_nth_record > 1
+            if file_path.style is not None and file_path.style.caption is not None and len(file_path.style.caption) > 0:
+                # If a caption exists (and is not empty), treat it as
+                # equivalent to a file name. This ought to work, in that
+                # pathlib doesn't document any exceptions on the Path
+                # constructor.
+                file_path = Path(file_path.style.caption)
+            else:
+                file_path = Path(cls.DATA_FRAME_CAPTION_DEFAULT)
+            
+            input_format = KgtkReaderOptions.INPUT_FORMAT_KGTK
+            (header, column_names) = cls._build_column_names(source,
+                                                             options,
+                                                             input_format,
+                                                             error_file=error_file,
+                                                             verbose=verbose)
 
-        use_graph_cache: bool = False
-        use_fast_path: bool = False
+        else:
+            if file_path is not None and isinstance(file_path, str):
+                file_path = Path(file_path)
 
-        if graph_cache is not None and \
-           file_path is not None and \
-           not need_record_slicing:
+            # Supply the default input_format:
+            input_format = KgtkReaderOptions.INPUT_FORMAT_KGTK
+            if options.input_format is not None:
+                # If supplied in an option, use that.
+                input_format = options.input_format
+            elif file_path is not None:
+                # if the input file has a CSV extension, possibly compressed,
+                # use that to override the input format.
+                if len(file_path.suffixes) == 1:
+                    if file_path.suffix == cls.CSV_FILE_EXTENSION:
+                        input_format = KgtkReaderOptions.INPUT_FORMAT_CSV
+                elif len(file_path.suffixes) > 1:
+                    if file_path.suffixes[-1] in cls.COMPRESSED_FILE_EXTENSIONS and file_path.suffixes[-2] == cls.CSV_FILE_EXTENSION:
+                        input_format = KgtkReaderOptions.INPUT_FORMAT_CSV
 
-            from kgtk.io.graphcacheadaptor import GraphCacheAdaptor
-            gca: typing.Optional[GraphCacheAdaptor] = GraphCacheAdaptor.open(graph_cache_path=Path(graph_cache),
-                                                                             file_path=file_path,
-                                                                             who=who,
-                                                                             options=options,
-                                                                             value_options=value_options,
-                                                                             ignore_stale_graph_cache=options.ignore_stale_graph_cache,
-                                                                             error_file=error_file,
-                                                                             verbose=verbose)
-            if gca is not None:
-                use_graph_cache = True
-                if verbose:
-                    print("KgtkReader: Using the graph cache.", file=error_file, flush=True)
-                    
-                source = ClosableIterTextIOWrapper(sys.stdin) # This is a dummy definition.
-                rewindable = True
-                column_names = gca.column_names.copy()
-                header = gca.header
-
-        if not use_graph_cache and \
-           not need_record_slicing and \
-           not options.repair_and_validate_lines and \
-           not options.repair_and_validate_values and \
-           options.implied_label is None and \
-           input_format == KgtkReaderOptions.INPUT_FORMAT_KGTK:
-
-            use_fast_path = True
             if verbose:
-                print("KgtkReader: OK to use the fast read path.", file=error_file, flush=True)
+                print("input format: %s" % input_format, file=error_file, flush=True)
+
+            # Decide whether or not to use the graph cache or the fast read path.
+            # This code assumes that the options will not change beyond this
+            # point.
+            need_record_slicing: bool = \
+                options.record_limit is not None or \
+                options.tail_count is not None or \
+                options.initial_skip_count != 0 or \
+                    options.every_nth_record > 1
+
+            if graph_cache is not None and \
+               file_path is not None and \
+               not need_record_slicing:
+
+                from kgtk.io.graphcacheadaptor import GraphCacheAdaptor
+                gca: typing.Optional[GraphCacheAdaptor] = GraphCacheAdaptor.open(graph_cache_path=Path(graph_cache),
+                                                                                 file_path=file_path,
+                                                                                 who=who,
+                                                                                 options=options,
+                                                                                 value_options=value_options,
+                                                                                 ignore_stale_graph_cache=options.ignore_stale_graph_cache,
+                                                                                 error_file=error_file,
+                                                                                 verbose=verbose)
+                if gca is not None:
+                    use_graph_cache = True
+                    if verbose:
+                        print("KgtkReader: Using the graph cache.", file=error_file, flush=True)
+
+                    source = ClosableIterTextIOWrapper(sys.stdin) # This is a dummy definition.
+                    rewindable = True
+                    column_names = gca.column_names.copy()
+                    header = gca.header
+
+            if not use_graph_cache and \
+               not need_record_slicing and \
+               not options.repair_and_validate_lines and \
+               not options.repair_and_validate_values and \
+               options.implied_label is None and \
+               input_format == KgtkReaderOptions.INPUT_FORMAT_KGTK:
+
+                use_fast_path = True
+                if verbose:
+                    print("KgtkReader: OK to use the fast read path.", file=error_file, flush=True)
 
 
-        if not use_graph_cache:
-            source, rewindable = cls._openfile(file_path, options=options, error_file=error_file, verbose=verbose)
+            if not use_graph_cache:
+                source, rewindable = cls._openfile(file_path, options=options, error_file=error_file, verbose=verbose)
 
-            # Read the kgtk file header and split it into column names.  We get the
-            # header back, too, for use in debugging and error messages.
-            (header, column_names) = cls._build_column_names(source, options, input_format, error_file=error_file, verbose=verbose)
+                # Read the kgtk file header and split it into column names.  We get the
+                # header back, too, for use in debugging and error messages.
+                (header, column_names) = cls._build_column_names(source, options, input_format, error_file=error_file, verbose=verbose)
 
         if options.number_of_columns is not None and len(column_names) != options.number_of_columns:
             cls._yelp("Expected %d columns, got %d in the header" % (options.number_of_columns, len(column_names)),
@@ -809,6 +847,8 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
 
         # Build a map from column name to column index.
+        if verbose:
+            print("column names: %s" % repr(column_names), file=error_file, flush=True)
         column_name_map: typing.Mapping[str, int] = cls.build_column_name_map(column_names,
                                                                               header_line=header,
                                                                               who=who,
@@ -842,6 +882,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                                                 error_action=options.header_error_action,
                                                 error_file=error_file,
                                                 is_optional=True)
+
             if node1_idx >= 0:
                 is_edge_file = True
                 is_node_file = False
@@ -1136,13 +1177,15 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
         if options.force_column_names is None:
             if options.no_input_header:
                 if options.number_of_columns is not None:
-                    column_names: typing.List[str] = [ "" ] * options.number_of_columns
+                    # If there is no input header and we ae not forcing column names,
+                    # build default column names ['col1', 'col2', ...]
+                    column_names = [ cls.COLUMN_NAME_PREFIX_DEFAULT + str(i + 1) for i in range(options.number_of_columns)]
                     return options.column_separator.join(column_names), column_names
                 else:
                     raise ValueError("Cannot read a file with no header and an unnown number of columns.")
             # Read the column names from the first line, stripping end-of-line characters.
             #
-            # TODO: if the read fails, throw a more useful exception with the line number.
+            # TODO: if the read fails, throw a more useful exception identifying the file.
             try:
                 header: str = next(source).rstrip("\r\n")
             except StopIteration:
@@ -1152,9 +1195,17 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
             # Split the first line into column names.
             if input_format == KgtkReaderOptions.INPUT_FORMAT_CSV:
-                return header, cls.csvsplit(header)
+                column_names = cls.csvsplit(header)
+                if options.unquote_csv_column_names:
+                    # TODO: Handle the troublesome case of a double quote inside a column
+                    # name.
+                    column_names = [x[1:-1] if x.startswith('"') else x for x in column_names ]
+                    header = options.column_separator.join(column_names)
+
             else:
-                return header, header.split(options.column_separator)
+                column_names = header.split(options.column_separator)
+
+            return header, column_names
         else:
             # Skip the first record to override the column names in the file.
             # Do not skip the first record if the file does not have a header record.
@@ -1197,7 +1248,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             sys.exit(1)
             
         # print("In input data line %d, %s: %s" % (self.data_lines_read, msg, line), file=self.error_file, flush=True)
-        print("Data line %d:\n%s\n%s" % (self.data_lines_read, line, msg), file=self.error_file, flush=True)
+        # print("Data line %d:\n%s\n%s" % (self.data_lines_read, line, msg), file=self.error_file, flush=True)
         self.data_errors_reported += 1
         if self.options.error_limit > 0 and self.data_errors_reported >= self.options.error_limit:
             raise ValueError("Too many data errors, exiting.")
@@ -2009,10 +2060,15 @@ def main():
     parser.add_argument(dest="kgtk_file", help="The KGTK file to read", type=Path, nargs="?")
     KgtkReader.add_debug_arguments(parser, expert=True)
     parser.add_argument(       "--test", dest="test_method", help="The test to perform (default=%(default)s).",
-                               choices=["rows", "concise-rows",
-                                        "kgtk-values", "concise-kgtk-values",
-                                        "dicts", "concise-dicts",
-                                        "kgtk-value-dicts", "concise-kgtk-value-dicts"],
+                               choices=["rows",
+                                        "concise-rows",
+                                        "kgtk-values",
+                                        "concise-kgtk-values",
+                                        "dicts",
+                                        "concise-dicts",
+                                        "kgtk-value-dicts",
+                                        "concise-kgtk-value-dicts",
+                                        "dataframe"],
                                default="rows")
     parser.add_argument(       "--test-validate", dest="test_validate", help="Validate KgtkValue objects in test (default=%(default)s).",
                                type=optional_bool, nargs='?', const=True, default=False)
@@ -2034,6 +2090,50 @@ def main():
         value_options.show(out=error_file)
         print("=======", file=error_file, flush=True)
 
+    line_count: int = 0
+    row: typing.List[str]
+
+    if args.test_method == "dataframe":
+        if args.verbose:
+            print("Testing reading a DataFrame.", file=error_file, flush=True)
+
+        df_column_names: typing.List[str] = ["node1", "label", "node2"]
+        df_data: typing.List[typing.List[typing.Union[str, int]]] = [
+            ["P10", "p585-count", '73'],
+            ["P1000", "p585-count", '16'],
+            ["P101", "p585-count", '5'],
+            ["P202", "p323", 'xx"yy'],
+            ["P203", "p323", '"xxyy"'],
+        ]
+        df: pandas.DataFrame = pandas.DataFrame(
+            data=df_data,
+            columns=df_column_names,
+            )
+
+        df_kr: KgtkReader = KgtkReader.open(df,
+                                            error_file = error_file,
+                                            options=reader_options,
+                                            value_options=value_options,
+                                            verbose=args.verbose,
+                                            very_verbose=args.very_verbose)
+
+        for row in df_kr:
+            df_error_count: int = 0
+            idx: int
+            for idx in range(len(row)):
+                if df_data[line_count][idx] != row[idx]:
+                    df_error_count += 1
+                    if args.verbose:
+                        print("Line %d: column %d: expected %s got %s" % (line_count +1, idx+1, repr(df_data[line_count][idx]), repr( row[idx])),
+                              file=error_file, flush=True)
+
+            line_count += 1
+            if df_error_count > 0:
+                print("%d DataFrame errors in line %d" % (df_error_count, line_count), file=error_file, flush=True)
+
+        print("Read %d lines" % line_count, file=error_file, flush=True)
+        return
+
     kr: KgtkReader = KgtkReader.open(args.kgtk_file,
                                      error_file = error_file,
                                      options=reader_options,
@@ -2041,8 +2141,6 @@ def main():
                                      verbose=args.verbose,
                                      very_verbose=args.very_verbose)
 
-    line_count: int = 0
-    row: typing.List[str]
     kgtk_values: typing.List[KgtkValue]
     concise_kgtk_values: typing.List[typing.Optional[KgtkValue]]
     dict_row: typing.Mapping[str, str]
@@ -2094,6 +2192,10 @@ def main():
             print("Testing iterating over concise KgtkValue dicts.", file=error_file, flush=True)
         for kgtk_value_dict in kr.kgtk_value_dicts(concise=True, validate=args.test_validate):
             line_count += 1
+
+    else:
+        print("Unexpected test method %s" % repr(args.test_method), file=error_file, flush=True)
+        return            
             
     print("Read %d lines" % line_count, file=error_file, flush=True)
 

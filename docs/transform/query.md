@@ -10,11 +10,6 @@ be piped in from stdin or named explicitly.  Named input files can
 also be optionally compressed.  Output goes to stdout or the specified
 output file which will be transparently compressed according to its file extension.
 
-!!! note
-    **Important restriction:** Command pipes must contain **at most** one query command
-    per graph cache due to database locking considerations.  Future versions might relax
-    this restriction.
-
 
 ## Usage
 ```
@@ -29,10 +24,9 @@ usage: kgtk query [-h] [-i INPUT_FILE [INPUT_FILE ...]] [--as NAME]
                   [--idx SPEC [SPEC ...]] [--explain [MODE]]
                   [--graph-cache DBFILE] [--show-cache]
                   [--aux-cache DBFILE [DBFILE ...]] [--read-only]
-                  [--import MODULE_LIST] [-o OUTPUT]
+                  [--single-user] [--import MODULE_LIST] [-o OUTPUT]
 
 Query one or more KGTK files with Kypher.
-IMPORTANT: input can come from stdin but chaining queries is not yet supported.
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -96,6 +90,8 @@ optional arguments:
   --read-only, --ro     do not create or update the graph cache in any way,
                         only run queries against already imported and indexed
                         data
+  --single-user         single-user mode blocks concurrent database access
+                        from parallel processes for faster data import
   --import MODULE_LIST  Python modules needed to define user extensions to
                         built-in functions
   -o OUTPUT, --out OUTPUT
@@ -142,7 +138,7 @@ milliseconds to minutes depending on selectivity and result sizes.
 ### Features under development:
 
 * `not/exists` pattern handling
-* support for chained queries
+    * if needed can be emulated via query pipelines
 * `--create` and `--remove` to instantiate and add/remove edge patterns
   from result bindings
 * `--with` clause to compute derived values to use by `--create` and `--remove`
@@ -1490,6 +1486,98 @@ Result:
 | Otto  | works  | Kaiser  |
 
 
+### Query pipelines
+
+KGTK has a powerful pipelining feature that allows commands to be
+chained into pipelines where the output of one command becomes
+the input of the next.  This is also possible for queries which
+allows us to chain queries into complex query pipelines.  There
+are a number of reason why we might want to do this:
+
+* to intersperse KGTK commands to augment the data, for example,
+  use `add-id` to add edge IDs
+* to work around certain limitations of the `query` command,
+  e.g., to emulate subqueries
+* for performance reasons, e.g., to reuse an intermediate but
+  otherwise temporary result in multiple queries
+
+Here is an example use case.  Suppose we wanted to filter `GRAPH`
+to only output low-frequency edges.  Here we define "low-frequency"
+as an edge that has a label that occurs less than 5 times in the data.
+To do this we have to first use [**aggregation**](#aggregation) to
+count edge labels and then restrict based on those counts.  However,
+we cannot currently do that in Kypher, since we do not have subqueries
+(yet).  Aggregation is done in the return clause, and there is no way
+for us to express an upper or lower bound based on the computed counts.
+
+So let us compute what we want with a query pipeline instead.  The first
+query in the command below computes the counts on edge labels as
+we've seen before.  Since the resulting count rows will become the
+input to a second query, it is important that they are in valid KGTK
+format, which is the reason that we express them as `PROP count N`
+triples with the appropriate `node1`, `label` and `node2` column
+headers.  We then pipe the output of this query into `add-id` which
+simply adds an `id` column.  Next we use the output of `add-id` as the
+input of the second query with `-i -`.  The dash indicates that this
+input comes from standard input of the query command (the output of
+`add-id`).  Within the match clause we can refer to this input as
+`stdin` (or we could have simply omitted a name, since it is the first
+input in the list).  We then select edges from `GRAPH` that have one
+of the properties in the list where the count matches the
+where-constraint:
+
+```
+kgtk query -i $GRAPH \
+     --match '(x)-[r]->(y)' \
+     --return 'r.label as node1, "count" as label, count(r.label) as node2' \
+   / add-id \
+   / query -i - -i $GRAPH \
+     --match 'stdin:  (prop)-[]->(count), \
+              graph:  (x)-[r {label: prop}]->(y)' \
+     --where 'cast(count, int) < 5' \
+     --return 'x, r.label, y, r'
+```
+Result:
+
+| node1 | label  | node2 | id  |
+|-------|--------|-------|-----|
+| Joe   | friend | Otto  | e13 |
+| Hans  | loves  | Molly | e11 |
+| Otto  | loves  | Susi  | e12 |
+| Joe   | loves  | Joe   | e14 |
+
+Here is a minor variant that names the counts input with an alias (see
+[**Input and output specifications**](#input-output)) which can make
+queries more readable:
+
+```
+kgtk query -i $GRAPH \
+     --match '(x)-[r]->(y)' \
+     --return 'r.label as node1, "count" as label, count(r.label) as node2' \
+   / add-id \
+   / query -i - --as counts -i $GRAPH \
+     --match 'counts: (prop)-[]->(count), \
+              graph:  (x)-[r {label: prop}]->(y)' \
+     --where 'cast(count, int) < 5' \
+     --return 'x, r.label, y, r'
+```
+
+Any number of queries can be chained into complex pipelines.  If
+intermediate data such as the counts above are not explicitly named
+and preserved, it will simply be replaced by the input imported by
+the next query in the chain.  This is generally the expected behavior
+and avoids accumulation of useless intermediate results.
+
+Query pipelines are powerful, but also can have a lot of complexity.
+There are many places where command or query errors may occur.  For
+that reason they should be developed and debugged step-by-step instead
+of trying to make things work all at once.  Also note that options or
+defaults from one query do not carry over to the next one, they all
+are processed as if they were independently launched queries in the
+shell, the only thing connecting them is the dataflow from stdout of
+one query to stdin of the next.
+
+
 <A NAME="input-output"></A>
 ## Input and output specifications
 
@@ -1780,6 +1868,12 @@ if the input data has all the appropriate columns, for example:
 kgtk query -i file1.tsv -a file2.tsv -a file3.tsv --limit 5
 ```
 
+!!! note
+    Appending data is not supported for vector tables processed by
+    [**Kypher-V**](#kypher-v), since ANNS indexing and other processing
+    needs to be done collectively for the whole table, and can
+    (currently) not be updated incrementally.
+
 
 ### Output specification
 
@@ -1955,6 +2049,45 @@ in parallel over the same graph cache.  Note, however, that disk
 access contention from parallel queries might lead to performance
 degredation that could completely eliminate any gains from parallel
 processing.
+
+
+### Single-user mode, locking and transactions
+
+By default the database runs in multi-user mode, allowing (at most)
+one process to update a graph cache database and any number of other
+concurrent processes to simultaneously read it.  This is implemented
+by using SQLite's
+[**write-ahead-logging**](https://www.sqlite.org/wal.html) mode (or
+WAL mode).  While this is generally a preferable configuration option,
+it can slow down import of large data files by a factor of 1.5 to 2.
+
+In single-user mode (activated with the `--single-user` option), the
+database does not allow any concurrent readers while updates are being
+processed.  This is useful to speed up importing and indexing of very
+large data files, but can lead to "database is locked" errors with
+query pipelines or other parallel invocations, so should be used with care
+when it is clear that only one process needs to access a graph cache.
+This distinction between single-user and multi-user mode only exists
+if one process is currently *modifying* the database.  If there are no
+updates, e.g., if all queries use the `--read-only` option, both modes
+behave identically and multiple parallel queries over the same graph
+cache are possible.
+
+If a graph cache database is currently being updated (because data is
+being imported or an index created), any attempt by a second process
+to concurrently modify the graph cache database will fail with a
+"database is locked" error after a short timeout period.  Once the
+first update operation is complete, the second one can be relaunched.
+
+All update operations such as data import, index creation and update
+of the `kypher_master` info table are protected by atomic database
+transactions.  If an error or user interrupt occurs during such a
+transaction, any changes are rolled back to the last consistent state.
+It is possible that a rollback journal file persists after a user
+interrupt, however, the next query on the same graph cache DB will
+make the database consistent based on the journal file before any
+further processing occurs.  The journal file will then be
+automatically deleted.
 
 
 ### Managing very large datasets
@@ -2725,7 +2858,7 @@ Result:
 * Kypher does not use a property graph data model
 * supports querying across multiple graphs
 * no graph update commands
-* single match clause only
+* single strict match clause only
 * no relationship isomorphism
 * no dynamic properties such as `x[fn(y)]`
 * lists can only contain literals
@@ -2736,6 +2869,7 @@ Features that are currently missing but might become available in future version
 
 * transitive path range patterns
 * `exists` subqueries
+    * if needed can be emulated via query pipelines
 * `with` clause variable bindings
 * `union` queries
 * patterns with undirected edges

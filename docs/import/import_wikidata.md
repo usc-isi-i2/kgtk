@@ -10,7 +10,6 @@ usage: kgtk import-wikidata [-h] [-i INPUT_FILE] [--procs PROCS]
                             [--max-size-per-mapper-queue MAX_SIZE_PER_MAPPER_QUEUE]
                             [--mapper-batch-size MAPPER_BATCH_SIZE]
                             [--single-mapper-queue [True/False]]
-                            [--collect-seperately [True/False]]
                             [--collector-batch-size COLLECTOR_BATCH_SIZE]
                             [--use-shm [True/False]]
                             [--collector-queue-per-proc-size COLLECTOR_QUEUE_PER_PROC_SIZE]
@@ -33,16 +32,6 @@ usage: kgtk import-wikidata [-h] [-i INPUT_FILE] [--procs PROCS]
                             [--source SOURCE] [--deprecated]
                             [--use-python-cat [True/False]]
                             [--interleave [True/False]]
-                            [--entry-type-edges [True/False]]
-                            [--alias-edges [True/False]]
-                            [--datatype-edges [True/False]]
-                            [--description-edges [True/False]]
-                            [--label-edges [True/False]]
-                            [--reference-edges [True/False]]
-                            [--reference-detail-edges [True/False]]
-                            [--sitelink-edges [True/False]]
-                            [--sitelink-verbose-edges [True/False]]
-                            [--sitelink-verbose-qualifiers [True/False]]
                             [--parse-aliases [True/False]]
                             [--parse-descriptions [True/False]]
                             [--parse-labels [True/False]]
@@ -80,10 +69,6 @@ optional arguments:
                         If true, use a single queue for worker tasks. If
                         false, each worker has its own task queue.
                         (default=False).
-  --collect-seperately [True/False]
-                        If true, collect the node, edge, and qualifier results
-                        using seperate processes. If false, collect the
-                        results with a single process. (default=False).
   --collector-batch-size COLLECTOR_BATCH_SIZE
                         How many statements to queue in a batch to the
                         collector. (default=5)
@@ -136,36 +121,6 @@ optional arguments:
   --interleave [True/False]
                         If true, output the edges and qualifiers in a single
                         file (the edge file). (default=False).
-  --entry-type-edges [True/False]
-                        If true, create edge records for the entry type field.
-                        (default=False).
-  --alias-edges [True/False]
-                        If true, create edge records for aliases.
-                        (default=False).
-  --datatype-edges [True/False]
-                        If true, create edge records for property datatypes.
-                        (default=False).
-  --description-edges [True/False]
-                        If true, create edge records for descriptions.
-                        (default=False).
-  --label-edges [True/False]
-                        If true, create edge records for labels.
-                        (default=False).
-  --reference-edges [True/False]
-                        If true, create edge records for references.
-                        (default=False).
-  --reference-detail-edges [True/False]
-                        If true, create edge records for reference details.
-                        (default=False).
-  --sitelink-edges [True/False]
-                        If true, create edge records for sitelinks.
-                        (default=False).
-  --sitelink-verbose-edges [True/False]
-                        If true, create edge records for sitelink details
-                        (lang, site, badges). (default=False).
-  --sitelink-verbose-qualifiers [True/False]
-                        If true, create qualifier records for sitelink details
-                        (lang, site, badges). (default=False).
   --parse-aliases [True/False]
                         If true, parse aliases. (default=True).
   --parse-descriptions [True/False]

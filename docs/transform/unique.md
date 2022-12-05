@@ -70,7 +70,7 @@ If you run out of main memory, you should presort the input file with [`kgtk sor
 
 ```
 usage: kgtk unique [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
-                   [-c [COLUMN_NAME [COLUMN_NAME ...]]] [--empty EMPTY_VALUE]
+                   [-c [COLUMN_NAME ...]] [--empty EMPTY_VALUE]
                    [--label LABEL_VALUE]
                    [--format {edge,node,node-counts,node-only}]
                    [--prefix PREFIX] [--where WHERE_COLUMN_NAME]
@@ -93,7 +93,7 @@ optional arguments:
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
                         The KGTK output file. (May be omitted or '-' for
                         stdout.)
-  -c [COLUMN_NAME [COLUMN_NAME ...]], --column [COLUMN_NAME [COLUMN_NAME ...]], --columns [COLUMN_NAME [COLUMN_NAME ...]]
+  -c [COLUMN_NAME ...], --column [COLUMN_NAME ...], --columns [COLUMN_NAME ...]
                         The column(s) to count unique values (default=node2 or
                         its alias).
   --empty EMPTY_VALUE   A value to substitute for empty values (default=).

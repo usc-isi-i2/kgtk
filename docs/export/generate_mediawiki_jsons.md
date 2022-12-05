@@ -34,58 +34,70 @@ property datatype declarations can be read from an optional input file.
 
 ## Usage
 ```
-usage: kgtk generate-mediawiki-jsons [-h] [-i INPUT_FILE] [-pf PROPERTY_FILE] [-lp LABELS]
-                                     [-ap ALIASES] [-dp DESCRIPTIONS] [-pd PROP_DECLARATION]
-                                     [-pr OUTPUT_PREFIX] [-n N] [-log LOG_PATH] [-w WARNING]
-                                     [-r HAS_RANK] [--error-action {log,raise}]
-                                     [-pl PROPERTY_DECLARATION_LABEL] [-fp [True/False]]
-                                     [-ip [True/False]] [-v [True/False]]
+usage: kgtk generate-mediawiki-jsons [-h] [-i INPUT_FILE] [-pf PROPERTY_FILE]
+                                     [-lp LABELS] [-ap ALIASES]
+                                     [-dp DESCRIPTIONS] [-pd PROP_DECLARATION]
+                                     [-pr OUTPUT_PREFIX] [-n N]
+                                     [-log LOG_PATH] [-w WARNING]
+                                     [-r HAS_RANK]
+                                     [--error-action {ignore,log,raise}]
+                                     [-pl PROPERTY_DECLARATION_LABEL]
+                                     [-fp [True/False]] [-ip [True/False]]
+                                     [-v [True/False]]
 
 Generating json files that mimic mediawiki *wbgetentities* api call response. This tool assumes statements and qualifiers related to one entity will be bundled close as the `generate-wikidata-triples` function assumes. If this requirement is not met, please set `n` to a number LARGER than the total number of entities in the kgtk file
 
 optional arguments:
   -h, --help            show this help message and exit
   -i INPUT_FILE, --input-file INPUT_FILE
-                        The KGTK input file. (May be omitted or '-' for stdin.)
+                        The KGTK input file. (May be omitted or '-' for
+                        stdin.)
   -pf PROPERTY_FILE, --property-file PROPERTY_FILE
-                        the file which contains the property datatype mapping in kgtk format
-                        (Optional, use '-' for stdin.)
+                        the file which contains the property datatype mapping
+                        in kgtk format (Optional, use '-' for stdin.)
   -lp LABELS, --label-property LABELS
-                        property identifiers which will create labels, separated by comma','.
+                        property identifiers which will create labels,
+                        separated by comma','.
   -ap ALIASES, --alias-property ALIASES
-                        alias identifiers which will create labels, separated by comma','.
+                        alias identifiers which will create labels, separated
+                        by comma','.
   -dp DESCRIPTIONS, --description-property DESCRIPTIONS
-                        description identifiers which will create labels, separated by comma','.
+                        description identifiers which will create labels,
+                        separated by comma','.
   -pd PROP_DECLARATION, --property-declaration-in-file PROP_DECLARATION
-                        whether to read properties from the input kgtk file. If set to yes, make sure the
-                        property declaration happens before its usage. default=False
+                        whether to read properties from the input kgtk file.
+                        If set to yes, make sure the property declaration
+                        happens before its usage. default=False
   -pr OUTPUT_PREFIX, --output-file-prefix OUTPUT_PREFIX
                         set the prefix of the output files. Default to `kgtk`
   -n N, --output-n-lines N
-                        output json file when the corresponding dictionary size reaches n.
-                        Default to 1000
+                        output json file when the corresponding dictionary
+                        size reaches n. Default to 1000
   -log LOG_PATH, --log-path LOG_PATH
                         set the path of the log file
   -w WARNING, --warning WARNING
-                        if set to yes, warn various kinds of exceptions and mistakes and log them
-                        to a log file with line number in input file, rather than stopping.
-                        logging
+                        if set to yes, warn various kinds of exceptions and
+                        mistakes and log them to a log file with line number
+                        in input file, rather than stopping. logging
   -r HAS_RANK, --rank HAS_RANK
-                        Whether the input file contains a rank column. Please refer to the
-                        `import_wikidata` command for the header information. Default to False,
-                        then all the ranks will be `normal`, therefore `NormalRank`.
-  --error-action {log,raise}
-                        When errors occur, either log them (`log`) or raise an exception
-                        (`raise`). Default='log'.
+                        Whether the input file contains a rank column. Please
+                        refer to the `import_wikidata` command for the header
+                        information. Default to False, then all the ranks will
+                        be `normal`, therefore `NormalRank`.
+  --error-action {ignore,log,raise}
+                        When errors occur, either ignore them ('ignore'), log
+                        them (`log`), or raise an exception (`raise`).
+                        Default='log'.
   -pl PROPERTY_DECLARATION_LABEL, --property-declaration-label PROPERTY_DECLARATION_LABEL
-                        The edge label in a property file that indicates a property declaration.
-                        default='data_type'
+                        The edge label in a property file that indicates a
+                        property declaration. default='data_type'
   -fp [True/False], --filter-prop-file [True/False]
-                        If true and a property file has been specified, filter the prop file,
-                        processing only edges with the property declaration label. (default=True)
+                        If true and a property file has been specified, filter
+                        the prop file, processing only edges with the property
+                        declaration label. (default=True)
   -ip [True/False], --ignore-property-declarations-in-file [True/False]
-                        If true, ignore input edges with the property declaration label.
-                        (default=True)
+                        If true, ignore input edges with the property
+                        declaration label. (default=True)
   -v [True/False], --verbose [True/False]
                         If true, provide additional feedback. (default=False)
 ```
@@ -528,73 +540,23 @@ The following basic mapping structure is recommended for loading the jsons into 
 
 ```{python}
 mapping_file = {
-    "mappings": {
-        "dynamic": False,
-        "properties": {
-            "labels": {
-                "dynamic": True,
-                "properties": {
-                    "en": {
-                        "properties": {
-                            "language": {"type": "text",
-                                         "index": False},
-                            "value": {"type": "text",
-                                      "analyzer": "english"}
-                        }
-                    }
-                }
-            },
-            "descriptions": {
-                "dynamic": True,
-                "properties": {
-                    "en": {
-                        "properties": {
-                            "language": {"type": "text",
-                                         "index": False},
-                            "value": {"type": "text",
-                                      "analyzer": "english"}
-                        }
-                    }
-                }},
-            "aliases": {
-                "type": "object",
-                "enabled": False},
-            "claims": {
-                "type": "object",
-                "enabled": False
-            },
-            "sitelinks": {
-                "type": "object",
-                "enabled": False
-            },
-            "pageid": {
-                "type": "integer",
-                "index": False
-            },
-            "ns": {
-                "type": "integer",
-                "index": False
-            },
-            "title": {
-                "type": "text",
-                "index": False
-            },
-            "lastrevid": {
-                "type": "text",
-                "index": False
-            },
-            "type": {
-                "type": "text",
-                "index": False
-            },
-            "datatype": {
-                "type": "text",
-                "index": False
-            },
-            "id": {
-                "type": "keyword"
-            }
-        }
+    /bin/sh: line 1: Splitting: command not found
+    /bin/sh: line 3: node1: command not found
+    /bin/sh: line 3: The: command not found
+    /bin/sh: line 6: 1.: command not found
+    /bin/sh: line 7: P: command not found
+    /bin/sh: line 7: Q: command not found
+    /bin/sh: line 7: Paxy: command not found
+    /bin/sh: line 7: P00_axy: command not found
+    /bin/sh: line 7: 2.: command not found
+    /bin/sh: line 8: 3.: command not found
+    /bin/sh: line 11: wbgetentities: command not found
+    /bin/sh: line 11: 1.: command not found
+    /bin/sh: line 12: wbgetentities: command not found
+    /bin/sh: line 12: 2.: command not found
+    /bin/sh: line 13: success:: command not found
+    /bin/sh: line 13: 3.: command not found
+    /bin/sh: line 17: The: command not found
 
     }
 }

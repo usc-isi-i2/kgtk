@@ -17,8 +17,7 @@ DEFAULT_GRAPH_CACHE_FILE = os.path.join(
     tempfile.gettempdir(), 'kgtk-graph-cache-%s.sqlite3.db' % os.environ.get('USER', ''))
 
 def parser():
-    desc = ('Query one or more KGTK files with Kypher.\n' +
-            'IMPORTANT: input can come from stdin but chaining queries is not yet supported.')
+    desc = ('Query one or more KGTK files with Kypher.\n')
     return {
         'help': desc,
         'description': desc,
@@ -151,6 +150,9 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args):
     parser.add_argument('--read-only', '--ro', action='store_true', dest='readonly',
                         help="do not create or update the graph cache in any way"
                         + ", only run queries against already imported and indexed data")
+    parser.add_argument('--single-user', action='store_true', dest='single_user',
+                        help="single-user mode blocks concurrent database access"
+                        + " from parallel processes for faster data import")
     parser.add_argument('--import', metavar='MODULE_LIST', default=None, action='store', dest='import',
                         help="Python modules needed to define user extensions to built-in functions")
     parser.add_argument('-o', '--out', default='-', action='store', dest='output',
@@ -258,9 +260,13 @@ def run(input_files: KGTKFiles, **options):
         store = None
         try:
             graph_cache = options.get('graph_cache_file')
+            # TRICKY: if one of our inputs is stdin, we must be invoked in a pipe;
+            # this requires special handling by SqliteStore to avoid DB locking issues:
+            piped = any(map(sqlstore.SqliteStore.is_standard_input, inputs))
             store = sqlstore.SqliteStore(graph_cache, create=not os.path.exists(graph_cache),
                                          loglevel=loglevel, readonly=options.get('readonly'),
-                                         aux_dbfiles=options.get('aux_graph_cache_file'))
+                                         aux_dbfiles=options.get('aux_graph_cache_file'),
+                                         single_user=options.get('single_user'), piped=piped)
 
             if show_cache:
                 store.describe_meta_tables(out=sys.stdout)

@@ -16,7 +16,6 @@ optional arguments:
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
                         The KGTK output file. (May be omitted or '-' for
                         stdout.)
-
 ```
 
 ## Obtaining the data

@@ -27,10 +27,12 @@ usage: kgtk graph-statistics [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                              [--undirected [True|False]]
                              [--compute-pagerank [True|False]]
                              [--compute-hits [True|False]]
+                             [--compute-betweenness [True|False]]
                              [--output-statistics-only [True|False]]
                              [--output-degrees [True|False]]
                              [--output-pagerank [True|False]]
                              [--output-hits [True|False]]
+                             [--output-betweenness [True|False]]
                              [--log-file LOG_FILE]
                              [--log-top-relations [True|False]]
                              [--log-degrees-histogram [True|False]]
@@ -41,6 +43,7 @@ usage: kgtk graph-statistics [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                              [--page-rank-property VERTEX_PAGERANK]
                              [--vertex-hits-authority-property VERTEX_AUTH]
                              [--vertex-hits-hubs-property VERTEX_HUBS]
+                             [--betweenness-property VERTEX_BETWEENNESS]
                              [-v [optional True|False]]
 
 optional arguments:
@@ -64,6 +67,10 @@ optional arguments:
   --compute-hits [True|False]
                         Whether or not to compute the HITS properties. Note:
                         --undirected disables HITS calculation. (default=True)
+  --compute-betweenness [True|False]
+                        Whether or not to compute the betweenness property.
+                        Note: betweenness is not suitable for large graphs.
+                        (default=False)
   --output-statistics-only [True|False]
                         If this option is set, write only the statistics edges
                         to the primary output file. Else, write both the
@@ -76,6 +83,9 @@ optional arguments:
                         output file. (default=True)
   --output-hits [True|False]
                         Whether or not to write HITS edges to the primary
+                        output file. (default=True)
+  --output-betweenness [True|False]
+                        Whether or not to write betweenness to the primary
                         output file. (default=True)
   --log-file LOG_FILE   Summary file for the global statistics of the graph.
   --log-top-relations [True|False]
@@ -103,7 +113,7 @@ optional arguments:
                         in-degree and -out-degree if --undirected were False.
                         (default=vertex_out_degree)
   --page-rank-property VERTEX_PAGERANK
-                        Label for pank rank property.
+                        Label for page rank property.
                         (default=vertex_pagerank)
   --vertex-hits-authority-property VERTEX_AUTH
                         Label for edge: vertext hits authority.
@@ -111,6 +121,9 @@ optional arguments:
   --vertex-hits-hubs-property VERTEX_HUBS
                         Label for edge: vertex hits hubs.
                         (default=vertex_hubs)
+  --betweenness-property VERTEX_BETWEENNESS
+                        Label for betweenness property.
+                        (default=vertex_betweenness)
 
   -v [optional True|False], --verbose [optional True|False]
                         Print additional progress messages (default=False).

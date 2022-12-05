@@ -59,7 +59,8 @@ def progress_startup(pid: typing.Optional[int] = None, fd: typing.Optional[int] 
     # should be an input file.  There is no option to moitor multiple specific
     # input files other than calling this routine sequentially
     global _save_progress, _save_progress_tty, _save_progress_debug
-    print("progress_startup.", file=sys.stderr, flush=True)
+    if _save_progress_debug:
+        print("progress_startup.", file=sys.stderr, flush=True)
     if not _save_progress:
         if _save_progress_debug:
             print("progress_startup: Progress monitoring not requested.", file=sys.stderr, flush=True)

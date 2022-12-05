@@ -2,19 +2,25 @@ This command loads a TSV edges file into Graph-tool, and exports it to Graph-too
 
 ## Usage
 ```
-usage: kgtk export-gt [-h] [-i INPUT_FILE] [-o OUTPUT_FILE] [--directed] [--log LOG_FILE]
+usage: kgtk export-gt [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
+                      [--undirected [True|False]] [--node-file NODE_FILE]
+                      [-v [optional True|False]]
 
 optional arguments:
   -h, --help            show this help message and exit
   -i INPUT_FILE, --input-file INPUT_FILE
-                        The KGTK input file. (May be omitted or '-' for stdin.)
+                        The KGTK input file. (May be omitted or '-' for
+                        stdin.)
   -o OUTPUT_FILE, --output-file OUTPUT_FILE
-                        Graph tool file to dump the graph too - if empty, it will not be
-                        saved. (Optional, use '-' for stdout.)
-  --directed            Is the graph directed or not?
-  --log LOG_FILE        Log file for summarized statistics of the graph.
+                        Graph tool file to dump the graph too - if empty, it
+                        will not be saved. (Optional, use '-' for stdout.)
+  --undirected [True|False]
+                        When True, the graph is undirected. (default=False)
   --node-file NODE_FILE
                         Specify the location of node file.
+
+  -v [optional True|False], --verbose [optional True|False]
+                        Print additional progress messages (default=False).
 ```
 
 ## Examples

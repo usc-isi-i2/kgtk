@@ -816,7 +816,7 @@ kgtk unreify-values -i examples/docs/unreify-values-file3.tsv \
 | XoBugQcoEt6xNnqGsHDXfTA:g1 | ont:cluster | gaia:events/03a41b2b-e0ef-42f9-a192-433e0abc3a70-cluster-projectedFromSingleton |  |
 | XoBugQcoEt6xNnqGsHDXfTA:g1 | ont:clusterMember | gaia:events/03a41b2b-e0ef-42f9-a192-433e0abc3a70 |  |
 | XoBugQcoEt6xNnqGsHDXfTA:g1 | ont:system | noBugQcoEt6xNnqGsHDXfTA-2: |  |
-| XoBugQcoEt6xNnqGsHDXfTA:g1 | ont:confidenceValue | 1.0\|2.0 | XoBugQcoEt6xNnqGsHDXfTA:g2 |
+| XoBugQcoEt6xNnqGsHDXfTA:g1 | ont:confidenceValue | 2.0\|1.0 | XoBugQcoEt6xNnqGsHDXfTA:g2 |
 | XoBugQcoEt6xNnqGsHDXfTA:g2 | ont:system | noBugQcoEt6xNnqGsHDXfTA-2: | XoBugQcoEt6xNnqGsHDXfTA:g2-1 |
 | XoBugQcoEt6xNnqGsHDXfTA:g3 | rdf:type | rdf:Statement |  |
 | XoBugQcoEt6xNnqGsHDXfTA:g3 | rdf:object | gaia:entities/d1dcefce-badf-4948-bfcf-5d33116fa12c |  |
