@@ -135,15 +135,6 @@ edges and larger where queries executing on a standard laptop run in
 milliseconds to minutes depending on selectivity and result sizes.
 
 
-### Features under development:
-
-* `not/exists` pattern handling
-    * if needed can be emulated via query pipelines
-* `--create` and `--remove` to instantiate and add/remove edge patterns
-  from result bindings
-* `--with` clause to compute derived values to use by `--create` and `--remove`
-
-
 ## Overview
 
 ### Selecting edges with the `--match` clause
@@ -3068,11 +3059,13 @@ Result:
 Features that are currently missing but might become available in future versions:
 
 * transitive path range patterns
-* `exists` subqueries
+* full `call` subqueries
     * if needed can be emulated via query pipelines
 * `with` clause variable bindings
 * `union` queries
 * patterns with undirected edges
+* return patterns
+    * Example: `--retpat '(x)-[r1:works]->(y), (x)-[r2:salary]->(s)'`
 
 
 ## Tips and tricks
