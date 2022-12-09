@@ -80,8 +80,8 @@ usage: kgtk ifexists [-h] [-i INPUT_FILE] [--filter-on FILTER_FILE]
                      [-o OUTPUT_FILE] [--reject-file REJECT_FILE]
                      [--matched-filter-file MATCHED_FILTER_FILE]
                      [--unmatched-filter-file UNMATCHED_FILTER_FILE]
-                     [--input-keys [INPUT_KEYS [INPUT_KEYS ...]]]
-                     [--filter-keys [FILTER_KEYS [FILTER_KEYS ...]]]
+                     [--input-keys [INPUT_KEYS ...]]
+                     [--filter-keys [FILTER_KEYS ...]]
                      [--cache-input [True|False]]
                      [--preserve-order [True|False]]
                      [--presorted [True|False]] [-v [optional True|False]]
@@ -111,10 +111,10 @@ optional arguments:
   --unmatched-filter-file UNMATCHED_FILTER_FILE
                         The KGTK file for filter records that did not match
                         any input records. (Optional, use '-' for stdout.)
-  --input-keys [INPUT_KEYS [INPUT_KEYS ...]], --left-keys [INPUT_KEYS [INPUT_KEYS ...]]
+  --input-keys [INPUT_KEYS ...], --left-keys [INPUT_KEYS ...]
                         The key columns in the file being filtered
                         (default=None).
-  --filter-keys [FILTER_KEYS [FILTER_KEYS ...]], --right-keys [FILTER_KEYS [FILTER_KEYS ...]]
+  --filter-keys [FILTER_KEYS ...], --right-keys [FILTER_KEYS ...]
                         The key columns in the filter-on file (default=None).
   --cache-input [True|False]
                         Cache the input file instead of the filter keys

@@ -17,7 +17,8 @@ RUN apt-get install --reinstall build-essential -y
 
 RUN git clone https://github.com/usc-isi-i2/kgtk/
 
-RUN cd /kgtk && python setup.py install
+RUN #cd /kgtk && python setup.py install
+RUN cd /kgtk && pip install -e .
 
 RUN conda update -n base -c defaults conda
 

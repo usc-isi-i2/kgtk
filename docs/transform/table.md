@@ -56,13 +56,65 @@ optional arguments:
 Use this command to filter the standard output of any KGTK command to an text table:
 
 ```bash
-kgtk xxxxx / table
+kgtk cat -i examples/docs/sample-example1.tsv / table
 ```
+
+~~~
+| node1       | label        | node2       | id |
+| ----------- | ------------ | ----------- | -- |
+| red         | property     | True        |    |
+| red         | isa          | rgbcolor    |    |
+| red         | maxoccurs    | 1           |    |
+| green       | property     | True        |    |
+| green       | isa          | rgbcolor    |    |
+| green       | maxoccurs    | 1           |    |
+| blue        | property     | True        |    |
+| blue        | isa          | rgbcolor    |    |
+| blue        | maxoccurs    | 1           |    |
+| rgbcolor    | datatype     | True        |    |
+| rgbcolor    | node1_type   | symbol      |    |
+| rgbcolor    | node2_type   | number      |    |
+| rgbcolor    | minval       | 0.0         |    |
+| rgbcolor    | maxval       | 1.0         |    |
+| rgbcolor    | requires     | red         |    |
+| rgbcolor    | requires     | green       |    |
+| rgbcolor    | requires     | blue        |    |
+| rgbcolor    | isa          | colorclass  |    |
+| rgbcolor    | prohibits    | colorname   |    |
+| colorname   | property     | True        |    |
+| colorname   | isa          | colorclass  |    |
+| colorname   | node1_type   | symbol      |    |
+| colorname   | node2_type   | symbol      |    |
+| colorname   | node2_values | red         |    |
+| colorname   | node2_values | green       |    |
+| colorname   | node2_values | blue        |    |
+| colorname   | node2_values | yellow      |    |
+| colorclass  | mustoccur    | True        |    |
+| cube        | property     | True        |    |
+| cube        | isa          | boxshape    |    |
+| cone        | property     | True        |    |
+| cone        | isa          | pointyshape |    |
+| cone        | isa          | roundshape  |    |
+| sphere      | property     | True        |    |
+| sphere      | isa          | roundshape  |    |
+| pyramid     | property     | True        |    |
+| pyramid     | isa          | pointyshape |    |
+| cylinder    | property     | True        |    |
+| cylinder    | isa          | roundshape  |    |
+| boxshape    | datatype     | True        |    |
+| boxshape    | isa          | shape       |    |
+| pointyshape | datatype     | True        |    |
+| pointyshape | isa          | shape       |    |
+| roundshape  | datatype     | True        |    |
+| roundshape  | isa          | shape       |    |
+| shape       | datatype     | True        |    |
+| shape       | mustoccur    | True        |    |
+~~~
 
 ### Convert a KGTK file to an TABLE Table in a File
 
 Use this command to convert a KGTK file to an text table in a file:
 
 ```bash
-kgtk table -i xxx.kgtk -o xxx.table
+kgtk table -i examples/docs/sample-example1.tsv -o sample-example1.table
 ```

@@ -183,8 +183,8 @@ See [`kgtk add-id`](../add_id] for additional details.
 usage: kgtk implode [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                     [--reject-file REJECT_FILE] [--column COLUMN_NAME]
                     [--prefix PREFIX]
-                    [--types [{empty,list,number,quantity,string,language_qualified_string,location_coordinates,date_and_times,extension,boolean,symbol} [{empty,list,number,quantity,string,language_qualified_string,location_coordinates,date_and_times,extension,boolean,symbol} ...]]]
-                    [--without [{language_suffix,low_tolerance,high_tolerance,si_units,units_node,precision} [{language_suffix,low_tolerance,high_tolerance,si_units,units_node,precision} ...]]]
+                    [--types [{empty,list,number,quantity,string,language_qualified_string,location_coordinates,date_and_times,extension,boolean,symbol} ...]]
+                    [--without [{language_suffix,low_tolerance,high_tolerance,si_units,units_node,precision} ...]]
                     [--overwrite [True/False]] [--validate [True/False]]
                     [--escape-pipes [True/False]]
                     [--quantities-include-numbers [True/False]]
@@ -224,13 +224,13 @@ optional arguments:
   --column COLUMN_NAME  The name of the column to explode. (default=node2).
   --prefix PREFIX       The prefix for exploded column names.
                         (default=node2;kgtk:).
-  --types [{empty,list,number,quantity,string,language_qualified_string,location_coordinates,date_and_times,extension,boolean,symbol} [{empty,list,number,quantity,string,language_qualified_string,location_coordinates,date_and_times,extension,boolean,symbol} ...]]
+  --types [{empty,list,number,quantity,string,language_qualified_string,location_coordinates,date_and_times,extension,boolean,symbol} ...]
                         The KGTK data types for which fields should be
                         imploded. (default=['empty', 'list', 'number',
                         'quantity', 'string', 'language_qualified_string',
                         'location_coordinates', 'date_and_times', 'extension',
                         'boolean', 'symbol']).
-  --without [{language_suffix,low_tolerance,high_tolerance,si_units,units_node,precision} [{language_suffix,low_tolerance,high_tolerance,si_units,units_node,precision} ...]]
+  --without [{language_suffix,low_tolerance,high_tolerance,si_units,units_node,precision} ...]
                         The KGTK fields to do without. (default=None).
   --overwrite [True/False]
                         Indicate that it is OK to overwrite an existing

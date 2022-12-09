@@ -4,48 +4,65 @@ The triple generator reads a tab-separated kgtk file from standard input, by def
 
 ## Usage
 ```
-usage: kgtk generate-wikidata-triples [-h] [-lp LABELS] [-ap ALIASES] [-dp DESCRIPTIONS]
-                                      [-pf PROP_FILE] [-pd PROP_DECLARATION] [-n N]
-                                      [-gt TRUTHY] [-w WARNING] [-gz USE_GZ] [-sid USE_ID]
-                                      [-log LOG_PATH] [-prefix PREFIX_PATH]
+usage: kgtk generate-wikidata-triples [-h] [-lp LABELS] [-ap ALIASES]
+                                      [-dp DESCRIPTIONS] [-pf PROPERTY_FILE]
+                                      [-pd [True|False]] [-n N]
+                                      [-gt [True|False]] [-w [True|False]]
+                                      [-sid [True|False]] [-log LOG_PATH]
+                                      [-prefix PREFIX_PATH]
+                                      [--error-action ERROR_ACTION]
+                                      [-i INPUT_FILE] [-o OUTPUT_FILE]
 
 Generating Wikidata triples.
 
 optional arguments:
   -h, --help            show this help message and exit
   -lp LABELS, --label-property LABELS
-                        property identifiers which will create labels, separated by
-                        comma','.
+                        property identifiers which will create labels,
+                        separated by comma','.
   -ap ALIASES, --alias-property ALIASES
-                        alias identifiers which will create labels, separated by comma','.
+                        alias identifiers which will create labels, separated
+                        by comma','.
   -dp DESCRIPTIONS, --description-property DESCRIPTIONS
-                        description identifiers which will create labels, separated by
-                        comma','.
-  -pf PROP_FILE, --property-file PROP_FILE
-                        path to the file which contains the property datatype mapping in
-                        kgtk format.
-  -pd PROP_DECLARATION, --property-declaration-in-file PROP_DECLARATION
-                        wehther read properties in the kgtk file. If set to yes, use `cat
-                        input.tsv input.tsv` to pipe the input file twice
+                        description identifiers which will create labels,
+                        separated by comma','.
+  -pf PROPERTY_FILE, --property-file PROPERTY_FILE
+                        path to the file which contains the property datatype
+                        mapping in kgtk format.
+  -pd [True|False], --property-declaration-in-file [True|False]
+                        whether read properties in the kgtk file. If set to
+                        yes, use `cat input.tsv input.tsv` to pipe the input
+                        file twice
   -n N, --output-n-lines N
-                        output triples approximately every {n} lines of reading stdin.
-  -gt TRUTHY, --generate-truthy TRUTHY
-                        the default is to not generate truthy triples. Specify this option
-                        to generate truthy triples.
-  -w WARNING, --warning WARNING
-                        if set to yes, warn various kinds of exceptions and mistakes and log
-                        them to a log file with line number in input file, rather than
-                        stopping. logging
-  -gz USE_GZ, --use-gz USE_GZ
-                        if set to yes, read from compressed gz file
-  -sid USE_ID, --use-id USE_ID
-                        if set to yes, the id in the edge will be used as statement id when
-                        creating statement or truthy statement
+                        output triples approximately every {n} lines of
+                        reading stdin.
+  -gt [True|False], --generate-truthy [True|False]
+                        the default is to not generate truthy triples. Specify
+                        this option to generate truthy triples.
+  -w [True|False], --warning [True|False]
+                        if specified, warn various kinds of exceptions and
+                        mistakes and log them to a log file with line number
+                        in input file, rather than stopping. logging
+  -sid [True|False], --use-id [True|False]
+                        if set to yes, the id in the edge will be used as
+                        statement id when creating statement or truthy
+                        statement
   -log LOG_PATH, --log-path LOG_PATH
                         set the path of the log file
   -prefix PREFIX_PATH, --prefix-path PREFIX_PATH
-                        set the path of the prefix kgtk file that provides customized uri
-                        prefix binding
+                        set the path of the prefix kgtk file that provides
+                        customized uri prefix binding
+  --error-action ERROR_ACTION
+                        Defines the command behavior in case there are errors
+                        in execution, [log|raise]. 'log': log the errors to a
+                        log file and continue, 'raise': raise exception and
+                        quit. Default: 'log'
+  -i INPUT_FILE, --input-file INPUT_FILE
+                        The KGTK input file. (May be omitted or '-' for
+                        stdin.)
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        Output triples file path. (May be omitted or '-' for
+                        stdout.)
 ```
 
 

@@ -32,3 +32,9 @@ coverage:
 
 download-spacy-model:
 	python3 -m spacy download en_core_web_sm
+
+update-documents:
+	for name in docs/*/*.md; do \
+		echo python kgtk/utils/update_documentation.py --md $${name} --summary; \
+		python kgtk/utils/update_documentation.py --md $${name} --summary; \
+	done
