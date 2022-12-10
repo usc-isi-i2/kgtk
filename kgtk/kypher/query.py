@@ -271,6 +271,9 @@ class KgtkQuery(object):
         if m is not None and m.start() > 0:
             base_handle = handle[0:m.start()]
         mapped_files = hmap.values()
+        # don't do this: it would allow the default graph to be remapped to an explicit
+        # handle, but that would change the handle semantics for existing queries:
+        # mapped_files = [f for h, f in hmap.items() if h != f or h != self.default_graph]
         for file in files:
             if file not in mapped_files:
                 key = file
@@ -281,6 +284,13 @@ class KgtkQuery(object):
                 if key.find(handle) >= 0 or key.find(base_handle) >= 0:
                     hmap[handle] = file
                     return file
+        # also don't do this which is the converse of the above: it would allow an implicit
+        # graph handle to be remapped to a file that was already explicitly mapped before
+        # (we clarified implicit mapping of the default graph in the documentation):
+        # if handle == self.default_graph:
+        #     file = self.default_graph
+        #     hmap[handle] = file
+        #     return file
         raise Exception("failed to uniquely map handle '%s' onto one of %s" % (handle, files))
 
     def get_parameter_value(self, name):
