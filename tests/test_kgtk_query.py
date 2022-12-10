@@ -298,7 +298,7 @@ class TestKGTKQuery(unittest.TestCase):
         self.assertTrue('Molly' in node2_1s)
         self.assertTrue('Susi' in node2_1s)
 
-    def test_kgtk_query__named_multi_graph_join(self):
+    def test_kgtk_query_named_multi_graph_join(self):
         cli_entry("kgtk", "query", "-i", self.file_path,
                   "-i", self.works_path,
                   "-o", f'{self.temp_dir}/out.tsv', "--match",
@@ -1444,3 +1444,134 @@ class TestKGTKQuery(unittest.TestCase):
         inputs = ' '.join([self.file_path, self.works_path])
         qdf = self.run_test_query(query, input=inputs)
         self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_exists_explicit_people_who_are_loved(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match '(x)-[:name]->(n)'
+                        --where 'EXISTS {{()-[:loves]->(x)}}'
+                        --return 'x as node1, n as name'
+                """
+        result = ['''node1\tname''',
+                  '''Joe\t"Joe"''',
+                  '''Molly\t"Molly"''',
+                  '''Susi\t"Susi"''']
+        inputs = ' '.join([self.file_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+        
+    def test_kgtk_query_exists_explicit_people_who_are_loved_and_rich(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match '(x)-[:name]->(n)'
+                        --where 'EXISTS {{()-[:loves]->(x), w: (x {{salary: s}})-[:works]->()
+                                         WHERE cast(s, int) >= 10000}}'
+                        --return 'x as node1, n as name'
+                """
+        result = ['''node1\tname''',
+                  '''Joe\t"Joe"''',
+                  '''Molly\t"Molly"''']
+        inputs = ' '.join([self.file_path, self.works_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_exists_function_people_who_are_loved(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match '(x)-[:name]->(n)'
+                        --where 'EXISTS(()-[:loves]->(x))'
+                        --return 'x as node1, n as name'
+                """
+        result = ['''node1\tname''',
+                  '''Joe\t"Joe"''',
+                  '''Molly\t"Molly"''',
+                  '''Susi\t"Susi"''']
+        inputs = ' '.join([self.file_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+        
+    def test_kgtk_query_exists_implicit_people_who_are_loved(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match '(x)-[:name]->(n)'
+                        --where '()-[:loves]->(x)'
+                        --return 'x as node1, n as name'
+                """
+        result = ['''node1\tname''',
+                  '''Joe\t"Joe"''',
+                  '''Molly\t"Molly"''',
+                  '''Susi\t"Susi"''']
+        inputs = ' '.join([self.file_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+        
+    def test_kgtk_query_exists_implicit_in_return(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match '(x)-[:name]->(n)'
+                        --return 'x as node1, n as name, ()-[:loves]->(x) or ()-[:friend]->(x) as happy'
+                """
+        result = ["""node1\tname\thappy""",
+                  """Hans\t'Hans'@de\t0""",
+                  """Otto\t'Otto'@de\t1""",
+                  """Joe\t"Joe"\t1""",
+                  """Molly\t"Molly"\t1""",
+                  """Susi\t"Susi"\t1"""]
+        inputs = ' '.join([self.file_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+        
+    def test_kgtk_query_exists_implicit_pattern_chain(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match '(x)-[:name]->(n)'
+                        --where '()-[:loves]->(x)-[:friend]->()'
+                        --return 'x as node1, n as name'
+                """
+        result = ['''node1\tname''',
+                  '''Joe\t"Joe"''']
+        inputs = ' '.join([self.file_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+        
+    def test_kgtk_query_exists_implicit_pattern_chain_new_variable_error(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match '(x)-[:name]->(n)'
+                        --where '()-[:loves]->(x)-[:friend]->(f)'
+                        --return 'x as node1, n as name'
+                """
+        inputs = ' '.join([self.file_path])
+        self.assertRaises(Exception, self.run_test_query, query, inputs)
+        
+    def test_kgtk_query_exists_explicit_nested(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match '(x)-[:name]->(n)'
+                        --where 'EXISTS {{()-[:loves]->(x), \
+                                         w: (x)-[wr:works]->() \
+                                         WHERE NOT EXISTS {{q: (wr)-[:ends]->(e) \
+                                                           WHERE e < "^2000"}}}}' \
+                        --return 'x as node1, n as name'
+                """
+        result = ['''node1\tname''',
+                  '''Joe\t"Joe"''',
+                  '''Molly\t"Molly"''',
+                  '''Susi\t"Susi"''']
+        inputs = ' '.join([self.file_path, self.works_path, self.quals_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+        
+    def test_kgtk_query_implicit_default_graph_already_used_1(self):
+        """Fail because the default graph is already mapped to 'g' and thus can't be used implicitly later.
+        """
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match 'g: (x)-[:name]->(n)'
+                        --where 'exists(()-[:loves]->(x))'
+                        --return 'x as node1, n as name'
+                """
+        inputs = ' '.join([self.file_path])
+        self.assertRaises(Exception, self.run_test_query, query, inputs)
+
+    def test_kgtk_query_implicit_default_graph_already_used_2(self):
+        """Fail because the default graph is already mapped implicitly and thus can't be mapped to 'g' later.
+        """
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match '(x)-[:name]->(n)'
+                        --where 'exists(g: ()-[:loves]->(x))'
+                        --return 'x as node1, n as name'
+                """
+        inputs = ' '.join([self.file_path])
+        self.assertRaises(Exception, self.run_test_query, query, inputs)
