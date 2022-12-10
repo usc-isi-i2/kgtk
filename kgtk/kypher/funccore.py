@@ -248,7 +248,7 @@ class Likelihood(BuiltinFunction):
             prob = expr.args[1].value
             return f'{self.get_name()}({arg}, {prob})'
         else:
-            raise Exception("Illegal LIKELIHOOD expression")
+            raise KGTKException("Illegal LIKELIHOOD expression")
 
 Likelihood(name='likelihood').define()
 

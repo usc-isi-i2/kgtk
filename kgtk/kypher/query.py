@@ -13,6 +13,7 @@ import copy
 import sh
 from   odictliteral import odict
 
+from   kgtk.exceptions import KGTKException
 import kgtk.kypher.parser as parser
 import kgtk.kypher.sqlstore as ss
 from   kgtk.kypher.utils import *
@@ -87,7 +88,7 @@ def dwim_to_lqstring_para(x):
             text = text[1:-1]
         text = re.sub(r"(?P<char>['\|])", r'\\\g<char>', text)
         return "'%s'@%s" % (text, lang)
-    raise Exception("cannot coerce '%s' into a language-qualified string" % x)
+    raise KGTKException("cannot coerce '%s' into a language-qualified string" % x)
 
 
 ### Query translation:
@@ -209,7 +210,7 @@ class KgtkQuery(object):
         self.skip_clause = self.query.get_skip_clause()
         self.limit_clause = self.query.get_limit_clause()
         if multi is not None and multi < 1:
-            raise Exception(f'Illegal multi-edge value: {multi}')
+            raise KGTKException(f'Illegal multi-edge value: {multi}')
         self.multi_edge = multi
         self.dont_optimize = dont_optimize
         
@@ -291,7 +292,7 @@ class KgtkQuery(object):
         #     file = self.default_graph
         #     hmap[handle] = file
         #     return file
-        raise Exception("failed to uniquely map handle '%s' onto one of %s" % (handle, files))
+        raise KGTKException("failed to uniquely map handle '%s' onto one of %s" % (handle, files))
 
     def get_parameter_value(self, name):
         value = self.parameters.get(name)
@@ -302,7 +303,7 @@ class KgtkQuery(object):
                 value = (name,)
                 self.parameters[name] = value
             else:
-                raise Exception("undefined query parameter: '%s'" % name)
+                raise KGTKException("undefined query parameter: '%s'" % name)
         return value
 
     def get_pattern_clause_graph(self, clause):
@@ -481,7 +482,7 @@ class KgtkQuery(object):
                     sql = sql[:-1] + ';' + prop + '"'
             else:
                 return graph, column, sql
-        raise Exception("Unhandled property lookup expression: " + str(expr))
+        raise KGTKException("Unhandled property lookup expression: " + str(expr))
 
     def function_call_to_sql(self, expr, state):
         function = expr.function
@@ -494,7 +495,7 @@ class KgtkQuery(object):
             return sqlfn.translate_call_to_sql(self, expr, state)
         elif function.upper() == 'EXISTS':
             # illegal arguments duped the grammar to translate this into an actual function call:
-            raise Exception("Illegal 'EXISTS' function call")
+            raise KGTKException("Illegal 'EXISTS' function call")
         # otherwise, assume it is some non-special SQL built-in function,
         # if it isn't, the database will complain later during execution:
         args = [self.expression_to_sql(arg, state) for arg in expr.args]
@@ -516,7 +517,7 @@ class KgtkQuery(object):
 
             explicit = isinstance(match_clause, parser.ExplicitExistsExpression)
             if len(match_clause.pattern) > 1 and not explicit:
-                raise Exception("Need explicit 'EXISTS' subquery for comma-chained patterns")
+                raise KGTKException("Need explicit 'EXISTS' subquery for comma-chained patterns")
 
             # register clause top-level info such as variables and restrictions:
             for clause in match_clause.get_pattern_clauses():
@@ -529,7 +530,7 @@ class KgtkQuery(object):
             nvars -= len([x for x in state.variable_map if not self.query.is_anonymous_variable(x)])
             if nvars != 0 and not explicit:
                 # in unmarked patterns and the EXISTS function, we are only allowed to reference existing vars:
-                raise Exception("Need explicit 'EXISTS' subquery to introduce new pattern variables")
+                raise KGTKException("Need explicit 'EXISTS' subquery to introduce new pattern variables")
 
             sources, joined, int_condition, ext_condition = self.match_clause_to_sql(match_clause, state)
             aux_tables = list(state.get_match_clause_aux_tables(match_clause))
@@ -572,7 +573,7 @@ class KgtkQuery(object):
             op = self.OPERATOR_TABLE[expr_type]
             return '(%s %s %s)' % (arg1, op, arg2)
         elif expr_type == parser.Hat:
-            raise Exception("Unsupported operator: '^'")
+            raise KGTKException("Unsupported operator: '^'")
         
         elif expr_type in (parser.Eq, parser.Neq, parser.Lt, parser.Gt, parser.Lte, parser.Gte):
             arg1 = self.expression_to_sql(expr.arg1, state)
@@ -588,10 +589,10 @@ class KgtkQuery(object):
             op = self.OPERATOR_TABLE[expr_type]
             return '(%s %s %s)' % (arg1, op, arg2)
         elif expr_type == parser.Xor:
-            raise Exception("Unsupported operator: 'XOR'")
+            raise KGTKException("Unsupported operator: 'XOR'")
         elif expr_type == parser.Case:
             # TO DO: implement, has the same syntax as SQL:
-            raise Exception("Unsupported operator: 'CASE'")
+            raise KGTKException("Unsupported operator: 'CASE'")
         
         elif expr_type == parser.Call:
             return self.function_call_to_sql(expr, state)
@@ -606,7 +607,7 @@ class KgtkQuery(object):
             if op in ('IS_NULL', 'IS_NOT_NULL'):
                 return '(%s %s)' % (arg1, op.replace('_', ' '))
             if expr.arg2 is None:
-                raise Exception('Unhandled operator: %s' % str(op))
+                raise KGTKException('Unhandled operator: %s' % str(op))
             arg2 = self.expression_to_sql(expr.arg2, state)
             if op in ('IN'):
                 return '(%s %s %s)' % (arg1, op, arg2)
@@ -615,14 +616,14 @@ class KgtkQuery(object):
                 sqlfn.load()
                 return f'{sqlfn.get_name()}({arg1}, {arg2})'
             else:
-                raise Exception('Unhandled operator: %s' % str(op))
+                raise KGTKException('Unhandled operator: %s' % str(op))
 
         elif issubclass(expr_type, parser.ExistsExpression):
             # both implicit and explicit EXISTS expressions are translated into subqueries:
             return self.exists_subquery_to_sql(expr, state)
 
         else:
-            raise Exception('Unhandled expression type: %s' % str(parser.object_to_tree(expr)))
+            raise KGTKException('Unhandled expression type: %s' % str(parser.object_to_tree(expr)))
 
     def where_clause_to_sql(self, where_clause, state):
         if where_clause is None:
@@ -854,7 +855,7 @@ class KgtkQuery(object):
             return ""
         select = self.return_clause_to_sql_selection(with_clause, state)
         if select != ('*', None):
-            raise Exception("unsupported WITH clause, only 'WITH * ...' is currently supported")
+            raise KGTKException("unsupported WITH clause, only 'WITH * ...' is currently supported")
         where = self.where_clause_to_sql(with_clause.where, state)
         return where
     
@@ -890,7 +891,7 @@ class KgtkQuery(object):
         sources, joined, int_condition, ext_condition = self.match_clause_to_sql(self.match_clause, state)
         aux_tables = list(state.get_match_clause_aux_tables(self.match_clause))
         if len(sources) > 1 and not self.force:
-            raise Exception('match clause generates a cross-product which can be very expensive, use --force to override')
+            raise KGTKException('match clause generates a cross-product which can be very expensive, use --force to override')
         assert not ext_condition, 'INTERNAL ERROR: unexpected match clause'
 
         where = []
@@ -909,7 +910,7 @@ class KgtkQuery(object):
             sources, joined, int_condition, ext_condition = self.match_clause_to_sql(opt_clause, state)
             aux_tables = list(state.get_match_clause_aux_tables(opt_clause))
             if len(sources) > 1 and not self.force:
-                raise Exception('optional clause generates a cross-product which can be very expensive, use --force to override')
+                raise KGTKException('optional clause generates a cross-product which can be very expensive, use --force to override')
             # FIXME: nested optionals are broken, for one, the aliases becomes shielded and inaccessible in the ext_condition:
             nested = len(joined) > 0
             query.write(f'\nLEFT JOIN {"(" if nested else ""}{self.graph_names_to_sql_join(sources + aux_tables)}')
@@ -1119,8 +1120,8 @@ class KgtkQuery(object):
         if self.multi_edge and self.multi_edge > 1:
             ncols = len(self.result_header)
             if ncols % self.multi_edge != 0:
-                raise Exception(f'illegal multi-edge value: {ncols} result columns' +
-                                f' cannot be evenly split into {self.multi_edge} separate rows')
+                raise KGTKException(f'illegal multi-edge value: {ncols} result columns' +
+                                    f' cannot be evenly split into {self.multi_edge} separate rows')
             ncols = ncols // self.multi_edge
             self.result_header = self.result_header[:ncols]
             flatres = itertools.chain.from_iterable(result)
@@ -1180,12 +1181,12 @@ class TranslationState(object):
         if self.variable_map is None:
             if error:
                 # for cases where external variables are not allowed (e.g. LIMIT):
-                raise Exception('Illegal context for variable: %s' % variable)
+                raise KGTKException('Illegal context for variable: %s' % variable)
             else:
                 return None
         sql_vars = self.variable_map.get(variable)
         if sql_vars is None and error:
-            raise Exception('Undefined variable: %s' % variable)
+            raise KGTKException('Undefined variable: %s' % variable)
         return sql_vars
 
     def register_table_alias(self, table, alias):
@@ -1197,9 +1198,9 @@ class TranslationState(object):
             self.alias_map[alias] = table
             self.alias_map.setdefault(table, []).append(alias)
         elif isinstance(current, list):
-            raise Exception(f'Alias {alias} already used as table name')
+            raise KGTKException(f'Alias {alias} already used as table name')
         elif current != table:
-            raise Exception(f'Alias {alias} already in use for {current}')
+            raise KGTKException(f'Alias {alias} already in use for {current}')
 
     def get_alias_table(self, alias, error=True):
         """Return the table for which 'alias' has been registered as an alias.
@@ -1207,7 +1208,7 @@ class TranslationState(object):
         """
         table = self.alias_map.get(alias)
         if table is None and error:
-            raise Exception(f'Alias {alias} is not defined')
+            raise KGTKException(f'Alias {alias} is not defined')
         return table
 
     def get_table_aliases(self, table, create_prefix=None):
@@ -1224,9 +1225,9 @@ class TranslationState(object):
                 if self.alias_map.get(alias) is None:
                     self.register_table_alias(table, alias)
                     return self.alias_map[table]
-            raise Exception('Internal error: alias map exhausted')
+            raise KGTKException('Internal error: alias map exhausted')
         else:
-            raise Exception(f'No aliases defined for {table}')
+            raise KGTKException(f'No aliases defined for {table}')
 
     def get_vtable_map(self):
         return self.vtable_map
@@ -1453,11 +1454,11 @@ def translate_text_match_op_to_sql(query, expr, state):
     
     normfun = normalize_text_match_operator(expr.function)
     if not normfun:
-        raise Exception(f"Unsupported text match function: {expr.function}")
+        raise KGTKException(f"Unsupported text match function: {expr.function}")
     arguments = expr.args
     arity = len(arguments)
     if arity < 1:
-        raise Exception(f"Missing arguments in {expr.function} expression")
+        raise KGTKException(f"Missing arguments in {expr.function} expression")
 
     # handle first argument which can be a variable or property expression (possibly starting with an index name):
     # ('Variable', {'name': 'l'})
@@ -1486,7 +1487,7 @@ def translate_text_match_op_to_sql(query, expr, state):
     elif isinstance(arg1, parser.Expression2) and isinstance(arg1.arg1, parser.Variable):
         graph_alias, column_name, sql = query.property_to_sql(arg1, state)
     else:
-        raise Exception(f"First argument to {expr.function} needs to be variable or property")
+        raise KGTKException(f"First argument to {expr.function} needs to be variable or property")
 
     # find applicable indexes:
     graph = state.get_alias_table(graph_alias)
@@ -1499,9 +1500,9 @@ def translate_text_match_op_to_sql(query, expr, state):
     indexes = find_matching_text_indexes(query, graph, index_name, column)
     if len(indexes) == 0:
         # for now, until we support mode:autotext:
-        raise Exception(f"No usable text index found for {expr.function}")
+        raise KGTKException(f"No usable text index found for {expr.function}")
     elif len(indexes) > 1:
-        raise Exception(f"Multiple applicable text indexes found for {expr.function}")
+        raise KGTKException(f"Multiple applicable text indexes found for {expr.function}")
 
     # generate the SQL translation:
     index = indexes[0]
@@ -1517,7 +1518,7 @@ def translate_text_match_op_to_sql(query, expr, state):
 
     if normfun in ('match', 'like', 'glob'):
         if arity != 2:
-            raise Exception(f"Extraneous {expr.function} arguments")
+            raise KGTKException(f"Extraneous {expr.function} arguments")
         operator = normfun.upper()
         arg2 = query.expression_to_sql(arguments[1], state)
         return f'{index_alias}.{index_column} {operator} {arg2} and {index_alias}.rowid = {graph_alias}.rowid'

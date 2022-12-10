@@ -10,6 +10,8 @@ import pprint
 import re
 import parsley
 import ometa.grammar
+
+from   kgtk.exceptions import KGTKException
 from   kgtk.kypher.grammar import KYPHER_GRAMMAR
 
 pp = pprint.PrettyPrinter(indent=4)
@@ -482,7 +484,7 @@ class RelationshipPattern(QueryElement):
         self.right_arrow = right_arrow
         # a bidirectional arrow is legal in the grammar but not legal Cypher;
         if left_arrow and right_arrow:
-            raise Exception('Illegal bidirectional arrow: %s' % str(self.simplify().to_tree()))
+            raise KGTKException('Illegal bidirectional arrow: %s' % str(self.simplify().to_tree()))
 
     def simplify(self):
         self.detail = simplify_object(self.detail)
@@ -876,14 +878,14 @@ def intern_ast(query, ast):
             klass = AST_NAME_TABLE.get(ast[0])
             if klass is not None:
                 return klass(query, *ast[1:])
-    raise Exception('Unhandled expression type: %s' % ast)
+    raise KGTKException('Unhandled expression type: %s' % ast)
 
 def intern_ast_list(query, ast_list):
     if ast_list is None:
         return None
     elif isinstance(ast_list, list):
         return [intern_ast(query, ast) for ast in ast_list]
-    raise Exception('Unhandled list type: %s' % ast_list)
+    raise KGTKException('Unhandled list type: %s' % ast_list)
 
 
 ### Kypher query:
