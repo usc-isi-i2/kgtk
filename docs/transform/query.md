@@ -1,4 +1,4 @@
-Query a KGTK file with the Kypher query language
+Query one or more KGTK files with the Kypher query language
 (a variant of [Cypher](https://neo4j.com/developer/cypher/))
 and return the results according to a return specification.  This
 command is very flexible and can be used to perform a large number of
@@ -1048,6 +1048,12 @@ that the case of keywords such as `EXISTS` or `WHERE` is insignificant):
 * Exists function: `EXISTS(<pattern>)`
 * Implicit exists: `<pattern>`
 
+The `<pattern>` in the above expressions can be graph-qualified if
+necessary (see [**Input naming**](#input-naming)).  Just as with
+strict and optional match clauses, however, each exists condition
+expression starts from scratch and does not inherit the last active
+graph from any prior or enclosing expressions.
+
 Explicit exists conditions are the most general and powerful.  They
 specify a bona fide *subquery* that returns true as soon as one
 solution to it was generated.  Explicit exists conditions can
@@ -1849,16 +1855,22 @@ simple greedy match process:
     * it has a numeric suffix (e.g., `g42`) and its non-numeric prefix
       is contained as a substring in the base name of the input file
 4. if no match can be found for a particular handle, an error will be raised
-5. once a handle is matched its matching input is removed from the pool of
+5. once a handle is matched, its matching input is removed from the pool of
    available inputs and the next handle (if any) is matched against the
    remaining ones
+6. if the first pattern clause does not have a graph handle, its handle
+   implicitly becomes the default graph, which gets matched to the first
+   input file (this also consumes that input and makes it unavailable
+   for any explicit handle matching, which means that in any other
+   optional match clauses or exists conditions, this graph can only be
+   accessed implicitly!)
 
-Finally, if the first match clause does not have a graph handle, its
-handle implicitly becomes the default graph which gets matched to the
-first input file.  Clauses that are not directly preceded by a graph
-handle inherit theirs from the previous clause, so only changes from
-one graph to another need to be explicitly marked in the match
-pattern.
+Pattern clauses that are not directly preceded by a graph handle
+inherit theirs from the previous clause, so only changes from one
+graph to another need to be explicitly marked in a match pattern.
+However, this inheritance is only within the scope of a single match
+pattern.  Other match patterns, for example in `--opt` clauses or
+exists conditions, are processed independently.
 
 If one of the inputs is standard input, its internally associated file
 name is (or ends with) `/dev/stdin` which can be used to refer to it
