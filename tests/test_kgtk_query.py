@@ -1637,7 +1637,7 @@ class TestKGTKQuery(unittest.TestCase):
 
     def test_kgtk_query_kypherv_basic_similarity(self):
         # Kypher-V manual example:
-        query = """kgtk query -o {OUTPUT} --graph-cache {DB}
+        query = """kgtk --debug --expert query -o {OUTPUT} --graph-cache {DB}
                         -i {INPUT} --idx vector: mode:valuegraph
                         --match '`embed.tsv`: (x:Q868)-[]->(xv),
                                               (y:Q913)-[]->(yv),
