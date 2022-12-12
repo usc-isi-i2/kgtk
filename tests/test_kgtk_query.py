@@ -22,9 +22,9 @@ class TestKGTKQuery(unittest.TestCase):
         self.works_path = 'data/kypher/works.tsv'
         self.props_path = 'data/kypher/props.tsv'
         self.literals_path = 'data/kypher/literals.tsv'
-        self.embed_path = '../examples/docs/query-embed.tsv.gz'
-        self.embed_labels_path = '../examples/docs/query-embed-labels.tsv.gz'
-        self.embed_claims_path = '../examples/docs/query-embed-claims.tsv.gz'
+        self.embed_path = 'data/kypher/embed.tsv.gz'
+        self.embed_labels_path = 'data/kypher/embed-labels.tsv.gz'
+        self.embed_claims_path = 'data/kypher/embed-claims.tsv.gz'
         self.temp_dir = tempfile.mkdtemp()
         self.sqldb = f'{self.temp_dir}/test.sqlite3.db'
         self.df = pd.read_csv(self.file_path, sep='\t')
