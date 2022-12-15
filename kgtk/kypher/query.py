@@ -37,13 +37,13 @@ from   kgtk.kypher.functions import SqlFunction
 # - header column dealiasing/normalization, checking for required columns
 # - bump graph timestamps when they get queried
 # + allow order-by on column aliases (currently they are undefined variables)
-# - (not) exists pattern handling
+# + (not) exists pattern handling
 # + null-value handling and testing
 # - handle properties that are ambiguous across graphs
 # + graphs fed in from stdin
 # + graph naming independent from files, so we don't have to have source data files
 #   available after import for querying, e.g.: ... -i $FILE1 --as g1 -i $FILE2 --as g2 ...
-# - with named graphs, we probably also need some kind of --info command to list content
+# + with named graphs, we probably also need some kind of --info command to list content
 # + investigate Cyphers multiple distinct match clauses more thoroughly; apparently, a
 #   difference is that in a single pattern, each relationship must match a different edge
 #   which is kind of like UVBR in SNePS, but in multiple match patterns that restriction
@@ -113,10 +113,10 @@ def dwim_to_lqstring_para(x):
 #   - HC: only lists of literals
 # + A function call: length(p), nodes(p).
 # + An aggregate function: avg(x.prop), count(*).
-# - A path-pattern: (a)-->()<--(b).
+# + A path-pattern: (a)-->()<--(b).
 # + An operator application: 1 + 2 and 3 < 4.
 # + A predicate expression is an expression that returns true or false: a.prop = 'Hello', length(p) > 10, exists(a.name).
-# - An existential subquery is an expression that returns true or false: EXISTS { MATCH (n)-[r]→(p) WHERE p.name = 'Sven' }.
+# + An existential subquery is an expression that returns true or false: EXISTS { MATCH (n)-[r]→(p) WHERE p.name = 'Sven' }.
 # + A regular expression: a.name =~ 'Tim.*'
 #   - HC: SQLite supports LIKE and GLOB (which both have different regexp syntax),
 #     and REGEXP and MATCH through user-defined functions (we support =~ via kgtk_regex)
