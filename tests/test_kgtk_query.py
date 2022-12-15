@@ -1432,6 +1432,48 @@ class TestKGTKQuery(unittest.TestCase):
         qdf = self.run_test_query(query, input=inputs)
         self.assert_test_query_result(qdf, result)
 
+    def test_kgtk_query_optional_where_vars_are_local(self):
+        # Test for a bug fix in optional where clause variable translation:
+        # the variable in 'x > "Joe"' needs to be translated relative to
+        # the local match clause as g.x and not w.x, since we use a nested
+        # join based on the optional pattern and restriction to compute
+        # the table that is then left-joined with the table of the strict match:
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match 'w: (x)-[:works]->(c)'
+                        --opt   'g: ()-[:loves]->(x), (x)-[:name]->(n)'
+                        --where 'x > "Joe"'
+                       --return 'x as person, n as name, c as company'
+                """
+        result = ["""person\tname\tcompany""",
+                  """Hans\t\tACME""",
+                  """Otto\t\tKaiser""",
+                  """Joe\t\tKaiser""",
+                  """Molly\t"Molly"\tRenal""",
+                  """Susi\t"Susi"\tCakes"""]
+        inputs = ' '.join([self.file_path, self.works_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_optional_where_vars_are_local_strict_variant(self):
+        # For reference, this moves the where clause into the strict match which
+        # creates a different result, since now it is evaluated for each source edge,
+        # while before the optional simply failed if either the loves edge wasn't
+        # present or the where restriction failed in which case the result was just null:
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match 'w: (x)-[:works]->(c)'
+                        --where 'x > "Joe"'
+                        --opt   'g: ()-[:loves]->(x), (x)-[:name]->(n)'
+                       --return 'x as person, n as name, c as company'
+                """
+        result = ["""person\tname\tcompany""",
+                  """Molly\t"Molly"\tRenal""",
+                  """Otto\t\tKaiser""",
+                  """Susi\t"Susi"\tCakes"""]
+        inputs = ' '.join([self.file_path, self.works_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+        
+
     def test_kgtk_query_special_functions(self):
         # Test functions such as 'concat' and 'likelihood' that require special translation:
         query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
@@ -1637,7 +1679,7 @@ class TestKGTKQuery(unittest.TestCase):
 
     def test_kgtk_query_kypherv_basic_similarity(self):
         # Kypher-V manual example:
-        query = """kgtk --debug --expert query -o {OUTPUT} --graph-cache {DB}
+        query = """kgtk query -o {OUTPUT} --graph-cache {DB}
                         -i {INPUT} --idx vector: mode:valuegraph
                         --match '`embed.tsv`: (x:Q868)-[]->(xv),
                                               (y:Q913)-[]->(yv),
