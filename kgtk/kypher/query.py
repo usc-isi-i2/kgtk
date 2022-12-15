@@ -446,9 +446,26 @@ class KgtkQuery(object):
                 # variable names a return column alias, rename it apart to avoid name conflicts:
                 column = self.alias_column_name(col)
                 return None, column, sql_quote_ident(column)
-        # otherwise, pick the representative from the set of equiv-joined column vars,
-        # which corresponds to the graph alias and column name used by the first reference:
-        graph, column = sql_vars[0]
+                
+        # if we are currently translating a match clause, use a clause-local reference
+        # if possible, to do the right thing for where conditions of optional clauses
+        # (a restriction needs to be evaluated relative to the local optional match pattern
+        # *before* a restricted variable gets joined with a strict match somewhere -
+        # see unit test 'test_kgtk_query_optional_where_vars_are_local()'):
+        graph = None
+        if state.get_match_clause():
+            for vg, vc in sql_vars:
+                for gt, ga in self.get_match_clause_graphs(state.get_match_clause()):
+                    if vg == ga:
+                        graph, column = vg, vc
+                        break
+                if graph is not None:
+                    break
+        if graph is None:
+            # otherwise, pick the representative from the set of equiv-joined column vars,
+            # which corresponds to the graph alias and column name used by the first reference:
+            graph, column = sql_vars[0]
+
         table = state.get_alias_table(graph)
         if self.store.is_vector_column(table, column):
             return graph, column, self.store.vector_column_to_sql(table, column, table_alias=graph)
@@ -541,6 +558,7 @@ class KgtkQuery(object):
             sql += ')'
             return sql
         finally:
+            state.set_match_clause(None)
             state.pop_subquery()
 
     def expression_to_sql(self, expr, state):
@@ -751,6 +769,8 @@ class KgtkQuery(object):
     def get_match_clause_graphs(self, match_clause):
         """Return the set of graph table names with aliases referenced by this 'match_clause'.
         """
+        # IMPORTANT: we cannot currently cache this and need to recompute the list at every call
+        # so we'll pick up virtual graphs once they've been registered by 'pattern_clause_to_sql()':
         graphs = set()
         graphs_list = []
         for clause in match_clause.get_pattern_clauses():
@@ -767,12 +787,10 @@ class KgtkQuery(object):
     def get_all_match_clause_graphs(self):
         """Return the set of graph table names with aliases referenced by this query.
         """
+        # IMPORTANT: do not cache this - see above:
         graphs = set()
         for match_clause in self.get_all_match_clauses():
-            for clause in match_clause.get_pattern_clauses():
-                graph_table = self.get_pattern_clause_graph(clause)
-                graph_alias = self.get_pattern_clause_graph_alias(clause)
-                graphs.add((graph_table, graph_alias))
+            graphs.update(self.get_match_clause_graphs(match_clause))
         return graphs
 
     def graph_names_to_sql_join(self, graphs, dont_optimize=False, append=False):
@@ -841,7 +859,8 @@ class KgtkQuery(object):
             joined = [(graph, clause_sources.index(graph)) for graph in joined]
             joined.sort(key=lambda x: x[1])
             joined = [x[0] for x in joined]
-        
+
+        state.set_match_clause(None)
         return sources, joined, internal_condition, external_condition
 
     def with_clause_to_sql(self, with_clause, state):
@@ -880,6 +899,7 @@ class KgtkQuery(object):
             for clause in match_clause.get_pattern_clauses():
                 graph_alias = self.get_pattern_clause_graph_alias(clause)
                 self.pattern_clause_props_to_sql(clause, graph_alias, state)
+            state.set_match_clause(None)
 
         # assemble SQL query:
         query = io.StringIO()
@@ -911,7 +931,6 @@ class KgtkQuery(object):
             aux_tables = list(state.get_match_clause_aux_tables(opt_clause))
             if len(sources) > 1 and not self.force:
                 raise KGTKException('optional clause generates a cross-product which can be very expensive, use --force to override')
-            # FIXME: nested optionals are broken, for one, the aliases becomes shielded and inaccessible in the ext_condition:
             nested = len(joined) > 0
             query.write(f'\nLEFT JOIN {"(" if nested else ""}{self.graph_names_to_sql_join(sources + aux_tables)}')
             if nested:
@@ -1385,15 +1404,15 @@ class TranslationState(object):
 
     def push_subquery(self):
         """Save the current state so it doesn't get polluted by subquery-local information.
-        We only care about subquery-local variable mappings (so far).
+        We only care about the current match clause and subquery-local variable mappings.
         """
-        self.subquery_stack.append(self.variable_map)
+        self.subquery_stack.append((self.match_clause, self.variable_map))
         self.variable_map = copy.deepcopy(self.variable_map)
 
     def pop_subquery(self):
         """Restore the current state to what it was before we entered a subquery.
         """
-        self.variable_map = self.subquery_stack.pop()
+        self.match_clause, self.variable_map = self.subquery_stack.pop()
 
 
 ### Text match support
