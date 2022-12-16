@@ -2571,8 +2571,9 @@ Result:
 Property syntax is primarily needed to access the values of additional
 columns such as the `node1;salary` and `graph` columns in the examples
 above.  Properties are also a convenient way to supply parameters to
-virtual graphs such as the similarity search operators provided by
-[**Kypher-V**](#kypher-v).
+[**virtual graphs**](#virtual-graph-functions) such as `kgtk_values`
+or the similarity search operators provided by
+[**Kypher-V**](#indexed-similarity-search).
 
 There is one additional situation where they are sometimes needed,
 which is to disambiguate to which edge a property should apply.  For
