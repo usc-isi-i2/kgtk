@@ -1335,7 +1335,12 @@ class SqliteStore(SqlStore):
         
         with open_to_read(file) as inp:
             csvreader = csv.reader(inp, dialect=None, delimiter='\t', quoting=csv.QUOTE_NONE)
-            header = next(csvreader)
+            if self.piped:
+                # header has already been read from stdin, now parse it here:
+                header = io.StringIO(self.piped_header)
+                header = next(csv.reader(header, dialect=None, delimiter='\t', quoting=csv.QUOTE_NONE))
+            else:
+                header = next(csvreader)
             schema = self.kgtk_header_to_graph_table_schema(table, header)
 
             for vcol in vector_columns:
