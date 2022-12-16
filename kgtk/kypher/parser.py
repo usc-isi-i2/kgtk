@@ -7,8 +7,11 @@ import sys
 import os
 import os.path
 import pprint
+import re
 import parsley
 import ometa.grammar
+
+from   kgtk.exceptions import KGTKException
 from   kgtk.kypher.grammar import KYPHER_GRAMMAR
 
 pp = pprint.PrettyPrinter(indent=4)
@@ -137,10 +140,31 @@ def has_element(obj, test):
             if has_element(elt, test):
                 return True
     elif isinstance(obj, dict):
-        for elt in obj.values():
-            if has_element(elt, test):
+        for key, val in obj.items():
+            if key.startswith('_') or val is None:
+                continue
+            if has_element(val, test):
                 return True
     return False
+
+def collect_elements(obj, test, coll=None):
+    """Collect any of the 'QueryElement's in `obj' and/or any of their
+    recursive subelements that satisfy 'test' and return them as a list.
+    """
+    coll = [] if coll is None else coll
+    if isinstance(obj, QueryElement):
+        if test(obj):
+            coll.append(obj)
+        collect_elements(obj.__dict__, test, coll)
+    elif isinstance(obj, list):
+        for elt in obj:
+            collect_elements(elt, test, coll)
+    elif isinstance(obj, dict):
+        for key, val in obj.items():
+            if key.startswith('_') or val is None:
+                continue
+            collect_elements(val, test, coll)
+    return coll
 
 
 ### Object representation for Kypher ASTs (Abstract Syntax Trees)
@@ -445,6 +469,8 @@ class RelationshipPattern(QueryElement):
             # We handle this here with a "change class" to `PatternElement' which is what it should be.
             # TO DO: clean this up, but it will do for now:
             #        make this return a PathPattern to make normalization work similar to MATCH
+            # NOTE:  since we are translating Graph/RelationshipPattern into "ImplicitExistsExpression" now,
+            #        the second 'WHERE case' incongruent signature has been eliminated as a side-effect
             head = args[0]
             tail = args[1] is not None and list(args[1:]) or []
             PatternElement.__init__(self, query, head, tail)
@@ -458,7 +484,7 @@ class RelationshipPattern(QueryElement):
         self.right_arrow = right_arrow
         # a bidirectional arrow is legal in the grammar but not legal Cypher;
         if left_arrow and right_arrow:
-            raise Exception('Illegal bidirectional arrow: %s' % str(self.simplify().to_tree()))
+            raise KGTKException('Illegal bidirectional arrow: %s' % str(self.simplify().to_tree()))
 
     def simplify(self):
         self.detail = simplify_object(self.detail)
@@ -681,6 +707,9 @@ class StrictMatch(QueryElement):
                     current_graph = normpath[0].graph or current_graph
                     normpath[0].graph = current_graph
                     self.pattern_clauses.append(normpath)
+        # add pclause to mclause backpointers for the benefit of the query translator:
+        for pclause in self.pattern_clauses:
+            pclause[0]._match_clause = self
         return self
 
     def get_pattern_clauses(self, default_graph=None):
@@ -692,6 +721,19 @@ class StrictMatch(QueryElement):
 
 class OptionalMatch(StrictMatch):
     ast_name = 'OptionalMatch'
+
+class ExistsExpression(StrictMatch):
+    # these are not top-level clauses but do behave like a strict match
+    pass
+
+class ExplicitExistsExpression(ExistsExpression):
+    ast_name = 'ExplicitExistsExpression'
+
+class ImplicitExistsExpression(ExistsExpression):
+    ast_name = 'ImplicitExistsExpression'
+    
+class ExistsFunction(ExistsExpression):
+    ast_name = 'ExistsFunction'
 
 class Where(QueryElement):
     ast_name = 'Where'
@@ -781,12 +823,14 @@ class Return(QueryElement):
         self.body = intern_ast(query, body)
 
     def simplify(self):
-        body = self.body.simplify()
-        self.items = body.items
-        self.order = body.order
-        self.skip = body.skip
-        self.limit = body.limit
-        delattr(self, 'body')
+        if hasattr(self, 'body'):
+            body = self.body.simplify()
+            self.items = body.items
+            self.order = body.order
+            self.skip = body.skip
+            self.limit = body.limit
+            delattr(self, 'body')
+        simplify_object(self.__dict__)
         return self
 
 class With(Return):
@@ -834,14 +878,14 @@ def intern_ast(query, ast):
             klass = AST_NAME_TABLE.get(ast[0])
             if klass is not None:
                 return klass(query, *ast[1:])
-    raise Exception('Unhandled expression type: %s' % ast)
+    raise KGTKException('Unhandled expression type: %s' % ast)
 
 def intern_ast_list(query, ast_list):
     if ast_list is None:
         return None
     elif isinstance(ast_list, list):
         return [intern_ast(query, ast) for ast in ast_list]
-    raise Exception('Unhandled list type: %s' % ast_list)
+    raise KGTKException('Unhandled list type: %s' % ast_list)
 
 
 ### Kypher query:
@@ -881,6 +925,11 @@ class KypherQuery(object):
         optional_clauses = self.simplify().query.match.optionals
         return optional_clauses
 
+    def get_all_match_clauses(self):
+        """Return all strict, optional and other pattern match clauses of this query.
+        """
+        return collect_elements(self.query, lambda x: isinstance(x, StrictMatch))
+
     def get_with_clause(self):
         assert isinstance(self.query, SingleQuery), 'Only single-match queries are supported, no unions'
         self.simplify()
@@ -907,6 +956,13 @@ class KypherQuery(object):
         ret = self.get_return_clause()
         limit = ret and ret.limit or None
         return limit
+
+    ANONYMOUS_VARIABLE_REGEX = re.compile(r'^_x[0-9][0-9][0-9][0-9]$')
+
+    def is_anonymous_variable(self, name):
+        """Return True if 'name' matches variables created by self.create_anonymous_variable().
+        """
+        return len(name) == 6 and self.ANONYMOUS_VARIABLE_REGEX.match(name)
 
     def create_anonymous_variable(self):
         i = 1

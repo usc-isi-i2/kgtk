@@ -599,7 +599,7 @@ class TopKCosineSimilarity(VirtualGraphFunction, VectorFunction):
         """
         rel = clause[1]
         vrel = rel.variable
-        for mclause in query.get_match_clauses():
+        for mclause in query.get_top_level_match_clauses():
             for pclause in mclause.get_pattern_clauses():
                 prel = pclause[1]
                 # test if we have a join controller clause that matches on the variable:
@@ -796,7 +796,7 @@ class SimilarityJoinController(VirtualGraphFunction):
         """Find a qualifying similarity function linked to this controller via 'vrel'.
         Return None if nothing could be found.
         """
-        for mclause in query.get_match_clauses():
+        for mclause in query.get_top_level_match_clauses():
             for pclause in mclause.get_pattern_clauses():
                 prel = pclause[1]
                 # test variable name match, but ensure that the variable is from a different clause:

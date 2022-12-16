@@ -22,6 +22,9 @@ class TestKGTKQuery(unittest.TestCase):
         self.works_path = 'data/kypher/works.tsv'
         self.props_path = 'data/kypher/props.tsv'
         self.literals_path = 'data/kypher/literals.tsv'
+        self.embed_path = 'data/kypher/embed.tsv.gz'
+        self.embed_labels_path = 'data/kypher/embed-labels.tsv.gz'
+        self.embed_claims_path = 'data/kypher/embed-claims.tsv.gz'
         self.temp_dir = tempfile.mkdtemp()
         self.sqldb = f'{self.temp_dir}/test.sqlite3.db'
         self.df = pd.read_csv(self.file_path, sep='\t')
@@ -298,7 +301,7 @@ class TestKGTKQuery(unittest.TestCase):
         self.assertTrue('Molly' in node2_1s)
         self.assertTrue('Susi' in node2_1s)
 
-    def test_kgtk_query__named_multi_graph_join(self):
+    def test_kgtk_query_named_multi_graph_join(self):
         cli_entry("kgtk", "query", "-i", self.file_path,
                   "-i", self.works_path,
                   "-o", f'{self.temp_dir}/out.tsv', "--match",
@@ -1429,6 +1432,48 @@ class TestKGTKQuery(unittest.TestCase):
         qdf = self.run_test_query(query, input=inputs)
         self.assert_test_query_result(qdf, result)
 
+    def test_kgtk_query_optional_where_vars_are_local(self):
+        # Test for a bug fix in optional where clause variable translation:
+        # the variable in 'x > "Joe"' needs to be translated relative to
+        # the local match clause as g.x and not w.x, since we use a nested
+        # join based on the optional pattern and restriction to compute
+        # the table that is then left-joined with the table of the strict match:
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match 'w: (x)-[:works]->(c)'
+                        --opt   'g: ()-[:loves]->(x), (x)-[:name]->(n)'
+                        --where 'x > "Joe"'
+                       --return 'x as person, n as name, c as company'
+                """
+        result = ["""person\tname\tcompany""",
+                  """Hans\t\tACME""",
+                  """Otto\t\tKaiser""",
+                  """Joe\t\tKaiser""",
+                  """Molly\t"Molly"\tRenal""",
+                  """Susi\t"Susi"\tCakes"""]
+        inputs = ' '.join([self.file_path, self.works_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_optional_where_vars_are_local_strict_variant(self):
+        # For reference, this moves the where clause into the strict match which
+        # creates a different result, since now it is evaluated for each source edge,
+        # while before the optional simply failed if either the loves edge wasn't
+        # present or the where restriction failed in which case the result was just null:
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match 'w: (x)-[:works]->(c)'
+                        --where 'x > "Joe"'
+                        --opt   'g: ()-[:loves]->(x), (x)-[:name]->(n)'
+                       --return 'x as person, n as name, c as company'
+                """
+        result = ["""person\tname\tcompany""",
+                  """Molly\t"Molly"\tRenal""",
+                  """Otto\t\tKaiser""",
+                  """Susi\t"Susi"\tCakes"""]
+        inputs = ' '.join([self.file_path, self.works_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+        
+
     def test_kgtk_query_special_functions(self):
         # Test functions such as 'concat' and 'likelihood' that require special translation:
         query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
@@ -1442,5 +1487,434 @@ class TestKGTKQuery(unittest.TestCase):
                   """ottosusi3kaiser2.5""",
                   """joejoe3kaiser2.5"""]
         inputs = ' '.join([self.file_path, self.works_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_exists_explicit_people_who_are_loved(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match '(x)-[:name]->(n)'
+                        --where 'EXISTS {{()-[:loves]->(x)}}'
+                        --return 'x as node1, n as name'
+                """
+        result = ['''node1\tname''',
+                  '''Joe\t"Joe"''',
+                  '''Molly\t"Molly"''',
+                  '''Susi\t"Susi"''']
+        inputs = ' '.join([self.file_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+        
+    def test_kgtk_query_exists_explicit_people_who_are_loved_and_rich(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match '(x)-[:name]->(n)'
+                        --where 'EXISTS {{()-[:loves]->(x), w: (x {{salary: s}})-[:works]->()
+                                         WHERE cast(s, int) >= 10000}}'
+                        --return 'x as node1, n as name'
+                """
+        result = ['''node1\tname''',
+                  '''Joe\t"Joe"''',
+                  '''Molly\t"Molly"''']
+        inputs = ' '.join([self.file_path, self.works_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_exists_function_people_who_are_loved(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match '(x)-[:name]->(n)'
+                        --where 'EXISTS(()-[:loves]->(x))'
+                        --return 'x as node1, n as name'
+                """
+        result = ['''node1\tname''',
+                  '''Joe\t"Joe"''',
+                  '''Molly\t"Molly"''',
+                  '''Susi\t"Susi"''']
+        inputs = ' '.join([self.file_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+        
+    def test_kgtk_query_exists_implicit_people_who_are_loved(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match '(x)-[:name]->(n)'
+                        --where '()-[:loves]->(x)'
+                        --return 'x as node1, n as name'
+                """
+        result = ['''node1\tname''',
+                  '''Joe\t"Joe"''',
+                  '''Molly\t"Molly"''',
+                  '''Susi\t"Susi"''']
+        inputs = ' '.join([self.file_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+        
+    def test_kgtk_query_exists_implicit_in_return(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match '(x)-[:name]->(n)'
+                        --return 'x as node1, n as name, ()-[:loves]->(x) or ()-[:friend]->(x) as happy'
+                """
+        result = ["""node1\tname\thappy""",
+                  """Hans\t'Hans'@de\t0""",
+                  """Otto\t'Otto'@de\t1""",
+                  """Joe\t"Joe"\t1""",
+                  """Molly\t"Molly"\t1""",
+                  """Susi\t"Susi"\t1"""]
+        inputs = ' '.join([self.file_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+        
+    def test_kgtk_query_exists_implicit_pattern_chain(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match '(x)-[:name]->(n)'
+                        --where '()-[:loves]->(x)-[:friend]->()'
+                        --return 'x as node1, n as name'
+                """
+        result = ['''node1\tname''',
+                  '''Joe\t"Joe"''']
+        inputs = ' '.join([self.file_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+        
+    def test_kgtk_query_exists_implicit_pattern_chain_new_variable_error(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match '(x)-[:name]->(n)'
+                        --where '()-[:loves]->(x)-[:friend]->(f)'
+                        --return 'x as node1, n as name'
+                """
+        inputs = ' '.join([self.file_path])
+        self.assertRaises(Exception, self.run_test_query, query, inputs)
+        
+    def test_kgtk_query_exists_explicit_nested(self):
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match '(x)-[:name]->(n)'
+                        --where 'EXISTS {{()-[:loves]->(x), \
+                                         w: (x)-[wr:works]->() \
+                                         WHERE NOT EXISTS {{q: (wr)-[:ends]->(e) \
+                                                           WHERE e < "^2000"}}}}' \
+                        --return 'x as node1, n as name'
+                """
+        result = ['''node1\tname''',
+                  '''Joe\t"Joe"''',
+                  '''Molly\t"Molly"''',
+                  '''Susi\t"Susi"''']
+        inputs = ' '.join([self.file_path, self.works_path, self.quals_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+
+
+    def test_kgtk_query_implicit_default_graph_already_used_1(self):
+        """Fail because the default graph is already mapped to 'g' and thus can't be used implicitly later.
+        """
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match 'g: (x)-[:name]->(n)'
+                        --where 'exists(()-[:loves]->(x))'
+                        --return 'x as node1, n as name'
+                """
+        inputs = ' '.join([self.file_path])
+        self.assertRaises(Exception, self.run_test_query, query, inputs)
+
+    def test_kgtk_query_implicit_default_graph_already_used_2(self):
+        """Fail because the default graph is already mapped implicitly and thus can't be mapped to 'g' later.
+        """
+        query = """kgtk query -i {INPUT} -o {OUTPUT} --graph-cache {DB}
+                        --match '(x)-[:name]->(n)'
+                        --where 'exists(g: ()-[:loves]->(x))'
+                        --return 'x as node1, n as name'
+                """
+        inputs = ' '.join([self.file_path])
+        self.assertRaises(Exception, self.run_test_query, query, inputs)
+
+
+    def test_kgtk_query_kypherv_import_embeddings_with_defaults(self):
+        # Kypher-V manual example:
+        query = """kgtk query -o {OUTPUT} --graph-cache {DB}
+                        -i {INPUT} --idx vector:node2 mode:valuegraph
+                        --match '(x)-[r]->(v)'
+                        --return 'r as id, x as node1, r.label as label, kgtk_stringify(substr(kvec_to_base64(v), 2, 20)) as node2'
+                        --limit 5
+                """
+        result = [
+            '''id\tnode1\tlabel\tnode2''',
+            '''e-3bc7d18e\tQ100428034\temb\t"5oXdvZaFe78lxhm/xfy2"''',
+            '''e-ecf67b59\tQ10061\temb\t"kOTZvbezFr81FoG+QhgK"''',
+            '''e-46106323\tQ101638\temb\t"2cQevgXyib91AWu+cv5h"''',
+            '''e-b06fd3c7\tQ101911\temb\t"kUQ0vaJISL+MI4g9rvwa"''',
+            '''e-842953ca\tQ102118866\temb\t"000Hv645Qr/KVFu9eCk/"''',
+        ]
+        inputs = ' '.join([self.embed_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_kypherv_import_embeddings_with_minimal_defaults(self):
+        # Kypher-V manual example:
+        query = """kgtk query -o {OUTPUT} --graph-cache {DB}
+                        -i {INPUT} --idx vector: mode:valuegraph
+                        --match '(x)-[r]->(v)'
+                        --return 'r as id, x as node1, r.label as label, kgtk_stringify(substr(kvec_to_base64(v), 2, 20)) as node2'
+                        --limit 2
+                """
+        result = [
+            '''id\tnode1\tlabel\tnode2''',
+            '''e-3bc7d18e\tQ100428034\temb\t"5oXdvZaFe78lxhm/xfy2"''',
+            '''e-ecf67b59\tQ10061\temb\t"kOTZvbezFr81FoG+QhgK"''',
+        ]
+        inputs = ' '.join([self.embed_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_kypherv_import_embeddings_with_options(self):
+        # Kypher-V manual example:
+        query = """kgtk query -o {OUTPUT} --graph-cache {DB}
+                        -i {INPUT} --idx vector:node2/fmt=auto/dtype=float32/store=inline/norm=False mode:valuegraph
+                        --match '(x)-[r]->(v)'
+                        --return 'r as id, x as node1, r.label as label, kgtk_stringify(substr(kvec_to_base64(v), 2, 20)) as node2'
+                        --limit 2
+                """
+        result = [
+            '''id\tnode1\tlabel\tnode2''',
+            '''e-3bc7d18e\tQ100428034\temb\t"5oXdvZaFe78lxhm/xfy2"''',
+            '''e-ecf67b59\tQ10061\temb\t"kOTZvbezFr81FoG+QhgK"''',
+        ]
+        inputs = ' '.join([self.embed_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_kypherv_basic_similarity(self):
+        # Kypher-V manual example:
+        query = """kgtk query -o {OUTPUT} --graph-cache {DB}
+                        -i {INPUT} --idx vector: mode:valuegraph
+                        --match '`embed.tsv`: (x:Q868)-[]->(xv),
+                                              (y:Q913)-[]->(yv),
+                                 `labels.tsv`: (x)-[]->(xl),
+                                               (y)-[]->(yl)'
+                         --return 'xl as xlabel, yl as ylabel, substr(kvec_cos_sim(xv, yv), 1, 8) as sim'
+                """
+        result = [
+            """xlabel\tylabel\tsim""",
+            """'Aristotle'@en\t'Socrates'@en\t0.692607""",
+        ]
+        # we list labels first, so the --idx spec applies to the last embed input:
+        inputs = ' '.join([self.embed_labels_path, self.embed_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_kypherv_similarity_to_random_vector(self):
+        # Kypher-V manual example:
+        query = """kgtk query -o {OUTPUT} --graph-cache {DB}
+                        -i {INPUT} --idx vector: mode:valuegraph
+                        --match '`embed.tsv`: (x:Q868)-[]->(xv),
+                                 `labels.tsv`: (x)-[]->(xl)'
+                         --return 'xl as xlabel, substr(kvec_cos_sim(xv, kvec_unstringify(pyeval("[1] * 100"))), 1, 8) as sim'
+                """
+        result = [
+            """xlabel\tsim""",
+            """'Aristotle'@en\t0.003323""",
+        ]
+        # we list labels first, so the --idx spec applies to the last embed input:
+        inputs = ' '.join([self.embed_labels_path, self.embed_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_kypherv_cos_sim_via_dot_product(self):
+        # Kypher-V manual example:
+        query = """kgtk query -o {OUTPUT} --graph-cache {DB}
+                        -i {INPUT} --idx vector: mode:valuegraph
+                        --match '`embed.tsv`: (x:Q868)-[]->(xv),
+                                              (y:Q913)-[]->(yv),
+                                 `labels.tsv`: (x)-[]->(xl),
+                                               (y)-[]->(yl)'
+                         --return 'xl as xlabel, yl as ylabel,
+                                   substr(kvec_dot(kvec_divide(xv, kvec_l2_norm(xv)), kvec_divide(yv, kvec_l2_norm(yv))), 1, 8) as sim'
+                """
+        result = [
+            """xlabel\tylabel\tsim""",
+            """'Aristotle'@en\t'Socrates'@en\t0.692607""",
+        ]
+        # we list labels first, so the --idx spec applies to the last embed input:
+        inputs = ' '.join([self.embed_labels_path, self.embed_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_kypherv_brute_force_sim_search(self):
+        # Kypher-V manual example:
+        query = """kgtk query -o {OUTPUT} --graph-cache {DB}
+                        -i {INPUT} --idx vector: mode:valuegraph
+                        --match '`embed.tsv`: (x:Q913)-[]->(xv),
+                                              (y)-[]->(yv),
+                                 `labels.tsv`: (x)-[]->(xl),
+                                               (y)-[]->(yl)'
+                        --return 'x as x, xl as xlabel, y as y, yl as ylabel, substr(kvec_cos_sim(xv, yv), 1, 8) as sim'
+                        --order  'sim desc'
+                        --limit 5
+                """
+        result = [
+            """x\txlabel\ty\tylabel\tsim""",
+            """Q913\t'Socrates'@en\tQ913\t'Socrates'@en\t1.0""",
+            """Q913\t'Socrates'@en\tQ179149\t'Antisthenes'@en\t0.824994""",
+            """Q913\t'Socrates'@en\tQ409647\t'Aeschines of Sphettus'@en\t0.814151""",
+            """Q913\t'Socrates'@en\tQ666230\t'Aristobulus of Paneas'@en\t0.801446""",
+            """Q913\t'Socrates'@en\tQ380190\t'Phaedo of Elis'@en\t0.785770""",
+        ]
+        # we list labels first, so the --idx spec applies to the last embed input:
+        inputs = ' '.join([self.embed_labels_path, self.embed_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+
+    def test_kgtk_query_kypherv_sim_search_no_nn_index_error(self):
+        # Kypher-V manual example - fail because we don't have an NN index built yet:
+        query = """kgtk query -o {OUTPUT} --graph-cache {DB}
+                        -i {INPUT} --idx vector: mode:valuegraph
+                        --match '`embed.tsv`: (x:Q913)-[]->(xv),
+                                              (xv)-[r:kvec_topk_cos_sim {{k: 10}}]->(y),
+                                 `labels.tsv`: (x)-[]->(xl),
+                                               (y)-[]->(yl)'
+                        --return 'x as x, xl as xlabel, y as y, yl as ylabel, substr(r.similarity, 1, 8) as sim'
+                        --limit 5
+                """
+        # we list labels first, so the --idx spec applies to the last embed input:
+        inputs = ' '.join([self.embed_labels_path, self.embed_path])
+        self.assertRaises(Exception, self.run_test_query, query, inputs)
+
+    def test_kgtk_query_kypherv_sim_search_with_nn_index(self):
+        # Kypher-V manual example:
+        query = """kgtk query -o {OUTPUT} --graph-cache {DB}
+                        -i {INPUT} --idx vector:node2/nn/nlist=8 mode:valuegraph
+                        --match '`embed.tsv`: (x:Q913)-[]->(xv),
+                                              (xv)-[r:kvec_topk_cos_sim {{k: 10}}]->(y),
+                                 `labels.tsv`: (x)-[]->(xl),
+                                               (y)-[]->(yl)'
+                        --return 'x as x, xl as xlabel, y as y, yl as ylabel, substr(r.similarity, 1, 8) as sim'
+                        --limit 5
+                """
+        result = [
+            """x\txlabel\ty\tylabel\tsim""",
+            """Q913\t'Socrates'@en\tQ913\t'Socrates'@en\t1.0""",
+            """Q913\t'Socrates'@en\tQ179149\t'Antisthenes'@en\t0.824994""",
+            """Q913\t'Socrates'@en\tQ409647\t'Aeschines of Sphettus'@en\t0.814151""",
+            """Q913\t'Socrates'@en\tQ666230\t'Aristobulus of Paneas'@en\t0.801446""",
+            """Q913\t'Socrates'@en\tQ380190\t'Phaedo of Elis'@en\t0.785770"""
+        ]
+        # we list labels first, so the --idx spec applies to the last embed input:
+        inputs = ' '.join([self.embed_labels_path, self.embed_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+        
+    def test_kgtk_query_kypherv_sim_search_with_cutoff_and_vector_export(self):
+        # Kypher-V manual example:
+        query = """kgtk query -o {OUTPUT} --graph-cache {DB}
+                        -i {INPUT} --idx vector:node2/nn/nlist=8 mode:valuegraph
+                        --match '`embed.tsv`: (x:Q913)-[]->(xv),
+                                              (xv)-[r:kvec_topk_cos_sim {{nprobe: 8}}]->(y),
+                                `labels.tsv`: (x)-[]->(xl),
+                                              (y)-[]->(yl)'
+                        --where  'x != y and r.similarity >= 0.8'
+                       --return 'x as x, xl as xlabel, y as y, yl as ylabel, substr(r.similarity, 1, 8) as sim, r.vid as yvid, 
+                                 kgtk_stringify(substr(kvec_to_base64(r.vector), 2, 20)) as yv'
+                """
+        result = [
+            '''x\txlabel\ty\tylabel\tsim\tyvid\tyv''',
+            '''Q913\t'Socrates'@en\tQ179149\t'Antisthenes'@en\t0.824994\te-ea594b00\t"LDeCPTLTJ79I0HK+si3t"''',
+            '''Q913\t'Socrates'@en\tQ409647\t'Aeschines of Sphettus'@en\t0.814151\te-0685ee35\t"5lOZvNnqEb85jqe+S5Qv"''',
+            '''Q913\t'Socrates'@en\tQ666230\t'Aristobulus of Paneas'@en\t0.801446\te-2906ba9a\t"Ex++vHClDL9nnLW+qXvT"'''
+        ]
+        # we list labels first, so the --idx spec applies to the last embed input:
+        inputs = ' '.join([self.embed_labels_path, self.embed_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+        
+    def test_kgtk_query_kypherv_sim_search_vector_join_bad(self):
+        # Kypher-V manual example:
+        query = """kgtk query -o {OUTPUT} --graph-cache {DB}
+                        -i {INPUT} --idx vector:node2/nn/nlist=8 mode:valuegraph
+                        --match '`embed.tsv`: (x)-[]->(xv),
+                                              (xv)-[r:kvec_topk_cos_sim {{k: 5}}]->(y),
+                                 `claims.tsv`: (y)-[:P31]->(:Q5),
+                                               (y)-[:P106]->(:Q36180),
+                                 `labels.tsv`: (x)-[]->(xl),
+                                               (y)-[]->(yl)'
+                        --where  'x in ["Q859", "Q868", "Q913"]'
+                        --return 'x as x, xl as xlabel, y as y, yl as ylabel, substr(r.similarity, 1, 8) as sim'
+                """
+        result = [
+            """x\txlabel\ty\tylabel\tsim""",
+            """Q859\t'Plato'@en\tQ41155\t'Heraclitus'@en\t0.747522""",
+            """Q859\t'Plato'@en\tQ83375\t'Empedocles'@en\t0.742346""",
+            """Q868\t'Aristotle'@en\tQ868\t'Aristotle'@en\t1.0""",
+            """Q868\t'Aristotle'@en\tQ10261\t'Pythagoras'@en\t0.769469""",
+            """Q868\t'Aristotle'@en\tQ5264\t'Hippocrates'@en\t0.755326"""
+        ]
+        # we list labels first, so the --idx spec applies to the last embed input:
+        inputs = ' '.join([self.embed_labels_path, self.embed_claims_path, self.embed_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+        
+    def test_kgtk_query_kypherv_sim_search_vector_join_good(self):
+        # Kypher-V manual example:
+        query = """kgtk query -o {OUTPUT} --graph-cache {DB}
+                        -i {INPUT} --idx vector:node2/nn/nlist=8 mode:valuegraph
+                        --match '`embed.tsv`: (x)-[]->(xv),
+                                              (xv)-[r:kvec_topk_cos_sim {{k: 5, maxk: 100}}]->(y),
+                                 `claims.tsv`: (y)-[:P31]->(:Q5),
+                                               (y)-[:P106]->(:Q36180),
+                                 `labels.tsv`: (x)-[]->(xl),
+                                               (y)-[]->(yl)'
+                        --where  'x in ["Q859", "Q868", "Q913"]'
+                        --return 'x as x, xl as xlabel, y as y, yl as ylabel, substr(r.similarity, 1, 8) as sim'
+                """
+        result = [
+            """x\txlabel\ty\tylabel\tsim""",
+            """Q859\t'Plato'@en\tQ41155\t'Heraclitus'@en\t0.747522""",
+            """Q859\t'Plato'@en\tQ83375\t'Empedocles'@en\t0.742346""",
+            """Q859\t'Plato'@en\tQ5264\t'Hippocrates'@en\t0.727953""",
+            """Q859\t'Plato'@en\tQ868\t'Aristotle'@en\t0.733143""",
+            """Q859\t'Plato'@en\tQ1430\t'Marcus Aurelius'@en\t0.703216""",
+            """Q868\t'Aristotle'@en\tQ868\t'Aristotle'@en\t1.0""",
+            """Q868\t'Aristotle'@en\tQ10261\t'Pythagoras'@en\t0.769469""",
+            """Q868\t'Aristotle'@en\tQ5264\t'Hippocrates'@en\t0.755326""",
+            """Q868\t'Aristotle'@en\tQ41155\t'Heraclitus'@en\t0.739228""",
+            """Q868\t'Aristotle'@en\tQ271809\t'Proclus'@en\t0.725646""",
+            """Q913\t'Socrates'@en\tQ271809\t'Proclus'@en\t0.765996""",
+            """Q913\t'Socrates'@en\tQ5264\t'Hippocrates'@en\t0.767316""",
+            """Q913\t'Socrates'@en\tQ1430\t'Marcus Aurelius'@en\t0.759520""",
+            """Q913\t'Socrates'@en\tQ10261\t'Pythagoras'@en\t0.751109""",
+            """Q913\t'Socrates'@en\tQ83375\t'Empedocles'@en\t0.744120"""
+        ]
+        # we list labels first, so the --idx spec applies to the last embed input:
+        inputs = ' '.join([self.embed_labels_path, self.embed_claims_path, self.embed_path])
+        qdf = self.run_test_query(query, input=inputs)
+        self.assert_test_query_result(qdf, result)
+        
+    def test_kgtk_query_kypherv_sim_search_vector_join_unbalanced(self):
+        # Kypher-V manual example:
+        query = """kgtk query -o {OUTPUT} --graph-cache {DB}
+                        -i {INPUT} --idx vector:node2/nn/nlist=8 mode:valuegraph
+                        --match '`embed.tsv`: (x)-[]->(xv),
+                                              (xv)-[r:kvec_topk_cos_sim {{k: 50}}]->(y),
+                                  `claims.tsv`: (y)-[:P31]->(:Q5),
+                                                (y)-[:P106]->(:Q36180),
+                                  `labels.tsv`: (x)-[]->(xl),
+                                                (y)-[]->(yl)'
+                        --where  'x in ["Q859", "Q868", "Q913"]'
+                        --return 'x as x, xl as xlabel, y as y, yl as ylabel, substr(r.similarity, 1, 8) as sim'
+                        --limit 15
+                """
+        result = [
+            """x\txlabel\ty\tylabel\tsim""",
+            """Q859\t'Plato'@en\tQ41155\t'Heraclitus'@en\t0.747522""",
+            """Q859\t'Plato'@en\tQ83375\t'Empedocles'@en\t0.742346""",
+            """Q859\t'Plato'@en\tQ868\t'Aristotle'@en\t0.733143""",
+            """Q859\t'Plato'@en\tQ5264\t'Hippocrates'@en\t0.727953""",
+            """Q859\t'Plato'@en\tQ1430\t'Marcus Aurelius'@en\t0.703216""",
+            """Q859\t'Plato'@en\tQ10261\t'Pythagoras'@en\t0.696925""",
+            """Q859\t'Plato'@en\tQ125551\t'Parmenides'@en\t0.693956""",
+            """Q859\t'Plato'@en\tQ47154\t'Lucretius'@en\t0.693444""",
+            """Q859\t'Plato'@en\tQ271809\t'Proclus'@en\t0.688394""",
+            """Q859\t'Plato'@en\tQ59138\t'Diogenes Laërtius'@en\t0.680530""",
+            """Q859\t'Plato'@en\tQ313924\t'Nicolaus of Damascus'@en\t0.677434""",
+            """Q859\t'Plato'@en\tQ175042\t'Nigidius Figulus'@en\t0.649016""",
+            """Q859\t'Plato'@en\tQ561367\t'Lucius Aelius Stilo Praeconinus'@en\t0.646487""",
+            """Q868\t'Aristotle'@en\tQ868\t'Aristotle'@en\t1.0""",
+            """Q868\t'Aristotle'@en\tQ10261\t'Pythagoras'@en\t0.769469"""
+        ]
+        # we list labels first, so the --idx spec applies to the last embed input:
+        inputs = ' '.join([self.embed_labels_path, self.embed_claims_path, self.embed_path])
         qdf = self.run_test_query(query, input=inputs)
         self.assert_test_query_result(qdf, result)

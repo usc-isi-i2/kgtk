@@ -11,7 +11,6 @@ import math
 from   functools import lru_cache
 
 import numpy as np
-import h5py
 import faiss
 
 from   kgtk.kypher.utils import *
@@ -945,6 +944,7 @@ class Hd5VectorStore(VectorStore):
         SQL store is in read-only mode).  We only upgrade the mode from 'r' to 'r+' if
         needed, we never go the other direction.
         """
+        import h5py
         if self.conn is None:
             for vstore in self.get_linked_stores():
                 if vstore.conn is not None:

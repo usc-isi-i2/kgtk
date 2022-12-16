@@ -255,15 +255,23 @@ KYPHER_GRAMMAR = r"""
          | S I N G L E WS '(' WS FilterExpression:fex WS ')' -> ["Single", fex]
          | RelationshipsPattern
          | GraphRelationshipsPattern
+         | ExplicitExistsExpression
+         | ExistsFunction
          | parenthesizedExpression
          | FunctionInvocation
          | Variable
 
     parenthesizedExpression = '(' WS Expression:ex WS ')' -> ex
 
-    RelationshipsPattern = NodePattern:np (WS PatternElementChain)?:pec -> ["RelationshipsPattern", np, pec]
+    RelationshipsPattern = NodePattern:np (WS PatternElementChain)*:pec 
+                             -> ["ImplicitExistsExpression", [['PatternPart', None, ['PatternElement', np, pec]]], None]
     
-    GraphRelationshipsPattern = Variable:v ':' WS NodePattern:np (WS PatternElementChain)?:pec -> ["GraphRelationshipsPattern", v, np, pec]
+    GraphRelationshipsPattern = Variable:v ':' WS NodePattern:np (WS PatternElementChain)*:pec 
+                             -> ["ImplicitExistsExpression", [['GraphPatternPart', v, ['PatternElement', np, pec]]], None]
+
+    ExplicitExistsExpression = E X I S T S WS "{" WS Pattern:p (WS Where)?:w WS "}" -> ["ExplicitExistsExpression", p, w]
+
+    ExistsFunction = E X I S T S WS "(" WS Pattern:p WS ")" -> ["ExistsFunction", p, None]
 
     FilterExpression = IdInColl:i (WS Where)?:w -> ["FilterExpression", i, w]
 
