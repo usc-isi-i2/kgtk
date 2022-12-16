@@ -15,3 +15,5 @@ peewee>=3.14.10
 odictliteral
 torchbiggraph
 unidecode
+h5py
+faiss-cpu
