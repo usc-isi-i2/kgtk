@@ -183,15 +183,18 @@ columns of a matching line will be output (including extra columns if
 any).  Therefore, the resulting output shows the full content of the
 file starting with its KGTK header line.
 
-The following query is equivalent to the above.  The singular
-anonymous node pattern will be completed to a full edge by implicitly
-adding an anonymous relation and to-node:
+The following queries are equivalent to the above.  The double arrows
+and the singular anonymous node pattern will be completed to a full
+edge by implicitly adding an anonymous relation (and to-node if
+necessary):
 
 ```
+kgtk query -i $GRAPH --match '()-->()'
+kgtk query -i $GRAPH --match '()<--()'
 kgtk query -i $GRAPH --match '()'
 ```
 
-That pattern is also the default for `--match`, so the following query
+The last pattern is also the default for `--match`, so the following query
 is again equivalent to the above and produces the same as running
 `cat` on the file:
 
@@ -2428,8 +2431,185 @@ wrong with experimenting.
 <A NAME="properties"></A>
 ### Node and edge properties
 
-TO DO: Needs to describe edge as well as node properties and how they
-relate to extra columns.
+Due to the differences between the property graph data model of Cypher
+and the hyper-relational data model used by KGTK, relation variables
+in Kypher get bound to edge IDs from KGTK's `id` column, since those
+represent the unique identities of edges.  All other elements of an
+edge such as its `node1`, `node2`, `label` and extra columns can then
+be referenced using Kypher's property syntax.  For example, if we have
+an edge or relation variable `r`, `r.label` references the edge's
+label, `r.node1` its starting node, or `r.graph` an extra column named
+`graph`.
+
+The property syntax is also available for the nodes of an edge using
+KGTK's path column syntax.  For example, a file column named
+`node1;salary` expresses a `salary` property on the `node1` of an edge
+(which can be viewed as a shorthand notation for a salary edge that
+just occupies one extra column in the data file).
+
+Let us illustrate these concepts with a number of examples.  We start
+by retrieving a set of `works` edges using our familiar Kypher syntax
+for this task:
+
+```
+kgtk query -i $WORKS \
+     --match 'w: (x)-[r:works]->(y)' \
+     --return 'r, x, r.label, y' \
+     --limit 3
+```
+Result:
+
+| id  | node1 | label | node2  |
+|-----|-------|-------|--------|
+| w11 | Hans  | works | ACME   |
+| w12 | Otto  | works | Kaiser |
+| w13 | Joe   | works | Kaiser |
+
+Next we retrieve the exact same information, but now we eliminate all
+but the relation variable `r` in the match clause.  We then use property
+syntax to access the remaining parts of the edge plus an extra `graph`
+column that is also part of the `WORKS` data in the return clause:
+
+```
+kgtk query -i $WORKS \
+     --match 'w: ()-[r:works]->()' \
+     --return 'r, r.node1, r.label, r.node2, r.graph' \
+     --limit 3
+```
+Result:
+
+| id  | node1 | label | node2  | graph  |
+|-----|-------|-------|--------|--------|
+| w11 | Hans  | works | ACME   | employ |
+| w12 | Otto  | works | Kaiser | employ |
+| w13 | Joe   | works | Kaiser | employ |
+
+Note that using property syntax does not incur any query run time
+overhead, since all the necessary mapping is handled at query
+translation time.
+
+Next we use Kypher's property syntax to bind relation properties to
+variables.  The property part of a relation or node pattern uses a
+dictionary notation where keys are property names and values can be
+variables or constants or really any expression.  We then can use
+these variables in the return statement, similar to our original
+query, but now we also have a graph variable `g` for the `graph`
+column which we couldn't have achieved with our standard Kypher edge
+pattern syntax:
+
+```
+kgtk query -i $WORKS \
+     --match 'w: ()-[r {node1: x, label: "works", node2: y, graph: g}]->()' \
+     --return 'r, x, r.label, y, g' \
+     --limit 3
+```
+Result:
+
+| id  | node1 | label | node2  | graph  |
+|-----|-------|-------|--------|--------|
+| w11 | Hans  | works | ACME   | employ |
+| w12 | Otto  | works | Kaiser | employ |
+| w13 | Joe   | works | Kaiser | employ |
+
+
+Here is a minor variant that uses a function call expression to
+compute the restriction on the edge label.  Note that these property
+value expressions all simply become conditions in an implicit where
+clause such as `--where r.label = lower("WORKS")`:
+
+```
+kgtk query -i $WORKS \
+     --match 'w: ()-[r {node1: x, label: lower("WORKS"), node2: y, graph: g}]->()' \
+     --return 'r, x, r.label, y, g' \
+     --limit 3
+```
+Result:
+
+| id  | node1 | label | node2  | graph  |
+|-----|-------|-------|--------|--------|
+| w11 | Hans  | works | ACME   | employ |
+| w12 | Otto  | works | Kaiser | employ |
+| w13 | Joe   | works | Kaiser | employ |
+
+
+Next we show how we can access the `salary` property of `node1` which is stored
+in the `node1;salary` column of the KGTK file:
+
+```
+kgtk query -i $WORKS \
+     --match 'w: ({salary: s})-[r {node1: x, label: "works", node2: y, graph: g}]->()' \
+     --return 'r, x, r.label, y, s as salary, g' \
+     --limit 3
+```
+Result:
+
+| id  | node1 | label | node2  | salary | graph  |
+|-----|-------|-------|--------|--------|--------|
+| w11 | Hans  | works | ACME   | 10000  | employ |
+| w12 | Otto  | works | Kaiser | 8000   | employ |
+| w13 | Joe   | works | Kaiser | 20000  | employ |
+
+
+Finally, properties can also be used to join clauses.  For example, here we
+constrain the `node1` property of `r` to be identical to `x` of the name edge:
+
+```
+kgtk query -i $GRAPH -i $WORKS \
+     --match 'g: (x)-[:name]->(n), \
+              w: ({salary: s})-[r {node1: x, label: "works", node2: y, graph: g}]->()' \
+     --where 'cast(s, int) > 10000' \
+     --return 'r, x, r.label, y, s as salary, g'
+```
+Result:
+
+| id  | node1 | label | node2  | salary | graph  |
+|-----|-------|-------|--------|--------|--------|
+| w13 | Joe   | works | Kaiser | 20000  | employ |
+| w14 | Molly | works | Renal  | 11000  | employ |
+
+
+Property syntax is primarily needed to access the values of additional
+columns such as the `node1;salary` and `graph` columns in the examples
+above.  Properties are also a convenient way to supply parameters to
+virtual graphs such as the similarity search operators provided by
+[**Kypher-V**](#kypher-v).
+
+There is one additional situation where they are sometimes needed,
+which is to disambiguate to which edge a property should apply.  For
+example, in the query below we use a variable `r` as the `node1` of
+the first match clause, but as the relation variable of the second.
+When we try to run this query we get a (somewhat cryptic) error
+message:
+
+```
+kgtk query -i $WORKS -i $QUALS \
+     --match 'quals: (r)-[q]->(time), \
+              works: (x)-[r]->(y)'  \
+     --where 'time.kgtk_date_year <= 2000' \
+     --return 'r as id, x, r.label, y, q.label as trel, time as time'
+no such column: graph_5_c1.node1;label
+```
+
+The reason is that when we specify `r.label` in the return clause, it
+is ambiguous whether that should apply to the first or second edge in
+the match pattern.  To resolve the ambiguity, we can use a property
+expression to introduce the `rl` variable to access the label of the
+second edge which then allows us to successfully run the query:
+
+```
+kgtk query -i $WORKS -i $QUALS \
+     --match 'quals: (r)-[q]->(time), \
+              works: (x)-[r {label: rl}]->(y)'  \
+     --where 'time.kgtk_date_year <= 2000' \
+     --return 'r as id, x, rl, y, q.label as trel, time as time'
+```
+Result:
+
+| id  | node1 | label | node2  | trel   | time                     |
+|-----|-------|-------|--------|--------|--------------------------|
+| w11 | Hans  | works | ACME   | starts | ^1984-12-17T00:03:12Z/11 |
+| w12 | Otto  | works | Kaiser | ends   | ^1987-11-08T04:56:34Z/10 |
+| w13 | Joe   | works | Kaiser | starts | ^1996-02-23T08:02:56Z/09 |
 
 
 ### Quoting
@@ -2503,14 +2683,46 @@ shell, query strings containing parameters need to be in single
 quotes, or the dollar sign needs to be appropriately escaped.
 
 
-#### Quoting of variables and schema names
+#### Quoting of variables and symbolic names
 
-TO DO: describe backtick quoting for graph variables, column names, etc.
+Kypher syntax follows Cypher and is quite restrictive in the allowed
+syntax for symbolic names such as node and edge variables, graph
+variables, output columns, restrictions in match patterns, and so on.
+Identifiers are only allowed to contain alphanumeric characters and
+underscores and must start with a letter.  Backtick quoting can be
+used to escape symbolic names and include arbitrary characters.  To
+include a backtick itself, simply double it.  For example, to use a
+space in an output column in a return clause, one could do the
+following:
+
+```
+kgtk query ... --return 'c as company, avg(s) as `average salary`' ...
+```
+
+Backticks are meaningful to the Unix shell, so it is important that
+they are escaped or inside a quoted string to prevent their
+interpretation by the shell.  Here is an example query that makes
+excessive use of backtick quoting just to illustrate where and how
+that can be used:
+
+```
+kgtk query -i $GRAPH \
+     --match '`graph.tsv`: (`?1`)-[`?2`:`name`]->(`?3`)' \
+     --where 'kgtk_lqstring(`?3`)' \
+     --return '`?2`, `?1`, `?2`.label, `lower`(`?3`) as `no``de2`, `?3`.kgtk_lqstring_lang as `node2;lang`'
+```
+Result:
+
+| id  | node1 | label | no`de2    | node2;lang |
+|-----|-------|-------|-----------|------------|
+| e21 | Hans  | name  | 'hans'@de | de         |
+| e22 | Otto  | name  | 'otto'@de | de         |
 
 
 ### Strings, numbers and literals
 
-TO DO
+TO DO, see also the section on KGTK [**literal
+functions**](#literal-functions).
 
 
 ### Null values
@@ -2570,9 +2782,112 @@ Result:
 |  e22  |  Otto   |  name   |  'Otto'@de  |
 
 
-### Regular expressions
+### Regular expressions matching
 
-TO DO
+Kypher supports a number of different ways to match nodes, edge labels
+and literals via regular expression patterns.  The central operator to
+do this kind of matching is `=~`, which matches a value against a
+regular expression.  Note that Kypher regular expressions use Python
+regexp syntax, which is different from the Java regexps used by
+Cypher.
+
+In the query below we select all `name` edges whose `node1` ends in `s`,
+`o` or `y`.  A regular expression has to match the whole string
+which is why we use `.*` to match the initial portion:
+
+```
+kgtk query -i $GRAPH \
+     --match '(x)-[r:name]->(y)' \
+     --where 'x =~".*[soy]"'
+```
+Result:
+
+| id  | node1 | label | node2     |
+|-----|-------|-------|-----------|
+| e21 | Hans  | name  | 'Hans'@de |
+| e22 | Otto  | name  | 'Otto'@de |
+| e24 | Molly | name  | "Molly"   |
+
+
+Note that KGTK literals such as strings and language-qualified strings
+contain quotes and language suffixes as part of their content, so
+regular expressions have to account for those extra characters or
+remove them first.  For example:
+
+```
+kgtk query -i $GRAPH \
+     --match '(x)-[r:name]->(y)' \
+     --where 'kgtk_string(y) and kgtk_unstringify(y) =~ ".*[iy]"' \
+     --return 'r, x, r.label, y'
+```
+Result:
+
+| id  | node1 | label | node2   |
+|-----|-------|-------|---------|
+| e24 | Molly | name  | "Molly" |
+| e25 | Susi  | name  | "Susi"  |
+
+
+Kypher additionally supports the following built-in functions to
+handle different kinds of pattern matching operations:
+
+| Function                  | Description                                                                                                    |
+|---------------------------|----------------------------------------------------------------------------------------------------------------|
+| glob(x, y)                | Match `y` via an SQL GLOB pattern `x`             ([full doc](https://sqlite.org/lang_corefunc.html#glob)).    |
+| like(x, y, [z])           | Match `y` via an SQL LIKE pattern `x` (escaped by `z`)  ([full doc](https://sqlite.org/lang_corefunc.html#like)). |
+| kgtk_regex(x, regex)      | Regex matcher that implements the Cypher `=~` semantics which must match the whole string ([Python regex syntax](https://docs.python.org/3/howto/regex.html)) |
+| kgtk_regex_replace(x, regex, repl) | Regex replacer that replaces all occurrences of `regex` in `x` with `repl` ([Python regex syntax](https://docs.python.org/3/howto/regex
+
+
+In this example we first select edges based on a regular expression
+and then edit an output column using a regex replace:
+
+```
+kgtk query -i $GRAPH \
+     --match '(x)-[r:name]->(y)' \
+     --where 'x =~".*[soy]"' \
+     --return 'r, kgtk_regex_replace(x, "(.)(.*)", "\\2\\1") as node1, r.label, y'
+```
+Result:
+
+| id  | node1 | label | node2     |
+|-----|-------|-------|-----------|
+| e21 | ansH  | name  | 'Hans'@de |
+| e22 | ttoO  | name  | 'Otto'@de |
+| e24 | ollyM | name  | "Molly"   |
+
+
+The `like` function implements SQL LIKE pattern matching which is case-insensitive
+and only supports the `%` and `_` wildcard characters:
+
+```
+kgtk query -i $GRAPH \
+     --match '(x)-[r:name]->(y)' \
+     --where 'like("j%", x)'
+```
+Result:
+
+| id  | node1 | label | node2 |
+|-----|-------|-------|-------|
+| e23 | Joe   | name  | "Joe" |
+
+
+The `glob` function is case-sensitive and implements Unix-style glob pattern matching:
+
+```
+kgtk query -i $GRAPH \
+     --match '(x)-[r:name]->(y)' \
+     --where 'glob("[JM]*", x)'
+```
+Result:
+
+| id  | node1 | label | node2   |
+|-----|-------|-------|---------|
+| e23 | Joe   | name  | "Joe"   |
+| e24 | Molly | name  | "Molly" |
+
+Note that both `like` and `glob` are implemented by SQLite directly and might be somewhat
+faster than the Python-based regex matching used by the `=~` operator.
 
 
 ### Built-in functions
@@ -2600,8 +2915,10 @@ to their full documentation.
 |---------------------------|----------------------------------------------------------------------------------------------------------------|
 | cast(x, type)             | Convert `x` into an expression of `type`.                                                                      |
 | concat(x, ...)            | Cocatenate printed representations of the given arguments into a string.                                       |
+| glob(x, y)                | Match `y` via an SQL GLOB pattern `x`             ([full doc](https://sqlite.org/lang_corefunc.html#glob)).    |
 | instr(x, sub)             | Find the first occurrence of `sub` in string `x`  ([full doc](https://sqlite.org/lang_corefunc.html#instr)).   |
 | length(x)                 | Number of characters in a string `x`              ([full doc](https://sqlite.org/lang_corefunc.html#length)).  |
+| like(x, y, [z])           | Match `y` via an SQL LIKE pattern `x` (escaped by `z`)  ([full doc](https://sqlite.org/lang_corefunc.html#like)). |
 | lower(x)                  | Convert `x` to lower case                         ([full doc](https://sqlite.org/lang_corefunc.html#lower)).   |
 | printf(format, ...)       | Build a formatted string from some arguments      ([full doc](https://sqlite.org/lang_corefunc.html#printf)).  |
 | replace(x, from, to)      | Replace `from` with `to` in `x`                   ([full doc](https://sqlite.org/lang_corefunc.html#replace)). |
@@ -2643,7 +2960,7 @@ functions**](https://www.sqlite.org/lang_aggfunc.html) can be used.
 | kgtk_symbol(x)        | Return True if `x` is a KGTK symbol.  This assumes valid literals and only tests the first character (except for booleans).    |
 | kgtk_type(x)          | Return a type for the KGTK literal or symbol `x`, which will be one of `string`, `lq_string`, `date_time`, `quantity`, `geo_coord`, `boolean`, `typed_literal` or `symbol`.  This assumes valid literals and only tests the first character (except for booleans). |
 | kgtk_regex(x, regex)  | Regex matcher that implements the Cypher `=~` semantics which must match the whole string ([Python regex syntax](https://docs.python.org/3/howto/regex.html)) |
-| kgtk_regex_replace(x, regex, repl) | Regex replacer that replaces all occurrances of `regex` in `x` with `repl` ([Python regex syntax](https://docs.python.org/3/howto/regex.html), see Python's `re.sub`) |
+| kgtk_regex_replace(x, regex, repl) | Regex replacer that replaces all occurrences of `regex` in `x` with `repl` ([Python regex syntax](https://docs.python.org/3/howto/regex.html), see Python's `re.sub`) |
 | kgtk_null_to_empty(x) | If `x` is NULL map it onto the empty string, otherwise return `x` unmodified.              |
 | kgtk_empty_to_null(x) | If `x` is the empty string, map it onto NULL, otherwise return `x` unmodified.             |
 
@@ -2653,6 +2970,7 @@ view them as virtual properties on the underlying literal.  For
 example, `x.kgtk_lqstring_text` instead of `kgtk_lqstring_text(x)`.
 
 
+<A NAME="literal-functions"></A>
 #### Functions on KGTK strings
 
 | Function            | Description                                                  |
