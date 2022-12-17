@@ -3,7 +3,6 @@ mypy
 rltk
 seaborn
 sentence_transformers
-sklearn
 SPARQLWrapper
 tqdm
 simplejson
