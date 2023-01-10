@@ -16,3 +16,4 @@ odictliteral
 torchbiggraph
 unidecode
 faiss-cpu
+scikit-learn
