@@ -49,7 +49,8 @@ def show_html(img_width=150):
 
 # -
 
-# This notebook contains a number of example queries using Kypher-V. The queries assume the existence of a number of similarity graph caches in the DB directory which are defined here via shell variables:
+# The Kypher-V example queries in this notebook assume the existence of a number of similarity
+# graph caches in the `DB` directory, which are all defined here via shell variables:
 
 DB="/kgtk-data/kypherv"
 # %env DB={DB}
@@ -59,10 +60,10 @@ DB="/kgtk-data/kypherv"
 # %env ABSTRACT={DB}/wikidata-20221102-dwd-v8-abstract-embeddings.sqlite3.db
 # %env IMAGE={DB}/wikimedia-capcom-image-embeddings-v2.sqlite3.db
 
-# If you copied the graph caches to a different location, please adjust the
-# paths and definitions accordingly.
+# If you copied the graph caches and their associated `.faiss.idx` ANNS index files
+# to a different location, please adjust the paths and definitions accordingly.
 
-# Throughout the notebook we use a number of different invocation styles for
+# Throughout the notebook we use three different invocation styles for
 # the `kgtk` command to better control the appearance of the generated output.
 # We either use it via the `!kgtk ...` syntax directly, use the `kgtk(...)`
 # function which produces an HTML rendering of a Pandas frame containing the
@@ -74,23 +75,23 @@ DB="/kgtk-data/kypherv"
 # <A NAME="graph-caches"></A>
 # ### Similarity graph caches
 #
-# The examples in this notebook use a number of different standard and similarity
+# The examples in this notebook rely on several standard and similarity
 # graph caches based on `wikidata-20221102-dwd-v8`.  These graph caches are
 # available in the `DB` directory of the `ckg06` server from where they can be
 # copied or accessed directly in example queries.  It will generally not be
 # possible to run the notebook directly from that server, so if you want to
 # run and experiment with the notebook in a Jupyter environment, you have to
 # # copy the graph caches to a different location where a notebook server can be run.
-# Make sure to also include the associated ANNS index files that end in
+# In this case, make sure to also copy the associated ANNS index files that end in
 # a `.faiss.idx` extension.
 
-# This notebook also does not show how the individual similarity caches were
+# This notebook does not show how the individual similarity caches were
 # constructed.  To see how that can be done, please consult
 # the [**Kypher-V Manual**](https://kgtk.readthedocs.io/en/latest/transform/query/#kypher-v)
 # or look at the respective `*.db.build.txt` files in the `DB` directory.  For reference,
 # we show just one incantation here on how the `COMPLEX` graph cache was built.  Other
 # graph caches were built similarly with some modifications to adjust for differences in
-# the embedding data used (for `COMPLEX` this takes about 3 hours to run):
+# the embedding data used (for `COMPLEX` this takes about 2.5-3 hours to run on a laptop):
 
 # ```
 # $ export WD=.../datasets/wikidata-20221102-dwd-v8
@@ -106,8 +107,8 @@ DB="/kgtk-data/kypherv"
 
 # We use the following similarity graph caches which can be combined
 # with a main graph cache using one or more `--auxiliary-cache` or `--ac`
-# options.  The `COMPLEX` graph cache contains 59M 100-D ComplEx
-# graph embeddings:
+# options to the `query` command.  The `COMPLEX` graph cache contains
+# 59M 100-D ComplEx graph embeddings:
 
 # !kgtk query --gc $COMPLEX --sc
 
@@ -138,7 +139,7 @@ DB="/kgtk-data/kypherv"
 # ### Vector tables are regular KGTK files
 #
 # Any KGTK representation that associates a node or edge ID with a vector
-# will work.  A format we commonly use is where a `node1` points to a vector
+# will work.  An edge format we commonly use is a `node1` pointing to a vector
 # literal in `node2` via an `emb` edge (but any label will do).  For example,
 # here we show the first three embedding edges in `COMPLEX` (the `node2;_kgtk_vec_qcell`
 # column is an auxiliary column automatically computed by ANNS indexing):
@@ -155,9 +156,9 @@ kgtk("""query --gc $COMPLEX -i complex --limit 3""")
 kgtk(""" 
       query --gc $MAIN --ac $ABSTRACT
       -i abstract -i labels
-      --match 'abstract: (x:Q868)-[]->(xv),
-                         (y:Q913)-[]->(yv),
-               labels:   (x)-[]->(xl), (y)-[]->(yl)'
+      --match 'abstract: (x:Q868)-->(xv),
+                         (y:Q913)-->(yv),
+               labels:   (x)-->(xl), (y)-->(yl)'
       --return 'xl as xlabel, yl as ylabel, kvec_cos_sim(xv, yv) as sim'
      """)
 
@@ -175,22 +176,22 @@ kgtk("""
 kgtk("""
       query --gc $MAIN --ac $ABSTRACT
       -i abstract -i labels -i claims
-      --match 'abstract: (x:Q913)-[]->(xv), (y)-[]->(yv),
+      --match 'abstract: (x:Q913)-->(xv), (y)-->(yv),
                claims:   (y)-[:P106]->(:Q4964182),
-               labels:   (x)-[]->(xl), (y)-[]->(yl)'
+               labels:   (x)-->(xl), (y)-->(yl)'
       --return 'xl as xlabel, yl as ylabel, kvec_cos_sim(xv, yv) as sim'
       --order  'sim desc'
       --limit 10
      """)
 
-# There are about 9M Q5's (humans) that have short abstract vectors:
+# There are about 9M Q5's (humans) in Wikidata, 1.8M of which have short abstract vectors:
 
 kgtk("""
       query --gc $MAIN --ac $ABSTRACT
-      -i abstract -i labels -i claims
-      --match 'abstract: (x:Q913)-[]->(xv),
-               claims:   (y)-[:P31]->(:Q5)'
-      --return 'count(distinct y)' --force
+      -i abstract -i claims
+      --match 'abstract: (x)-->(),
+               claims:   (x)-[:P31]->(:Q5)'
+      --return 'count(distinct x)'
      """)
 
 
@@ -200,9 +201,9 @@ kgtk("""
 # !time DISABLED kgtk query --gc $MAIN \
 #                  --ac $ABSTRACT \
 #       -i abstract -i labels -i claims \
-#       --match 'abstract: (x:Q913)-[]->(xv), (y)-[]->(yv), \
+#       --match 'abstract: (x:Q913)-->(xv), (y)-->(yv), \
 #                claims:   (y)-[:P31]->(:Q5), \
-#                labels:   (x)-[]->(xl), (y)-[]->(yl)' \
+#                labels:   (x)-->(xl), (y)-->(yl)' \
 #       --return 'xl as xlabel, yl as ylabel, kvec_cos_sim(xv, yv) as sim' \
 #       --order  'sim desc' \
 #       --limit 10
@@ -233,9 +234,9 @@ kgtk("""
 kgtk("""
       query --gc $MAIN --ac $ABSTRACT
       -i abstract -i labels -i claims
-      --match 'abstract: (x:Q913)-[]->(xv),
+      --match 'abstract: (x:Q913)-->(xv),
                          (xv)-[r:kvec_topk_cos_sim {k: 5, nprobe: 4}]->(y),
-               labels:   (x)-[]->(xl), (y)-[]->(yl)'
+               labels:   (x)-->(xl), (y)-->(yl)'
       --return 'xl as xlabel, yl as ylabel, r.similarity as sim'
       --limit 10
      """)
@@ -251,11 +252,11 @@ kgtk("""
 kgtk("""
       query --gc $MAIN --ac $ABSTRACT
       -i abstract -i labels -i claims
-      --match 'abstract: (x)-[]->(xv),
+      --match 'abstract: (x)-->(xv),
                          (xv)-[r:kvec_topk_cos_sim {k: 5, maxk: 1024, nprobe: 4}]->(y),
                claims:   (y)-[:P106]->(:Q4964182),
                          (y)-[:P31]->(:Q5),
-               labels:   (x)-[]->(xl), (y)-[]->(yl)'
+               labels:   (x)-->(xl), (y)-->(yl)'
       --where 'x in ["Q859", "Q868", "Q913"] and x != y'
       --return 'xl as xlabel, yl as ylabel, r.similarity as sim'
      """)
@@ -267,11 +268,11 @@ kgtk("""
 kgtk("""
       query --gc $MAIN --ac $ABSTRACT
       -i abstract -i labels -i claims
-      --match 'abstract: (x)-[]->(xv),
+      --match 'abstract: (x)-->(xv),
                          (xv)-[r:kvec_topk_cos_sim {k: 5, nprobe: 4}]->(y),
                claims:   (y)-[:P106]->(:Q4964182),
                          (y)-[:P31]->(:Q5),
-               labels:   (x)-[]->(xl), (y)-[]->(yl)'
+               labels:   (x)-->(xl), (y)-->(yl)'
       --where 'x in ["Q859", "Q868", "Q913"] and x != y'
       --return 'xl as xlabel, yl as ylabel, r.similarity as sim'
      """)
@@ -306,7 +307,7 @@ kgtk("""
 #       --match 'image:  (ximg)-[rx {qnode: $SEED}]->(xiv), \
 #                        (xiv)-[r:kvec_topk_cos_sim {k: 10, nprobe: 8}]->(yimg), \
 #                        (yimg)-[ry {qnode: y}]->(), \
-#                labels: (y)-[]->(ylabel)' \
+#                labels: (y)-->(ylabel)' \
 #       --where 'not exists {image: (ximg2)-[{qnode: $SEED}]->() WHERE rowid(ximg2) < rowid(ximg) }' \
 #       --return 'y as qnode, ylabel as label, printf("%.5g", r.similarity) as sim, yimg as image' \
 #       --para  SEED=Q76 \
@@ -343,7 +344,7 @@ show_html(img_width=200)
 #       --match 'image: (ximg)-[rx {qnode: $SEED}]->(xiv), \
 #                       (xiv)-[r:kvec_topk_cos_sim {k: 10, nprobe: 8}]->(yimg), \
 #                       (yimg)-[ry {qnode: y}]->(), \
-#                labels: (y)-[]->(ylabel)' \
+#                labels: (y)-->(ylabel)' \
 #       --where 'not exists {image: (ximg2)-[{qnode: $SEED}]->() WHERE rowid(ximg2) < rowid(ximg) }' \
 #       --return 'y as qnode, ylabel as label, printf("%.5g", r.similarity) as sim, yimg as image' \
 #       --para  SEED=Q582964 \
@@ -361,7 +362,7 @@ show_html(img_width=100)
 #       --match 'image: (ximg)-[rx {qnode: $SEED}]->(xiv), \
 #                       (xiv)-[r:kvec_topk_cos_sim {k: 20, nprobe: 8}]->(yimg), \
 #                       (yimg)-[ry {qnode: y}]->(), \
-#                labels: (y)-[]->(ylabel)' \
+#                labels: (y)-->(ylabel)' \
 #       --where 'not exists {image: (ximg2)-[{qnode: $SEED}]->() WHERE rowid(ximg2) < rowid(ximg) }' \
 #       --return 'y as qnode, ylabel as label, printf("%.5g", r.similarity) as sim, yimg as image' \
 #       --para  SEED=Q756815  \
@@ -385,7 +386,7 @@ show_html()
 #       --match 'image: (ximg)-[rx {qnode: $SEED}]->(xiv), \
 #                       (xiv)-[r:kvec_topk_cos_sim {k: 20, nprobe: 4, maxk: 1024}]->(yimg), \
 #                       (yimg)-[ry {qnode: y}]->(), \
-#                labels: (y)-[]->(ylabel), \
+#                labels: (y)-->(ylabel), \
 #                claims: (y)-[:P17]->(c:Q40)' \
 #       --where 'not exists {image: (ximg2)-[{qnode: $SEED}]->() WHERE rowid(ximg2) < rowid(ximg) }' \
 #       --return 'y as qnode, ylabel as label, printf("%.5g", r.similarity) as sim, yimg as image' \
@@ -433,7 +434,7 @@ show_html()
 # +
 # out = !kgtk query --ac $MAIN --ac $ABSTRACT \
 #       -i text_emb_queries -i abstract -i labels -i claims -i sentence \
-#       --match  'queries:  (x:q1)-[]->(xv), \
+#       --match  'queries:  (x:q1)-->(xv), \
 #                 abstract: (xv)-[r:kvec_topk_cos_sim {k: 10, maxk: 1024, nprobe: 4}]->(y), \
 #                 claims:   (y)-[:P106]->(:Q4964182), \
 #                 labels:   (y)-->(yl), \
@@ -449,7 +450,7 @@ show_html()
 # +
 # out = !kgtk query --ac $MAIN --ac $ABSTRACT \
 #       -i text_emb_queries -i abstract -i labels -i claims -i sentence \
-#       --match  'queries:  (x:q2)-[]->(xv), \
+#       --match  'queries:  (x:q2)-->(xv), \
 #                 abstract: (xv)-[r:kvec_topk_cos_sim {k: 10, maxk: 1024, nprobe: 8}]->(y), \
 #                 claims:   (y)-[:P17]->(:Q40), \
 #                 labels:   (y)-->(yl), \
@@ -466,7 +467,7 @@ show_html()
 # +
 # out = !kgtk query --ac $MAIN --ac $ABSTRACT \
 #       -i text_emb_queries -i abstract -i labels -i claims -i sentence \
-#       --match  'queries:  (x:q3)-[]->(xv), \
+#       --match  'queries:  (x:q3)-->(xv), \
 #                 abstract: (xv)-[r:kvec_topk_cos_sim {k: 10, maxk: 1024, nprobe: 8}]->(y), \
 #                 claims:   (y)-[:P31]->(:Q5), \
 #                           (y)-[:P27]->(:Q145), \
@@ -491,9 +492,9 @@ show_html()
 kgtk("""
       query --gc $MAIN --ac $COMPLEX
       -i complex -i labels
-      --match 'complex:  (x)-[]->(xv),
+      --match 'complex:  (x)-->(xv),
                          (xv)-[r:kvec_topk_cos_sim {k: 10, maxk: 1024, nprobe: 8}]->(y),
-               labels:   (x)-[]->(xl), (y)-[]->(yl)'
+               labels:   (x)-->(xl), (y)-->(yl)'
       --where 'x in ["Q859", "Q868", "Q913"]'
       --return 'xl as xlabel, yl as ylabel, r.similarity as sim'
      """)
@@ -501,9 +502,9 @@ kgtk("""
 kgtk("""
       query --gc $MAIN --ac $TRANSE
       -i transe -i labels
-      --match 'transe:   (x)-[]->(xv),
+      --match 'transe:   (x)-->(xv),
                          (xv)-[r:kvec_topk_cos_sim {k: 10, maxk: 1024, nprobe: 8}]->(y),
-               labels:   (x)-[]->(xl), (y)-[]->(yl)'
+               labels:   (x)-->(xl), (y)-->(yl)'
       --where 'x in ["Q859", "Q868", "Q913"]'
       --return 'xl as xlabel, yl as ylabel, r.similarity as sim'
      """)
@@ -511,10 +512,10 @@ kgtk("""
 # +
 # out = !kgtk query --gc $MAIN --ac $ABSTRACT \
 #       -i abstract -i labels -i sentence \
-#       --match 'abstract: (x)-[]->(xv), \
+#       --match 'abstract: (x)-->(xv), \
 #                          (xv)-[r:kvec_topk_cos_sim {k: 10, maxk: 1024, nprobe: 8}]->(y), \
-#                labels:   (x)-[]->(xl), (y)-[]->(yl), \
-#                sent:     (y)-[]->(ys)' \
+#                labels:   (x)-->(xl), (y)-->(yl), \
+#                sent:     (y)-->(ys)' \
 #       --where 'x in ["Q859", "Q868", "Q913"]' \
 #       --return 'xl as xlabel, yl as ylabel, r.similarity as sim, kgtk_lqstring_text(ys) as ysent' \
 #     / html
@@ -528,9 +529,9 @@ show_html()
 kgtk("""
       query --gc $MAIN --ac $COMPLEX
       -i complex -i labels
-      --match 'complex:  (x)-[]->(xv),
+      --match 'complex:  (x)-->(xv),
                          (xv)-[r:kvec_topk_cos_sim {k: 10, maxk: 1024, nprobe: 8}]->(y),
-               labels:   (x)-[]->(xl), (y)-[]->(yl)'
+               labels:   (x)-->(xl), (y)-->(yl)'
       --where 'x in ["Q40", "Q41", "Q30"]'
       --return 'xl as xlabel, yl as ylabel, r.similarity as sim'
      """)
@@ -538,9 +539,9 @@ kgtk("""
 kgtk("""
       query --gc $MAIN --ac $TRANSE
       -i transe -i labels
-      --match 'transe:   (x)-[]->(xv),
+      --match 'transe:   (x)-->(xv),
                          (xv)-[r:kvec_topk_cos_sim {k: 10, maxk: 1024, nprobe: 8}]->(y),
-               labels:   (x)-[]->(xl), (y)-[]->(yl)'
+               labels:   (x)-->(xl), (y)-->(yl)'
       --where 'x in ["Q40", "Q41", "Q30"]'
       --return 'xl as xlabel, yl as ylabel, r.similarity as sim'
      """)
@@ -548,10 +549,10 @@ kgtk("""
 # +
 # out = !kgtk query --gc $MAIN --ac $ABSTRACT \
 #       -i abstract -i labels -i sentence \
-#       --match 'abstract: (x)-[]->(xv), \
+#       --match 'abstract: (x)-->(xv), \
 #                          (xv)-[r:kvec_topk_cos_sim {k: 10, maxk: 1024, nprobe: 8}]->(y), \
-#                labels:   (x)-[]->(xl), (y)-[]->(yl), \
-#                sent:     (y)-[]->(ys)' \
+#                labels:   (x)-->(xl), (y)-->(yl), \
+#                sent:     (y)-->(ys)' \
 #       --where 'x in ["Q40", "Q41", "Q30"]' \
 #       --return 'xl as xlabel, yl as ylabel, r.similarity as sim, kgtk_lqstring_text(ys) as ysent' \
 #     / html
@@ -565,9 +566,9 @@ show_html()
 kgtk("""
       query --gc $MAIN --ac $COMPLEX
       -i complex -i labels
-      --match 'complex:  (x)-[]->(xv),
+      --match 'complex:  (x)-->(xv),
                          (xv)-[r:kvec_topk_cos_sim {k: 10, maxk: 1024, nprobe: 8}]->(y),
-               labels:   (x)-[]->(xl), (y)-[]->(yl)'
+               labels:   (x)-->(xl), (y)-->(yl)'
       --where 'x in ["Q144", "Q146", "Q726"]'
       --return 'xl as xlabel, yl as ylabel, r.similarity as sim'
      """)
@@ -575,9 +576,9 @@ kgtk("""
 kgtk("""
       query --gc $MAIN --ac $TRANSE
       -i transe -i labels
-      --match 'transe:   (x)-[]->(xv),
+      --match 'transe:   (x)-->(xv),
                          (xv)-[r:kvec_topk_cos_sim {k: 10, maxk: 1024, nprobe: 8}]->(y),
-               labels:   (x)-[]->(xl), (y)-[]->(yl)'
+               labels:   (x)-->(xl), (y)-->(yl)'
       --where 'x in ["Q144", "Q146", "Q726"]'
       --return 'xl as xlabel, yl as ylabel, r.similarity as sim'
      """)
@@ -585,10 +586,10 @@ kgtk("""
 # +
 # out = !kgtk query --gc $MAIN --ac $ABSTRACT \
 #       -i abstract -i labels -i sentence \
-#       --match 'abstract: (x)-[]->(xv), \
+#       --match 'abstract: (x)-->(xv), \
 #                          (xv)-[r:kvec_topk_cos_sim {k: 10, maxk: 1024, nprobe: 8}]->(y), \
-#                labels:   (x)-[]->(xl), (y)-[]->(yl), \
-#                sent:     (y)-[]->(ys)' \
+#                labels:   (x)-->(xl), (y)-->(yl), \
+#                sent:     (y)-->(ys)' \
 #       --where 'x in ["Q144", "Q146", "Q726"]' \
 #       --return 'xl as xlabel, yl as ylabel, r.similarity as sim, kgtk_lqstring_text(ys) as ysent' \
 #     / html
@@ -602,9 +603,9 @@ show_html()
 kgtk("""
       query --gc $MAIN --ac $COMPLEX
       -i complex -i labels
-      --match 'complex:  (x)-[]->(xv),
+      --match 'complex:  (x)-->(xv),
                          (xv)-[r:kvec_topk_cos_sim {k: 10, maxk: 1024, nprobe: 8}]->(y),
-               labels:   (x)-[]->(xl), (y)-[]->(yl)'
+               labels:   (x)-->(xl), (y)-->(yl)'
       --where 'x in ["Q8418"]'
       --return 'xl as xlabel, yl as ylabel, r.similarity as sim'
      """)
@@ -612,9 +613,9 @@ kgtk("""
 kgtk("""
       query --gc $MAIN --ac $TRANSE
       -i transe -i labels
-      --match 'transe:   (x)-[]->(xv),
+      --match 'transe:   (x)-->(xv),
                          (xv)-[r:kvec_topk_cos_sim {k: 10, maxk: 1024, nprobe: 8}]->(y),
-               labels:   (x)-[]->(xl), (y)-[]->(yl)'
+               labels:   (x)-->(xl), (y)-->(yl)'
       --where 'x in ["Q8418"]'
       --return 'xl as xlabel, yl as ylabel, r.similarity as sim'
      """)
@@ -622,10 +623,10 @@ kgtk("""
 # +
 # out = !kgtk query --gc $MAIN --ac $ABSTRACT \
 #       -i abstract -i labels -i sentence \
-#       --match 'abstract: (x)-[]->(xv), \
+#       --match 'abstract: (x)-->(xv), \
 #                          (xv)-[r:kvec_topk_cos_sim {k: 10, maxk: 1024, nprobe: 8}]->(y), \
-#                labels:   (x)-[]->(xl), (y)-[]->(yl), \
-#                sent:     (y)-[]->(ys)' \
+#                labels:   (x)-->(xl), (y)-->(yl), \
+#                sent:     (y)-->(ys)' \
 #       --where 'x in ["Q8418"]' \
 #       --return 'xl as xlabel, yl as ylabel, r.similarity as sim, kgtk_lqstring_text(ys) as ysent' \
 #     / html
@@ -639,9 +640,9 @@ show_html()
 kgtk("""
       query --gc $MAIN --ac $COMPLEX
       -i complex -i labels
-      --match 'complex:  (x)-[]->(xv),
+      --match 'complex:  (x)-->(xv),
                          (xv)-[r:kvec_topk_cos_sim {k: 10, maxk: 1024, nprobe: 8}]->(y),
-               labels:   (x)-[]->(xl), (y)-[]->(yl)'
+               labels:   (x)-->(xl), (y)-->(yl)'
       --where 'x in ["Q1930187"]'
       --return 'xl as xlabel, yl as ylabel, r.similarity as sim'
      """)
@@ -649,9 +650,9 @@ kgtk("""
 kgtk("""
       query --gc $MAIN --ac $TRANSE
       -i transe -i labels
-      --match 'transe:   (x)-[]->(xv),
+      --match 'transe:   (x)-->(xv),
                          (xv)-[r:kvec_topk_cos_sim {k: 10, maxk: 1024, nprobe: 8}]->(y),
-               labels:   (x)-[]->(xl), (y)-[]->(yl)'
+               labels:   (x)-->(xl), (y)-->(yl)'
       --where 'x in ["Q1930187"]'
       --return 'xl as xlabel, yl as ylabel, r.similarity as sim'
      """)
@@ -659,10 +660,10 @@ kgtk("""
 # +
 # out = !kgtk query --gc $MAIN --ac $ABSTRACT \
 #       -i abstract -i labels -i sentence \
-#       --match 'abstract: (x)-[]->(xv), \
+#       --match 'abstract: (x)-->(xv), \
 #                          (xv)-[r:kvec_topk_cos_sim {k: 10, maxk: 1024, nprobe: 8}]->(y), \
-#                labels:   (x)-[]->(xl), (y)-[]->(yl), \
-#                sent:     (y)-[]->(ys)' \
+#                labels:   (x)-->(xl), (y)-->(yl), \
+#                sent:     (y)-->(ys)' \
 #       --where 'x in ["Q1930187"]' \
 #       --return 'xl as xlabel, yl as ylabel, r.similarity as sim, kgtk_lqstring_text(ys) as ysent' \
 #     / html
@@ -676,9 +677,9 @@ show_html()
 kgtk("""
       query --gc $MAIN --ac $COMPLEX
       -i complex -i labels
-      --match 'complex:  (x)-[]->(xv),
+      --match 'complex:  (x)-->(xv),
                          (xv)-[r:kvec_topk_cos_sim {k: 10, maxk: 1024, nprobe: 8}]->(y),
-               labels:   (x)-[]->(xl), (y)-[]->(yl)'
+               labels:   (x)-->(xl), (y)-->(yl)'
       --where 'x in ["Q48352"]'
       --return 'xl as xlabel, yl as ylabel, r.similarity as sim'
      """)
@@ -686,9 +687,9 @@ kgtk("""
 kgtk("""
       query --gc $MAIN --ac $TRANSE
       -i transe -i labels
-      --match 'transe:   (x)-[]->(xv),
+      --match 'transe:   (x)-->(xv),
                          (xv)-[r:kvec_topk_cos_sim {k: 10, maxk: 1024, nprobe: 8}]->(y),
-               labels:   (x)-[]->(xl), (y)-[]->(yl)'
+               labels:   (x)-->(xl), (y)-->(yl)'
       --where 'x in ["Q48352"]'
       --return 'xl as xlabel, yl as ylabel, r.similarity as sim'
      """)
@@ -696,10 +697,10 @@ kgtk("""
 # +
 # out = !kgtk query --gc $MAIN --ac $ABSTRACT \
 #       -i abstract -i labels -i sentence \
-#       --match 'abstract: (x)-[]->(xv), \
+#       --match 'abstract: (x)-->(xv), \
 #                          (xv)-[r:kvec_topk_cos_sim {k: 10, maxk: 1024, nprobe: 8}]->(y), \
-#                labels:   (x)-[]->(xl), (y)-[]->(yl), \
-#                sent:     (y)-[]->(ys)' \
+#                labels:   (x)-->(xl), (y)-->(yl), \
+#                sent:     (y)-->(ys)' \
 #       --where 'x in ["Q48352"]' \
 #       --return 'xl as xlabel, yl as ylabel, r.similarity as sim, kgtk_lqstring_text(ys) as ysent' \
 #     / html
