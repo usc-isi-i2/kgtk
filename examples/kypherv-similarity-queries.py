@@ -57,7 +57,7 @@ DB="/kgtk-data/kypherv"
 # %env MAIN={DB}/wikidata-20221102-dwd-v8-main.sqlite3.db
 # %env COMPLEX={DB}/wikidata-20221102-dwd-v8-complex-embeddings.sqlite3.db
 # %env TRANSE={DB}/wikidata-20221102-dwd-v8-transe-embeddings.sqlite3.db
-# %env ABSTRACT={DB}/wikidata-20221102-dwd-v8-abstract-embeddings.sqlite3.db
+# %env ABSTRACT={DB}/wikidata-20221102-dwd-v8-abstract-embeddings-large.sqlite3.db
 # %env IMAGE={DB}/wikimedia-capcom-image-embeddings-v2.sqlite3.db
 
 # If you copied the graph caches and their associated `.faiss.idx` ANNS index files
@@ -118,7 +118,9 @@ DB="/kgtk-data/kypherv"
 
 # The `ABSTRACT` graph cache contains the sentences and embedding vectors
 # generated from the first sentences of Wikipedia short abstracts.  It
-# contains about 6M 768-D Roberta base vectors:
+# contains about 6M 1024-D Roberta large vectors (**Note**: these are different
+# embeddings than the ones used and reported on in the 2022 Wikidata Workshop paper,
+# therefore, the query results in this notebook are somewhat different):
 
 # !kgtk query --gc $ABSTRACT --sc
 
@@ -196,7 +198,7 @@ kgtk("""
 
 
 # If we used the same brute-force search from above on this much larger set,
-# it would take about 5 min to run (which is why this command is disabled):
+# it would take about 2 min to run (which is why this command is disabled):
 
 # !time DISABLED kgtk query --gc $MAIN \
 #                  --ac $ABSTRACT \
@@ -211,16 +213,16 @@ kgtk("""
 # ```
 # xlabel	ylabel	sim
 # 'Socrates'@en	'Socrates'@en	1.0000001192092896
-# 'Socrates'@en	'Anytus'@en	0.9346579909324646
-# 'Socrates'@en	'Heraclitus'@en	0.9344534277915955
-# 'Socrates'@en	'Hippocrates'@en	0.9304061532020569
-# 'Socrates'@en	'Cleisthenes'@en	0.9292828440666199
-# 'Socrates'@en	'Aristides'@en	0.9283562898635864
-# 'Socrates'@en	'Yannis Xirotiris'@en	0.926308274269104
-# 'Socrates'@en	'Sotiris Trivizas'@en	0.9255445003509521
-# 'Socrates'@en	'Aris Maragkopoulos'@en	0.9234243035316467
-# 'Socrates'@en	'Valerios Stais'@en	0.919943630695343
-# 93.859u 38.640s 4:49.84 45.7%	0+0k 18782808+8io 0pf+0w
+# 'Socrates'@en	'Adamantios Korais'@en	0.8731658458709717
+# 'Socrates'@en	'Prodicus'@en	0.872790515422821
+# 'Socrates'@en	'Protagoras'@en	0.8702158331871033
+# 'Socrates'@en	'Manuel Chrysoloras'@en	0.8680326342582703
+# 'Socrates'@en	'Cebes'@en	0.8670117259025574
+# 'Socrates'@en	'Pyrrho'@en	0.8662737011909485
+# 'Socrates'@en	'Menedemus'@en	0.8632197380065918
+# 'Socrates'@en	'Epicurus'@en	0.8617314696311951
+# 'Socrates'@en	'Xenophon'@en	0.8607585430145264
+# 52.997u 15.548s 1:50.53 62.0%	0+0k 19477248+136io 0pf+0w
 # ```
 
 # <A NAME="indexed-search"></A>
@@ -262,8 +264,8 @@ kgtk("""
      """)
 
 
-# For comparison, here is a run without dynamic scaling which returns much fewer results, since
-# only a small number of the top-5 similar results for each input also satisfy the post conditions:
+# For comparison, here is a run without dynamic scaling which returns fewer results, since
+# not all of the top-5 similar results for each input also satisfy the post conditions:
 
 kgtk("""
       query --gc $MAIN --ac $ABSTRACT
@@ -417,11 +419,11 @@ show_html()
 # sed -e 's/^ *//' | \
 # kgtk cat --no-input-header --input-column-names node1 node2 --implied-label sentence \
 #    / add-id \
-#    / text-embedding -i - --model roberta-base-nli-mean-tokens \
+#    / text-embedding -i - --model roberta-large-nli-mean-tokens \
 #           --output-data-format kgtk --output-property emb -o - \
 #    / query -i - --idx vector:node2 --as text_emb_queries --match '(x)' --return x
 
-# The above created 768-D text embedding vector for three short queries
+# The above created 1024-D text embedding vector for three short queries
 # using the same text embedding type as used in our `ABSTRACT` embeddings.
 # Now we find Wikidata QNodes whose short-abstract embedding vector is most similar
 # to the queries, and that satisfy any additional conditions we might have.
