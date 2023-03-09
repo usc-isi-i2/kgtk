@@ -196,12 +196,15 @@ class SqliteStore(SqlStore):
         #self.pragma('main.page_size = 65536') # for zfs only
         self.pragma('main.cache_size = %d' % int(self.CACHE_SIZE / self.pragma('page_size')))
         self.pragma('busy_timeout = %d' % int(self.LOCK_TIMEOUT * 1000))
-        if self.single_user:
-            # prevents concurrent readers while DB is modified, but speeds up imports by 1.5-2x:
-            self.pragma('main.journal_mode=delete')
-        else:
-            # WAL-mode allows one writer and multiple readers, but slows down large data imports:
-            self.pragma('main.journal_mode=wal')
+        if not self.readonly:
+            # Skip this if the DB is readonly, since this change amounts to a write OP:
+            # TO DO: also consider/test write-protected DB file which amounts to read-only
+            if self.single_user:
+                # prevents concurrent readers while DB is modified, but speeds up imports by 1.5-2x:
+                self.pragma('main.journal_mode=delete')
+            else:
+                # WAL-mode allows one writer and multiple readers, but slows down large data imports
+                self.pragma('main.journal_mode=wal')
 
     def configure_temp_dir(self):
         """Configure the SQLite temp directory to be in the same location as the database file,
