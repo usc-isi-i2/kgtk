@@ -76,6 +76,7 @@ MAX_OP: str = "max"
 MIN_OP: str = "min"
 MINUS_OP: str = "minus" # (column1 - column2) or (column - value)
 MOD_OP: str = "mod" # (column mod column) or (column mod value)
+MULTIPLY_OP: str = "multiply" # (column x column) or (column x value)
 NEGATE_OP: str = "negate" # (column, ...)
 NUMBER_OP: str = "number" # Get a number or the numeric part of a quantity.
 PERCENTAGE_OP: str = "percentage"
@@ -1854,6 +1855,27 @@ def run(input_file: KGTKFiles,
                     output_row[into_column_idx] = str(float(row[sources[0]]) % float(values[0]))
                 return True
             opfunc = mod_op
+
+        elif operation == MULTIPLY_OP:
+            if not ((len(sources) == 2 and len(values) == 0) or (len(sources) == 1 and len(values) == 1)):
+                raise KGTKException("Multiply needs two sources or one source and one value, got %d sources and %d values" % (len(sources), len(values)))
+            if len(into_column_idxs) != 1:
+                raise KGTKException("Multiply needs 1 destination columns, got %d" % len(into_column_idxs))
+
+            def multiply_2_op()->bool:
+                # TODO: support quantities.
+                output_row[into_column_idx] = str(float(row[sources[0]]) * float(row[sources[1]]))
+                return True
+
+            def multiply_1op()->bool:
+                # TODO: support quantities.
+                output_row[into_column_idx] = str(float(row[sources[0]]) * float(values[0]))
+                return True
+
+            if len(sources) == 2:
+                opfunc = multiply_2_op
+            else:
+                opfunc = multiply_1_op
 
         elif operation == NAND_OP:
             if len(sources) == 0:
