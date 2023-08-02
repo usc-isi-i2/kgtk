@@ -8,7 +8,7 @@
 usage: import-csv [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                   [-c COLUMNS [COLUMNS ...]] [--labels LABELS [LABELS ...]]
                   [--id-column ID_COLUMN_NAME] [-v [optional True|False]]
-                  [--add-id ADD_ID] [--old-id-column-name COLUMN_NAME]
+                  [--add-id] [--old-id-column-name COLUMN_NAME]
                   [--new-id-column-name COLUMN_NAME]
                   [--overwrite-id [optional true|false]]
                   [--verify-id-unique [optional true|false]]
@@ -40,7 +40,7 @@ optional arguments:
                         (default=column names)
   --id-column ID_COLUMN_NAME
                         The name of the ID column. (default=id or alias)
-  --add-id ADD_ID       Add an id column to the output. (default=False)
+  --add-id              Add an id column to the output. (default=False)
   --old-id-column-name COLUMN_NAME
                         The name of the old ID column. (default=id).
   --new-id-column-name COLUMN_NAME
@@ -145,7 +145,7 @@ Since we don't have an ID column, we can use the `--add-id` option to add an ID 
 
 ```bash
 !kgtk import-csv \
-    --add-id True \
+    --add-id \
     --input-file ../../tests/data/Paintings.csv \
     --output-file normalized_Paintings.tsv
 ```
@@ -186,7 +186,7 @@ If this is a `;` seperated file, we can use the `--column-separator` option to s
 ```bash
 !kgtk import-csv \
     --column-separator ';' \
-    --add-id True \
+    --add-id \
     --input-file ../../tests/data/Calendar_2018_geopoint.csv \
     --output-file normalized_Calendar_2018_geopoint.tsv
 ```

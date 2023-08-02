@@ -40,7 +40,7 @@ class TestKGTKImportCSV(unittest.TestCase):
         cli_entry("kgtk", "import-csv", 
             "-i", "data/Paintings.csv", 
             "-o", f'{self.temp_dir}/Paintings.tsv',
-            "--add-id", "True",
+            "--add-id",
         )
 
         df = pd.read_csv(f'{self.temp_dir}/Paintings.tsv', sep='\t')
@@ -65,7 +65,7 @@ class TestKGTKImportCSV(unittest.TestCase):
         cli_entry("kgtk", "import-csv", 
             "-i", "data/Calendar_2018_geopoint.csv", 
             "-o", f'{self.temp_dir}/Calendar_2018_geopoint.tsv',
-            "--add-id", "True",
+            "--add-id",
             "--column-separator", ";",
         )
 
