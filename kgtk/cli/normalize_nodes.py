@@ -64,7 +64,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
             column_separator=KgtkFormat.CSV_COLUMN_SEPARATOR,
         )
 
-        parser.add_argument("--add-id", action="store_true", type=bool, dest="add_id",
+        parser.add_argument("--add-id", action="store_true", dest="add_id",
                             help="Add an id column to the output. (default=%(default)s)", default=False)
 
         KgtkIdBuilderOptions.add_arguments(parser, expert=True) # Show all the options.
