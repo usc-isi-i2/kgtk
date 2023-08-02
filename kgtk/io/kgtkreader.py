@@ -1195,7 +1195,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
 
             # Split the first line into column names.
             if input_format == KgtkReaderOptions.INPUT_FORMAT_CSV:
-                column_names = cls.csvsplit(header)
+                column_names = cls.csvsplit(header, options.column_separator)
                 if options.unquote_csv_column_names:
                     # TODO: Handle the troublesome case of a double quote inside a column
                     # name.
@@ -1271,12 +1271,18 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
             print("%s" % line, file=self.reject_file)
 
     @classmethod
-    def csvsplit(cls, line: str)->typing.List[str]:
+    def csvsplit(cls, line: str, column_separator: str)->typing.List[str]:
         row: typing.List[str] = [ ]
         item: str = ""
         c: str
         instring: bool = False
         sawstring:bool = False
+        column_separator: str = (
+            column_separator 
+            if column_separator != KgtkFormat.COLUMN_SEPARATOR 
+            else KgtkFormat.CSV_COLUMN_SEPARATOR
+        )
+
         for c in line:
             if instring:
                 if c == '"':
@@ -1290,7 +1296,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                     instring = True
                     if sawstring:
                         item += c
-                elif c == ",":
+                elif c == column_separator:
                     if sawstring:
                         row.append(KgtkFormat.stringify(item))
                     else:
@@ -1389,7 +1395,7 @@ class KgtkReader(KgtkBase, ClosableIter[typing.List[str]]):
                         continue
 
             if self.input_format == KgtkReaderOptions.INPUT_FORMAT_CSV:
-                row = self.csvsplit(line)
+                row = self.csvsplit(line, self.options.column_separator)
             else:
                 row = line.split(self.options.column_separator)
 

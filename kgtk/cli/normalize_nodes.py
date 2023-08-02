@@ -10,14 +10,19 @@ from kgtk.cli_argparse import KGTKArgumentParser, KGTKFiles
 from kgtk.kgtkformat import KgtkFormat
 from kgtk.io.kgtkreader import KgtkReader, KgtkReaderOptions, KgtkReaderMode
 from kgtk.io.kgtkwriter import KgtkWriter
+from kgtk.reshape.kgtkidbuilder import KgtkIdBuilder, KgtkIdBuilderOptions
 from kgtk.utils.argparsehelpers import optional_bool
 from kgtk.value.kgtkvalue import KgtkValue
 from kgtk.value.kgtkvalueoptions import KgtkValueOptions
 
+IMPORT_CSV_COMMAND = 'import-csv'
+
 def parser():
     return {
+        'aliases': [ IMPORT_CSV_COMMAND ],
         'help': 'Normalize a KGTK node file into a KGTK edge file.',
-        'description': 'Normalize a KGTK node file into a KGTK edge file with a row for each column value in the input file.'
+        'description': 'If called as "kgtk normalize-nodes", Normalize a KGTK node file into a KGTK edge file with a row for each column value in the input file.\n' +
+        'If called as "kgtk import-csv", the input file is assumed to be a CSV file.'
     }
 
 
@@ -30,6 +35,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
 
     _expert: bool = parsed_shared_args._expert
     _mode: str = parsed_shared_args._mode
+    _command: str = parsed_shared_args._command
 
     parser.add_input_file(positional=True)
     parser.add_output_file()
@@ -50,12 +56,27 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
                                     expert=_expert)
     KgtkValueOptions.add_arguments(parser, expert=_expert)
 
+    if _command == IMPORT_CSV_COMMAND:
+        parser.prog = IMPORT_CSV_COMMAND
+        parser.set_defaults(
+            input_format=KgtkReaderOptions.INPUT_FORMAT_CSV,
+            mode=KgtkReaderMode.NONE,
+            column_separator=KgtkFormat.CSV_COLUMN_SEPARATOR,
+        )
+
+        parser.add_argument("--add-id", action="store_true", dest="add_id",
+                            help="Add an id column to the output. (default=%(default)s)", default=False)
+
+        KgtkIdBuilderOptions.add_arguments(parser, expert=True) # Show all the options.
+        
+
 def run(input_file: KGTKFiles,
         output_file: KGTKFiles,
 
         columns: typing.Optional[typing.List[str]] = None,
         labels: typing.Optional[typing.List[str]] = None,
         id_column_name: typing.Optional[str] = None,
+        add_id: typing.Optional[bool] = None,
 
         errors_to_stdout: bool = False,
         errors_to_stderr: bool = True,
@@ -79,6 +100,7 @@ def run(input_file: KGTKFiles,
     # Build the option structures.
     reader_options: KgtkReaderOptions = KgtkReaderOptions.from_dict(kwargs)
     value_options: KgtkValueOptions = KgtkValueOptions.from_dict(kwargs)
+    idbuilder_options: KgtkIdBuilderOptions = KgtkIdBuilderOptions.from_dict(kwargs)
 
     # Show the final option structures for debugging and documentation.
     if show_options:
@@ -120,8 +142,9 @@ def run(input_file: KGTKFiles,
                                          verbose=verbose,
                                          very_verbose=very_verbose,
         )
+        idb: KgtkIdBuilder = KgtkIdBuilder.new(kr, idbuilder_options)
 
-        id_column_idx: int = kr.get_id_column_index(id_column_name)
+        id_column_idx: int = idb.new_id_column_idx if add_id else kr.get_id_column_index(id_column_name)
         if id_column_idx < 0:
             raise KGTKException("Unknown ID column %s" % repr(id_column_name))
 
@@ -140,6 +163,9 @@ def run(input_file: KGTKFiles,
         row: typing.List[str]
         for row in kr:
             input_line_count += 1
+
+            if add_id:
+                row = idb.build(row, input_line_count)
 
             node1_value: str = row[id_column_idx]
 
