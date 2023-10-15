@@ -1,4 +1,4 @@
-<img src="https://github.com/usc-isi-i2/kgtk/raw/master/docs/images/kgtk_logo_200x200.png" width="150"/>
+<img src="docs/images/kgtk_logo_200x200.png" width="150"/>
 
 # KGTK: Knowledge Graph Toolkit
 
