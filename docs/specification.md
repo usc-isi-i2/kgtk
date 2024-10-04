@@ -189,7 +189,8 @@ List values are not allowed in node1, label and node2 columns of the edge table.
 
 ## Unlabeled and Undirected Edges
 Even though unusual for knowledge graphs, edges might be unlabeled to represent purely structural information more common in standard graph representations.  To represent an unlabeled edge, the label column in the edge file can simply be blank.  By default, edges are assumed to be directed from node1 to node2.  To represent a blank, undirected edge, the special predicate label _ (underscore) can be used.  To represent labeled but undirected edges, the edge label needs to start with an _ (underscore), for example, _brotherOf.
-Node File Format
+
+## Node File Format
 Node files allow a more concise node-centric specification of edges.  They have one mandatory column for the node ID (using the predefined name or its alias(es)).  Lines with blank node IDs are ignored. Node files must not contain a node1 column, in order to distinguish node files from edge files, which may contain an id column. We might want to disallow node2 columns from node files, too.All other columns are optional and specify edges where the identified node is node1.  Here is a small example that simply adds labels to our three nodes:
 
 
