@@ -17,7 +17,8 @@ usage: kgtk normalize-nodes [-h] [-i INPUT_FILE] [-o OUTPUT_FILE]
                             [--id-column ID_COLUMN_NAME]
                             [-v [optional True|False]]
 
-Normalize a KGTK node file into a KGTK edge file with a row for each column value in the input file.
+If called as "kgtk normalize-nodes", Normalize a KGTK node file into a KGTK edge file with a row for each column value in the input file.
+If called as "kgtk import-csv", the input file is assumed to be a CSV file.
 
 optional arguments:
   -h, --help            show this help message and exit

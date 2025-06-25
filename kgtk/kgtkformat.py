@@ -11,6 +11,7 @@ import typing
 
 class KgtkFormat:
     COLUMN_SEPARATOR: str = "\t"
+    CSV_COLUMN_SEPARATOR: str = ","
     COMMENT_INDICATOR: str = "#"
     LIST_SEPARATOR: str = "|"
 
