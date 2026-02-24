@@ -22,7 +22,8 @@ ALL_EMBEDDING_MODELS_NAMES = [
     "roberta-base-nli-stsb-mean-tokens",
     "roberta-large-nli-mean-tokens",
     "roberta-large-nli-stsb-mean-tokens",
-    "sentence-transformers/all-distilroberta-v1"
+    "sentence-transformers/all-distilroberta-v1",
+    "sentence-transformers/all-MiniLM-L6-v2"
 ]
 
 
@@ -42,7 +43,7 @@ def add_arguments_extended(parser: KGTKArgumentParser, parsed_shared_args: Names
     # model name
     all_models_names = ALL_EMBEDDING_MODELS_NAMES
     parser.add_argument('-m', '--model', action='store', nargs='+', dest='all_models_names',
-                        default="bert-base-nli-cls-token", choices=all_models_names,
+                        default="sentence-transformers/all-MiniLM-L6-v2", choices=all_models_names,
                         help="the model to used for embedding")
 
     parser.add_argument('--sentence-property', action='store',
@@ -100,7 +101,7 @@ def run(**kwargs):
         from pathlib import Path
         from kgtk.gt.embedding_utils import EmbeddingVector
 
-        all_models_names = kwargs.get("all_models_names", ['bert-base-wikipedia-sections-mean-tokens'])
+        all_models_names = kwargs.get("all_models_names", ['sentence-transformers/all-MiniLM-L6-v2'])
         output_format = kwargs.get("output_data_format")
 
         output_file = kwargs.get("output_file")

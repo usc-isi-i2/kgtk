@@ -19,7 +19,7 @@ class EmbeddingVector:
                  output_format: str = "kgtk"):
         self._logger = logging.getLogger(__name__)
         if not model_name:
-            self.model_name = 'bert-base-nli-mean-tokens'
+            self.model_name = 'sentence-transformers/all-MiniLM-L6-v2'
         else:
             self.model_name = model_name
         self._logger.info("Using model {}".format(self.model_name))

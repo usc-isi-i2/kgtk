@@ -66,7 +66,7 @@ You can call the functions directly with given args as
 ```
 kgtk text-embedding \ 
     -input-file / -i <string> \ # * optional, path to the file
-    --model / -m <list_of_string> \  # optional, default is `bert-base-wikipedia-sections-mean-tokens`
+    --model / -m <list_of_string> \  # optional, default is `sentence-transformers/all-MiniLM-L6-v2`
     --output-data-format <string> {w2v, kgtk}, default is `kgtk`
     --output-property <string> \ # optional, default is "text_embedding"
     --out-file/ -o <string> \ by default embeddings to console
@@ -91,7 +91,10 @@ The path to the input file. For example: `input_file1.csv`, it also support to s
 #### --model/ -m Embedding_Model(s)
 The embedding models want to apply on the sentences. If multiple models given, they will be applied to the same data one by one and output the results with all models.
 
-currently followly 16 models are pretrained and could be used. If not specified, the default model will be `bert-base-wikipedia-sections-mean-tokens`
+currently followly 17 models are pretrained and could be used. If not specified, the default model will be `sentence-transformers/all-MiniLM-L6-v2`
+
+> **Note**: The default model `sentence-transformers/all-MiniLM-L6-v2` provides better quality sentence embeddings than bert-base models, with 5x faster inference speed and lower memory consumption. It produces 384-dimensional vectors optimized for semantic similarity tasks.
+
 ```
 bert-base-nli-cls-token
 bert-base-nli-max-tokens
@@ -109,6 +112,7 @@ roberta-base-nli-mean-tokens
 roberta-base-nli-stsb-mean-tokens
 roberta-large-nli-mean-tokens
 roberta-large-nli-stsb-mean-tokens
+sentence-transformers/all-MiniLM-L6-v2
 ```
 
 #### --output-property
